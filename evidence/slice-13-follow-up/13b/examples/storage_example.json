@@ -1,0 +1,38 @@
+{
+  "sessions": [
+    "f8545380-6b4c-40b5-88c9-9a2239f90176",
+    "9f704430-a74a-41ee-b09a-f38d9dbfe4ee"
+  ],
+  "round_trip_audits": 24,
+  "summary": {
+    "sessions": [
+      {
+        "id": "f8545380-6b4c-40b5-88c9-9a2239f90176",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "9f704430-a74a-41ee-b09a-f38d9dbfe4ee",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      }
+    ],
+    "counts": {
+      "artifact": 424,
+      "artifact_edge": 524,
+      "capture_session": 2,
+      "receipt": 10,
+      "quote_observation": 10,
+      "metadata_version": 96,
+      "calculation": 24,
+      "calculation_receipt": 174,
+      "candidate_observation": 44,
+      "coverage_event": 6
+    },
+    "replay": "saved calculations and retained images only; no complete stream or exchange-event history"
+  }
+}

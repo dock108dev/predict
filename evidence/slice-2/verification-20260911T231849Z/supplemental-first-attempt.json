@@ -1,0 +1,7 @@
+{
+  "result": "filtered discovery returned; settlement GET raised LookupError on HTTP 404",
+  "settlement_source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/settlement",
+  "request_cap": 3,
+  "raw_responses_saved": false,
+  "limitation": "Initial supplemental harness did not persist responses on error; repaired response preservation and repeated bounded verification."
+}

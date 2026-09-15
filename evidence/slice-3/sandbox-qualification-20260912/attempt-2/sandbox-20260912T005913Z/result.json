@@ -1,0 +1,139 @@
+{
+  "environment": "sandbox",
+  "classification": "sandbox observation",
+  "budgets": {
+    "rest_attempts": 20,
+    "seconds": 90,
+    "frames": 200,
+    "storage_bytes": 5000000,
+    "events": 1,
+    "markets": 3,
+    "connections": 2
+  },
+  "authentication": true,
+  "catalog": true,
+  "initial_image": false,
+  "reconnect_image": false,
+  "disconnect_requested": true,
+  "cancellation_propagated": true,
+  "changed_selection_window": false,
+  "event_id": "19458",
+  "markets": [
+    "19458:219:0"
+  ],
+  "stop": "bounded capture completed",
+  "rest": [
+    {
+      "path": "/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/mm/get_tournaments",
+      "status": 200
+    },
+    {
+      "path": "/mm/get_sport_events",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/get_price_ladder",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/get_multiple_markets",
+      "status": 200
+    },
+    {
+      "path": "/websocket/connection-config",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/websocket",
+      "status": 200
+    },
+    {
+      "path": "/auth/refresh",
+      "status": 200
+    },
+    {
+      "path": "/websocket/connection-config",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/websocket",
+      "status": 200
+    }
+  ],
+  "stream": [
+    {
+      "event": "connection_config",
+      "fields": [
+        "app_id",
+        "cluster",
+        "key",
+        "service",
+        "ws_host"
+      ],
+      "ws_host": "ws.sandbox.prophetx.dev",
+      "cluster": "mt1"
+    },
+    {
+      "event": "subscribed",
+      "generation": 1,
+      "channel_count": 1,
+      "channel_limit": 400
+    },
+    {
+      "event": "invalidated",
+      "reason": "ConnectionClosedOK",
+      "stage": "market_data",
+      "generation": 1
+    },
+    {
+      "event": "connection_config",
+      "fields": [
+        "app_id",
+        "cluster",
+        "key",
+        "service",
+        "ws_host"
+      ],
+      "ws_host": "ws.sandbox.prophetx.dev",
+      "cluster": "mt1"
+    },
+    {
+      "event": "subscribed",
+      "generation": 2,
+      "channel_count": 1,
+      "channel_limit": 400
+    }
+  ],
+  "frames": 6,
+  "records": [
+    {
+      "file": "market-001.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_tournaments",
+      "received_at": "2026-09-12T00:59:13.623458+00:00",
+      "sha256": "698839e17b32ac7c5e2ff8d30e17acafa28dddb550060a145859f3ba82d8deba"
+    },
+    {
+      "file": "market-002.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:59:13.730215+00:00",
+      "sha256": "f6022bea71fcfa22bc4023e24922dd1f9541f435fd577b5e7b831e87901169d6"
+    },
+    {
+      "file": "market-003.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/v4/mm/get_price_ladder",
+      "received_at": "2026-09-12T00:59:13.776546+00:00",
+      "sha256": "567393f22ec9a5872eed619823aafaa5c2b376ea571813e2efebb04e720aaa9b"
+    },
+    {
+      "file": "market-004.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/v4/mm/get_multiple_markets",
+      "received_at": "2026-09-12T00:59:13.893092+00:00",
+      "sha256": "03b1289f9888c0ab4b472f3d7c1eec341aa6ba14eab3543f6f956356232a94d8"
+    }
+  ],
+  "units_verified": false
+}

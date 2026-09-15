@@ -1,0 +1,10 @@
+{
+  "qa": {
+    "client_id": false,
+    "client_secret": false
+  },
+  "production": {
+    "client_id": false,
+    "client_secret": false
+  }
+}

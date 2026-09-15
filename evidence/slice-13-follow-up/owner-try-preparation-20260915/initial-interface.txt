@@ -1,0 +1,23 @@
+Browser tab: 1, Title: "Market Watch · Prediction Arb", URL: "http://127.0.0.1:8765/".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 9, 35-44, 46, 48-49, 53, 63-65, 70-71
++		75 text Ready to scan
++			76 text Kalshi ready
++			77 text Current NFL discovery on start
++			78 text Polymarket US ready
++			79 text Current NFL discovery on start
++			80 text ProphetX partial
++			81 text Sandbox and unsized quotes only; outside this scan
++			82 text Novig unavailable
++			83 text Live access not qualified; outside this scan
++		84 text Current qualified opportunities
++		85 text 0
++		86 text 0
++		87 text 0
++		88 text Prices retain their original observation times
++		89 text No observations yet
++			90 text ⌁
++			91 text Your next scan starts here
++			92 text Start a bounded scan to see venue prices, available size, and the conditions behind each comparison.
++			93 text No qualified opportunities yet
++			94 text An empty qualified list does not hide prices or unresolved conditions.

@@ -1,0 +1,21 @@
+{
+  "state": "idle",
+  "mode": "live",
+  "sid": null,
+  "limits": {
+    "seconds": 60,
+    "markets": 2,
+    "receipts": 1000,
+    "storage_bytes": 134217728
+  },
+  "started_at": null,
+  "error": null,
+  "venues": {},
+  "messages": 0,
+  "queue": 0,
+  "depth_busy": false,
+  "view": {
+    "active": false,
+    "current_opportunities": 0
+  }
+}

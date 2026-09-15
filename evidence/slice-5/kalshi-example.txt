@@ -1,0 +1,7 @@
+Historical Kalshi replay; not current prices or trading qualification
+Atlanta vs Pittsburgh scheduled 2026-09-13T17:00:00+00:00
+Market: KXNFLGAME-26SEP13ATLPIT-PIT metadata status: active
+Native book: synchronized depth: partial source timestamp: None receipt: 2026-09-12T01:29:23.452519+00:00
+yes bid 0.7000 derived ask 0.7100
+no bid 0.2900 derived ask 0.3000
+Rules: https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf effective fee: None

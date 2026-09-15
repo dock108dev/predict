@@ -1,0 +1,4354 @@
+{
+  "registry_version": "2026-09-12.1",
+  "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+  "registry_teams": {
+    "NFL": 32,
+    "MLB": 30
+  },
+  "scope": "Identity enrichment only; no event equivalence, line comparison or settlement approval.",
+  "coverage": [
+    {
+      "evidence_class": "actual_capture",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "events": 5,
+      "extraction_unknown": 0,
+      "participant_results": {
+        "resolved": 10
+      },
+      "unique_resolved_teams": 10
+    },
+    {
+      "evidence_class": "actual_capture",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NFL",
+      "events": 10,
+      "extraction_unknown": 0,
+      "participant_results": {
+        "resolved": 20
+      },
+      "unique_resolved_teams": 20
+    },
+    {
+      "evidence_class": "actual_capture",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "league": "NFL",
+      "events": 32,
+      "extraction_unknown": 0,
+      "participant_results": {
+        "resolved": 64
+      },
+      "unique_resolved_teams": 28
+    },
+    {
+      "evidence_class": "synthetic",
+      "venue": "novig",
+      "environment": "qa",
+      "league": "NFL",
+      "events": 2,
+      "extraction_unknown": 1,
+      "participant_results": {
+        "resolved": 1,
+        "unknown": 1
+      },
+      "unique_resolved_teams": 1
+    }
+  ],
+  "records": [
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74905",
+      "native_title": "Tampa Bay vs. Cincinnati",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Tampa Bay Buccaneers",
+          "native_id": "77",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TB",
+            "canonical_name": "Tampa Bay Buccaneers",
+            "candidates": [
+              "NFL:TB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tampa Bay Buccaneers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:77|evidence/phase-0/pmus-nfl-events.json#/events/0/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tampa Bay Buccaneers",
+            "native_id": "77"
+          },
+          "extraction": "events[id=74905].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Cincinnati Bengals",
+          "native_id": "54",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CIN",
+            "canonical_name": "Cincinnati Bengals",
+            "candidates": [
+              "NFL:CIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cincinnati Bengals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:54|evidence/phase-0/pmus-nfl-events.json#/events/0/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cincinnati Bengals",
+            "native_id": "54"
+          },
+          "extraction": "events[id=74905].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74903",
+      "native_title": "Atlanta vs. Pittsburgh",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Atlanta Falcons",
+          "native_id": "49",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ATL",
+            "canonical_name": "Atlanta Falcons",
+            "candidates": [
+              "NFL:ATL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Atlanta Falcons|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:49|evidence/phase-0/pmus-nfl-events.json#/events/1/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Atlanta Falcons",
+            "native_id": "49"
+          },
+          "extraction": "events[id=74903].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Pittsburgh Steelers",
+          "native_id": "74",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PIT",
+            "canonical_name": "Pittsburgh Steelers",
+            "candidates": [
+              "NFL:PIT"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Pittsburgh Steelers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:74|evidence/phase-0/pmus-nfl-events.json#/events/1/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Pittsburgh Steelers",
+            "native_id": "74"
+          },
+          "extraction": "events[id=74903].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74902",
+      "native_title": "Baltimore vs. Indianapolis",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Baltimore Ravens",
+          "native_id": "50",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BAL",
+            "canonical_name": "Baltimore Ravens",
+            "candidates": [
+              "NFL:BAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Baltimore Ravens|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:50|evidence/phase-0/pmus-nfl-events.json#/events/2/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Baltimore Ravens",
+            "native_id": "50"
+          },
+          "extraction": "events[id=74902].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Indianapolis Colts",
+          "native_id": "61",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:IND",
+            "canonical_name": "Indianapolis Colts",
+            "candidates": [
+              "NFL:IND"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Indianapolis Colts|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:61|evidence/phase-0/pmus-nfl-events.json#/events/2/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Indianapolis Colts",
+            "native_id": "61"
+          },
+          "extraction": "events[id=74902].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74901",
+      "native_title": "Chicago vs. Carolina",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Chicago Bears",
+          "native_id": "53",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CHI",
+            "canonical_name": "Chicago Bears",
+            "candidates": [
+              "NFL:CHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Chicago Bears|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:53|evidence/phase-0/pmus-nfl-events.json#/events/3/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Chicago Bears",
+            "native_id": "53"
+          },
+          "extraction": "events[id=74901].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Carolina Panthers",
+          "native_id": "52",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CAR",
+            "canonical_name": "Carolina Panthers",
+            "candidates": [
+              "NFL:CAR"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Carolina Panthers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:52|evidence/phase-0/pmus-nfl-events.json#/events/3/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Carolina Panthers",
+            "native_id": "52"
+          },
+          "extraction": "events[id=74901].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74906",
+      "native_title": "New York J vs. Tennessee",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "New York Jets",
+          "native_id": "72",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NYJ",
+            "canonical_name": "New York Jets",
+            "candidates": [
+              "NFL:NYJ"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New York Jets|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:72|evidence/phase-0/pmus-nfl-events.json#/events/4/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New York Jets",
+            "native_id": "72"
+          },
+          "extraction": "events[id=74906].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Tennessee Titans",
+          "native_id": "78",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TEN",
+            "canonical_name": "Tennessee Titans",
+            "candidates": [
+              "NFL:TEN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tennessee Titans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:78|evidence/phase-0/pmus-nfl-events.json#/events/4/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tennessee Titans",
+            "native_id": "78"
+          },
+          "extraction": "events[id=74906].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74907",
+      "native_title": "New Orleans vs. Detroit",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "New Orleans Saints",
+          "native_id": "70",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NO",
+            "canonical_name": "New Orleans Saints",
+            "candidates": [
+              "NFL:NO"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New Orleans Saints|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:70|evidence/phase-0/pmus-nfl-events.json#/events/5/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New Orleans Saints",
+            "native_id": "70"
+          },
+          "extraction": "events[id=74907].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Detroit Lions",
+          "native_id": "58",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DET",
+            "canonical_name": "Detroit Lions",
+            "candidates": [
+              "NFL:DET"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Detroit Lions|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:58|evidence/phase-0/pmus-nfl-events.json#/events/5/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Detroit Lions",
+            "native_id": "58"
+          },
+          "extraction": "events[id=74907].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74908",
+      "native_title": "Buffalo vs. Houston",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Buffalo Bills",
+          "native_id": "51",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo Bills|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:51|evidence/phase-0/pmus-nfl-events.json#/events/6/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo Bills",
+            "native_id": "51"
+          },
+          "extraction": "events[id=74908].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Houston Texans",
+          "native_id": "60",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:HOU",
+            "canonical_name": "Houston Texans",
+            "candidates": [
+              "NFL:HOU"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Houston Texans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:60|evidence/phase-0/pmus-nfl-events.json#/events/6/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Houston Texans",
+            "native_id": "60"
+          },
+          "extraction": "events[id=74908].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74904",
+      "native_title": "Cleveland vs. Jacksonville",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Cleveland Browns",
+          "native_id": "55",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CLE",
+            "canonical_name": "Cleveland Browns",
+            "candidates": [
+              "NFL:CLE"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cleveland Browns|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:55|evidence/phase-0/pmus-nfl-events.json#/events/7/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cleveland Browns",
+            "native_id": "55"
+          },
+          "extraction": "events[id=74904].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Jacksonville Jaguars",
+          "native_id": "62",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:JAX",
+            "canonical_name": "Jacksonville Jaguars",
+            "candidates": [
+              "NFL:JAX"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Jacksonville Jaguars|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:62|evidence/phase-0/pmus-nfl-events.json#/events/7/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Jacksonville Jaguars",
+            "native_id": "62"
+          },
+          "extraction": "events[id=74904].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74910",
+      "native_title": "Green Bay vs. Minnesota",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Green Bay Packers",
+          "native_id": "59",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:GB",
+            "canonical_name": "Green Bay Packers",
+            "candidates": [
+              "NFL:GB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Green Bay Packers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:59|evidence/phase-0/pmus-nfl-events.json#/events/8/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Green Bay Packers",
+            "native_id": "59"
+          },
+          "extraction": "events[id=74910].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Minnesota Vikings",
+          "native_id": "68",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:MIN",
+            "canonical_name": "Minnesota Vikings",
+            "candidates": [
+              "NFL:MIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Minnesota Vikings|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:68|evidence/phase-0/pmus-nfl-events.json#/events/8/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Minnesota Vikings",
+            "native_id": "68"
+          },
+          "extraction": "events[id=74910].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/phase-0/pmus-nfl-events.json",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "native_event_id": "74909",
+      "native_title": "Arizona vs. Los Angeles C",
+      "native_league": "nfl",
+      "source": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+      "received_at": "2026-09-11T21:53:06.513501+00:00",
+      "raw_sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:polymarket_us:production:None:1|evidence/phase-0/pmus-nfl-events.json#/league"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "1"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Arizona Cardinals",
+          "native_id": "48",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ARI",
+            "canonical_name": "Arizona Cardinals",
+            "candidates": [
+              "NFL:ARI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Arizona Cardinals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:48|evidence/phase-0/pmus-nfl-events.json#/events/9/teams/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Arizona Cardinals",
+            "native_id": "48"
+          },
+          "extraction": "events[id=74909].teams[0]"
+        },
+        {
+          "position": 1,
+          "name": "Los Angeles Chargers",
+          "native_id": "65",
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:LAC",
+            "canonical_name": "Los Angeles Chargers",
+            "candidates": [
+              "NFL:LAC"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Los Angeles Chargers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:polymarket_us:production:NFL:65|evidence/phase-0/pmus-nfl-events.json#/events/9/teams/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Los Angeles Chargers",
+            "native_id": "65"
+          },
+          "extraction": "events[id=74909].teams[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "pmus-event-teams:v1; array order; no home/away inference"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19458",
+      "native_title": "Chicago Bears at Carolina Panthers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Carolina Panthers",
+          "native_id": "5",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CAR",
+            "canonical_name": "Carolina Panthers",
+            "candidates": [
+              "NFL:CAR"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Carolina Panthers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:5|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Carolina Panthers",
+            "native_id": "5"
+          },
+          "extraction": "data.sport_events[event_id=19458].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Chicago Bears",
+          "native_id": "6",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CHI",
+            "canonical_name": "Chicago Bears",
+            "candidates": [
+              "NFL:CHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Chicago Bears|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:6|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Chicago Bears",
+            "native_id": "6"
+          },
+          "extraction": "data.sport_events[event_id=19458].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19459",
+      "native_title": "Tampa Bay Buccaneers at Cincinnati Bengals",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Cincinnati Bengals",
+          "native_id": "7",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CIN",
+            "canonical_name": "Cincinnati Bengals",
+            "candidates": [
+              "NFL:CIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cincinnati Bengals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:7|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/1/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cincinnati Bengals",
+            "native_id": "7"
+          },
+          "extraction": "data.sport_events[event_id=19459].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Tampa Bay Buccaneers",
+          "native_id": "33",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TB",
+            "canonical_name": "Tampa Bay Buccaneers",
+            "candidates": [
+              "NFL:TB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tampa Bay Buccaneers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:33|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/1/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tampa Bay Buccaneers",
+            "native_id": "33"
+          },
+          "extraction": "data.sport_events[event_id=19459].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008881",
+      "native_title": "Atlanta Falcons at Pittsburgh Steelers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Pittsburgh Steelers",
+          "native_id": "1700005098",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PIT",
+            "canonical_name": "Pittsburgh Steelers",
+            "candidates": [
+              "NFL:PIT"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Pittsburgh Steelers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005098|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/2/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Pittsburgh Steelers",
+            "native_id": "1700005098"
+          },
+          "extraction": "data.sport_events[event_id=1700008881].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Atlanta Falcons",
+          "native_id": "1700005093",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ATL",
+            "canonical_name": "Atlanta Falcons",
+            "candidates": [
+              "NFL:ATL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Atlanta Falcons|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005093|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/2/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Atlanta Falcons",
+            "native_id": "1700005093"
+          },
+          "extraction": "data.sport_events[event_id=1700008881].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19461",
+      "native_title": "Buffalo Bills at Houston Texans",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Houston Texans",
+          "native_id": "13",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:HOU",
+            "canonical_name": "Houston Texans",
+            "candidates": [
+              "NFL:HOU"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Houston Texans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:13|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/3/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Houston Texans",
+            "native_id": "13"
+          },
+          "extraction": "data.sport_events[event_id=19461].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Buffalo Bills",
+          "native_id": "4",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo Bills|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:4|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/3/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo Bills",
+            "native_id": "4"
+          },
+          "extraction": "data.sport_events[event_id=19461].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19463",
+      "native_title": "Cleveland Browns at Jacksonville Jaguars",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Jacksonville Jaguars",
+          "native_id": "15",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:JAX",
+            "canonical_name": "Jacksonville Jaguars",
+            "candidates": [
+              "NFL:JAX"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Jacksonville Jaguars|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:15|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/4/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Jacksonville Jaguars",
+            "native_id": "15"
+          },
+          "extraction": "data.sport_events[event_id=19463].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Cleveland Browns",
+          "native_id": "8",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CLE",
+            "canonical_name": "Cleveland Browns",
+            "candidates": [
+              "NFL:CLE"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cleveland Browns|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:8|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/4/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cleveland Browns",
+            "native_id": "8"
+          },
+          "extraction": "data.sport_events[event_id=19463].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008897",
+      "native_title": "Tampa Bay Buccaneers at Cincinnati Bengals",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Cincinnati Bengals",
+          "native_id": "1700005082",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CIN",
+            "canonical_name": "Cincinnati Bengals",
+            "candidates": [
+              "NFL:CIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cincinnati Bengals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005082|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/5/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cincinnati Bengals",
+            "native_id": "1700005082"
+          },
+          "extraction": "data.sport_events[event_id=1700008897].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Tampa Bay Buccaneers",
+          "native_id": "1700005092",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TB",
+            "canonical_name": "Tampa Bay Buccaneers",
+            "candidates": [
+              "NFL:TB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tampa Bay Buccaneers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005092|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/5/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tampa Bay Buccaneers",
+            "native_id": "1700005092"
+          },
+          "extraction": "data.sport_events[event_id=1700008897].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19464",
+      "native_title": "Atlanta Falcons at Pittsburgh Steelers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Pittsburgh Steelers",
+          "native_id": "28",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PIT",
+            "canonical_name": "Pittsburgh Steelers",
+            "candidates": [
+              "NFL:PIT"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Pittsburgh Steelers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:28|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/6/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Pittsburgh Steelers",
+            "native_id": "28"
+          },
+          "extraction": "data.sport_events[event_id=19464].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Atlanta Falcons",
+          "native_id": "2",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ATL",
+            "canonical_name": "Atlanta Falcons",
+            "candidates": [
+              "NFL:ATL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Atlanta Falcons|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:2|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/6/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Atlanta Falcons",
+            "native_id": "2"
+          },
+          "extraction": "data.sport_events[event_id=19464].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19462",
+      "native_title": "Baltimore Ravens at Indianapolis Colts",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Indianapolis Colts",
+          "native_id": "14",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:IND",
+            "canonical_name": "Indianapolis Colts",
+            "candidates": [
+              "NFL:IND"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Indianapolis Colts|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:14|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Indianapolis Colts",
+            "native_id": "14"
+          },
+          "extraction": "data.sport_events[event_id=19462].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Baltimore Ravens",
+          "native_id": "3",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BAL",
+            "canonical_name": "Baltimore Ravens",
+            "candidates": [
+              "NFL:BAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Baltimore Ravens|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:3|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Baltimore Ravens",
+            "native_id": "3"
+          },
+          "extraction": "data.sport_events[event_id=19462].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008869",
+      "native_title": "Buffalo Bills at Houston Texans",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Houston Texans",
+          "native_id": "1700005104",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:HOU",
+            "canonical_name": "Houston Texans",
+            "candidates": [
+              "NFL:HOU"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Houston Texans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005104|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/8/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Houston Texans",
+            "native_id": "1700005104"
+          },
+          "extraction": "data.sport_events[event_id=1700008869].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Buffalo Bills",
+          "native_id": "1700005089",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo Bills|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005089|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/8/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo Bills",
+            "native_id": "1700005089"
+          },
+          "extraction": "data.sport_events[event_id=1700008869].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008874",
+      "native_title": "New York Jets at Tennessee Titans",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Tennessee Titans",
+          "native_id": "1700005078",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TEN",
+            "canonical_name": "Tennessee Titans",
+            "candidates": [
+              "NFL:TEN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tennessee Titans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005078|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/9/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tennessee Titans",
+            "native_id": "1700005078"
+          },
+          "extraction": "data.sport_events[event_id=1700008874].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "New York Jets",
+          "native_id": "1700005081",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NYJ",
+            "canonical_name": "New York Jets",
+            "candidates": [
+              "NFL:NYJ"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New York Jets|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005081|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/9/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New York Jets",
+            "native_id": "1700005081"
+          },
+          "extraction": "data.sport_events[event_id=1700008874].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008886",
+      "native_title": "Cleveland Browns at Jacksonville Jaguars",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Jacksonville Jaguars",
+          "native_id": "1700005097",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:JAX",
+            "canonical_name": "Jacksonville Jaguars",
+            "candidates": [
+              "NFL:JAX"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Jacksonville Jaguars|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005097|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/10/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Jacksonville Jaguars",
+            "native_id": "1700005097"
+          },
+          "extraction": "data.sport_events[event_id=1700008886].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Cleveland Browns",
+          "native_id": "1700005095",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CLE",
+            "canonical_name": "Cleveland Browns",
+            "candidates": [
+              "NFL:CLE"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cleveland Browns|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005095|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/10/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cleveland Browns",
+            "native_id": "1700005095"
+          },
+          "extraction": "data.sport_events[event_id=1700008886].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008879",
+      "native_title": "Chicago Bears at Carolina Panthers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Carolina Panthers",
+          "native_id": "1700005094",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CAR",
+            "canonical_name": "Carolina Panthers",
+            "candidates": [
+              "NFL:CAR"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Carolina Panthers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005094|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/11/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Carolina Panthers",
+            "native_id": "1700005094"
+          },
+          "extraction": "data.sport_events[event_id=1700008879].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Chicago Bears",
+          "native_id": "1700005086",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CHI",
+            "canonical_name": "Chicago Bears",
+            "candidates": [
+              "NFL:CHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Chicago Bears|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005086|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/11/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Chicago Bears",
+            "native_id": "1700005086"
+          },
+          "extraction": "data.sport_events[event_id=1700008879].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19465",
+      "native_title": "New York Jets at Tennessee Titans",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Tennessee Titans",
+          "native_id": "34",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:TEN",
+            "canonical_name": "Tennessee Titans",
+            "candidates": [
+              "NFL:TEN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Tennessee Titans|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:34|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/12/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Tennessee Titans",
+            "native_id": "34"
+          },
+          "extraction": "data.sport_events[event_id=19465].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "New York Jets",
+          "native_id": "24",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NYJ",
+            "canonical_name": "New York Jets",
+            "candidates": [
+              "NFL:NYJ"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New York Jets|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:24|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/12/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New York Jets",
+            "native_id": "24"
+          },
+          "extraction": "data.sport_events[event_id=19465].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008972",
+      "native_title": "Baltimore Ravens at Indianapolis Colts",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Indianapolis Colts",
+          "native_id": "1700005096",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:IND",
+            "canonical_name": "Indianapolis Colts",
+            "candidates": [
+              "NFL:IND"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Indianapolis Colts|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005096|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/13/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Indianapolis Colts",
+            "native_id": "1700005096"
+          },
+          "extraction": "data.sport_events[event_id=1700008972].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Baltimore Ravens",
+          "native_id": "1700005079",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BAL",
+            "canonical_name": "Baltimore Ravens",
+            "candidates": [
+              "NFL:BAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Baltimore Ravens|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005079|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/13/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Baltimore Ravens",
+            "native_id": "1700005079"
+          },
+          "extraction": "data.sport_events[event_id=1700008972].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008898",
+      "native_title": "New Orleans Saints at Detroit Lions",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Detroit Lions",
+          "native_id": "1700005100",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DET",
+            "canonical_name": "Detroit Lions",
+            "candidates": [
+              "NFL:DET"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Detroit Lions|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005100|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/14/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Detroit Lions",
+            "native_id": "1700005100"
+          },
+          "extraction": "data.sport_events[event_id=1700008898].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "New Orleans Saints",
+          "native_id": "1700005103",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NO",
+            "canonical_name": "New Orleans Saints",
+            "candidates": [
+              "NFL:NO"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New Orleans Saints|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005103|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/14/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New Orleans Saints",
+            "native_id": "1700005103"
+          },
+          "extraction": "data.sport_events[event_id=1700008898].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19467",
+      "native_title": "Miami Dolphins at Las Vegas Raiders",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Las Vegas Raiders",
+          "native_id": "25",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:LV",
+            "canonical_name": "Las Vegas Raiders",
+            "candidates": [
+              "NFL:LV"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Las Vegas Raiders|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:25|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/15/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Las Vegas Raiders",
+            "native_id": "25"
+          },
+          "extraction": "data.sport_events[event_id=19467].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Miami Dolphins",
+          "native_id": "19",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:MIA",
+            "canonical_name": "Miami Dolphins",
+            "candidates": [
+              "NFL:MIA"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Miami Dolphins|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:19|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/15/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Miami Dolphins",
+            "native_id": "19"
+          },
+          "extraction": "data.sport_events[event_id=19467].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008873",
+      "native_title": "Washington Commanders at Philadelphia Eagles",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Philadelphia Eagles",
+          "native_id": "1700005077",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PHI",
+            "canonical_name": "Philadelphia Eagles",
+            "candidates": [
+              "NFL:PHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Philadelphia Eagles|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005077|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/16/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Philadelphia Eagles",
+            "native_id": "1700005077"
+          },
+          "extraction": "data.sport_events[event_id=1700008873].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Washington Commanders",
+          "native_id": "1700005106",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:WAS",
+            "canonical_name": "Washington Commanders",
+            "candidates": [
+              "NFL:WAS"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Washington Commanders|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005106|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/16/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Washington Commanders",
+            "native_id": "1700005106"
+          },
+          "extraction": "data.sport_events[event_id=1700008873].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19466",
+      "native_title": "Arizona Cardinals at Los Angeles Chargers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Los Angeles Chargers",
+          "native_id": "29",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:LAC",
+            "canonical_name": "Los Angeles Chargers",
+            "candidates": [
+              "NFL:LAC"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Los Angeles Chargers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:29|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/17/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Los Angeles Chargers",
+            "native_id": "29"
+          },
+          "extraction": "data.sport_events[event_id=19466].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Arizona Cardinals",
+          "native_id": "1",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ARI",
+            "canonical_name": "Arizona Cardinals",
+            "candidates": [
+              "NFL:ARI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Arizona Cardinals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/17/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Arizona Cardinals",
+            "native_id": "1"
+          },
+          "extraction": "data.sport_events[event_id=19466].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008871",
+      "native_title": "Miami Dolphins at Las Vegas Raiders",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Las Vegas Raiders",
+          "native_id": "1700005076",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:LV",
+            "canonical_name": "Las Vegas Raiders",
+            "candidates": [
+              "NFL:LV"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Las Vegas Raiders|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005076|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/18/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Las Vegas Raiders",
+            "native_id": "1700005076"
+          },
+          "extraction": "data.sport_events[event_id=1700008871].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Miami Dolphins",
+          "native_id": "1700005101",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:MIA",
+            "canonical_name": "Miami Dolphins",
+            "candidates": [
+              "NFL:MIA"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Miami Dolphins|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005101|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/18/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Miami Dolphins",
+            "native_id": "1700005101"
+          },
+          "extraction": "data.sport_events[event_id=1700008871].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008882",
+      "native_title": "Arizona Cardinals at Los Angeles Chargers",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Los Angeles Chargers",
+          "native_id": "1700005080",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:LAC",
+            "canonical_name": "Los Angeles Chargers",
+            "candidates": [
+              "NFL:LAC"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Los Angeles Chargers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005080|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/19/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Los Angeles Chargers",
+            "native_id": "1700005080"
+          },
+          "extraction": "data.sport_events[event_id=1700008882].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Arizona Cardinals",
+          "native_id": "1700005088",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ARI",
+            "canonical_name": "Arizona Cardinals",
+            "candidates": [
+              "NFL:ARI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Arizona Cardinals|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005088|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/19/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Arizona Cardinals",
+            "native_id": "1700005088"
+          },
+          "extraction": "data.sport_events[event_id=1700008882].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19469",
+      "native_title": "Washington Commanders at Philadelphia Eagles",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Philadelphia Eagles",
+          "native_id": "26",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PHI",
+            "canonical_name": "Philadelphia Eagles",
+            "candidates": [
+              "NFL:PHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Philadelphia Eagles|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:26|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Philadelphia Eagles",
+            "native_id": "26"
+          },
+          "extraction": "data.sport_events[event_id=19469].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Washington Commanders",
+          "native_id": "35",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:WAS",
+            "canonical_name": "Washington Commanders",
+            "candidates": [
+              "NFL:WAS"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Washington Commanders|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:35|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Washington Commanders",
+            "native_id": "35"
+          },
+          "extraction": "data.sport_events[event_id=19469].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008876",
+      "native_title": "Green Bay Packers at Minnesota Vikings",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Minnesota Vikings",
+          "native_id": "1700005102",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:MIN",
+            "canonical_name": "Minnesota Vikings",
+            "candidates": [
+              "NFL:MIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Minnesota Vikings|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005102|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/21/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Minnesota Vikings",
+            "native_id": "1700005102"
+          },
+          "extraction": "data.sport_events[event_id=1700008876].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Green Bay Packers",
+          "native_id": "1700005084",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:GB",
+            "canonical_name": "Green Bay Packers",
+            "candidates": [
+              "NFL:GB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Green Bay Packers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005084|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/21/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Green Bay Packers",
+            "native_id": "1700005084"
+          },
+          "extraction": "data.sport_events[event_id=1700008876].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19468",
+      "native_title": "Green Bay Packers at Minnesota Vikings",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-13T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Minnesota Vikings",
+          "native_id": "20",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:MIN",
+            "canonical_name": "Minnesota Vikings",
+            "candidates": [
+              "NFL:MIN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Minnesota Vikings|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:20|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/22/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Minnesota Vikings",
+            "native_id": "20"
+          },
+          "extraction": "data.sport_events[event_id=19468].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Green Bay Packers",
+          "native_id": "12",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:GB",
+            "canonical_name": "Green Bay Packers",
+            "candidates": [
+              "NFL:GB"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Green Bay Packers|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:12|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/22/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Green Bay Packers",
+            "native_id": "12"
+          },
+          "extraction": "data.sport_events[event_id=19468].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700009229",
+      "native_title": "Dallas Cowboys at New York Giants",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-14T00:20:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "New York Giants",
+          "native_id": "1700005091",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NYG",
+            "canonical_name": "New York Giants",
+            "candidates": [
+              "NFL:NYG"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New York Giants|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005091|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/23/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New York Giants",
+            "native_id": "1700005091"
+          },
+          "extraction": "data.sport_events[event_id=1700009229].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Dallas Cowboys",
+          "native_id": "1700005083",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DAL",
+            "canonical_name": "Dallas Cowboys",
+            "candidates": [
+              "NFL:DAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Dallas Cowboys|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005083|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/23/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Dallas Cowboys",
+            "native_id": "1700005083"
+          },
+          "extraction": "data.sport_events[event_id=1700009229].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19455",
+      "native_title": "Dallas Cowboys at New York Giants",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-14T00:20:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "New York Giants",
+          "native_id": "23",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:NYG",
+            "canonical_name": "New York Giants",
+            "candidates": [
+              "NFL:NYG"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:New York Giants|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:23|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/24/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "New York Giants",
+            "native_id": "23"
+          },
+          "extraction": "data.sport_events[event_id=19455].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Dallas Cowboys",
+          "native_id": "9",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DAL",
+            "canonical_name": "Dallas Cowboys",
+            "candidates": [
+              "NFL:DAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Dallas Cowboys|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:9|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/24/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Dallas Cowboys",
+            "native_id": "9"
+          },
+          "extraction": "data.sport_events[event_id=19455].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19456",
+      "native_title": "Denver Broncos at Kansas City Chiefs",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-15T00:15:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Kansas City Chiefs",
+          "native_id": "16",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:KC",
+            "canonical_name": "Kansas City Chiefs",
+            "candidates": [
+              "NFL:KC"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Kansas City Chiefs|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:16|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/25/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Kansas City Chiefs",
+            "native_id": "16"
+          },
+          "extraction": "data.sport_events[event_id=19456].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Denver Broncos",
+          "native_id": "10",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DEN",
+            "canonical_name": "Denver Broncos",
+            "candidates": [
+              "NFL:DEN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Denver Broncos|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:10|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/25/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Denver Broncos",
+            "native_id": "10"
+          },
+          "extraction": "data.sport_events[event_id=19456].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700009202",
+      "native_title": "Denver Broncos at Kansas City Chiefs",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-15T00:15:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Kansas City Chiefs",
+          "native_id": "1700005090",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:KC",
+            "canonical_name": "Kansas City Chiefs",
+            "candidates": [
+              "NFL:KC"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Kansas City Chiefs|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005090|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/26/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Kansas City Chiefs",
+            "native_id": "1700005090"
+          },
+          "extraction": "data.sport_events[event_id=1700009202].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Denver Broncos",
+          "native_id": "1700005075",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DEN",
+            "canonical_name": "Denver Broncos",
+            "candidates": [
+              "NFL:DEN"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Denver Broncos|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005075|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/26/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Denver Broncos",
+            "native_id": "1700005075"
+          },
+          "extraction": "data.sport_events[event_id=1700009202].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "1700008973",
+      "native_title": "Detroit Lions at Buffalo Bills",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Buffalo Bills",
+          "native_id": "1700005089",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo Bills|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005089|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/8/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo Bills",
+            "native_id": "1700005089"
+          },
+          "extraction": "data.sport_events[event_id=1700008973].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Detroit Lions",
+          "native_id": "1700005100",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DET",
+            "canonical_name": "Detroit Lions",
+            "candidates": [
+              "NFL:DET"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Detroit Lions|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:1700005100|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/14/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Detroit Lions",
+            "native_id": "1700005100"
+          },
+          "extraction": "data.sport_events[event_id=1700008973].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19470",
+      "native_title": "Detroit Lions at Buffalo Bills",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Buffalo Bills",
+          "native_id": "4",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo Bills|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:4|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/3/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo Bills",
+            "native_id": "4"
+          },
+          "extraction": "data.sport_events[event_id=19470].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Detroit Lions",
+          "native_id": "11",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DET",
+            "canonical_name": "Detroit Lions",
+            "candidates": [
+              "NFL:DET"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Detroit Lions|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:11|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/28/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Detroit Lions",
+            "native_id": "11"
+          },
+          "extraction": "data.sport_events[event_id=19470].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19486",
+      "native_title": "Baltimore Ravens at Dallas Cowboys",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-09-27T20:25:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Dallas Cowboys",
+          "native_id": "9",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DAL",
+            "canonical_name": "Dallas Cowboys",
+            "candidates": [
+              "NFL:DAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Dallas Cowboys|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:9|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/24/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Dallas Cowboys",
+            "native_id": "9"
+          },
+          "extraction": "data.sport_events[event_id=19486].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Baltimore Ravens",
+          "native_id": "3",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BAL",
+            "canonical_name": "Baltimore Ravens",
+            "candidates": [
+              "NFL:BAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Baltimore Ravens|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:3|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Baltimore Ravens",
+            "native_id": "3"
+          },
+          "extraction": "data.sport_events[event_id=19486].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19502",
+      "native_title": "Indianapolis Colts at Washington Commanders",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-10-04T13:30:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Washington Commanders",
+          "native_id": "35",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:WAS",
+            "canonical_name": "Washington Commanders",
+            "candidates": [
+              "NFL:WAS"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Washington Commanders|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:35|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Washington Commanders",
+            "native_id": "35"
+          },
+          "extraction": "data.sport_events[event_id=19502].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Indianapolis Colts",
+          "native_id": "14",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:IND",
+            "canonical_name": "Indianapolis Colts",
+            "candidates": [
+              "NFL:IND"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Indianapolis Colts|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:14|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Indianapolis Colts",
+            "native_id": "14"
+          },
+          "extraction": "data.sport_events[event_id=19502].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json",
+      "venue": "prophetx",
+      "environment": "sandbox",
+      "native_event_id": "19518",
+      "native_title": "Philadelphia Eagles at Jacksonville Jaguars",
+      "native_league": "NFL",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T00:57:21.221431+00:00",
+      "raw_sha256": "4eed37a3ce27b5a36311cc72e5837e3231d9da51713e78570db5f0bc224c61c3",
+      "scheduled_start": "2026-10-11T13:30:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/",
+          "native:prophetx:sandbox:None:31|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": "31"
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Jacksonville Jaguars",
+          "native_id": "15",
+          "role": "home",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:JAX",
+            "canonical_name": "Jacksonville Jaguars",
+            "candidates": [
+              "NFL:JAX"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Jacksonville Jaguars|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:15|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/4/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Jacksonville Jaguars",
+            "native_id": "15"
+          },
+          "extraction": "data.sport_events[event_id=19518].competitors[0]"
+        },
+        {
+          "position": 1,
+          "name": "Philadelphia Eagles",
+          "native_id": "26",
+          "role": "away",
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PHI",
+            "canonical_name": "Philadelphia Eagles",
+            "candidates": [
+              "NFL:PHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Philadelphia Eagles|https://www.nfl.com/teams/; curated explicit shorthand v1",
+              "native:prophetx:sandbox:NFL:26|evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/0"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Philadelphia Eagles",
+            "native_id": "26"
+          },
+          "extraction": "data.sport_events[event_id=19518].competitors[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "prophetx-competitors:v1; array order and explicit side"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-4/public-20260912/rest-01.json",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_event_id": "KXNFLGAME-26SEP13ATLPIT",
+      "native_title": "Atlanta vs Pittsburgh",
+      "native_league": "NFL",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:29:23.023624+00:00",
+      "raw_sha256": "44be2d9d25c28a0cabf5531b95da2cfde95f421c7e1462bf2c43ef48e48023c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Atlanta",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:ATL",
+            "canonical_name": "Atlanta Falcons",
+            "candidates": [
+              "NFL:ATL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Atlanta|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Atlanta",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        },
+        {
+          "position": 1,
+          "name": "Pittsburgh",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:PIT",
+            "canonical_name": "Pittsburgh Steelers",
+            "candidates": [
+              "NFL:PIT"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Pittsburgh|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Pittsburgh",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "kalshi-game-vs:v1; series gated; title order; roles unknown",
+        "milestone.details native role IDs retained; identity relationship unestablished"
+      ],
+      "native_roles": [
+        [
+          "home",
+          "6aa76797-7833-45e1-85e3-96e0122801e1"
+        ],
+        [
+          "away",
+          "75685be6-4388-4bba-8bcb-d0b0c24feb50"
+        ]
+      ]
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-4/public-20260912/rest-01.json",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_event_id": "KXNFLGAME-26SEP13BALIND",
+      "native_title": "Baltimore vs Indianapolis",
+      "native_league": "NFL",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:29:23.023624+00:00",
+      "raw_sha256": "44be2d9d25c28a0cabf5531b95da2cfde95f421c7e1462bf2c43ef48e48023c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Baltimore",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BAL",
+            "canonical_name": "Baltimore Ravens",
+            "candidates": [
+              "NFL:BAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Baltimore|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Baltimore",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        },
+        {
+          "position": 1,
+          "name": "Indianapolis",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:IND",
+            "canonical_name": "Indianapolis Colts",
+            "candidates": [
+              "NFL:IND"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Indianapolis|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Indianapolis",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "kalshi-game-vs:v1; series gated; title order; roles unknown",
+        "milestone.details native role IDs retained; identity relationship unestablished"
+      ],
+      "native_roles": [
+        [
+          "home",
+          "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf"
+        ],
+        [
+          "away",
+          "a69a57af-f1a1-4d44-ab62-e220ebaa2a5c"
+        ]
+      ]
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-4/public-20260912/rest-01.json",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_event_id": "KXNFLGAME-26SEP13BUFHOU",
+      "native_title": "Buffalo vs Houston",
+      "native_league": "NFL",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:29:23.023624+00:00",
+      "raw_sha256": "44be2d9d25c28a0cabf5531b95da2cfde95f421c7e1462bf2c43ef48e48023c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Buffalo",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:BUF",
+            "canonical_name": "Buffalo Bills",
+            "candidates": [
+              "NFL:BUF"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Buffalo|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Buffalo",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        },
+        {
+          "position": 1,
+          "name": "Houston",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:HOU",
+            "canonical_name": "Houston Texans",
+            "candidates": [
+              "NFL:HOU"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Houston|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Houston",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "kalshi-game-vs:v1; series gated; title order; roles unknown",
+        "milestone.details native role IDs retained; identity relationship unestablished"
+      ],
+      "native_roles": [
+        [
+          "home",
+          "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0"
+        ],
+        [
+          "away",
+          "f9acd396-ba35-4cae-a431-a44b2af707b0"
+        ]
+      ]
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-4/public-20260912/rest-01.json",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_event_id": "KXNFLGAME-26SEP13CHICAR",
+      "native_title": "Chicago vs Carolina",
+      "native_league": "NFL",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:29:23.023624+00:00",
+      "raw_sha256": "44be2d9d25c28a0cabf5531b95da2cfde95f421c7e1462bf2c43ef48e48023c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Chicago",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CHI",
+            "canonical_name": "Chicago Bears",
+            "candidates": [
+              "NFL:CHI"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Chicago|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Chicago",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        },
+        {
+          "position": 1,
+          "name": "Carolina",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CAR",
+            "canonical_name": "Carolina Panthers",
+            "candidates": [
+              "NFL:CAR"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Carolina|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Carolina",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "kalshi-game-vs:v1; series gated; title order; roles unknown",
+        "milestone.details native role IDs retained; identity relationship unestablished"
+      ],
+      "native_roles": [
+        [
+          "home",
+          "e37050ce-354f-4dd0-b2d8-0bd1e9650eb7"
+        ],
+        [
+          "away",
+          "9a77500a-1945-495e-b6f5-5c35bedaa8b9"
+        ]
+      ]
+    },
+    {
+      "evidence_class": "actual_capture",
+      "artifact": "evidence/slice-4/public-20260912/rest-01.json",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_event_id": "KXNFLGAME-26SEP13CLEJAC",
+      "native_title": "Cleveland vs Jacksonville",
+      "native_league": "NFL",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:29:23.023624+00:00",
+      "raw_sha256": "44be2d9d25c28a0cabf5531b95da2cfde95f421c7e1462bf2c43ef48e48023c3",
+      "scheduled_start": "2026-09-13T17:00:00+00:00",
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Cleveland",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:CLE",
+            "canonical_name": "Cleveland Browns",
+            "candidates": [
+              "NFL:CLE"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Cleveland|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Cleveland",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        },
+        {
+          "position": 1,
+          "name": "Jacksonville",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:JAX",
+            "canonical_name": "Jacksonville Jaguars",
+            "candidates": [
+              "NFL:JAX"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Jacksonville|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Jacksonville",
+            "native_id": null
+          },
+          "extraction": "event.title:kalshi-game-vs:v1"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "kalshi-game-vs:v1; series gated; title order; roles unknown",
+        "milestone.details native role IDs retained; identity relationship unestablished"
+      ],
+      "native_roles": [
+        [
+          "home",
+          "61a75ab7-eaf0-4601-b920-86b1e165007d"
+        ],
+        [
+          "away",
+          "05cc62a4-bd74-4b2c-ab7b-1b177b9f6790"
+        ]
+      ]
+    },
+    {
+      "evidence_class": "synthetic",
+      "artifact": null,
+      "venue": "novig",
+      "environment": "qa",
+      "native_event_id": "synthetic-event",
+      "native_title": "Synthetic away at home",
+      "native_league": "NFL",
+      "source": "synthetic:normalization-edge",
+      "received_at": "2026-09-12T00:00:00+00:00",
+      "raw_sha256": "11e455f14a21d9ea54f49647ed05b1e4cff9b29b9370e056600305f56e2adea2",
+      "scheduled_start": null,
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [],
+      "extraction_status": "unknown",
+      "extraction_provenance": [
+        "unsupported-native-format:v1"
+      ],
+      "native_roles": []
+    },
+    {
+      "evidence_class": "synthetic",
+      "artifact": null,
+      "venue": "novig",
+      "environment": "qa",
+      "native_event_id": "synthetic-event",
+      "native_title": "Synthetic named participants",
+      "native_league": "NFL",
+      "source": "synthetic:normalization-edge",
+      "received_at": "2026-09-12T00:00:00+00:00",
+      "raw_sha256": "11e455f14a21d9ea54f49647ed05b1e4cff9b29b9370e056600305f56e2adea2",
+      "scheduled_start": null,
+      "league": {
+        "status": "resolved",
+        "canonical_id": "NFL",
+        "canonical_name": "National Football League",
+        "candidates": [
+          "NFL"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:league:None:None:NFL|https://www.nfl.com/teams/"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NFL",
+        "native_id": null
+      },
+      "participants": [
+        {
+          "position": 0,
+          "name": "Dallas Cowboys",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "resolved",
+            "canonical_id": "NFL:DAL",
+            "canonical_name": "Dallas Cowboys",
+            "candidates": [
+              "NFL:DAL"
+            ],
+            "provenance": [
+              "name-key:v1",
+              "alias:team:NFL:None:Dallas Cowboys|https://www.nfl.com/teams/; curated explicit shorthand v1"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Dallas Cowboys",
+            "native_id": null
+          },
+          "extraction": "Event.participants[0]"
+        },
+        {
+          "position": 1,
+          "name": "Unknown Club",
+          "native_id": null,
+          "role": null,
+          "resolution": {
+            "status": "unknown",
+            "canonical_id": null,
+            "canonical_name": null,
+            "candidates": [],
+            "provenance": [
+              "name-key:v1",
+              "no-explicit-alias"
+            ],
+            "registry_version": "2026-09-12.1",
+            "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+            "input_name": "Unknown Club",
+            "native_id": null
+          },
+          "extraction": "Event.participants[1]"
+        }
+      ],
+      "extraction_status": "extracted",
+      "extraction_provenance": [
+        "shared-participants:v1"
+      ],
+      "native_roles": []
+    }
+  ],
+  "synthetic_edges": [
+    {
+      "label": "shared city",
+      "result": {
+        "status": "ambiguous",
+        "canonical_id": null,
+        "canonical_name": null,
+        "candidates": [
+          "NFL:NYG",
+          "NFL:NYJ"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:team:NFL:None:New York|https://www.nfl.com/teams/; curated explicit shorthand v1"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "New York",
+        "native_id": null
+      }
+    },
+    {
+      "label": "cross-league abbreviation",
+      "result": {
+        "status": "ambiguous",
+        "canonical_id": null,
+        "canonical_name": null,
+        "candidates": [
+          "MLB:CIN",
+          "NFL:CIN"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:team:NFL:None:CIN|https://www.nfl.com/teams/; curated explicit shorthand v1",
+          "alias:team:MLB:None:CIN|https://www.mlb.com/team; curated explicit shorthand v1"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "CIN",
+        "native_id": null
+      }
+    },
+    {
+      "label": "unknown",
+      "result": {
+        "status": "unknown",
+        "canonical_id": null,
+        "canonical_name": null,
+        "candidates": [],
+        "provenance": [
+          "name-key:v1",
+          "no-explicit-alias"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "Unknown Club",
+        "native_id": null
+      }
+    },
+    {
+      "label": "native/name conflict",
+      "result": {
+        "status": "conflicting",
+        "canonical_id": null,
+        "canonical_name": null,
+        "candidates": [
+          "NFL:DAL",
+          "NFL:TB"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:team:NFL:None:Dallas Cowboys|https://www.nfl.com/teams/; curated explicit shorthand v1",
+          "native:polymarket_us:production:NFL:77|evidence/phase-0/pmus-nfl-events.json#/events/0/teams/0",
+          "native-name-disagreement"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "Dallas Cowboys",
+        "native_id": "77"
+      }
+    },
+    {
+      "label": "unsupported league",
+      "result": {
+        "status": "unknown",
+        "canonical_id": null,
+        "canonical_name": null,
+        "candidates": [],
+        "provenance": [
+          "name-key:v1",
+          "no-explicit-alias"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NCAAF",
+        "native_id": null
+      }
+    }
+  ],
+  "documentation_examples": [
+    {
+      "evidence_class": "documentation_example",
+      "input": "NY Yankees",
+      "result": {
+        "status": "resolved",
+        "canonical_id": "MLB:NYY",
+        "canonical_name": "New York Yankees",
+        "candidates": [
+          "MLB:NYY"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:team:MLB:None:NY Yankees|curated-explicit-shorthand:v1"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "NY Yankees",
+        "native_id": null
+      }
+    },
+    {
+      "evidence_class": "documentation_example",
+      "input": "Boston Red Sox",
+      "result": {
+        "status": "resolved",
+        "canonical_id": "MLB:BOS",
+        "canonical_name": "Boston Red Sox",
+        "candidates": [
+          "MLB:BOS"
+        ],
+        "provenance": [
+          "name-key:v1",
+          "alias:team:MLB:None:Boston Red Sox|https://www.mlb.com/team; curated explicit shorthand v1"
+        ],
+        "registry_version": "2026-09-12.1",
+        "registry_sha256": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+        "input_name": "Boston Red Sox",
+        "native_id": null
+      }
+    }
+  ],
+  "limitations": [
+    "Novig: synthetic only; no live capture or native mappings.",
+    "MLB: 30 registry teams; no MLB event capture in this replay.",
+    "NCAAF/NBA/NHL remain planned, absent from registry.",
+    "Historical names not present in these captures are not auto-merged."
+  ]
+}

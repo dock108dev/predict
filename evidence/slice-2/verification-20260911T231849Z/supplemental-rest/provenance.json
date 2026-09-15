@@ -1,0 +1,23 @@
+[
+  {
+    "file": "response-1.json",
+    "source": "https://gateway.polymarket.us/v1/markets?active=true&closed=false&slug=aec-nfl-bal-ind-2026-09-13&limit=1&offset=0",
+    "received_at": "2026-09-11T23:22:47.210142+00:00",
+    "kind": "new_public_observation",
+    "http_status": 200
+  },
+  {
+    "file": "response-2.json",
+    "source": "https://gateway.polymarket.us/v1/markets?active=true&closed=false&slug=aec-nfl-bal-ind-2026-09-13&limit=1&offset=1",
+    "received_at": "2026-09-11T23:22:47.249379+00:00",
+    "kind": "new_public_observation",
+    "http_status": 200
+  },
+  {
+    "file": "response-3.json",
+    "source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/settlement",
+    "received_at": "2026-09-11T23:22:47.275026+00:00",
+    "kind": "new_public_observation",
+    "http_status": 404
+  }
+]

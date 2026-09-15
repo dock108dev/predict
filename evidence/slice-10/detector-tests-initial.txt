@@ -1,0 +1,56 @@
+test_adapter_yes_no_direction_and_size (tests.test_arbitrage.DetectorTests.test_adapter_yes_no_direction_and_size) ... ok
+test_bids_not_acquisition_asks (tests.test_arbitrage.DetectorTests.test_bids_not_acquisition_asks) ... ok
+test_conflicting_duplicate_fails_closed (tests.test_arbitrage.DetectorTests.test_conflicting_duplicate_fails_closed) ... ok
+test_current_parent_revision_invalidates (tests.test_arbitrage.DetectorTests.test_current_parent_revision_invalidates) ... ok
+test_current_rule_revision_invalidates (tests.test_arbitrage.DetectorTests.test_current_rule_revision_invalidates) ... ERROR
+test_decimal_context_isolation (tests.test_arbitrage.DetectorTests.test_decimal_context_isolation) ... ok
+test_deduplication_and_stable_id (tests.test_arbitrage.DetectorTests.test_deduplication_and_stable_id) ... ok
+test_environment_isolation (tests.test_arbitrage.DetectorTests.test_environment_isolation) ... ok
+test_exceptional_outcomes_retained (tests.test_arbitrage.DetectorTests.test_exceptional_outcomes_retained) ... ok
+test_explicit_single_fill_grouping (tests.test_arbitrage.DetectorTests.test_explicit_single_fill_grouping) ... ok
+test_exposure_direction (tests.test_arbitrage.DetectorTests.test_exposure_direction) ... ok
+test_fee_conditions_never_bypassed (tests.test_arbitrage.DetectorTests.test_fee_conditions_never_bypassed) ... ok
+test_fee_eliminates_raw_gap (tests.test_arbitrage.DetectorTests.test_fee_eliminates_raw_gap) ... ok
+test_freshness_inclusive_boundary (tests.test_arbitrage.DetectorTests.test_freshness_inclusive_boundary) ... ok
+test_future_receipt_and_source (tests.test_arbitrage.DetectorTests.test_future_receipt_and_source) ... ok
+test_historical_production_coverage (tests.test_arbitrage.DetectorTests.test_historical_production_coverage) ... ok
+test_hypothetical_quantity_cannot_qualify_beyond_size (tests.test_arbitrage.DetectorTests.test_hypothetical_quantity_cannot_qualify_beyond_size) ... ok
+test_hypothetical_unknown_size_still_calculates (tests.test_arbitrage.DetectorTests.test_hypothetical_unknown_size_still_calculates) ... ok
+test_independent_outcome_arithmetic (tests.test_arbitrage.DetectorTests.test_independent_outcome_arithmetic) ... ok
+test_maker_deferred_not_calculated (tests.test_arbitrage.DetectorTests.test_maker_deferred_not_calculated) ... ok
+test_minimum_and_increment_validation (tests.test_arbitrage.DetectorTests.test_minimum_and_increment_validation) ... ok
+test_misscoped_fee_context (tests.test_arbitrage.DetectorTests.test_misscoped_fee_context) ... ok
+test_missing_account_context (tests.test_arbitrage.DetectorTests.test_missing_account_context) ... ok
+test_negative_case_rounding_independent (tests.test_arbitrage.DetectorTests.test_negative_case_rounding_independent) ... ok
+test_policy_validation_and_filters (tests.test_arbitrage.DetectorTests.test_policy_validation_and_filters) ... ok
+test_quiet_last_change_is_not_disconnection (tests.test_arbitrage.DetectorTests.test_quiet_last_change_is_not_disconnection) ... ok
+test_recent_receipt_cannot_clear_source_problem (tests.test_arbitrage.DetectorTests.test_recent_receipt_cannot_clear_source_problem) ... ok
+test_replay_time_is_deterministic (tests.test_arbitrage.DetectorTests.test_replay_time_is_deterministic) ... ok
+test_skew_inclusive_boundary (tests.test_arbitrage.DetectorTests.test_skew_inclusive_boundary) ... ok
+test_status_lock_and_sync (tests.test_arbitrage.DetectorTests.test_status_lock_and_sync) ... ok
+test_synthetic_is_never_current (tests.test_arbitrage.DetectorTests.test_synthetic_is_never_current) ... ok
+test_unit_conversion_is_explicit (tests.test_arbitrage.DetectorTests.test_unit_conversion_is_explicit) ... ok
+test_unknown_is_not_zero (tests.test_arbitrage.DetectorTests.test_unknown_is_not_zero) ... ok
+test_unknown_settlement_charge (tests.test_arbitrage.DetectorTests.test_unknown_settlement_charge) ... ok
+test_unknown_units_rejected (tests.test_arbitrage.DetectorTests.test_unknown_units_rejected) ... ok
+test_visible_size_and_common_grid (tests.test_arbitrage.DetectorTests.test_visible_size_and_common_grid) ... ok
+test_zero_and_negative_roi (tests.test_arbitrage.DetectorTests.test_zero_and_negative_roi) ... ok
+
+======================================================================
+ERROR: test_current_rule_revision_invalidates (tests.test_arbitrage.DetectorTests.test_current_rule_revision_invalidates)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_arbitrage.py", line 274, in test_current_rule_revision_invalidates
+    m.update(p,[row,rows[1]])
+    ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/moneyline.py", line 161, in update
+    row=clone(row); validate_market(row)
+                    ~~~~~~~~~~~~~~~^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/moneyline.py", line 146, in validate_market
+    raise ValueError('invalid listing-rule binding')
+ValueError: invalid listing-rule binding
+
+----------------------------------------------------------------------
+Ran 37 tests in 3.659s
+
+FAILED (errors=1)

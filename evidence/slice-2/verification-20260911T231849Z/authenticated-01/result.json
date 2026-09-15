@@ -1,0 +1,221 @@
+{
+  "evidence_kind": "live_authenticated_market_stream",
+  "market_id": "381955",
+  "market_slug": "aec-nfl-bal-ind-2026-09-13",
+  "events": [
+    {
+      "event": "connected",
+      "received_at": "2026-09-11T23:25:11.930889+00:00",
+      "connection_number": 1
+    },
+    {
+      "event": "subscribed",
+      "received_at": "2026-09-11T23:25:11.931151+00:00",
+      "request_id": "e5b2ce7b-1f67-4a3b-8feb-57c41dc9ac3b",
+      "dialect": "camel"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:11.971945+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:12.931373+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:15.262630+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:16.790797+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_data_stale",
+      "received_at": "2026-09-11T23:25:21.792015+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "deliberate_local_disconnect",
+      "received_at": "2026-09-11T23:25:21.932644+00:00"
+    },
+    {
+      "event": "disconnected",
+      "received_at": "2026-09-11T23:25:21.960601+00:00"
+    },
+    {
+      "event": "connection_closed",
+      "received_at": "2026-09-11T23:25:21.960750+00:00"
+    },
+    {
+      "event": "connected",
+      "received_at": "2026-09-11T23:25:23.060615+00:00",
+      "connection_number": 2
+    },
+    {
+      "event": "subscribed",
+      "received_at": "2026-09-11T23:25:23.061039+00:00",
+      "request_id": "6e9399ef-42d5-467d-8f65-9e81f8442170",
+      "dialect": "camel"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:23.096642+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:23.445778+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:23.953403+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:26.185720+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_data_stale",
+      "received_at": "2026-09-11T23:25:31.186950+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:31.362494+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:32.176878+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:32.994269+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:25:33.095620+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "cancelled",
+      "received_at": "2026-09-11T23:25:36.782018+00:00"
+    },
+    {
+      "event": "connection_closed",
+      "received_at": "2026-09-11T23:25:36.804274+00:00"
+    },
+    {
+      "event": "stopped",
+      "received_at": "2026-09-11T23:25:36.804291+00:00"
+    },
+    {
+      "event": "closed",
+      "received_at": "2026-09-11T23:25:36.804329+00:00"
+    },
+    {
+      "event": "closed",
+      "received_at": "2026-09-11T23:25:36.804388+00:00"
+    }
+  ],
+  "diagnostics": [
+    "market_data_stale",
+    "disconnected",
+    "market_data_stale",
+    "cancelled",
+    "stopped",
+    "closed",
+    "closed"
+  ],
+  "exercise": {
+    "local_disconnect_requested": true,
+    "local_disconnect_completed": true,
+    "cancellation_requested": true,
+    "cancellation_propagated": true
+  },
+  "messages": [
+    {
+      "file": "market-frame-001.json",
+      "received_at": "2026-09-11T23:25:11.970120+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "4e84b818f3febccb10461127c26d5383c13c953f87eb8695ccabe590964604c4"
+    },
+    {
+      "file": "market-frame-002.json",
+      "received_at": "2026-09-11T23:25:12.930410+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "ee15472f980fe7223da60a0adbc164c142b1095bbb20fbb5b2e5463710a1cdc7"
+    },
+    {
+      "file": "market-frame-003.json",
+      "received_at": "2026-09-11T23:25:15.261849+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "e167216b5afca0829f41a3080d3f20b9bd2453f04c793b66f63695505be17e9b"
+    },
+    {
+      "file": "market-frame-004.json",
+      "received_at": "2026-09-11T23:25:16.789798+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "71b58be7f12b3eca1f4e8d9001b29abc871f1076bde93270623f668e0582a882"
+    },
+    {
+      "file": "market-frame-005.json",
+      "received_at": "2026-09-11T23:25:23.095530+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "dabfc0e4be661aa966d2dbae47f70be05fa78df699ff3a1db5b33a540ebdffb6"
+    },
+    {
+      "file": "market-frame-006.json",
+      "received_at": "2026-09-11T23:25:23.444765+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "7588d3d37172369dee9c4081aca37332f7c2ae6dbe3b5e41cb568ef162a15d9b"
+    },
+    {
+      "file": "market-frame-007.json",
+      "received_at": "2026-09-11T23:25:23.952140+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "da1be62376abfb6c964bed5b4bf7138c8de8a705cfa9715f4993f3f70057c08a"
+    },
+    {
+      "file": "market-frame-008.json",
+      "received_at": "2026-09-11T23:25:26.183766+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "639db7aaa112940adfd8bd1b2d50d472235531a93ac20d7f7e190f3088ffda9d"
+    },
+    {
+      "file": "market-frame-009.json",
+      "received_at": "2026-09-11T23:25:31.361147+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "d01fc21887e0879c532ee69dfe548414ef2f1e93d5a159f10ee1f4166e1146f2"
+    },
+    {
+      "file": "market-frame-010.json",
+      "received_at": "2026-09-11T23:25:32.175694+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "298fc64e39aa67647423d04c3a87b90115bcf5261f4c0d7741f145bd59d0ad7f"
+    },
+    {
+      "file": "market-frame-011.json",
+      "received_at": "2026-09-11T23:25:32.993176+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "644324c2580ed47efa1a43f41ed91cd9f3c7e380c4a1eda5ad5518a76c203543"
+    },
+    {
+      "file": "market-frame-012.json",
+      "received_at": "2026-09-11T23:25:33.094994+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "ca5c59bd1d5d01e5d808dbabfc4b5fefb903e9727faeb2e62c450f332cd41810"
+    }
+  ],
+  "qualification": "unknown_snapshot_and_recovery_semantics"
+}

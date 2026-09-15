@@ -1,0 +1,50 @@
+[
+  {
+    "check": "Launch/restart",
+    "result": "Observed idle, Start enabled, Stop disabled; no scan resumed."
+  },
+  {
+    "check": "Live",
+    "result": "Both venues connected with evolving retained prices; deadline stopped final scan."
+  },
+  {
+    "check": "Owner stop",
+    "result": "Stopped synthetic and earlier live scans using browser controls; saved shutdown coverage."
+  },
+  {
+    "check": "Details",
+    "result": "Prices, quantities, fees, unknown material outcomes, receipt/source ages and skew inspected."
+  },
+  {
+    "check": "Depth",
+    "result": "Synthetic conditional positive depth verified; live unsized result and saved depth reopening verified."
+  },
+  {
+    "check": "Historical",
+    "result": "Reopened final live capture after app restart; controls disabled, current eligibility false."
+  },
+  {
+    "check": "Filters",
+    "result": "Event selection narrows rows; unmatched market text gives useful empty state; Backspace clears and restores rows."
+  },
+  {
+    "check": "Errors",
+    "result": "Safe local-data error during concurrent verification; clean subsequent scan/depth succeeded. No-saved-depth response verified. Underlying concurrent failure cause not conclusively diagnosed."
+  },
+  {
+    "check": "Visual",
+    "result": "1360x980 desktop and 390x844 narrow checked. Narrow page clientWidth=scrollWidth=390; tables intentionally scroll within panels. Full-page IAB screenshots may stitch duplicate content; viewport screenshots are the reference."
+  },
+  {
+    "check": "Fixed defects",
+    "result": "Canonical event selection, queue8 to32, label JavaScript syntax, human side labels, unresolved depth wording, persistent disclosures, candidate leg freshness, full history bounds."
+  },
+  {
+    "check": "Console",
+    "result": "Only historical syntax error at 23:57:22 UTC remained in accumulated tab log; no new JS errors after repair/reload."
+  },
+  {
+    "check": "Acceptance",
+    "result": "Technical and browser verification only; owner acceptance not claimed."
+  }
+]

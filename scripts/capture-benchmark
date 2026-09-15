@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Finite 13A supervisor; creates and destroys only its own socket-only cluster."""
+import json
+from hashlib import sha256
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from app.capture_benchmark import BUDGET
+args=sys.argv[1:]
+out=Path(args[args.index('--output')+1]).resolve() if '--output' in args else ROOT/'evidence/slice-13-follow-up/13a/baseline'
+out.mkdir(parents=True,exist_ok=True)
+(out/'source-identity.json').write_text(json.dumps({str(p.relative_to(ROOT)):sha256(p.read_bytes()).hexdigest() for folder in ('app','tests','integration_tests','scripts') for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts},indent=2)+'\n')
+budget=dict(BUDGET)
+if '--repair' in args:budget.update(schema='13b-v1',total_sessions=28,scenarios=BUDGET['scenarios']+['burst40'])
+if '--faults' in args:budget.update(schema='13b-faults-v1',total_sessions=18,scenarios=['stop_backlog','stop_depth','overload','byte_limit','receipt_limit','storage_limit','rollback','database_failure','finalization_failure'])
+(out/'declared-budget.json').write_text(json.dumps(budget,indent=2)+'\n')
+local=ROOT/'.local';local.mkdir(exist_ok=True)
+# Never invokes project-postgres, and never reads its owner socket or data dir.
+base=Path(tempfile.mkdtemp(prefix='13a-',dir=local));sock=base/'socket';sock.mkdir(mode=0o700)
+data=base/'data';started=False
+try:
+    subprocess.run(['initdb','-D',str(data),'-U','prediction_arb','--auth-local=trust','--auth-host=reject','--encoding=UTF8','--no-locale'],check=True,stdout=subprocess.DEVNULL,timeout=30)
+    subprocess.run(['pg_ctl','-D',str(data),'-l',str(base/'postgres.log'),'-o',f"-k {sock} -p 55439 -c listen_addresses='' -c unix_socket_permissions=0700 -c max_connections=12 -c shared_buffers=32MB",'start'],check=True,timeout=30)
+    started=True
+    command=[sys.executable,'-m','app.capture_benchmark','--socket',str(sock)]
+    if '--output' not in args:args+=['--output',str(out)]
+    result=subprocess.run(command+args,cwd=ROOT,timeout=BUDGET['max_supervisor_seconds'])
+    code=result.returncode
+finally:
+    if started:
+        subprocess.run(['pg_ctl','-D',str(data),'-m','immediate','stop'],check=True,timeout=30)
+    shutil.rmtree(base)
+    (out/'cleanup.json').write_text(json.dumps(dict(isolated_cluster_removed=not base.exists(),owner_cluster_touched=False),indent=2)+'\n')
+sys.exit(code)

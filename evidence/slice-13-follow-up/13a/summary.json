@@ -1,0 +1,5328 @@
+{
+  "fixture_sha256": "54eaf221ebbd0c5eb32c091076468f14c50bef53f094ec74bee648369f74dd26",
+  "runs": [
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.08589106525687384,
+      "book_service_max": 0.10229216702282429,
+      "book_service_rate": 11.642654530006196,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 4.841701593250036e-05,
+      "worker_queue_wait_max": 0.0001276669790968299,
+      "accepted_queue_wait_max": 0.0001330000231973827,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.23120087588904426,
+        "detector.compute": 0.22404012607876211,
+        "diagnostic.storage_guard": 0.04790274880360812,
+        "evaluate.total": 1.3621640859055333,
+        "executor_wait.book": 0.0009664149256423116,
+        "executor_wait.disconnect": 3.724999260157347e-05,
+        "receipt.normalize_and_persist": 0.0795960440300405,
+        "sql.execute": 0.227632045163773,
+        "store.calculation": 1.064572544186376,
+        "store.event": 0.0005866669816896319,
+        "store.metadata": 0.05515933397691697,
+        "store.put": 0.7664702191832475,
+        "store.receipt": 0.07717095996486023,
+        "transaction.inclusive": 2.1104717070120387,
+        "worker.book": 1.3741320819826797,
+        "worker.disconnect": 0.08605091605568305
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 22,
+          "total": 0.2806892928783782,
+          "mean": 0.012758604221744463,
+          "p50": 0.012083583482308313,
+          "p95": 0.02093416702700779,
+          "maximum": 0.021613667020574212
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.27375208504963666,
+          "mean": 0.012443276593165303,
+          "p50": 0.011513271019794047,
+          "p95": 0.016836624999996275,
+          "maximum": 0.01761658303439617
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.06028837384656072,
+          "mean": 0.0030144186923280357,
+          "p50": 0.002790249476674944,
+          "p95": 0.00731737504247576,
+          "maximum": 0.00731737504247576
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.6940450028632767,
+          "mean": 0.0770020455846944,
+          "p50": 0.07659941649762914,
+          "p95": 0.08731320797232911,
+          "maximum": 0.08821020898176357
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0009664149256423116,
+          "mean": 6.040093285264447e-05,
+          "p50": 5.093700019642711e-05,
+          "p95": 0.00012674997560679913,
+          "maximum": 0.00012674997560679913
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.724999260157347e-05,
+          "mean": 3.724999260157347e-05,
+          "p50": 3.724999260157347e-05,
+          "p95": 3.724999260157347e-05,
+          "maximum": 3.724999260157347e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00024929101346060634,
+          "mean": 0.00024929101346060634,
+          "p50": 0.00024929101346060634,
+          "p95": 0.00024929101346060634,
+          "maximum": 0.00024929101346060634
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 0.00013225001748651266,
+          "mean": 0.00013225001748651266,
+          "p50": 0.00013225001748651266,
+          "p95": 0.00013225001748651266,
+          "maximum": 0.00013225001748651266
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 6.187497638165951e-05,
+          "mean": 6.187497638165951e-05,
+          "p50": 6.187497638165951e-05,
+          "p95": 6.187497638165951e-05,
+          "maximum": 6.187497638165951e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.09376692009391263,
+          "mean": 0.0023441730023478157,
+          "p50": 0.0021621459745801985,
+          "p95": 0.005130959034431726,
+          "maximum": 0.006688166002277285
+        },
+        "sql.execute": {
+          "n": 2834,
+          "total": 0.2879179234732874,
+          "mean": 0.0001015941861232489,
+          "p50": 8.733296999707818e-05,
+          "p95": 0.0002181250019930303,
+          "maximum": 0.0015409589977934957
+        },
+        "store.calculation": {
+          "n": 22,
+          "total": 1.328891753219068,
+          "mean": 0.06040417060086673,
+          "p50": 0.060797874990385026,
+          "p95": 0.06862845900468528,
+          "maximum": 0.07073283300269395
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.003959916939493269,
+          "mean": 0.001319972313164423,
+          "p50": 0.0008674159762449563,
+          "p95": 0.0025058339815586805,
+          "maximum": 0.0025058339815586805
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.06958912604022771,
+          "mean": 0.0031631420927376234,
+          "p50": 0.0030525834881700575,
+          "p95": 0.00409633299568668,
+          "maximum": 0.0042881250265054405
+        },
+        "store.put": {
+          "n": 300,
+          "total": 0.9620227651321329,
+          "mean": 0.003206742550440443,
+          "p50": 0.0006643544766120613,
+          "p95": 0.033177000004798174,
+          "maximum": 0.04084566701203585
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.09105041803559288,
+          "mean": 0.002276260450889822,
+          "p50": 0.0021075414842925966,
+          "p95": 0.005015874980017543,
+          "maximum": 0.00623449997510761
+        },
+        "transaction.inclusive": {
+          "n": 127,
+          "total": 2.6342242879909463,
+          "mean": 0.020741923527487768,
+          "p50": 0.004008707997854799,
+          "p95": 0.0655884999432601,
+          "maximum": 0.07452233298681676
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 1.3741320819826797,
+          "mean": 0.08588325512391748,
+          "p50": 0.08558664601878263,
+          "p95": 0.10227695800131187,
+          "maximum": 0.10227695800131187
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.08605091605568305,
+          "mean": 0.08605091605568305,
+          "p50": 0.08605091605568305,
+          "p95": 0.08605091605568305,
+          "maximum": 0.08605091605568305
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.004701542027760297,
+          "mean": 0.004701542027760297,
+          "p50": 0.004701542027760297,
+          "p95": 0.004701542027760297,
+          "maximum": 0.004701542027760297
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0034108749823644757,
+          "mean": 0.0034108749823644757,
+          "p50": 0.0034108749823644757,
+          "p95": 0.0034108749823644757,
+          "maximum": 0.0034108749823644757
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.37253533297916874,
+          "mean": 0.37253533297916874,
+          "p50": 0.37253533297916874,
+          "p95": 0.37253533297916874,
+          "maximum": 0.37253533297916874
+        }
+      },
+      "input_rate": 4.029169508039203,
+      "input_span": 3.9710416670423,
+      "elapsed": 7.728596042026766
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.10435062494070735,
+      "book_service_max": 0.16743904101895168,
+      "book_service_rate": 9.583076292721831,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 3.825000021606684e-05,
+      "worker_queue_wait_max": 0.0001194580108858645,
+      "accepted_queue_wait_max": 0.0002252499689348042,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.24642983300145715,
+        "detector.compute": 0.2523127941531129,
+        "diagnostic.storage_guard": 0.05346333107445389,
+        "evaluate.total": 1.6277292480808683,
+        "executor_wait.book": 0.0008319609914906323,
+        "executor_wait.disconnect": 3.566703526303172e-05,
+        "receipt.normalize_and_persist": 0.09813133988063782,
+        "sql.execute": 0.3323861346580088,
+        "store.calculation": 1.2951066680252552,
+        "store.event": 0.0005318749463185668,
+        "store.metadata": 0.06318595813354477,
+        "store.put": 0.9709223685204051,
+        "store.receipt": 0.09584583312971517,
+        "transaction.inclusive": 2.5997837079921737,
+        "worker.book": 1.6694999152095988,
+        "worker.disconnect": 0.07166879199212417
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 22,
+          "total": 0.29601966799236834,
+          "mean": 0.01345543945419856,
+          "p50": 0.011552521027624607,
+          "p95": 0.02174937498057261,
+          "maximum": 0.02723120799055323
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.30009729420999065,
+          "mean": 0.013640786100454121,
+          "p50": 0.011615938012255356,
+          "p95": 0.01898283400805667,
+          "maximum": 0.037715999991633
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.06669724715175107,
+          "mean": 0.0033348623575875534,
+          "p50": 0.0028129165002610534,
+          "p95": 0.008053875004407018,
+          "maximum": 0.008053875004407018
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.9609004161320627,
+          "mean": 0.08913183709691194,
+          "p50": 0.07935956251458265,
+          "p95": 0.14225291600450873,
+          "maximum": 0.1568439999828115
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0008319609914906323,
+          "mean": 5.199756196816452e-05,
+          "p50": 4.318746505305171e-05,
+          "p95": 0.00011779204942286015,
+          "maximum": 0.00011779204942286015
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.566703526303172e-05,
+          "mean": 3.566703526303172e-05,
+          "p50": 3.566703526303172e-05,
+          "p95": 3.566703526303172e-05,
+          "maximum": 3.566703526303172e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00019029196118935943,
+          "mean": 0.00019029196118935943,
+          "p50": 0.00019029196118935943,
+          "p95": 0.00019029196118935943,
+          "maximum": 0.00019029196118935943
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 9.270798182114959e-05,
+          "mean": 9.270798182114959e-05,
+          "p50": 9.270798182114959e-05,
+          "p95": 9.270798182114959e-05,
+          "maximum": 9.270798182114959e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 4.5291963033378124e-05,
+          "mean": 4.5291963033378124e-05,
+          "p50": 4.5291963033378124e-05,
+          "p95": 4.5291963033378124e-05,
+          "maximum": 4.5291963033378124e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.11220354790566489,
+          "mean": 0.0028050886976416223,
+          "p50": 0.0019853539997711778,
+          "p95": 0.007825666980352253,
+          "maximum": 0.016536874987650663
+        },
+        "sql.execute": {
+          "n": 2834,
+          "total": 0.39344066864578053,
+          "mean": 0.00013882874687571649,
+          "p50": 9.631249122321606e-05,
+          "p95": 0.00035799999022856355,
+          "maximum": 0.007028416031971574
+        },
+        "store.calculation": {
+          "n": 22,
+          "total": 1.562072626024019,
+          "mean": 0.07100330118290996,
+          "p50": 0.061506437486968935,
+          "p95": 0.11420304200146347,
+          "maximum": 0.13935570901958272
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.003840874938759953,
+          "mean": 0.0012802916462533176,
+          "p50": 0.0008795420289970934,
+          "p95": 0.0024294579634442925,
+          "maximum": 0.0024294579634442925
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.07762295712018386,
+          "mean": 0.00352831623273563,
+          "p50": 0.003321937518194318,
+          "p95": 0.005212792020756751,
+          "maximum": 0.006359875027555972
+        },
+        "store.put": {
+          "n": 300,
+          "total": 1.1671851596329361,
+          "mean": 0.003890617198776454,
+          "p50": 0.0006968954694457352,
+          "p95": 0.0325133329606615,
+          "maximum": 0.10725154198007658
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.10961854294873774,
+          "mean": 0.0027404635737184437,
+          "p50": 0.0019417289877310395,
+          "p95": 0.007768874987959862,
+          "maximum": 0.01615704200230539
+        },
+        "transaction.inclusive": {
+          "n": 127,
+          "total": 3.128507081884891,
+          "mean": 0.02463391403058969,
+          "p50": 0.004442250006832182,
+          "p95": 0.08846316701965407,
+          "maximum": 0.14452120900386944
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 1.6694999152095988,
+          "mean": 0.10434374470059993,
+          "p50": 0.09589120800956152,
+          "p95": 0.16743358399253339,
+          "maximum": 0.16743358399253339
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.07166879199212417,
+          "mean": 0.07166879199212417,
+          "p50": 0.07166879199212417,
+          "p95": 0.07166879199212417,
+          "maximum": 0.07166879199212417
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.004634916957002133,
+          "mean": 0.004634916957002133,
+          "p50": 0.004634916957002133,
+          "p95": 0.004634916957002133,
+          "maximum": 0.004634916957002133
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0029827079852111638,
+          "mean": 0.0029827079852111638,
+          "p50": 0.0029827079852111638,
+          "p95": 0.0029827079852111638,
+          "maximum": 0.0029827079852111638
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.3763670829939656,
+          "mean": 0.3763670829939656,
+          "p50": 0.3763670829939656,
+          "p95": 0.3763670829939656,
+          "maximum": 0.3763670829939656
+        }
+      },
+      "input_rate": 4.030890858088563,
+      "input_span": 3.969345874967985,
+      "elapsed": 7.814449249999598
+    },
+    {
+      "markets": 2,
+      "scenario": "burst24",
+      "timing": true,
+      "counts": {
+        "offered": 24,
+        "accepted": 24,
+        "rejected": 0,
+        "processed": 24,
+        "unprocessed": 0,
+        "retained_per_side_observations": 56,
+        "committed_receipts": 56,
+        "attempted_receipt_writes": 56,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 24,
+          "accepted": 24,
+          "processed": 24
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.0793389948278976,
+      "book_service_max": 0.11867487500421703,
+      "book_service_rate": 12.604142542632449,
+      "queue_high_water": 24,
+      "estimated_bytes_high_water": 29654,
+      "oldest_seconds": 1.8315360000124201,
+      "worker_queue_wait_max": 0.00013808399671688676,
+      "accepted_queue_wait_max": 1.9061267910292372,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.2773462491459213,
+        "detector.compute": 0.2543029981898144,
+        "diagnostic.storage_guard": 0.0707939580315724,
+        "evaluate.total": 1.8111552101327106,
+        "executor_wait.book": 0.001171623996924609,
+        "receipt.normalize_and_persist": 0.07791875477414578,
+        "sql.execute": 0.2947322354884818,
+        "store.calculation": 1.4558784152031876,
+        "store.metadata": 0.07739700196543708,
+        "store.put": 1.0958506299066357,
+        "store.receipt": 0.0755402451613918,
+        "transaction.inclusive": 2.8723945487872697,
+        "worker.book": 1.9040272089187056
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 29,
+          "total": 0.3486206222441979,
+          "mean": 0.012021400767041305,
+          "p50": 0.010596250009257346,
+          "p95": 0.02221049997024238,
+          "maximum": 0.023738917021546513
+        },
+        "detector.compute": {
+          "n": 29,
+          "total": 0.3186545402277261,
+          "mean": 0.010988087594059521,
+          "p50": 0.01039033301640302,
+          "p95": 0.013914333016145974,
+          "maximum": 0.014239249983802438
+        },
+        "diagnostic.storage_guard": {
+          "n": 27,
+          "total": 0.08360904012806714,
+          "mean": 0.0030966311158543386,
+          "p50": 0.0025255419895984232,
+          "p95": 0.0068116660113446414,
+          "maximum": 0.0114951659925282
+        },
+        "evaluate.total": {
+          "n": 29,
+          "total": 2.2666353770764545,
+          "mean": 0.07815984058884326,
+          "p50": 0.07134779199259356,
+          "p95": 0.10949458397226408,
+          "maximum": 0.11132529197493568
+        },
+        "executor_wait.book": {
+          "n": 24,
+          "total": 0.001171623996924609,
+          "mean": 4.881766653852537e-05,
+          "p50": 4.3228501453995705e-05,
+          "p95": 7.624999852851033e-05,
+          "maximum": 0.00013749999925494194
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.0001699169515632093,
+          "mean": 0.0001699169515632093,
+          "p50": 0.0001699169515632093,
+          "p95": 0.0001699169515632093,
+          "maximum": 0.0001699169515632093
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.591699250042439e-05,
+          "mean": 7.591699250042439e-05,
+          "p50": 7.591699250042439e-05,
+          "p95": 7.591699250042439e-05,
+          "maximum": 7.591699250042439e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 5.245901411399245e-05,
+          "mean": 5.245901411399245e-05,
+          "p50": 5.245901411399245e-05,
+          "p95": 5.245901411399245e-05,
+          "maximum": 5.245901411399245e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 56,
+          "total": 0.0988574629300274,
+          "mean": 0.0017653118380362035,
+          "p50": 0.0014801039942540228,
+          "p95": 0.003225041029509157,
+          "maximum": 0.004797082976438105
+        },
+        "sql.execute": {
+          "n": 3768,
+          "total": 0.39615078520728275,
+          "mean": 0.00010513555870681602,
+          "p50": 8.656250429339707e-05,
+          "p95": 0.000245416013058275,
+          "maximum": 0.0020311669795773923
+        },
+        "store.calculation": {
+          "n": 29,
+          "total": 1.824122874182649,
+          "mean": 0.06290078876491893,
+          "p50": 0.05676208302611485,
+          "p95": 0.09376158396480605,
+          "maximum": 0.09443916601594537
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.003494833072181791,
+          "mean": 0.0017474165360908955,
+          "p50": 0.0017474165360908955,
+          "p95": 0.0027078750426881015,
+          "maximum": 0.0027078750426881015
+        },
+        "store.metadata": {
+          "n": 29,
+          "total": 0.09447337593883276,
+          "mean": 0.00325770261858044,
+          "p50": 0.0031051249825395644,
+          "p95": 0.00443070795154199,
+          "maximum": 0.004460584023036063
+        },
+        "store.put": {
+          "n": 402,
+          "total": 1.3588442525360733,
+          "mean": 0.003380209583423068,
+          "p50": 0.0006673545285593718,
+          "p95": 0.03153600002406165,
+          "maximum": 0.060876375006046146
+        },
+        "store.receipt": {
+          "n": 56,
+          "total": 0.09598545520566404,
+          "mean": 0.0017140259858154292,
+          "p50": 0.001432958000805229,
+          "p95": 0.0031795420218259096,
+          "maximum": 0.0047500000218860805
+        },
+        "transaction.inclusive": {
+          "n": 172,
+          "total": 3.5945592968491837,
+          "mean": 0.02089860056307665,
+          "p50": 0.0032238124986179173,
+          "p95": 0.06845987500855699,
+          "maximum": 0.09806820895755664
+        },
+        "worker.book": {
+          "n": 24,
+          "total": 1.9040272089187056,
+          "mean": 0.0793344670382794,
+          "p50": 0.07367825048277155,
+          "p95": 0.11409383296268061,
+          "maximum": 0.11866924999048933
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.004710624983999878,
+          "mean": 0.004710624983999878,
+          "p50": 0.004710624983999878,
+          "p95": 0.004710624983999878,
+          "maximum": 0.004710624983999878
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.003212291980162263,
+          "mean": 0.003212291980162263,
+          "p50": 0.003212291980162263,
+          "p95": 0.003212291980162263,
+          "maximum": 0.003212291980162263
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.5191995420027524,
+          "mean": 0.5191995420027524,
+          "p50": 0.5191995420027524,
+          "p95": 0.5191995420027524,
+          "maximum": 0.5191995420027524
+        }
+      },
+      "input_rate": 8656.512962303463,
+      "input_span": 0.0026569589972496033,
+      "elapsed": 3.8400648750248365
+    },
+    {
+      "markets": 2,
+      "scenario": "burst24",
+      "timing": true,
+      "counts": {
+        "offered": 24,
+        "accepted": 24,
+        "rejected": 0,
+        "processed": 24,
+        "unprocessed": 0,
+        "retained_per_side_observations": 56,
+        "committed_receipts": 56,
+        "attempted_receipt_writes": 56,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 24,
+          "accepted": 24,
+          "processed": 24
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.0781717120456354,
+      "book_service_max": 0.1800172919756733,
+      "book_service_rate": 12.79235127172622,
+      "queue_high_water": 24,
+      "estimated_bytes_high_water": 29654,
+      "oldest_seconds": 1.7965165420318954,
+      "worker_queue_wait_max": 0.00034220796078443527,
+      "accepted_queue_wait_max": 1.8690161670092493,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.30137529189232737,
+        "detector.compute": 0.24636721023125574,
+        "diagnostic.storage_guard": 0.06032104109181091,
+        "evaluate.total": 1.7918992099585012,
+        "executor_wait.book": 0.0013263770379126072,
+        "receipt.normalize_and_persist": 0.06950478325597942,
+        "sql.execute": 0.28951353835873306,
+        "store.calculation": 1.4445007940521464,
+        "store.metadata": 0.07571699906839058,
+        "store.put": 1.046888290089555,
+        "store.receipt": 0.06751391792204231,
+        "transaction.inclusive": 2.812601330515463,
+        "worker.book": 1.8759900049772114
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 29,
+          "total": 0.3649344578734599,
+          "mean": 0.012583946823222756,
+          "p50": 0.010423875006381422,
+          "p95": 0.02107820799574256,
+          "maximum": 0.06092104100389406
+        },
+        "detector.compute": {
+          "n": 29,
+          "total": 0.30213754333090037,
+          "mean": 0.0104185359769276,
+          "p50": 0.010027791024185717,
+          "p95": 0.012011167011223733,
+          "maximum": 0.016198208031710237
+        },
+        "diagnostic.storage_guard": {
+          "n": 27,
+          "total": 0.06930641707731411,
+          "mean": 0.0025669043361968187,
+          "p50": 0.0024085830082185566,
+          "p95": 0.0034892919939011335,
+          "maximum": 0.0046287080040201545
+        },
+        "evaluate.total": {
+          "n": 29,
+          "total": 2.154479126969818,
+          "mean": 0.07429238368861442,
+          "p50": 0.06953695899574086,
+          "p95": 0.08344029198633507,
+          "maximum": 0.1756977090262808
+        },
+        "executor_wait.book": {
+          "n": 24,
+          "total": 0.0013263770379126072,
+          "mean": 5.52657099130253e-05,
+          "p50": 3.883297904394567e-05,
+          "p95": 9.029102511703968e-05,
+          "maximum": 0.0003410419449210167
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 5.000003147870302e-05,
+          "mean": 5.000003147870302e-05,
+          "p50": 5.000003147870302e-05,
+          "p95": 5.000003147870302e-05,
+          "maximum": 5.000003147870302e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.48750171624124e-05,
+          "mean": 7.48750171624124e-05,
+          "p50": 7.48750171624124e-05,
+          "p95": 7.48750171624124e-05,
+          "maximum": 7.48750171624124e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 4.299997817724943e-05,
+          "mean": 4.299997817724943e-05,
+          "p50": 4.299997817724943e-05,
+          "p95": 4.299997817724943e-05,
+          "maximum": 4.299997817724943e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 56,
+          "total": 0.08454290922963992,
+          "mean": 0.0015096948076721414,
+          "p50": 0.0014571869978681207,
+          "p95": 0.0020637079724110663,
+          "maximum": 0.0035812080022878945
+        },
+        "sql.execute": {
+          "n": 3768,
+          "total": 0.3499877158901654,
+          "mean": 9.288421334664687e-05,
+          "p50": 8.13339720480144e-05,
+          "p95": 0.000179499969817698,
+          "maximum": 0.007322833989746869
+        },
+        "store.calculation": {
+          "n": 29,
+          "total": 1.7296150861657225,
+          "mean": 0.05964189952295595,
+          "p50": 0.05488762498134747,
+          "p95": 0.06816374999471009,
+          "maximum": 0.15925104200141504
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0011601249570958316,
+          "mean": 0.0005800624785479158,
+          "p50": 0.0005800624785479158,
+          "p95": 0.0008974999655038118,
+          "maximum": 0.0008974999655038118
+        },
+        "store.metadata": {
+          "n": 29,
+          "total": 0.09017166506964713,
+          "mean": 0.003109367761022315,
+          "p50": 0.0030595409916713834,
+          "p95": 0.0035637080436572433,
+          "maximum": 0.004312082950491458
+        },
+        "store.put": {
+          "n": 402,
+          "total": 1.2469059189897962,
+          "mean": 0.0031017560173875526,
+          "p50": 0.0006610420241486281,
+          "p95": 0.030940999975427985,
+          "maximum": 0.0719190840027295
+        },
+        "store.receipt": {
+          "n": 56,
+          "total": 0.08219687693053856,
+          "mean": 0.0014678013737596171,
+          "p50": 0.0014102290151640773,
+          "p95": 0.0020118329557590187,
+          "maximum": 0.003528458997607231
+        },
+        "transaction.inclusive": {
+          "n": 172,
+          "total": 3.367246499401517,
+          "mean": 0.01957701453140417,
+          "p50": 0.003124833485344425,
+          "p95": 0.06013875000644475,
+          "maximum": 0.16340625000884756
+        },
+        "worker.book": {
+          "n": 24,
+          "total": 1.8759900049772114,
+          "mean": 0.07816625020738381,
+          "p50": 0.0723725834977813,
+          "p95": 0.08812849997775629,
+          "maximum": 0.18000845902133733
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0015388750471174717,
+          "mean": 0.0015388750471174717,
+          "p50": 0.0015388750471174717,
+          "p95": 0.0015388750471174717,
+          "maximum": 0.0015388750471174717
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.003173458972014487,
+          "mean": 0.003173458972014487,
+          "p50": 0.003173458972014487,
+          "p95": 0.003173458972014487,
+          "maximum": 0.003173458972014487
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.4082365000504069,
+          "mean": 0.4082365000504069,
+          "p50": 0.4082365000504069,
+          "p95": 0.4082365000504069,
+          "maximum": 0.4082365000504069
+        }
+      },
+      "input_rate": 11776.753893475627,
+      "input_span": 0.0019529999699443579,
+      "elapsed": 3.6792545830248855
+    },
+    {
+      "markets": 2,
+      "scenario": "overflow40",
+      "timing": true,
+      "counts": {
+        "offered": 41,
+        "accepted": 33,
+        "rejected": 8,
+        "processed": 1,
+        "unprocessed": 32,
+        "retained_per_side_observations": 10,
+        "committed_receipts": 10,
+        "attempted_receipt_writes": 10,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 41,
+          "accepted": 33,
+          "processed": 1
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true,
+        "known_overflow": true
+      },
+      "book_service_mean": 0.30579145898809657,
+      "book_service_max": 0.30579145898809657,
+      "book_service_rate": 3.2702025207281107,
+      "queue_high_water": 32,
+      "estimated_bytes_high_water": 39543,
+      "oldest_seconds": 0.3192160420003347,
+      "worker_queue_wait_max": 3.8416997995227575e-05,
+      "accepted_queue_wait_max": 4.395894939079881e-05,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.014861625037156045,
+        "detector.compute": 0.016416832979302853,
+        "diagnostic.storage_guard": 0.0038377080345526338,
+        "evaluate.total": 0.08870937500614673,
+        "executor_wait.book": 3.766699228435755e-05,
+        "injected.receipt_delay": 0.21006587496958673,
+        "receipt.normalize_and_persist": 0.21580000000540167,
+        "sql.execute": 0.015574587625451386,
+        "store.calculation": 0.06541629100684077,
+        "store.metadata": 0.005300000018905848,
+        "store.put": 0.046782081946730614,
+        "store.receipt": 0.21565416705561802,
+        "transaction.inclusive": 0.34440837398869917,
+        "worker.book": 0.30578529101330787
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 6,
+          "total": 0.07031379104591906,
+          "mean": 0.011718965174319843,
+          "p50": 0.011310958507237956,
+          "p95": 0.014861625037156045,
+          "maximum": 0.014861625037156045
+        },
+        "detector.compute": {
+          "n": 6,
+          "total": 0.09187995799584314,
+          "mean": 0.015313326332640523,
+          "p50": 0.01282591701601632,
+          "p95": 0.030299458012450486,
+          "maximum": 0.030299458012450486
+        },
+        "diagnostic.storage_guard": {
+          "n": 4,
+          "total": 0.01266791601665318,
+          "mean": 0.003166979004163295,
+          "p50": 0.0031570624851156026,
+          "p95": 0.0038377080345526338,
+          "maximum": 0.0038377080345526338
+        },
+        "evaluate.total": {
+          "n": 6,
+          "total": 0.47248808498261496,
+          "mean": 0.07874801416376916,
+          "p50": 0.07863716696738265,
+          "p95": 0.09235212503699586,
+          "maximum": 0.09235212503699586
+        },
+        "executor_wait.book": {
+          "n": 1,
+          "total": 3.766699228435755e-05,
+          "mean": 3.766699228435755e-05,
+          "p50": 3.766699228435755e-05,
+          "p95": 3.766699228435755e-05,
+          "maximum": 3.766699228435755e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 7.83340074121952e-05,
+          "mean": 7.83340074121952e-05,
+          "p50": 7.83340074121952e-05,
+          "p95": 7.83340074121952e-05,
+          "maximum": 7.83340074121952e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.599999662488699e-05,
+          "mean": 7.599999662488699e-05,
+          "p50": 7.599999662488699e-05,
+          "p95": 7.599999662488699e-05,
+          "maximum": 7.599999662488699e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 6.59169745631516e-05,
+          "mean": 6.59169745631516e-05,
+          "p50": 6.59169745631516e-05,
+          "p95": 6.59169745631516e-05,
+          "maximum": 6.59169745631516e-05
+        },
+        "injected.receipt_delay": {
+          "n": 10,
+          "total": 1.0291919990559109,
+          "mean": 0.10291919990559109,
+          "p50": 0.10389508301159367,
+          "p95": 0.10507049999432638,
+          "maximum": 0.10507049999432638
+        },
+        "receipt.normalize_and_persist": {
+          "n": 10,
+          "total": 1.0580865400261246,
+          "mean": 0.10580865400261245,
+          "p50": 0.10713816649513319,
+          "p95": 0.10848833300406113,
+          "maximum": 0.10848833300406113
+        },
+        "sql.execute": {
+          "n": 755,
+          "total": 0.08525458368239924,
+          "mean": 0.00011291997838728377,
+          "p50": 9.387504542246461e-05,
+          "p95": 0.0002614170080050826,
+          "maximum": 0.0006238750065676868
+        },
+        "store.calculation": {
+          "n": 6,
+          "total": 0.35104187397519127,
+          "mean": 0.05850697899586521,
+          "p50": 0.05616356249083765,
+          "p95": 0.06649608298903331,
+          "maximum": 0.06649608298903331
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0010542920208536088,
+          "mean": 0.0005271460104268044,
+          "p50": 0.0005271460104268044,
+          "p95": 0.0007382920011878014,
+          "maximum": 0.0007382920011878014
+        },
+        "store.metadata": {
+          "n": 6,
+          "total": 0.02021500008413568,
+          "mean": 0.0033691666806892804,
+          "p50": 0.0031086670060176402,
+          "p95": 0.005300000018905848,
+          "maximum": 0.005300000018905848
+        },
+        "store.put": {
+          "n": 80,
+          "total": 0.25432491616811603,
+          "mean": 0.0031790614521014504,
+          "p50": 0.0006607079994864762,
+          "p95": 0.03172583394916728,
+          "maximum": 0.03457762498874217
+        },
+        "store.receipt": {
+          "n": 10,
+          "total": 1.0575672080158256,
+          "mean": 0.10575672080158256,
+          "p50": 0.10707387499860488,
+          "p95": 0.10841916705248877,
+          "maximum": 0.10841916705248877
+        },
+        "transaction.inclusive": {
+          "n": 34,
+          "total": 1.74337733106222,
+          "mean": 0.05127580385477118,
+          "p50": 0.021914771001320332,
+          "p95": 0.21575804200256243,
+          "maximum": 0.21684745798120275
+        },
+        "worker.book": {
+          "n": 1,
+          "total": 0.30578529101330787,
+          "mean": 0.30578529101330787,
+          "p50": 0.30578529101330787,
+          "p95": 0.30578529101330787,
+          "maximum": 0.30578529101330787
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0015487080090679228,
+          "mean": 0.0015487080090679228,
+          "p50": 0.0015487080090679228,
+          "p95": 0.0015487080090679228,
+          "maximum": 0.0015487080090679228
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.00317333301063627,
+          "mean": 0.00317333301063627,
+          "p50": 0.00317333301063627,
+          "p95": 0.00317333301063627,
+          "maximum": 0.00317333301063627
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 1.2561414579977281,
+          "mean": 1.2561414579977281,
+          "p50": 1.2561414579977281,
+          "p95": 1.2561414579977281,
+          "maximum": 1.2561414579977281
+        }
+      },
+      "input_rate": 7106.320520039367,
+      "input_span": 0.005628791986964643,
+      "elapsed": 1.6861701660091057
+    },
+    {
+      "markets": 2,
+      "scenario": "overflow40",
+      "timing": true,
+      "counts": {
+        "offered": 41,
+        "accepted": 33,
+        "rejected": 8,
+        "processed": 1,
+        "unprocessed": 32,
+        "retained_per_side_observations": 10,
+        "committed_receipts": 10,
+        "attempted_receipt_writes": 10,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 41,
+          "accepted": 33,
+          "processed": 1
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true,
+        "known_overflow": true
+      },
+      "book_service_mean": 0.3150792919914238,
+      "book_service_max": 0.3150792919914238,
+      "book_service_rate": 3.1738042626654726,
+      "queue_high_water": 32,
+      "estimated_bytes_high_water": 39543,
+      "oldest_seconds": 0.3256093749660067,
+      "worker_queue_wait_max": 4.7291978262364864e-05,
+      "accepted_queue_wait_max": 3.9624981582164764e-05,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.016144916007760912,
+        "detector.compute": 0.020691332989372313,
+        "diagnostic.storage_guard": 0.003146332979667932,
+        "evaluate.total": 0.09497691702563316,
+        "executor_wait.book": 4.6042026951909065e-05,
+        "injected.receipt_delay": 0.20765125006437302,
+        "receipt.normalize_and_persist": 0.21887158299796283,
+        "sql.execute": 0.017834794241935015,
+        "store.calculation": 0.06964825000613928,
+        "store.metadata": 0.0031378749990835786,
+        "store.put": 0.0483578309067525,
+        "store.receipt": 0.21873920800862834,
+        "transaction.inclusive": 0.3539412089739926,
+        "worker.book": 0.315073040954303
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 6,
+          "total": 0.08144303999142721,
+          "mean": 0.013573839998571202,
+          "p50": 0.01376904099015519,
+          "p95": 0.01738879201002419,
+          "maximum": 0.01738879201002419
+        },
+        "detector.compute": {
+          "n": 6,
+          "total": 0.08301787590608001,
+          "mean": 0.013836312651013335,
+          "p50": 0.013911521004047245,
+          "p95": 0.020691332989372313,
+          "maximum": 0.020691332989372313
+        },
+        "diagnostic.storage_guard": {
+          "n": 4,
+          "total": 0.010984708031173795,
+          "mean": 0.002746177007793449,
+          "p50": 0.0026966875011567026,
+          "p95": 0.003146332979667932,
+          "maximum": 0.003146332979667932
+        },
+        "evaluate.total": {
+          "n": 6,
+          "total": 0.5010449170367792,
+          "mean": 0.08350748617279653,
+          "p50": 0.08639506247709505,
+          "p95": 0.09497691702563316,
+          "maximum": 0.09497691702563316
+        },
+        "executor_wait.book": {
+          "n": 1,
+          "total": 4.6042026951909065e-05,
+          "mean": 4.6042026951909065e-05,
+          "p50": 4.6042026951909065e-05,
+          "p95": 4.6042026951909065e-05,
+          "maximum": 4.6042026951909065e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 5.2374962251633406e-05,
+          "mean": 5.2374962251633406e-05,
+          "p50": 5.2374962251633406e-05,
+          "p95": 5.2374962251633406e-05,
+          "maximum": 5.2374962251633406e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 8.575001265853643e-05,
+          "mean": 8.575001265853643e-05,
+          "p50": 8.575001265853643e-05,
+          "p95": 8.575001265853643e-05,
+          "maximum": 8.575001265853643e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 9.787501767277718e-05,
+          "mean": 9.787501767277718e-05,
+          "p50": 9.787501767277718e-05,
+          "p95": 9.787501767277718e-05,
+          "maximum": 9.787501767277718e-05
+        },
+        "injected.receipt_delay": {
+          "n": 10,
+          "total": 1.0271201260620728,
+          "mean": 0.10271201260620728,
+          "p50": 0.10236891653039493,
+          "p95": 0.10506329202326015,
+          "maximum": 0.10506329202326015
+        },
+        "receipt.normalize_and_persist": {
+          "n": 10,
+          "total": 1.0596708340453915,
+          "mean": 0.10596708340453916,
+          "p50": 0.10507912500179373,
+          "p95": 0.11299420800060034,
+          "maximum": 0.11299420800060034
+        },
+        "sql.execute": {
+          "n": 755,
+          "total": 0.0941440582391806,
+          "mean": 0.00012469411687308687,
+          "p50": 9.937497088685632e-05,
+          "p95": 0.00029012502636760473,
+          "maximum": 0.001051125000230968
+        },
+        "store.calculation": {
+          "n": 6,
+          "total": 0.3896420409437269,
+          "mean": 0.06494034015728782,
+          "p50": 0.06820487501681782,
+          "p95": 0.0733972909511067,
+          "maximum": 0.0733972909511067
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0006339169922284782,
+          "mean": 0.0003169584961142391,
+          "p50": 0.0003169584961142391,
+          "p95": 0.0004600000102072954,
+          "maximum": 0.0004600000102072954
+        },
+        "store.metadata": {
+          "n": 6,
+          "total": 0.01867958396906033,
+          "mean": 0.0031132639948433885,
+          "p50": 0.003044520999537781,
+          "p95": 0.0041491250158287585,
+          "maximum": 0.0041491250158287585
+        },
+        "store.put": {
+          "n": 80,
+          "total": 0.27822866319911554,
+          "mean": 0.0034778582899889442,
+          "p50": 0.0006741874967701733,
+          "p95": 0.03627262497320771,
+          "maximum": 0.04119695903500542
+        },
+        "store.receipt": {
+          "n": 10,
+          "total": 1.0591323740663938,
+          "mean": 0.10591323740663938,
+          "p50": 0.10502675001043826,
+          "p95": 0.11291829199763015,
+          "maximum": 0.11291829199763015
+        },
+        "transaction.inclusive": {
+          "n": 34,
+          "total": 1.8090671668760478,
+          "mean": 0.05320785784929553,
+          "p50": 0.02404510448104702,
+          "p95": 0.2132434170343913,
+          "maximum": 0.21990525000728667
+        },
+        "worker.book": {
+          "n": 1,
+          "total": 0.315073040954303,
+          "mean": 0.315073040954303,
+          "p50": 0.315073040954303,
+          "p95": 0.315073040954303,
+          "maximum": 0.315073040954303
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0009173339931294322,
+          "mean": 0.0009173339931294322,
+          "p50": 0.0009173339931294322,
+          "p95": 0.0009173339931294322,
+          "maximum": 0.0009173339931294322
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0030286670080386102,
+          "mean": 0.0030286670080386102,
+          "p50": 0.0030286670080386102,
+          "p95": 0.0030286670080386102,
+          "maximum": 0.0030286670080386102
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 1.2780281250015832,
+          "mean": 1.2780281250015832,
+          "p50": 1.2780281250015832,
+          "p95": 1.2780281250015832,
+          "maximum": 1.2780281250015832
+        }
+      },
+      "input_rate": 8295.528264095223,
+      "input_span": 0.004821874957997352,
+      "elapsed": 1.71296633296879
+    },
+    {
+      "markets": 2,
+      "scenario": "slow",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.19342235937801888,
+      "book_service_max": 0.23224625003058463,
+      "book_service_rate": 5.170033098632769,
+      "queue_high_water": 7,
+      "estimated_bytes_high_water": 8652,
+      "oldest_seconds": 1.105170916998759,
+      "worker_queue_wait_max": 8.687499212101102e-05,
+      "accepted_queue_wait_max": 1.305050500028301,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.199354543001391,
+        "detector.compute": 0.22304133197758347,
+        "diagnostic.storage_guard": 0.04815183283062652,
+        "evaluate.total": 1.3645819160155952,
+        "executor_wait.book": 0.0008046700386330485,
+        "executor_wait.disconnect": 5.079200491309166e-05,
+        "injected.receipt_delay": 1.7093766700709239,
+        "receipt.normalize_and_persist": 1.7836227111401968,
+        "sql.execute": 0.24203973269322887,
+        "store.calculation": 1.0599772511050105,
+        "store.event": 0.00046258297516033053,
+        "store.metadata": 0.059546960052102804,
+        "store.put": 0.7737955041811801,
+        "store.receipt": 1.7820193720399402,
+        "transaction.inclusive": 3.830532038991805,
+        "worker.book": 3.094669667072594,
+        "worker.disconnect": 0.06987320800544694
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 22,
+          "total": 0.2527023360016756,
+          "mean": 0.011486469818257981,
+          "p50": 0.011393770982977003,
+          "p95": 0.013009041955228895,
+          "maximum": 0.014193999988492578
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.281313082028646,
+          "mean": 0.012786958274029364,
+          "p50": 0.012912500009406358,
+          "p95": 0.0143735830206424,
+          "maximum": 0.015133250039070845
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.055875375866889954,
+          "mean": 0.0027937687933444976,
+          "p50": 0.002559520973591134,
+          "p95": 0.005244750005658716,
+          "maximum": 0.005244750005658716
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.7169234151369892,
+          "mean": 0.0780419734153177,
+          "p50": 0.07481010400806554,
+          "p95": 0.09074954100651667,
+          "maximum": 0.11899916600668803
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0008046700386330485,
+          "mean": 5.0291877414565533e-05,
+          "p50": 4.820898175239563e-05,
+          "p95": 8.608301868662238e-05,
+          "maximum": 8.608301868662238e-05
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 5.079200491309166e-05,
+          "mean": 5.079200491309166e-05,
+          "p50": 5.079200491309166e-05,
+          "p95": 5.079200491309166e-05,
+          "maximum": 5.079200491309166e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 3.8166006561368704e-05,
+          "mean": 3.8166006561368704e-05,
+          "p50": 3.8166006561368704e-05,
+          "p95": 3.8166006561368704e-05,
+          "maximum": 3.8166006561368704e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 9.14999982342124e-05,
+          "mean": 9.14999982342124e-05,
+          "p50": 9.14999982342124e-05,
+          "p95": 9.14999982342124e-05,
+          "maximum": 9.14999982342124e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.00014241697499528527,
+          "mean": 0.00014241697499528527,
+          "p50": 0.00014241697499528527,
+          "p95": 0.00014241697499528527,
+          "maximum": 0.00014241697499528527
+        },
+        "injected.receipt_delay": {
+          "n": 40,
+          "total": 2.1371207950869575,
+          "mean": 0.05342801987717394,
+          "p50": 0.05400893749902025,
+          "p95": 0.05503316700924188,
+          "maximum": 0.05503516597673297
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 2.2328859611880034,
+          "mean": 0.055822149029700084,
+          "p50": 0.05641739600105211,
+          "p95": 0.05817537504481152,
+          "maximum": 0.058434334001503885
+        },
+        "sql.execute": {
+          "n": 2834,
+          "total": 0.30632232374046,
+          "mean": 0.00010808832877221594,
+          "p50": 8.862500544637442e-05,
+          "p95": 0.00022920797346159816,
+          "maximum": 0.0019463329808786511
+        },
+        "store.calculation": {
+          "n": 22,
+          "total": 1.3358891261159442,
+          "mean": 0.060722233005270194,
+          "p50": 0.05739677097881213,
+          "p95": 0.07284516701474786,
+          "maximum": 0.0981935000163503
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.0013665418955497444,
+          "mean": 0.0004555139651832481,
+          "p50": 0.00046258297516033053,
+          "p95": 0.0006464169709943235,
+          "maximum": 0.0006464169709943235
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.07368462806334719,
+          "mean": 0.0033493012756066905,
+          "p50": 0.0031182710081338882,
+          "p95": 0.004046958987601101,
+          "maximum": 0.007830292044673115
+        },
+        "store.put": {
+          "n": 300,
+          "total": 0.9735935101634823,
+          "mean": 0.003245311700544941,
+          "p50": 0.0006659170030616224,
+          "p95": 0.0314685829798691,
+          "maximum": 0.051728000049479306
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 2.2309071630588733,
+          "mean": 0.055772679076471834,
+          "p50": 0.05636799996136688,
+          "p95": 0.05812225001864135,
+          "maximum": 0.05837725003948435
+        },
+        "transaction.inclusive": {
+          "n": 127,
+          "total": 4.812437790911645,
+          "mean": 0.03789321095206019,
+          "p50": 0.03898183302953839,
+          "p95": 0.11399862502003089,
+          "maximum": 0.11742362496443093
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 3.094669667072594,
+          "mean": 0.19341685419203714,
+          "p50": 0.1892975619994104,
+          "p95": 0.23224087501876056,
+          "maximum": 0.23224087501876056
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.06987320800544694,
+          "mean": 0.06987320800544694,
+          "p50": 0.06987320800544694,
+          "p95": 0.06987320800544694,
+          "maximum": 0.06987320800544694
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0013214159989729524,
+          "mean": 0.0013214159989729524,
+          "p50": 0.0013214159989729524,
+          "p95": 0.0013214159989729524,
+          "maximum": 0.0013214159989729524
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.003247540968004614,
+          "mean": 0.003247540968004614,
+          "p50": 0.003247540968004614,
+          "p95": 0.003247540968004614,
+          "maximum": 0.003247540968004614
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.832206417049747,
+          "mean": 0.832206417049747,
+          "p50": 0.832206417049747,
+          "p95": 0.832206417049747,
+          "maximum": 0.832206417049747
+        }
+      },
+      "input_rate": 9.294101830620408,
+      "input_span": 1.7215219169738702,
+      "elapsed": 5.777099375030957
+    },
+    {
+      "markets": 2,
+      "scenario": "slow",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.18955176294548437,
+      "book_service_max": 0.19649454101454467,
+      "book_service_rate": 5.275603795294708,
+      "queue_high_water": 7,
+      "estimated_bytes_high_water": 8652,
+      "oldest_seconds": 1.04040299996268,
+      "worker_queue_wait_max": 9.899999713525176e-05,
+      "accepted_queue_wait_max": 1.2397514159674756,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.19975412299390882,
+        "detector.compute": 0.2155401238705963,
+        "diagnostic.storage_guard": 0.04335504403570667,
+        "evaluate.total": 1.306628292950336,
+        "executor_wait.book": 0.0007699999259784818,
+        "executor_wait.disconnect": 5.095801316201687e-05,
+        "injected.receipt_delay": 1.7075557130156085,
+        "receipt.normalize_and_persist": 1.7832986669964157,
+        "sql.execute": 0.22972277575172484,
+        "store.calculation": 1.016154041979462,
+        "store.event": 0.0005181250162422657,
+        "store.metadata": 0.05659291608026251,
+        "store.put": 0.7507233766955324,
+        "store.receipt": 1.7816564181121066,
+        "transaction.inclusive": 3.749491413938813,
+        "worker.book": 3.0327495852834545,
+        "worker.disconnect": 0.07147804199485108
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 22,
+          "total": 0.2561468729400076,
+          "mean": 0.011643039679091255,
+          "p50": 0.011767978983698413,
+          "p95": 0.012717042001895607,
+          "maximum": 0.01318120799260214
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.2760624158545397,
+          "mean": 0.012548291629751806,
+          "p50": 0.012467562482925132,
+          "p95": 0.014716834004502743,
+          "maximum": 0.0162209160043858
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.0510369191179052,
+          "mean": 0.00255184595589526,
+          "p50": 0.002510479505872354,
+          "p95": 0.003109875018708408,
+          "maximum": 0.003109875018708408
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.6732077918713912,
+          "mean": 0.07605489963051779,
+          "p50": 0.07630779201281257,
+          "p95": 0.08319883397780359,
+          "maximum": 0.08496404101606458
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0007699999259784818,
+          "mean": 4.812499537365511e-05,
+          "p50": 4.21874865423888e-05,
+          "p95": 9.824999142438173e-05,
+          "maximum": 9.824999142438173e-05
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 5.095801316201687e-05,
+          "mean": 5.095801316201687e-05,
+          "p50": 5.095801316201687e-05,
+          "p95": 5.095801316201687e-05,
+          "maximum": 5.095801316201687e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00019045901717618108,
+          "mean": 0.00019045901717618108,
+          "p50": 0.00019045901717618108,
+          "p95": 0.00019045901717618108,
+          "maximum": 0.00019045901717618108
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.204199209809303e-05,
+          "mean": 7.204199209809303e-05,
+          "p50": 7.204199209809303e-05,
+          "p95": 7.204199209809303e-05,
+          "maximum": 7.204199209809303e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 5.3708034101873636e-05,
+          "mean": 5.3708034101873636e-05,
+          "p50": 5.3708034101873636e-05,
+          "p95": 5.3708034101873636e-05,
+          "maximum": 5.3708034101873636e-05
+        },
+        "injected.receipt_delay": {
+          "n": 40,
+          "total": 2.13127650518436,
+          "mean": 0.053281912629609,
+          "p50": 0.053634438023436815,
+          "p95": 0.05502941698068753,
+          "maximum": 0.055042624997440726
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 2.2290877068880945,
+          "mean": 0.055727192672202365,
+          "p50": 0.05603693702141754,
+          "p95": 0.05786429200088605,
+          "maximum": 0.058459167019464076
+        },
+        "sql.execute": {
+          "n": 2834,
+          "total": 0.2978912706603296,
+          "mean": 0.00010511336297118194,
+          "p50": 9.091649553738534e-05,
+          "p95": 0.00022295804228633642,
+          "maximum": 0.002798624977003783
+        },
+        "store.calculation": {
+          "n": 22,
+          "total": 1.2977332919836044,
+          "mean": 0.05898787690834566,
+          "p50": 0.05866575049003586,
+          "p95": 0.06400616600876674,
+          "maximum": 0.06566054100403562
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.004367250017821789,
+          "mean": 0.0014557500059405963,
+          "p50": 0.0005181250162422657,
+          "p95": 0.003358124988153577,
+          "maximum": 0.003358124988153577
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.07075191411422566,
+          "mean": 0.003215996096101166,
+          "p50": 0.003151666489429772,
+          "p95": 0.0038644999731332064,
+          "maximum": 0.004751334025058895
+        },
+        "store.put": {
+          "n": 300,
+          "total": 0.952746624709107,
+          "mean": 0.00317582208236369,
+          "p50": 0.0006746039725840092,
+          "p95": 0.03219679195899516,
+          "maximum": 0.039285333012230694
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 2.227074420079589,
+          "mean": 0.05567686050198972,
+          "p50": 0.05599368750699796,
+          "p95": 0.05781833303626627,
+          "maximum": 0.05840187496505678
+        },
+        "transaction.inclusive": {
+          "n": 127,
+          "total": 4.743600037880242,
+          "mean": 0.037351181400631824,
+          "p50": 0.03944295801920816,
+          "p95": 0.11331862496444955,
+          "maximum": 0.11570025002583861
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 3.0327495852834545,
+          "mean": 0.1895468490802159,
+          "p50": 0.1908635630097706,
+          "p95": 0.19649029104039073,
+          "maximum": 0.19649029104039073
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.07147804199485108,
+          "mean": 0.07147804199485108,
+          "p50": 0.07147804199485108,
+          "p95": 0.07147804199485108,
+          "maximum": 0.07147804199485108
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.004885417001787573,
+          "mean": 0.004885417001787573,
+          "p50": 0.004885417001787573,
+          "p95": 0.004885417001787573,
+          "maximum": 0.004885417001787573
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0028805829933844507,
+          "mean": 0.0028805829933844507,
+          "p50": 0.0028805829933844507,
+          "p95": 0.0028805829933844507,
+          "maximum": 0.0028805829933844507
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.8432977090124041,
+          "mean": 0.8432977090124041,
+          "p50": 0.8432977090124041,
+          "p95": 0.8432977090124041,
+          "maximum": 0.8432977090124041
+        }
+      },
+      "input_rate": 9.29382470355153,
+      "input_span": 1.7215732500189915,
+      "elapsed": 5.726998917001765
+    },
+    {
+      "markets": 2,
+      "scenario": "depth",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.07689739836860099,
+      "book_service_max": 0.09452695900108665,
+      "book_service_rate": 13.00434112486598,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 8.582952432334423e-06,
+      "worker_queue_wait_max": 0.024548292043618858,
+      "accepted_queue_wait_max": 0.00017399998614564538,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.18819699995219707,
+        "detector.compute": 0.1977428740938194,
+        "diagnostic.storage_guard": 0.047691539919469506,
+        "evaluate.total": 1.2456845440901816,
+        "executor_wait.book": 0.02514083409914747,
+        "executor_wait.disconnect": 4.2458996176719666e-05,
+        "receipt.normalize_and_persist": 0.050946252013091,
+        "sql.execute": 0.19920612225541845,
+        "store.calculation": 0.9767368750181049,
+        "store.event": 0.0009552920237183571,
+        "store.metadata": 0.05384041689103469,
+        "store.put": 0.7222833316773176,
+        "store.receipt": 0.04954529111273587,
+        "transaction.inclusive": 1.9210932530113496,
+        "worker.book": 1.230271459033247,
+        "worker.disconnect": 0.07765758398454636
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 23,
+          "total": 0.24296366795897484,
+          "mean": 0.010563637737346731,
+          "p50": 0.010613000020384789,
+          "p95": 0.012368042021989822,
+          "maximum": 0.014798332995269448
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.25501887407153845,
+          "mean": 0.011591767003251747,
+          "p50": 0.010760749515611678,
+          "p95": 0.014024750038515776,
+          "maximum": 0.025219000002834946
+        },
+        "diagnostic.storage_guard": {
+          "n": 21,
+          "total": 0.0720914569683373,
+          "mean": 0.0034329265223017763,
+          "p50": 0.0027622919878922403,
+          "p95": 0.006994583993218839,
+          "maximum": 0.010542000003624707
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.6215428771683946,
+          "mean": 0.0737064944167452,
+          "p50": 0.07155795849394053,
+          "p95": 0.08236720802960917,
+          "maximum": 0.09031287505058572
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.02514083409914747,
+          "mean": 0.0015713021311967168,
+          "p50": 3.8541475078091025e-05,
+          "p95": 0.02454770903568715,
+          "maximum": 0.02454770903568715
+        },
+        "executor_wait.depth": {
+          "n": 1,
+          "total": 0.07674845797009766,
+          "mean": 0.07674845797009766,
+          "p50": 0.07674845797009766,
+          "p95": 0.07674845797009766,
+          "maximum": 0.07674845797009766
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 4.2458996176719666e-05,
+          "mean": 4.2458996176719666e-05,
+          "p50": 4.2458996176719666e-05,
+          "p95": 4.2458996176719666e-05,
+          "maximum": 4.2458996176719666e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00014083401765674353,
+          "mean": 0.00014083401765674353,
+          "p50": 0.00014083401765674353,
+          "p95": 0.00014083401765674353,
+          "maximum": 0.00014083401765674353
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 9.566603694111109e-05,
+          "mean": 9.566603694111109e-05,
+          "p50": 9.566603694111109e-05,
+          "p95": 9.566603694111109e-05,
+          "maximum": 9.566603694111109e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 9.208399569615722e-05,
+          "mean": 9.208399569615722e-05,
+          "p50": 9.208399569615722e-05,
+          "p95": 9.208399569615722e-05,
+          "maximum": 9.208399569615722e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.06782433507032692,
+          "mean": 0.0016956083767581732,
+          "p50": 0.0016002500196918845,
+          "p95": 0.0023420840152539313,
+          "maximum": 0.0036897080135531723
+        },
+        "sql.execute": {
+          "n": 2914,
+          "total": 0.28154591703787446,
+          "mean": 9.661836549000496e-05,
+          "p50": 8.399999933317304e-05,
+          "p95": 0.0002032919437624514,
+          "maximum": 0.0010422500199638307
+        },
+        "store.calculation": {
+          "n": 23,
+          "total": 1.3007246259367093,
+          "mean": 0.05655324460594389,
+          "p50": 0.056746791990008205,
+          "p95": 0.06581145897507668,
+          "maximum": 0.06654749996960163
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.003044124983716756,
+          "mean": 0.0010147083279055853,
+          "p50": 0.0009552920237183571,
+          "p95": 0.0012647499679587781,
+          "maximum": 0.0012647499679587781
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.07045995880616829,
+          "mean": 0.0032027254002803766,
+          "p50": 0.0031363129965029657,
+          "p95": 0.003791875031311065,
+          "maximum": 0.0038460419746115804
+        },
+        "store.put": {
+          "n": 302,
+          "total": 0.9635737845674157,
+          "mean": 0.0031906416707530322,
+          "p50": 0.0006718539807479829,
+          "p95": 0.031646625022403896,
+          "maximum": 0.03886658401461318
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.06602316303178668,
+          "mean": 0.001650579075794667,
+          "p50": 0.0015605619992129505,
+          "p95": 0.0022789999493397772,
+          "maximum": 0.0036413329653441906
+        },
+        "transaction.inclusive": {
+          "n": 128,
+          "total": 2.539572083973326,
+          "mean": 0.019840406906041608,
+          "p50": 0.003474854485830292,
+          "p95": 0.06223329104250297,
+          "maximum": 0.07111629203427583
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 1.230271459033247,
+          "mean": 0.07689196618957794,
+          "p50": 0.07501752153621055,
+          "p95": 0.09452212502947077,
+          "maximum": 0.09452212502947077
+        },
+        "worker.depth": {
+          "n": 1,
+          "total": 0.05034708301536739,
+          "mean": 0.05034708301536739,
+          "p50": 0.05034708301536739,
+          "p95": 0.05034708301536739,
+          "maximum": 0.05034708301536739
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.07765758398454636,
+          "mean": 0.07765758398454636,
+          "p50": 0.07765758398454636,
+          "p95": 0.07765758398454636,
+          "maximum": 0.07765758398454636
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.004440707969479263,
+          "mean": 0.004440707969479263,
+          "p50": 0.004440707969479263,
+          "p95": 0.004440707969479263,
+          "maximum": 0.004440707969479263
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.004418542026542127,
+          "mean": 0.004418542026542127,
+          "p50": 0.004418542026542127,
+          "p95": 0.004418542026542127,
+          "maximum": 0.004418542026542127
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.42886354197980836,
+          "mean": 0.42886354197980836,
+          "p50": 0.42886354197980836,
+          "p95": 0.42886354197980836,
+          "maximum": 0.42886354197980836
+        }
+      },
+      "input_rate": 9.321319123939826,
+      "input_span": 1.716495250002481,
+      "elapsed": 5.382775040983688
+    },
+    {
+      "markets": 2,
+      "scenario": "depth",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.07956168748933123,
+      "book_service_max": 0.09944437496596947,
+      "book_service_rate": 12.568863627158414,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 9.379198309034109e-05,
+      "worker_queue_wait_max": 0.03604016703320667,
+      "accepted_queue_wait_max": 0.013958249997813255,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.19846412603510544,
+        "detector.compute": 0.18926783394999802,
+        "diagnostic.storage_guard": 0.047640668984968215,
+        "evaluate.total": 1.3190366670605727,
+        "executor_wait.book": 0.03666604094905779,
+        "executor_wait.disconnect": 8.012499893084168e-05,
+        "receipt.normalize_and_persist": 0.05247437267098576,
+        "sql.execute": 0.2262406960944645,
+        "store.calculation": 1.0493289558799006,
+        "store.event": 0.0011486670118756592,
+        "store.metadata": 0.06055854295846075,
+        "store.put": 0.765789584023878,
+        "store.receipt": 0.05102416698355228,
+        "transaction.inclusive": 2.053867209237069,
+        "worker.book": 1.2729009618633427,
+        "worker.disconnect": 0.10972499998752028
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 23,
+          "total": 0.27336725016357377,
+          "mean": 0.011885532615807555,
+          "p50": 0.011458292021416128,
+          "p95": 0.015015916025731713,
+          "maximum": 0.01799612503964454
+        },
+        "detector.compute": {
+          "n": 22,
+          "total": 0.2664008329156786,
+          "mean": 0.012109128768894483,
+          "p50": 0.01115341647528112,
+          "p95": 0.0160899999900721,
+          "maximum": 0.024844917003065348
+        },
+        "diagnostic.storage_guard": {
+          "n": 21,
+          "total": 0.06010129291098565,
+          "mean": 0.0028619663290945546,
+          "p50": 0.0027534999535419047,
+          "p95": 0.0035102919791825116,
+          "maximum": 0.0035998749663122
+        },
+        "evaluate.total": {
+          "n": 22,
+          "total": 1.8167955410899594,
+          "mean": 0.08258161550408906,
+          "p50": 0.07814416650217026,
+          "p95": 0.10849833401152864,
+          "maximum": 0.12029599997913465
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.03666604094905779,
+          "mean": 0.0022916275593161117,
+          "p50": 4.087499110028148e-05,
+          "p95": 0.03603954199934378,
+          "maximum": 0.03603954199934378
+        },
+        "executor_wait.depth": {
+          "n": 1,
+          "total": 0.0851522499579005,
+          "mean": 0.0851522499579005,
+          "p50": 0.0851522499579005,
+          "p95": 0.0851522499579005,
+          "maximum": 0.0851522499579005
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 8.012499893084168e-05,
+          "mean": 8.012499893084168e-05,
+          "p50": 8.012499893084168e-05,
+          "p95": 8.012499893084168e-05,
+          "maximum": 8.012499893084168e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 4.183303099125624e-05,
+          "mean": 4.183303099125624e-05,
+          "p50": 4.183303099125624e-05,
+          "p95": 4.183303099125624e-05,
+          "maximum": 4.183303099125624e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.499998901039362e-05,
+          "mean": 7.499998901039362e-05,
+          "p50": 7.499998901039362e-05,
+          "p95": 7.499998901039362e-05,
+          "maximum": 7.499998901039362e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 7.062498480081558e-05,
+          "mean": 7.062498480081558e-05,
+          "p50": 7.062498480081558e-05,
+          "p95": 7.062498480081558e-05,
+          "maximum": 7.062498480081558e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.07419299858156592,
+          "mean": 0.001854824964539148,
+          "p50": 0.0016147919814102352,
+          "p95": 0.0033602920011617243,
+          "maximum": 0.003828749991953373
+        },
+        "sql.execute": {
+          "n": 2914,
+          "total": 0.33970932447118685,
+          "mean": 0.0001165783543140655,
+          "p50": 9.316694922745228e-05,
+          "p95": 0.0002805829863063991,
+          "maximum": 0.001961125002708286
+        },
+        "store.calculation": {
+          "n": 23,
+          "total": 1.4730928718927316,
+          "mean": 0.0640475161692492,
+          "p50": 0.061445207975339144,
+          "p95": 0.08982687501702458,
+          "maximum": 0.09045679098926485
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.002343500033020973,
+          "mean": 0.0007811666776736578,
+          "p50": 0.0009167920215986669,
+          "p95": 0.0011486670118756592,
+          "maximum": 0.0011486670118756592
+        },
+        "store.metadata": {
+          "n": 22,
+          "total": 0.0807770419633016,
+          "mean": 0.0036716837256046183,
+          "p50": 0.0034653334878385067,
+          "p95": 0.004862207977566868,
+          "maximum": 0.005775165976956487
+        },
+        "store.put": {
+          "n": 302,
+          "total": 1.0797754110535607,
+          "mean": 0.0035754152683892737,
+          "p50": 0.0006898544961586595,
+          "p95": 0.03259275003802031,
+          "maximum": 0.05193299998063594
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.07233820989495143,
+          "mean": 0.0018084552473737858,
+          "p50": 0.001570833002915606,
+          "p95": 0.0032887920388020575,
+          "maximum": 0.00378400000045076
+        },
+        "transaction.inclusive": {
+          "n": 128,
+          "total": 2.8568885062122717,
+          "mean": 0.022319441454783373,
+          "p50": 0.0037198335048742592,
+          "p95": 0.07686329202260822,
+          "maximum": 0.09627579199150205
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 1.2729009618633427,
+          "mean": 0.07955631011645892,
+          "p50": 0.0773345000052359,
+          "p95": 0.09943741699680686,
+          "maximum": 0.09943741699680686
+        },
+        "worker.depth": {
+          "n": 1,
+          "total": 0.05355633300496265,
+          "mean": 0.05355633300496265,
+          "p50": 0.05355633300496265,
+          "p95": 0.05355633300496265,
+          "maximum": 0.05355633300496265
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.10972499998752028,
+          "mean": 0.10972499998752028,
+          "p50": 0.10972499998752028,
+          "p95": 0.10972499998752028,
+          "maximum": 0.10972499998752028
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0017149999621324241,
+          "mean": 0.0017149999621324241,
+          "p50": 0.0017149999621324241,
+          "p95": 0.0017149999621324241,
+          "maximum": 0.0017149999621324241
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0047677079564891756,
+          "mean": 0.0047677079564891756,
+          "p50": 0.0047677079564891756,
+          "p95": 0.0047677079564891756,
+          "maximum": 0.0047677079564891756
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.5547602080041543,
+          "mean": 0.5547602080041543,
+          "p50": 0.5547602080041543,
+          "p95": 0.5547602080041543,
+          "maximum": 0.5547602080041543
+        }
+      },
+      "input_rate": 9.286540039707837,
+      "input_span": 1.7229237080318853,
+      "elapsed": 5.49316308303969
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.24072745568992104,
+      "book_service_max": 0.33523154200520366,
+      "book_service_rate": 4.1540753925804434,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 9.958981536328793e-06,
+      "worker_queue_wait_max": 0.00011870800517499447,
+      "accepted_queue_wait_max": 0.1006213339860551,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.5981270819320343,
+        "detector.compute": 0.5635144150000997,
+        "diagnostic.storage_guard": 0.04722899995977059,
+        "evaluate.total": 4.0176563348504715,
+        "executor_wait.book": 0.0008029170567169785,
+        "executor_wait.disconnect": 5.70000265724957e-05,
+        "receipt.normalize_and_persist": 0.05504078895319253,
+        "sql.execute": 0.5707746665575542,
+        "store.calculation": 3.2625487499753945,
+        "store.event": 0.000593957956880331,
+        "store.metadata": 0.15247179195284843,
+        "store.put": 2.3971899983589537,
+        "store.receipt": 0.05347787699429318,
+        "transaction.inclusive": 6.1477008809451945,
+        "worker.book": 3.85155092010973,
+        "worker.disconnect": 0.23224283300805837
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 26,
+          "total": 0.8836453729891218,
+          "mean": 0.033986360499581605,
+          "p50": 0.033329604484606534,
+          "p95": 0.04124504094943404,
+          "maximum": 0.04595316603081301
+        },
+        "detector.compute": {
+          "n": 26,
+          "total": 0.8503246630425565,
+          "mean": 0.03270479473240602,
+          "p50": 0.030962124525103718,
+          "p95": 0.04232875001616776,
+          "maximum": 0.04892095795366913
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.05703658395214006,
+          "mean": 0.002851829197607003,
+          "p50": 0.0026597085234243423,
+          "p95": 0.004749374988023192,
+          "maximum": 0.004749374988023192
+        },
+        "evaluate.total": {
+          "n": 26,
+          "total": 5.968045544868801,
+          "mean": 0.22954021326418464,
+          "p50": 0.2255205624969676,
+          "p95": 0.27552745799766853,
+          "maximum": 0.329245708999224
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0008029170567169785,
+          "mean": 5.018231604481116e-05,
+          "p50": 4.2312516598030925e-05,
+          "p95": 0.0001165410503745079,
+          "maximum": 0.0001165410503745079
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 5.70000265724957e-05,
+          "mean": 5.70000265724957e-05,
+          "p50": 5.70000265724957e-05,
+          "p95": 5.70000265724957e-05,
+          "maximum": 5.70000265724957e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 8.533301297575235e-05,
+          "mean": 8.533301297575235e-05,
+          "p50": 8.533301297575235e-05,
+          "p95": 8.533301297575235e-05,
+          "maximum": 8.533301297575235e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 6.783404387533665e-05,
+          "mean": 6.783404387533665e-05,
+          "p50": 6.783404387533665e-05,
+          "p95": 6.783404387533665e-05,
+          "maximum": 6.783404387533665e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 6.683304673060775e-05,
+          "mean": 6.683304673060775e-05,
+          "p50": 6.683304673060775e-05,
+          "p95": 6.683304673060775e-05,
+          "maximum": 6.683304673060775e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 48,
+          "total": 0.08643904008204117,
+          "mean": 0.0018008133350425244,
+          "p50": 0.0015539789746981114,
+          "p95": 0.002923291001934558,
+          "maximum": 0.004319709027186036
+        },
+        "sql.execute": {
+          "n": 8285,
+          "total": 0.8392361662117764,
+          "mean": 0.00010129585590968937,
+          "p50": 8.633302059024572e-05,
+          "p95": 0.00021199998445808887,
+          "maximum": 0.015419083007145673
+        },
+        "store.calculation": {
+          "n": 26,
+          "total": 4.836232875823043,
+          "mean": 0.18600895676242474,
+          "p50": 0.18204297899501398,
+          "p95": 0.22386491700308397,
+          "maximum": 0.26419137499760836
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.002630708971992135,
+          "mean": 0.000876902990664045,
+          "p50": 0.000864042027387768,
+          "p95": 0.001172708987724036,
+          "maximum": 0.001172708987724036
+        },
+        "store.metadata": {
+          "n": 26,
+          "total": 0.22589587402762845,
+          "mean": 0.00868830284721648,
+          "p50": 0.008404458494624123,
+          "p95": 0.010825667006429285,
+          "maximum": 0.012697166996076703
+        },
+        "store.put": {
+          "n": 980,
+          "total": 3.55785133340396,
+          "mean": 0.003630460544289755,
+          "p50": 0.0006585000082850456,
+          "p95": 0.007627375016454607,
+          "maximum": 0.1556954580009915
+        },
+        "store.receipt": {
+          "n": 48,
+          "total": 0.08398687600856647,
+          "mean": 0.0017497265835118014,
+          "p50": 0.0015112085093278438,
+          "p95": 0.0028803329914808273,
+          "maximum": 0.004157041024882346
+        },
+        "transaction.inclusive": {
+          "n": 151,
+          "total": 9.125793089799117,
+          "mean": 0.06043571582648422,
+          "p50": 0.00796274997992441,
+          "p95": 0.1982602080097422,
+          "maximum": 0.279600957990624
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 3.85155092010973,
+          "mean": 0.24072193250685814,
+          "p50": 0.23144191701430827,
+          "p95": 0.33522499998798594,
+          "maximum": 0.33522499998798594
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.23224283300805837,
+          "mean": 0.23224283300805837,
+          "p50": 0.23224283300805837,
+          "p95": 0.23224283300805837,
+          "maximum": 0.23224283300805837
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0031926659867167473,
+          "mean": 0.0031926659867167473,
+          "p50": 0.0031926659867167473,
+          "p95": 0.0031926659867167473,
+          "maximum": 0.0031926659867167473
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0028117920155636966,
+          "mean": 0.0028117920155636966,
+          "p50": 0.0028117920155636966,
+          "p95": 0.0028117920155636966,
+          "maximum": 0.0028117920155636966
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.023111707996577,
+          "mean": 2.023111707996577,
+          "p50": 2.023111707996577,
+          "p95": 2.023111707996577,
+          "maximum": 2.023111707996577
+        }
+      },
+      "input_rate": 4.024217109748637,
+      "input_span": 3.9759286250337027,
+      "elapsed": 9.344611834036186
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.2548532707405684,
+      "book_service_max": 0.33640600001672283,
+      "book_service_rate": 3.9238264319470497,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 1.4625024050474167e-05,
+      "worker_queue_wait_max": 7.462501525878906e-05,
+      "accepted_queue_wait_max": 0.14247850002720952,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.6245532930479385,
+        "detector.compute": 0.5778498329455033,
+        "diagnostic.storage_guard": 0.046256540110334754,
+        "evaluate.total": 4.232070458936505,
+        "executor_wait.book": 0.0007650810293853283,
+        "executor_wait.disconnect": 3.529095556586981e-05,
+        "receipt.normalize_and_persist": 0.05801958782831207,
+        "sql.execute": 0.6253138094907627,
+        "store.calculation": 3.43387262505712,
+        "store.event": 0.0003707500291056931,
+        "store.metadata": 0.18044658412691206,
+        "store.put": 2.5254251633305103,
+        "store.receipt": 0.056390208075754344,
+        "transaction.inclusive": 6.518468836264219,
+        "worker.book": 4.077555041934829,
+        "worker.disconnect": 0.22433354100212455
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 26,
+          "total": 0.9378914590342902,
+          "mean": 0.03607274842439578,
+          "p50": 0.03447893800330348,
+          "p95": 0.05233408400090411,
+          "maximum": 0.053062207996845245
+        },
+        "detector.compute": {
+          "n": 26,
+          "total": 0.8730626269243658,
+          "mean": 0.0335793318047833,
+          "p50": 0.032506354502402246,
+          "p95": 0.045453083992470056,
+          "maximum": 0.05150770797627047
+        },
+        "diagnostic.storage_guard": {
+          "n": 20,
+          "total": 0.0563830811297521,
+          "mean": 0.002819154056487605,
+          "p50": 0.002680395497009158,
+          "p95": 0.00472050003008917,
+          "maximum": 0.00472050003008917
+        },
+        "evaluate.total": {
+          "n": 26,
+          "total": 6.260917875915766,
+          "mean": 0.2408045336890679,
+          "p50": 0.23516487548477016,
+          "p95": 0.32653229200514033,
+          "maximum": 0.33228308300022036
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.0007650810293853283,
+          "mean": 4.781756433658302e-05,
+          "p50": 4.147898289375007e-05,
+          "p95": 7.374997949227691e-05,
+          "maximum": 7.374997949227691e-05
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.529095556586981e-05,
+          "mean": 3.529095556586981e-05,
+          "p50": 3.529095556586981e-05,
+          "p95": 3.529095556586981e-05,
+          "maximum": 3.529095556586981e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 8.32080258987844e-05,
+          "mean": 8.32080258987844e-05,
+          "p50": 8.32080258987844e-05,
+          "p95": 8.32080258987844e-05,
+          "maximum": 8.32080258987844e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 6.925000343471766e-05,
+          "mean": 6.925000343471766e-05,
+          "p50": 6.925000343471766e-05,
+          "p95": 6.925000343471766e-05,
+          "maximum": 6.925000343471766e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 4.5249995309859514e-05,
+          "mean": 4.5249995309859514e-05,
+          "p50": 4.5249995309859514e-05,
+          "p95": 4.5249995309859514e-05,
+          "maximum": 4.5249995309859514e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 48,
+          "total": 0.08503504487453029,
+          "mean": 0.0017715634348860476,
+          "p50": 0.0015856249956414104,
+          "p95": 0.002664458006620407,
+          "maximum": 0.005065665987785906
+        },
+        "sql.execute": {
+          "n": 8285,
+          "total": 0.8986154317390174,
+          "mean": 0.00010846293684236782,
+          "p50": 8.800002979114652e-05,
+          "p95": 0.00023279100423678756,
+          "maximum": 0.011985459015704691
+        },
+        "store.calculation": {
+          "n": 26,
+          "total": 5.081437418004498,
+          "mean": 0.19543990069248068,
+          "p50": 0.18876520849880762,
+          "p95": 0.2623747499892488,
+          "maximum": 0.28656595799839124
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.0044130420428700745,
+          "mean": 0.0014710140142900248,
+          "p50": 0.0008901670225895941,
+          "p95": 0.0031521249911747873,
+          "maximum": 0.0031521249911747873
+        },
+        "store.metadata": {
+          "n": 26,
+          "total": 0.25027075019897893,
+          "mean": 0.009625798084576113,
+          "p50": 0.008452000503893942,
+          "p95": 0.019163208024110645,
+          "maximum": 0.026899666991084814
+        },
+        "store.put": {
+          "n": 980,
+          "total": 3.7252987480023876,
+          "mean": 0.0038013252530636607,
+          "p50": 0.0006696665077470243,
+          "p95": 0.007278792036231607,
+          "maximum": 0.14938445802545175
+        },
+        "store.receipt": {
+          "n": 48,
+          "total": 0.08275716699426994,
+          "mean": 0.001724107645713957,
+          "p50": 0.0015454165113624185,
+          "p95": 0.0026221669977530837,
+          "maximum": 0.005002499965485185
+        },
+        "transaction.inclusive": {
+          "n": 151,
+          "total": 9.598859252873808,
+          "mean": 0.06356860432366761,
+          "p50": 0.007644750003237277,
+          "p95": 0.21061329200165346,
+          "maximum": 0.29821870796149597
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 4.077555041934829,
+          "mean": 0.2548471901209268,
+          "p50": 0.2418179374653846,
+          "p95": 0.3364007080090232,
+          "maximum": 0.3364007080090232
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.22433354100212455,
+          "mean": 0.22433354100212455,
+          "p50": 0.22433354100212455,
+          "p95": 0.22433354100212455,
+          "maximum": 0.22433354100212455
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0061138339806348085,
+          "mean": 0.0061138339806348085,
+          "p50": 0.0061138339806348085,
+          "p95": 0.0061138339806348085,
+          "maximum": 0.0061138339806348085
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0028985830140300095,
+          "mean": 0.0028985830140300095,
+          "p50": 0.0028985830140300095,
+          "p95": 0.0028985830140300095,
+          "maximum": 0.0028985830140300095
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.0960062500089407,
+          "mean": 2.0960062500089407,
+          "p50": 2.0960062500089407,
+          "p95": 2.0960062500089407,
+          "maximum": 2.0960062500089407
+        }
+      },
+      "input_rate": 4.02843441020761,
+      "input_span": 3.9717662920011207,
+      "elapsed": 9.350323375023436
+    },
+    {
+      "markets": 4,
+      "scenario": "burst24",
+      "timing": true,
+      "counts": {
+        "offered": 24,
+        "accepted": 24,
+        "rejected": 0,
+        "processed": 12,
+        "unprocessed": 12,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 24,
+          "accepted": 24,
+          "processed": 12
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.2664665139988453,
+      "book_service_max": 0.35076274996390566,
+      "book_service_rate": 3.7528167610746523,
+      "queue_high_water": 24,
+      "estimated_bytes_high_water": 29654,
+      "oldest_seconds": 3.2517682920442894,
+      "worker_queue_wait_max": 0.00011608301429077983,
+      "accepted_queue_wait_max": 2.9951486670179293,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.47138733393512666,
+        "detector.compute": 0.5155940819531679,
+        "diagnostic.storage_guard": 0.034717290953267366,
+        "evaluate.total": 3.1410118750063702,
+        "executor_wait.book": 0.0006838338449597359,
+        "receipt.normalize_and_persist": 0.04747420799685642,
+        "sql.execute": 0.43281217152252793,
+        "store.calculation": 2.4850253729964606,
+        "store.metadata": 0.11452141805784777,
+        "store.put": 1.8149827977758832,
+        "store.receipt": 0.04598153888946399,
+        "transaction.inclusive": 4.673590913938824,
+        "worker.book": 3.197529333992861
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 21,
+          "total": 0.7870862918789499,
+          "mean": 0.03748029961328333,
+          "p50": 0.034130292013287544,
+          "p95": 0.04370945901609957,
+          "maximum": 0.07266970799537376
+        },
+        "detector.compute": {
+          "n": 21,
+          "total": 0.8057047488400713,
+          "mean": 0.03836689280190816,
+          "p50": 0.03334720799466595,
+          "p95": 0.05883816600544378,
+          "maximum": 0.08175358298467472
+        },
+        "diagnostic.storage_guard": {
+          "n": 15,
+          "total": 0.044065749854780734,
+          "mean": 0.0029377166569853823,
+          "p50": 0.0028066670056432486,
+          "p95": 0.00409129197942093,
+          "maximum": 0.00409129197942093
+        },
+        "evaluate.total": {
+          "n": 21,
+          "total": 5.248709584120661,
+          "mean": 0.2499385516247934,
+          "p50": 0.23847575002582744,
+          "p95": 0.30665275000501424,
+          "maximum": 0.3471702500246465
+        },
+        "executor_wait.book": {
+          "n": 12,
+          "total": 0.0006838338449597359,
+          "mean": 5.6986153746644654e-05,
+          "p50": 4.7874986194074154e-05,
+          "p95": 0.00011475000064820051,
+          "maximum": 0.00011475000064820051
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 4.4124957639724016e-05,
+          "mean": 4.4124957639724016e-05,
+          "p50": 4.4124957639724016e-05,
+          "p95": 4.4124957639724016e-05,
+          "maximum": 4.4124957639724016e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 0.00015375000657513738,
+          "mean": 0.00015375000657513738,
+          "p50": 0.00015375000657513738,
+          "p95": 0.00015375000657513738,
+          "maximum": 0.00015375000657513738
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 6.516603752970695e-05,
+          "mean": 6.516603752970695e-05,
+          "p50": 6.516603752970695e-05,
+          "p95": 6.516603752970695e-05,
+          "maximum": 6.516603752970695e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.07949683000333607,
+          "mean": 0.001987420750083402,
+          "p50": 0.0016489374975208193,
+          "p95": 0.005531625007279217,
+          "maximum": 0.006935541983693838
+        },
+        "sql.execute": {
+          "n": 6692,
+          "total": 0.7753410674049519,
+          "mean": 0.00011586088873355527,
+          "p50": 9.018747368827462e-05,
+          "p95": 0.00025091698626056314,
+          "maximum": 0.03966562502318993
+        },
+        "store.calculation": {
+          "n": 21,
+          "total": 4.213416705955751,
+          "mean": 0.20063889075979768,
+          "p50": 0.19111141696339473,
+          "p95": 0.2355980830034241,
+          "maximum": 0.25224812497617677
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0008418750367127359,
+          "mean": 0.00042093751835636795,
+          "p50": 0.00042093751835636795,
+          "p95": 0.0005426250281743705,
+          "maximum": 0.0005426250281743705
+        },
+        "store.metadata": {
+          "n": 21,
+          "total": 0.18673500005388632,
+          "mean": 0.008892142859708872,
+          "p50": 0.008807790989521891,
+          "p95": 0.010257875022944063,
+          "maximum": 0.01208175002830103
+        },
+        "store.put": {
+          "n": 794,
+          "total": 3.0761599270626903,
+          "mean": 0.0038742568350915493,
+          "p50": 0.0006713540060445666,
+          "p95": 0.007016332994680852,
+          "maximum": 0.14830029202857986
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.07721199764637277,
+          "mean": 0.0019302999411593192,
+          "p50": 0.0015942295140121132,
+          "p95": 0.005478958948515356,
+          "maximum": 0.006837790948338807
+        },
+        "transaction.inclusive": {
+          "n": 124,
+          "total": 7.915645043016411,
+          "mean": 0.06383584712110009,
+          "p50": 0.0076453124929685146,
+          "p95": 0.2206887910142541,
+          "maximum": 0.26429625001037493
+        },
+        "worker.book": {
+          "n": 12,
+          "total": 3.197529333992861,
+          "mean": 0.2664607778327384,
+          "p50": 0.2587420210184064,
+          "p95": 0.3507573339738883,
+          "maximum": 0.3507573339738883
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0012399170082062483,
+          "mean": 0.0012399170082062483,
+          "p50": 0.0012399170082062483,
+          "p95": 0.0012399170082062483,
+          "maximum": 0.0012399170082062483
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.009451167017687112,
+          "mean": 0.009451167017687112,
+          "p50": 0.009451167017687112,
+          "p95": 0.009451167017687112,
+          "maximum": 0.009451167017687112
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.195497999957297,
+          "mean": 2.195497999957297,
+          "p50": 2.195497999957297,
+          "p95": 2.195497999957297,
+          "maximum": 2.195497999957297
+        }
+      },
+      "input_rate": 10153.032844851412,
+      "input_span": 0.002265332965180278,
+      "elapsed": 5.5599256660207175
+    },
+    {
+      "markets": 4,
+      "scenario": "burst24",
+      "timing": true,
+      "counts": {
+        "offered": 24,
+        "accepted": 24,
+        "rejected": 0,
+        "processed": 12,
+        "unprocessed": 12,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 24,
+          "accepted": 24,
+          "processed": 12
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.25102625699946657,
+      "book_service_max": 0.28412266698433086,
+      "book_service_rate": 3.9836470174597114,
+      "queue_high_water": 24,
+      "estimated_bytes_high_water": 29654,
+      "oldest_seconds": 3.0648891250020824,
+      "worker_queue_wait_max": 0.00010324997128918767,
+      "accepted_queue_wait_max": 2.8154513749759644,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.438832790881861,
+        "detector.compute": 0.4385882931528613,
+        "diagnostic.storage_guard": 0.03455075004603714,
+        "evaluate.total": 2.958463792107068,
+        "executor_wait.book": 0.000592788856010884,
+        "receipt.normalize_and_persist": 0.04554104106500745,
+        "sql.execute": 0.4002004989888519,
+        "store.calculation": 2.35509504401125,
+        "store.metadata": 0.1360582499182783,
+        "store.put": 1.7301369142951444,
+        "store.receipt": 0.04422512406017631,
+        "transaction.inclusive": 4.471474247111473,
+        "worker.book": 3.0122507928754203
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 21,
+          "total": 0.7814773349091411,
+          "mean": 0.03721320642424481,
+          "p50": 0.0351789589622058,
+          "p95": 0.04254045896232128,
+          "maximum": 0.07275254203705117
+        },
+        "detector.compute": {
+          "n": 21,
+          "total": 0.8741426260676235,
+          "mean": 0.0416258393365535,
+          "p50": 0.033156042045447975,
+          "p95": 0.054779250000137836,
+          "maximum": 0.17186524998396635
+        },
+        "diagnostic.storage_guard": {
+          "n": 15,
+          "total": 0.04272812505951151,
+          "mean": 0.0028485416706341008,
+          "p50": 0.0026766249793581665,
+          "p95": 0.004907000053208321,
+          "maximum": 0.004907000053208321
+        },
+        "evaluate.total": {
+          "n": 21,
+          "total": 5.180694043170661,
+          "mean": 0.24669971634146004,
+          "p50": 0.23062045802362263,
+          "p95": 0.2787909160251729,
+          "maximum": 0.4375478749861941
+        },
+        "executor_wait.book": {
+          "n": 12,
+          "total": 0.000592788856010884,
+          "mean": 4.939907133424034e-05,
+          "p50": 4.4458487536758184e-05,
+          "p95": 0.00010120798833668232,
+          "maximum": 0.00010120798833668232
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 3.866699989885092e-05,
+          "mean": 3.866699989885092e-05,
+          "p50": 3.866699989885092e-05,
+          "p95": 3.866699989885092e-05,
+          "maximum": 3.866699989885092e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 0.00013095897156745195,
+          "mean": 0.00013095897156745195,
+          "p50": 0.00013095897156745195,
+          "p95": 0.00013095897156745195,
+          "maximum": 0.00013095897156745195
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 5.5958982557058334e-05,
+          "mean": 5.5958982557058334e-05,
+          "p50": 5.5958982557058334e-05,
+          "p95": 5.5958982557058334e-05,
+          "maximum": 5.5958982557058334e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 40,
+          "total": 0.0793738731299527,
+          "mean": 0.0019843468282488173,
+          "p50": 0.0016591460444033146,
+          "p95": 0.003939624992199242,
+          "maximum": 0.006318250030744821
+        },
+        "sql.execute": {
+          "n": 6692,
+          "total": 0.6928134258487262,
+          "mean": 0.00010352860517763392,
+          "p50": 8.812500163912773e-05,
+          "p95": 0.00023391697322949767,
+          "maximum": 0.003183875000104308
+        },
+        "store.calculation": {
+          "n": 21,
+          "total": 4.051568877999671,
+          "mean": 0.19293185133331767,
+          "p50": 0.18644975003553554,
+          "p95": 0.23085008299676701,
+          "maximum": 0.2548825840349309
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0006317510269582272,
+          "mean": 0.0003158755134791136,
+          "p50": 0.0003158755134791136,
+          "p95": 0.00043866701889783144,
+          "maximum": 0.00043866701889783144
+        },
+        "store.metadata": {
+          "n": 21,
+          "total": 0.2098397909430787,
+          "mean": 0.009992370997289462,
+          "p50": 0.008559541951399297,
+          "p95": 0.010616290965117514,
+          "maximum": 0.03765920799924061
+        },
+        "store.put": {
+          "n": 794,
+          "total": 2.938870075100567,
+          "mean": 0.003701347701637994,
+          "p50": 0.0006615625170525163,
+          "p95": 0.006960915983654559,
+          "maximum": 0.1321318750269711
+        },
+        "store.receipt": {
+          "n": 40,
+          "total": 0.07727579196216539,
+          "mean": 0.0019318947990541347,
+          "p50": 0.0016126249975059181,
+          "p95": 0.003811708011198789,
+          "maximum": 0.006261333997827023
+        },
+        "transaction.inclusive": {
+          "n": 124,
+          "total": 7.633856247062795,
+          "mean": 0.06156335683115157,
+          "p50": 0.0076823754934594035,
+          "p95": 0.2123171659768559,
+          "maximum": 0.26485941698774695
+        },
+        "worker.book": {
+          "n": 12,
+          "total": 3.0122507928754203,
+          "mean": 0.251020899406285,
+          "p50": 0.24929845848237164,
+          "p95": 0.2841181249823421,
+          "maximum": 0.2841181249823421
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0009261250379495323,
+          "mean": 0.0009261250379495323,
+          "p50": 0.0009261250379495323,
+          "p95": 0.0009261250379495323,
+          "maximum": 0.0009261250379495323
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0037699579843319952,
+          "mean": 0.0037699579843319952,
+          "p50": 0.0037699579843319952,
+          "p95": 0.0037699579843319952,
+          "maximum": 0.0037699579843319952
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.300861250027083,
+          "mean": 2.300861250027083,
+          "p50": 2.300861250027083,
+          "p95": 2.300861250027083,
+          "maximum": 2.300861250027083
+        }
+      },
+      "input_rate": 10161.815719261,
+      "input_span": 0.0022633750340901315,
+      "elapsed": 5.472197833994869
+    },
+    {
+      "markets": 4,
+      "scenario": "overflow40",
+      "timing": true,
+      "counts": {
+        "offered": 41,
+        "accepted": 33,
+        "rejected": 8,
+        "processed": 1,
+        "unprocessed": 32,
+        "retained_per_side_observations": 18,
+        "committed_receipts": 18,
+        "attempted_receipt_writes": 18,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 41,
+          "accepted": 33,
+          "processed": 1
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true,
+        "known_overflow": true
+      },
+      "book_service_mean": 0.4532529170392081,
+      "book_service_max": 0.4532529170392081,
+      "book_service_rate": 2.2062737213746297,
+      "queue_high_water": 32,
+      "estimated_bytes_high_water": 39543,
+      "oldest_seconds": 0.4634906249702908,
+      "worker_queue_wait_max": 3.9375037886202335e-05,
+      "accepted_queue_wait_max": 4.549999721348286e-05,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.034452083986252546,
+        "detector.compute": 0.039072791987564415,
+        "diagnostic.storage_guard": 0.002124540973454714,
+        "evaluate.total": 0.23783704201923683,
+        "executor_wait.book": 3.8583006244152784e-05,
+        "injected.receipt_delay": 0.21003904205281287,
+        "receipt.normalize_and_persist": 0.21438958396902308,
+        "sql.execute": 0.031776290270499885,
+        "store.calculation": 0.18779341701883823,
+        "store.metadata": 0.008929957984946668,
+        "store.put": 0.13875737506896257,
+        "store.receipt": 0.2142679169191979,
+        "transaction.inclusive": 0.5657575000077486,
+        "worker.book": 0.4532474590232596
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 10,
+          "total": 0.34486891515553,
+          "mean": 0.034486891515552995,
+          "p50": 0.03297075000591576,
+          "p95": 0.04585641605081037,
+          "maximum": 0.04585641605081037
+        },
+        "detector.compute": {
+          "n": 10,
+          "total": 0.4595992070971988,
+          "mean": 0.04595992070971988,
+          "p50": 0.04271447900100611,
+          "p95": 0.0745320410351269,
+          "maximum": 0.0745320410351269
+        },
+        "diagnostic.storage_guard": {
+          "n": 4,
+          "total": 0.010921500041149557,
+          "mean": 0.002730375010287389,
+          "p50": 0.0022979170316830277,
+          "p95": 0.004201125004328787,
+          "maximum": 0.004201125004328787
+        },
+        "evaluate.total": {
+          "n": 10,
+          "total": 2.40551616915036,
+          "mean": 0.240551616915036,
+          "p50": 0.23781489601242356,
+          "p95": 0.2750858750077896,
+          "maximum": 0.2750858750077896
+        },
+        "executor_wait.book": {
+          "n": 1,
+          "total": 3.8583006244152784e-05,
+          "mean": 3.8583006244152784e-05,
+          "p50": 3.8583006244152784e-05,
+          "p95": 3.8583006244152784e-05,
+          "maximum": 3.8583006244152784e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 3.487500362098217e-05,
+          "mean": 3.487500362098217e-05,
+          "p50": 3.487500362098217e-05,
+          "p95": 3.487500362098217e-05,
+          "maximum": 3.487500362098217e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 0.00016308296471834183,
+          "mean": 0.00016308296471834183,
+          "p50": 0.00016308296471834183,
+          "p95": 0.00016308296471834183,
+          "maximum": 0.00016308296471834183
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 0.0001106659765355289,
+          "mean": 0.0001106659765355289,
+          "p50": 0.0001106659765355289,
+          "p95": 0.0001106659765355289,
+          "maximum": 0.0001106659765355289
+        },
+        "injected.receipt_delay": {
+          "n": 18,
+          "total": 1.8704235431505367,
+          "mean": 0.10391241906391871,
+          "p50": 0.10498531252960674,
+          "p95": 0.10503016598522663,
+          "maximum": 0.10503016598522663
+        },
+        "receipt.normalize_and_persist": {
+          "n": 18,
+          "total": 1.9289334160275757,
+          "mean": 0.10716296755708754,
+          "p50": 0.10722333349986002,
+          "p95": 0.1092327919905074,
+          "maximum": 0.1092327919905074
+        },
+        "sql.execute": {
+          "n": 3150,
+          "total": 0.3391282552620396,
+          "mean": 0.00010765976357525067,
+          "p50": 8.814598550088704e-05,
+          "p95": 0.00023854098981246352,
+          "maximum": 0.009085749974474311
+        },
+        "store.calculation": {
+          "n": 10,
+          "total": 1.8488629580824636,
+          "mean": 0.18488629580824636,
+          "p50": 0.1807172915141564,
+          "p95": 0.22231004101922736,
+          "maximum": 0.22231004101922736
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0005279169999994338,
+          "mean": 0.0002639584999997169,
+          "p50": 0.0002639584999997169,
+          "p95": 0.0003386249882169068,
+          "maximum": 0.0003386249882169068
+        },
+        "store.metadata": {
+          "n": 10,
+          "total": 0.07957974896999076,
+          "mean": 0.007957974896999075,
+          "p50": 0.008151833491865546,
+          "p95": 0.008929957984946668,
+          "maximum": 0.008929957984946668
+        },
+        "store.put": {
+          "n": 376,
+          "total": 1.3583080430980772,
+          "mean": 0.0036125213912182905,
+          "p50": 0.0006408334884326905,
+          "p95": 0.006856583000626415,
+          "maximum": 0.1304680419852957
+        },
+        "store.receipt": {
+          "n": 18,
+          "total": 1.9279492488713004,
+          "mean": 0.10710829160396113,
+          "p50": 0.10716795848566107,
+          "p95": 0.10917320800945163,
+          "maximum": 0.10917320800945163
+        },
+        "transaction.inclusive": {
+          "n": 58,
+          "total": 5.380643003038131,
+          "mean": 0.09276970694893329,
+          "p50": 0.06735939599457197,
+          "p95": 0.2170592499896884,
+          "maximum": 0.2311474169837311
+        },
+        "worker.book": {
+          "n": 1,
+          "total": 0.4532474590232596,
+          "mean": 0.4532474590232596,
+          "p50": 0.4532474590232596,
+          "p95": 0.4532474590232596,
+          "maximum": 0.4532474590232596
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0008218750008381903,
+          "mean": 0.0008218750008381903,
+          "p50": 0.0008218750008381903,
+          "p95": 0.0008218750008381903,
+          "maximum": 0.0008218750008381903
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.004996625008061528,
+          "mean": 0.004996625008061528,
+          "p50": 0.004996625008061528,
+          "p95": 0.004996625008061528,
+          "maximum": 0.004996625008061528
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.9257138749817386,
+          "mean": 3.9257138749817386,
+          "p50": 3.9257138749817386,
+          "p95": 3.9257138749817386,
+          "maximum": 3.9257138749817386
+        }
+      },
+      "input_rate": 7723.934230693777,
+      "input_span": 0.005178708001039922,
+      "elapsed": 4.50141824997263
+    },
+    {
+      "markets": 4,
+      "scenario": "overflow40",
+      "timing": true,
+      "counts": {
+        "offered": 41,
+        "accepted": 33,
+        "rejected": 8,
+        "processed": 1,
+        "unprocessed": 32,
+        "retained_per_side_observations": 18,
+        "committed_receipts": 18,
+        "attempted_receipt_writes": 18,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 41,
+          "accepted": 33,
+          "processed": 1
+        },
+        "disconnect": {
+          "offered": 0,
+          "accepted": 0,
+          "processed": 0
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true,
+        "known_overflow": true
+      },
+      "book_service_mean": 0.4818597080302425,
+      "book_service_max": 0.4818597080302425,
+      "book_service_rate": 2.075292835933147,
+      "queue_high_water": 32,
+      "estimated_bytes_high_water": 39543,
+      "oldest_seconds": 0.4932438340038061,
+      "worker_queue_wait_max": 4.70829545520246e-05,
+      "accepted_queue_wait_max": 9.200000204145908e-05,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.05804841598728672,
+        "detector.compute": 0.04772295797010884,
+        "diagnostic.storage_guard": 0.00266866700258106,
+        "evaluate.total": 0.2658341660280712,
+        "executor_wait.book": 4.63749747723341e-05,
+        "injected.receipt_delay": 0.20546841603936628,
+        "receipt.normalize_and_persist": 0.21493183390703052,
+        "sql.execute": 0.03155350097222254,
+        "store.calculation": 0.20765495800878853,
+        "store.metadata": 0.00850991701008752,
+        "store.put": 0.13703971303766593,
+        "store.receipt": 0.21481770795071498,
+        "transaction.inclusive": 0.5865146249998361,
+        "worker.book": 0.4818540830165148
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 10,
+          "total": 0.3852784160990268,
+          "mean": 0.03852784160990268,
+          "p50": 0.03580362451612018,
+          "p95": 0.05804841598728672,
+          "maximum": 0.05804841598728672
+        },
+        "detector.compute": {
+          "n": 10,
+          "total": 0.41176271002041176,
+          "mean": 0.04117627100204117,
+          "p50": 0.03983779199188575,
+          "p95": 0.0631759170209989,
+          "maximum": 0.0631759170209989
+        },
+        "diagnostic.storage_guard": {
+          "n": 4,
+          "total": 0.010072458011563867,
+          "mean": 0.002518114502890967,
+          "p50": 0.0025062290078494698,
+          "p95": 0.003169999981764704,
+          "maximum": 0.003169999981764704
+        },
+        "evaluate.total": {
+          "n": 10,
+          "total": 2.521287456038408,
+          "mean": 0.2521287456038408,
+          "p50": 0.24401110349572264,
+          "p95": 0.30292195797665045,
+          "maximum": 0.30292195797665045
+        },
+        "executor_wait.book": {
+          "n": 1,
+          "total": 4.63749747723341e-05,
+          "mean": 4.63749747723341e-05,
+          "p50": 4.63749747723341e-05,
+          "p95": 4.63749747723341e-05,
+          "maximum": 4.63749747723341e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 4.841701593250036e-05,
+          "mean": 4.841701593250036e-05,
+          "p50": 4.841701593250036e-05,
+          "p95": 4.841701593250036e-05,
+          "maximum": 4.841701593250036e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 8.012499893084168e-05,
+          "mean": 8.012499893084168e-05,
+          "p50": 8.012499893084168e-05,
+          "p95": 8.012499893084168e-05,
+          "maximum": 8.012499893084168e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.7999998312443495e-05,
+          "mean": 3.7999998312443495e-05,
+          "p50": 3.7999998312443495e-05,
+          "p95": 3.7999998312443495e-05,
+          "maximum": 3.7999998312443495e-05
+        },
+        "injected.receipt_delay": {
+          "n": 18,
+          "total": 1.851686040055938,
+          "mean": 0.10287144666977434,
+          "p50": 0.10284493750077672,
+          "p95": 0.1050567920319736,
+          "maximum": 0.1050567920319736
+        },
+        "receipt.normalize_and_persist": {
+          "n": 18,
+          "total": 1.914247332897503,
+          "mean": 0.10634707404986127,
+          "p50": 0.10624660397297703,
+          "p95": 0.11108233395498246,
+          "maximum": 0.11108233395498246
+        },
+        "sql.execute": {
+          "n": 3150,
+          "total": 0.39796742785256356,
+          "mean": 0.0001263388659849408,
+          "p50": 9.508297080174088e-05,
+          "p95": 0.0002892090124078095,
+          "maximum": 0.00851441698614508
+        },
+        "store.calculation": {
+          "n": 10,
+          "total": 2.00397425115807,
+          "mean": 0.200397425115807,
+          "p50": 0.19340908349840902,
+          "p95": 0.24813033401733264,
+          "maximum": 0.24813033401733264
+        },
+        "store.event": {
+          "n": 2,
+          "total": 0.0005444579874165356,
+          "mean": 0.0002722289937082678,
+          "p50": 0.0002722289937082678,
+          "p95": 0.0003793329815380275,
+          "maximum": 0.0003793329815380275
+        },
+        "store.metadata": {
+          "n": 10,
+          "total": 0.08623158402042463,
+          "mean": 0.008623158402042464,
+          "p50": 0.0087038335041143,
+          "p95": 0.010780459037050605,
+          "maximum": 0.010780459037050605
+        },
+        "store.put": {
+          "n": 376,
+          "total": 1.4238806209759787,
+          "mean": 0.0037869165451488796,
+          "p50": 0.0006763335259165615,
+          "p95": 0.006990124995354563,
+          "maximum": 0.13557741697877645
+        },
+        "store.receipt": {
+          "n": 18,
+          "total": 1.9132064990117215,
+          "mean": 0.10628924994509564,
+          "p50": 0.10620322899194434,
+          "p95": 0.11102424998534843,
+          "maximum": 0.11102424998534843
+        },
+        "transaction.inclusive": {
+          "n": 58,
+          "total": 5.648621210129932,
+          "mean": 0.09739002086430916,
+          "p50": 0.06813989550573751,
+          "p95": 0.21745975001249462,
+          "maximum": 0.25892508297692984
+        },
+        "worker.book": {
+          "n": 1,
+          "total": 0.4818540830165148,
+          "mean": 0.4818540830165148,
+          "p50": 0.4818540830165148,
+          "p95": 0.4818540830165148,
+          "maximum": 0.4818540830165148
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0007995839696377516,
+          "mean": 0.0007995839696377516,
+          "p50": 0.0007995839696377516,
+          "p95": 0.0007995839696377516,
+          "maximum": 0.0007995839696377516
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0029297079890966415,
+          "mean": 0.0029297079890966415,
+          "p50": 0.0029297079890966415,
+          "p95": 0.0029297079890966415,
+          "maximum": 0.0029297079890966415
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.994818083010614,
+          "mean": 3.994818083010614,
+          "p50": 3.994818083010614,
+          "p95": 3.994818083010614,
+          "maximum": 3.994818083010614
+        }
+      },
+      "input_rate": 8126.227951156694,
+      "input_span": 0.004922332998830825,
+      "elapsed": 4.595627832983155
+    },
+    {
+      "markets": 4,
+      "scenario": "slow",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 14,
+        "unprocessed": 3,
+        "retained_per_side_observations": 42,
+        "committed_receipts": 42,
+        "attempted_receipt_writes": 42,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 13
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.3569406956174554,
+      "book_service_max": 0.4141830410226248,
+      "book_service_rate": 2.801585844029764,
+      "queue_high_water": 11,
+      "estimated_bytes_high_water": 12421,
+      "oldest_seconds": 3.3859272499685176,
+      "worker_queue_wait_max": 5.2292016334831715e-05,
+      "accepted_queue_wait_max": 3.136327792017255,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.5186224160715938,
+        "detector.compute": 0.5492068731109612,
+        "diagnostic.storage_guard": 0.03511487494688481,
+        "evaluate.total": 3.3984876250033267,
+        "executor_wait.book": 0.0004936240729875863,
+        "executor_wait.disconnect": 5.1499984692782164e-05,
+        "injected.receipt_delay": 1.4038667099666782,
+        "receipt.normalize_and_persist": 1.4657829609350301,
+        "sql.execute": 0.43272984569193795,
+        "store.calculation": 2.6857326270546764,
+        "store.event": 0.0009728749864734709,
+        "store.metadata": 0.1342527910019271,
+        "store.put": 1.9480843858327717,
+        "store.receipt": 1.4644607109948993,
+        "transaction.inclusive": 6.454569248424377,
+        "worker.book": 4.640176457876805,
+        "worker.disconnect": 0.236775207973551
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 23,
+          "total": 0.863302958139684,
+          "mean": 0.03753491122346452,
+          "p50": 0.033863708027638495,
+          "p95": 0.06084754102630541,
+          "maximum": 0.07357129198499024
+        },
+        "detector.compute": {
+          "n": 23,
+          "total": 0.8759678741334938,
+          "mean": 0.03808555974493451,
+          "p50": 0.039059125003404915,
+          "p95": 0.04322241595946252,
+          "maximum": 0.044855750049464405
+        },
+        "diagnostic.storage_guard": {
+          "n": 17,
+          "total": 0.043884415877982974,
+          "mean": 0.0025814362281166457,
+          "p50": 0.002482375013642013,
+          "p95": 0.004160915967077017,
+          "maximum": 0.004160915967077017
+        },
+        "evaluate.total": {
+          "n": 23,
+          "total": 5.480494793038815,
+          "mean": 0.23828238230603543,
+          "p50": 0.2343289169948548,
+          "p95": 0.2923074999707751,
+          "maximum": 0.3011649170075543
+        },
+        "executor_wait.book": {
+          "n": 13,
+          "total": 0.0004936240729875863,
+          "mean": 3.7971082537506634e-05,
+          "p50": 3.6958022974431515e-05,
+          "p95": 4.541699308902025e-05,
+          "maximum": 4.541699308902025e-05
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 5.1499984692782164e-05,
+          "mean": 5.1499984692782164e-05,
+          "p50": 5.1499984692782164e-05,
+          "p95": 5.1499984692782164e-05,
+          "maximum": 5.1499984692782164e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 3.5334029234945774e-05,
+          "mean": 3.5334029234945774e-05,
+          "p50": 3.5334029234945774e-05,
+          "p95": 3.5334029234945774e-05,
+          "maximum": 3.5334029234945774e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 8.154200622811913e-05,
+          "mean": 8.154200622811913e-05,
+          "p50": 8.154200622811913e-05,
+          "p95": 8.154200622811913e-05,
+          "maximum": 8.154200622811913e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 5.2084040362387896e-05,
+          "mean": 5.2084040362387896e-05,
+          "p50": 5.2084040362387896e-05,
+          "p95": 5.2084040362387896e-05,
+          "maximum": 5.2084040362387896e-05
+        },
+        "injected.receipt_delay": {
+          "n": 42,
+          "total": 2.26062921207631,
+          "mean": 0.05382450504943596,
+          "p50": 0.05479237550753169,
+          "p95": 0.05503550003049895,
+          "maximum": 0.055038000049535185
+        },
+        "receipt.normalize_and_persist": {
+          "n": 42,
+          "total": 2.3682077500852756,
+          "mean": 0.05638589881155418,
+          "p50": 0.056877416966017336,
+          "p95": 0.05841866601258516,
+          "maximum": 0.0587100830161944
+        },
+        "sql.execute": {
+          "n": 7319,
+          "total": 0.7218196935136802,
+          "mean": 9.862272079705974e-05,
+          "p50": 8.404202526435256e-05,
+          "p95": 0.00021837500389665365,
+          "maximum": 0.011412124964408576
+        },
+        "store.calculation": {
+          "n": 23,
+          "total": 4.356439378869254,
+          "mean": 0.18941040777692408,
+          "p50": 0.1792534170090221,
+          "p95": 0.24080025003058836,
+          "maximum": 0.25185150001198053
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.0015160010079853237,
+          "mean": 0.0005053336693284413,
+          "p50": 0.00036020902916789055,
+          "p95": 0.0009728749864734709,
+          "maximum": 0.0009728749864734709
+        },
+        "store.metadata": {
+          "n": 23,
+          "total": 0.2020836680312641,
+          "mean": 0.008786246436141917,
+          "p50": 0.00813266698969528,
+          "p95": 0.009016000025440007,
+          "maximum": 0.026632958033587784
+        },
+        "store.put": {
+          "n": 866,
+          "total": 3.1347777573391795,
+          "mean": 0.0036198357475048263,
+          "p50": 0.0006411460053641349,
+          "p95": 0.006553125043865293,
+          "maximum": 0.14438970800256357
+        },
+        "store.receipt": {
+          "n": 42,
+          "total": 2.3661232118611224,
+          "mean": 0.05633626694907434,
+          "p50": 0.05682912500924431,
+          "p95": 0.05836445797467604,
+          "maximum": 0.058653916988987476
+        },
+        "transaction.inclusive": {
+          "n": 133,
+          "total": 10.431125414732378,
+          "mean": 0.07842951439648405,
+          "p50": 0.10683900001458824,
+          "p95": 0.20009341702098027,
+          "maximum": 0.2614544999669306
+        },
+        "worker.book": {
+          "n": 13,
+          "total": 4.640176457876805,
+          "mean": 0.35693665060590807,
+          "p50": 0.34758674999466166,
+          "p95": 0.41417895804625005,
+          "maximum": 0.41417895804625005
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.236775207973551,
+          "mean": 0.236775207973551,
+          "p50": 0.236775207973551,
+          "p95": 0.236775207973551,
+          "maximum": 0.236775207973551
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0008008750155568123,
+          "mean": 0.0008008750155568123,
+          "p50": 0.0008008750155568123,
+          "p95": 0.0008008750155568123,
+          "maximum": 0.0008008750155568123
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0031035830033943057,
+          "mean": 0.0031035830033943057,
+          "p50": 0.0031035830033943057,
+          "p95": 0.0031035830033943057,
+          "maximum": 0.0031035830033943057
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.0291307080187835,
+          "mean": 3.0291307080187835,
+          "p50": 3.0291307080187835,
+          "p95": 3.0291307080187835,
+          "maximum": 3.0291307080187835
+        }
+      },
+      "input_rate": 9.162487117183106,
+      "input_span": 1.7462507499731146,
+      "elapsed": 8.063514917041175
+    },
+    {
+      "markets": 4,
+      "scenario": "slow",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 14,
+        "unprocessed": 3,
+        "retained_per_side_observations": 42,
+        "committed_receipts": 42,
+        "attempted_receipt_writes": 42,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 13
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.3662445223129068,
+      "book_service_max": 0.42510049999691546,
+      "book_service_rate": 2.7304162631151496,
+      "queue_high_water": 12,
+      "estimated_bytes_high_water": 13656,
+      "oldest_seconds": 3.4703915410209447,
+      "worker_queue_wait_max": 5.5957993026822805e-05,
+      "accepted_queue_wait_max": 3.197951624984853,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.5391734181321226,
+        "detector.compute": 0.6010219999589026,
+        "diagnostic.storage_guard": 0.03666187496855855,
+        "evaluate.total": 3.4811602100962773,
+        "executor_wait.book": 0.0005558309494517744,
+        "executor_wait.disconnect": 3.587501123547554e-05,
+        "injected.receipt_delay": 1.4044593709986657,
+        "receipt.normalize_and_persist": 1.4754852530895732,
+        "sql.execute": 0.4568087078514509,
+        "store.calculation": 2.7203470010426827,
+        "store.event": 0.00037941697519272566,
+        "store.metadata": 0.125696333067026,
+        "store.put": 1.9549349972512573,
+        "store.receipt": 1.4739877897663973,
+        "transaction.inclusive": 6.531624999886844,
+        "worker.book": 4.761118581111077,
+        "worker.disconnect": 0.2108227499993518
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 23,
+          "total": 0.839467128214892,
+          "mean": 0.036498570791951825,
+          "p50": 0.03535308304708451,
+          "p95": 0.04270979197463021,
+          "maximum": 0.06764229200780392
+        },
+        "detector.compute": {
+          "n": 23,
+          "total": 0.955173000053037,
+          "mean": 0.04152926087187117,
+          "p50": 0.039355042041279376,
+          "p95": 0.06882949999999255,
+          "maximum": 0.06892900000093505
+        },
+        "diagnostic.storage_guard": {
+          "n": 17,
+          "total": 0.0439578759833239,
+          "mean": 0.0025857574107837587,
+          "p50": 0.002507832949049771,
+          "p95": 0.0034167919657193124,
+          "maximum": 0.0034167919657193124
+        },
+        "evaluate.total": {
+          "n": 23,
+          "total": 5.531410959025379,
+          "mean": 0.24049612865327735,
+          "p50": 0.23558745899936184,
+          "p95": 0.2778783329995349,
+          "maximum": 0.3090516250231303
+        },
+        "executor_wait.book": {
+          "n": 13,
+          "total": 0.0005558309494517744,
+          "mean": 4.275622688090572e-05,
+          "p50": 4.26670303568244e-05,
+          "p95": 5.5333017371594906e-05,
+          "maximum": 5.5333017371594906e-05
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.587501123547554e-05,
+          "mean": 3.587501123547554e-05,
+          "p50": 3.587501123547554e-05,
+          "p95": 3.587501123547554e-05,
+          "maximum": 3.587501123547554e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 3.820803249254823e-05,
+          "mean": 3.820803249254823e-05,
+          "p50": 3.820803249254823e-05,
+          "p95": 3.820803249254823e-05,
+          "maximum": 3.820803249254823e-05
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 6.129097891971469e-05,
+          "mean": 6.129097891971469e-05,
+          "p50": 6.129097891971469e-05,
+          "p95": 6.129097891971469e-05,
+          "maximum": 6.129097891971469e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.899994771927595e-05,
+          "mean": 3.899994771927595e-05,
+          "p50": 3.899994771927595e-05,
+          "p95": 3.899994771927595e-05,
+          "maximum": 3.899994771927595e-05
+        },
+        "injected.receipt_delay": {
+          "n": 42,
+          "total": 2.2630219980492257,
+          "mean": 0.05388147614402918,
+          "p50": 0.055013812496326864,
+          "p95": 0.05504116602241993,
+          "maximum": 0.055045041954144835
+        },
+        "receipt.normalize_and_persist": {
+          "n": 42,
+          "total": 2.3788283359026536,
+          "mean": 0.05663876990244413,
+          "p50": 0.056978396023623645,
+          "p95": 0.059074082993902266,
+          "maximum": 0.059270999976433814
+        },
+        "sql.execute": {
+          "n": 7319,
+          "total": 0.7334062563604675,
+          "mean": 0.00010020580084170891,
+          "p50": 8.583400631323457e-05,
+          "p95": 0.0002336659817956388,
+          "maximum": 0.0011181249865330756
+        },
+        "store.calculation": {
+          "n": 23,
+          "total": 4.3276642500422895,
+          "mean": 0.18815931521923,
+          "p50": 0.18330812500789762,
+          "p95": 0.2302937910426408,
+          "maximum": 0.25708570796996355
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.0010349579388275743,
+          "mean": 0.0003449859796091914,
+          "p50": 0.00037941697519272566,
+          "p95": 0.0004398329765535891,
+          "maximum": 0.0004398329765535891
+        },
+        "store.metadata": {
+          "n": 23,
+          "total": 0.19568179018096998,
+          "mean": 0.008507903920911738,
+          "p50": 0.008379000006243587,
+          "p95": 0.011143250041641295,
+          "maximum": 0.013796625018585473
+        },
+        "store.put": {
+          "n": 866,
+          "total": 3.1297568258014508,
+          "mean": 0.003614037905082507,
+          "p50": 0.0006474585097748786,
+          "p95": 0.006824582989793271,
+          "maximum": 0.14336933300364763
+        },
+        "store.receipt": {
+          "n": 42,
+          "total": 2.37647703953553,
+          "mean": 0.056582786655607856,
+          "p50": 0.056928311969386414,
+          "p95": 0.058978374989237636,
+          "maximum": 0.05922558397287503
+        },
+        "transaction.inclusive": {
+          "n": 133,
+          "total": 10.436122796847485,
+          "mean": 0.07846708869810139,
+          "p50": 0.10930758400354534,
+          "p95": 0.20517470798222348,
+          "maximum": 0.2667041670065373
+        },
+        "worker.book": {
+          "n": 13,
+          "total": 4.761118581111077,
+          "mean": 0.36623989085469827,
+          "p50": 0.36179066699696705,
+          "p95": 0.42509620799683034,
+          "maximum": 0.42509620799683034
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.2108227499993518,
+          "mean": 0.2108227499993518,
+          "p50": 0.2108227499993518,
+          "p95": 0.2108227499993518,
+          "maximum": 0.2108227499993518
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.0009433749946765602,
+          "mean": 0.0009433749946765602,
+          "p50": 0.0009433749946765602,
+          "p95": 0.0009433749946765602,
+          "maximum": 0.0009433749946765602
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0026977910310961306,
+          "mean": 0.0026977910310961306,
+          "p50": 0.0026977910310961306,
+          "p95": 0.0026977910310961306,
+          "maximum": 0.0026977910310961306
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.997746624983847,
+          "mean": 2.997746624983847,
+          "p50": 2.997746624983847,
+          "p95": 2.997746624983847,
+          "maximum": 2.997746624983847
+        }
+      },
+      "input_rate": 9.091180276596544,
+      "input_span": 1.759947500017006,
+      "elapsed": 8.12679141596891
+    },
+    {
+      "markets": 4,
+      "scenario": "depth",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.24399082019590423,
+      "book_service_max": 0.27707616600673646,
+      "book_service_rate": 4.098514850669725,
+      "queue_high_water": 10,
+      "estimated_bytes_high_water": 11186,
+      "oldest_seconds": 2.128857792005874,
+      "worker_queue_wait_max": 0.11269508302211761,
+      "accepted_queue_wait_max": 2.345636292011477,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.5810727511416189,
+        "detector.compute": 0.5829954158980399,
+        "diagnostic.storage_guard": 0.04673120909137651,
+        "evaluate.total": 4.082353753037751,
+        "executor_wait.book": 0.11340820998884737,
+        "executor_wait.disconnect": 3.891700180247426e-05,
+        "receipt.normalize_and_persist": 0.05843137303600088,
+        "sql.execute": 0.5820273106801324,
+        "store.calculation": 3.3042461228906177,
+        "store.event": 0.0003731659962795675,
+        "store.metadata": 0.15866733400616795,
+        "store.put": 2.4625660012243316,
+        "store.receipt": 0.056717167200986296,
+        "transaction.inclusive": 6.265605628606863,
+        "worker.book": 3.903771668090485,
+        "worker.disconnect": 0.24921029200777411
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 27,
+          "total": 0.8638899161596783,
+          "mean": 0.03199592282072882,
+          "p50": 0.03266995801823214,
+          "p95": 0.03802887495839968,
+          "maximum": 0.04131850000703707
+        },
+        "detector.compute": {
+          "n": 26,
+          "total": 0.8757377488072962,
+          "mean": 0.03368222110797293,
+          "p50": 0.031106249982258305,
+          "p95": 0.05014545802259818,
+          "maximum": 0.05914912500884384
+        },
+        "diagnostic.storage_guard": {
+          "n": 21,
+          "total": 0.07900741911726072,
+          "mean": 0.003762258053202892,
+          "p50": 0.0024578750017099082,
+          "p95": 0.00568220904096961,
+          "maximum": 0.02391558396629989
+        },
+        "evaluate.total": {
+          "n": 26,
+          "total": 5.974286504031625,
+          "mean": 0.22978025015506248,
+          "p50": 0.2314889584959019,
+          "p95": 0.26699866697890684,
+          "maximum": 0.273513209016528
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.11340820998884737,
+          "mean": 0.007088013124302961,
+          "p50": 4.331249510869384e-05,
+          "p95": 0.11269454204011708,
+          "maximum": 0.11269454204011708
+        },
+        "executor_wait.depth": {
+          "n": 1,
+          "total": 0.21081037499243394,
+          "mean": 0.21081037499243394,
+          "p50": 0.21081037499243394,
+          "p95": 0.21081037499243394,
+          "maximum": 0.21081037499243394
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.891700180247426e-05,
+          "mean": 3.891700180247426e-05,
+          "p50": 3.891700180247426e-05,
+          "p95": 3.891700180247426e-05,
+          "maximum": 3.891700180247426e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00010862498311325908,
+          "mean": 0.00010862498311325908,
+          "p50": 0.00010862498311325908,
+          "p95": 0.00010862498311325908,
+          "maximum": 0.00010862498311325908
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 7.850001566112041e-05,
+          "mean": 7.850001566112041e-05,
+          "p50": 7.850001566112041e-05,
+          "p95": 7.850001566112041e-05,
+          "maximum": 7.850001566112041e-05
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 3.5167031455785036e-05,
+          "mean": 3.5167031455785036e-05,
+          "p50": 3.5167031455785036e-05,
+          "p95": 3.5167031455785036e-05,
+          "maximum": 3.5167031455785036e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 48,
+          "total": 0.084544496901799,
+          "mean": 0.0017613436854541458,
+          "p50": 0.0015367500018328428,
+          "p95": 0.00276004197075963,
+          "maximum": 0.005726665956899524
+        },
+        "sql.execute": {
+          "n": 8373,
+          "total": 0.8265433193300851,
+          "mean": 9.871531342769438e-05,
+          "p50": 8.362502558156848e-05,
+          "p95": 0.00019808299839496613,
+          "maximum": 0.026030250010080636
+        },
+        "store.calculation": {
+          "n": 27,
+          "total": 4.846449623990338,
+          "mean": 0.1794981342218644,
+          "p50": 0.18284033302916214,
+          "p95": 0.2232794159790501,
+          "maximum": 0.2295400410075672
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.0037050829851068556,
+          "mean": 0.0012350276617022853,
+          "p50": 0.0010276249959133565,
+          "p95": 0.0023042919929139316,
+          "maximum": 0.0023042919929139316
+        },
+        "store.metadata": {
+          "n": 26,
+          "total": 0.22715016908477992,
+          "mean": 0.008736544964799227,
+          "p50": 0.008313749975059181,
+          "p95": 0.011208874988369644,
+          "maximum": 0.015552208991721272
+        },
+        "store.put": {
+          "n": 982,
+          "total": 3.588111419114284,
+          "mean": 0.003653881282193772,
+          "p50": 0.0006572289858013391,
+          "p95": 0.007269333000294864,
+          "maximum": 0.14724962500622496
+        },
+        "store.receipt": {
+          "n": 48,
+          "total": 0.08217158314073458,
+          "mean": 0.0017119079820986371,
+          "p50": 0.001500479003880173,
+          "p95": 0.0026853749877773225,
+          "maximum": 0.005443374975584447
+        },
+        "transaction.inclusive": {
+          "n": 152,
+          "total": 9.132346460828558,
+          "mean": 0.060081226715977355,
+          "p50": 0.007658979506231844,
+          "p95": 0.20290008402662352,
+          "maximum": 0.24022391700418666
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 3.903771668090485,
+          "mean": 0.24398572925565531,
+          "p50": 0.24239241698523983,
+          "p95": 0.2770723339635879,
+          "maximum": 0.2770723339635879
+        },
+        "worker.depth": {
+          "n": 1,
+          "total": 0.13730199995916337,
+          "mean": 0.13730199995916337,
+          "p50": 0.13730199995916337,
+          "p95": 0.13730199995916337,
+          "maximum": 0.13730199995916337
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.24921029200777411,
+          "mean": 0.24921029200777411,
+          "p50": 0.24921029200777411,
+          "p95": 0.24921029200777411,
+          "maximum": 0.24921029200777411
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.005102791998069733,
+          "mean": 0.005102791998069733,
+          "p50": 0.005102791998069733,
+          "p95": 0.005102791998069733,
+          "maximum": 0.005102791998069733
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.0032865420216694474,
+          "mean": 0.0032865420216694474,
+          "p50": 0.0032865420216694474,
+          "p95": 0.0032865420216694474,
+          "maximum": 0.0032865420216694474
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 1.9571922920295037,
+          "mean": 1.9571922920295037,
+          "p50": 1.9571922920295037,
+          "p95": 1.9571922920295037,
+          "maximum": 1.9571922920295037
+        }
+      },
+      "input_rate": 9.109893213075637,
+      "input_span": 1.7563323329668492,
+      "elapsed": 7.025671500014141
+    },
+    {
+      "markets": 4,
+      "scenario": "depth",
+      "timing": true,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.2249760754421004,
+      "book_service_max": 0.2674445000011474,
+      "book_service_rate": 4.444917078560022,
+      "queue_high_water": 9,
+      "estimated_bytes_high_water": 9951,
+      "oldest_seconds": 1.7784808749565855,
+      "worker_queue_wait_max": 0.08506604097783566,
+      "accepted_queue_wait_max": 1.99677912495099,
+      "item_stage_totals": {
+        "calculation.validation_replay": 0.5626704180031084,
+        "detector.compute": 0.5221292048227042,
+        "diagnostic.storage_guard": 0.041723082889802754,
+        "evaluate.total": 3.750299289880786,
+        "executor_wait.book": 0.08566674904432148,
+        "executor_wait.disconnect": 3.720895620062947e-05,
+        "receipt.normalize_and_persist": 0.04824633605312556,
+        "sql.execute": 0.4660893738619052,
+        "store.calculation": 3.000543249072507,
+        "store.event": 0.0003320840187370777,
+        "store.metadata": 0.16395483392989263,
+        "store.put": 2.2282882324652746,
+        "store.receipt": 0.046924954920541495,
+        "transaction.inclusive": 5.714360876765568,
+        "worker.book": 3.599543375952635,
+        "worker.disconnect": 0.2085000830120407
+      },
+      "session_stage_summary": {
+        "calculation.validation_replay": {
+          "n": 27,
+          "total": 0.8496828779461794,
+          "mean": 0.03146973622022887,
+          "p50": 0.03143174998695031,
+          "p95": 0.0396992500172928,
+          "maximum": 0.05421495798509568
+        },
+        "detector.compute": {
+          "n": 26,
+          "total": 0.8156392068485729,
+          "mean": 0.03137073872494511,
+          "p50": 0.0297964790079277,
+          "p95": 0.038400915975216776,
+          "maximum": 0.05162941699381918
+        },
+        "diagnostic.storage_guard": {
+          "n": 21,
+          "total": 0.07646070694318041,
+          "mean": 0.003640986044913353,
+          "p50": 0.0024285420076921582,
+          "p95": 0.006810458027757704,
+          "maximum": 0.022907958016730845
+        },
+        "evaluate.total": {
+          "n": 26,
+          "total": 5.683263832819648,
+          "mean": 0.2185870704930634,
+          "p50": 0.21301308349939063,
+          "p95": 0.24637116701342165,
+          "maximum": 0.2644837920088321
+        },
+        "executor_wait.book": {
+          "n": 16,
+          "total": 0.08566674904432148,
+          "mean": 0.005354171815270092,
+          "p50": 3.766649751923978e-05,
+          "p95": 0.08506529097212479,
+          "maximum": 0.08506529097212479
+        },
+        "executor_wait.depth": {
+          "n": 1,
+          "total": 0.16668837500037625,
+          "mean": 0.16668837500037625,
+          "p50": 0.16668837500037625,
+          "p95": 0.16668837500037625,
+          "maximum": 0.16668837500037625
+        },
+        "executor_wait.disconnect": {
+          "n": 1,
+          "total": 3.720895620062947e-05,
+          "mean": 3.720895620062947e-05,
+          "p50": 3.720895620062947e-05,
+          "p95": 3.720895620062947e-05,
+          "maximum": 3.720895620062947e-05
+        },
+        "executor_wait.finish": {
+          "n": 1,
+          "total": 0.00013483298243954778,
+          "mean": 0.00013483298243954778,
+          "p50": 0.00013483298243954778,
+          "p95": 0.00013483298243954778,
+          "maximum": 0.00013483298243954778
+        },
+        "executor_wait.start": {
+          "n": 1,
+          "total": 0.0001005409867502749,
+          "mean": 0.0001005409867502749,
+          "p50": 0.0001005409867502749,
+          "p95": 0.0001005409867502749,
+          "maximum": 0.0001005409867502749
+        },
+        "executor_wait.synthetic_bootstrap": {
+          "n": 1,
+          "total": 5.6374992709606886e-05,
+          "mean": 5.6374992709606886e-05,
+          "p50": 5.6374992709606886e-05,
+          "p95": 5.6374992709606886e-05,
+          "maximum": 5.6374992709606886e-05
+        },
+        "receipt.normalize_and_persist": {
+          "n": 48,
+          "total": 0.07672837813152,
+          "mean": 0.0015985078777400001,
+          "p50": 0.00145581248216331,
+          "p95": 0.002317209029570222,
+          "maximum": 0.004465666017495096
+        },
+        "sql.execute": {
+          "n": 8373,
+          "total": 0.7273612673161551,
+          "mean": 8.686985158439688e-05,
+          "p50": 8.104101289063692e-05,
+          "p95": 0.000175916007719934,
+          "maximum": 0.0019992910092696548
+        },
+        "store.calculation": {
+          "n": 27,
+          "total": 4.5823789581190795,
+          "mean": 0.16971773918959554,
+          "p50": 0.1719420420122333,
+          "p95": 0.19697204197291285,
+          "maximum": 0.19741595903178677
+        },
+        "store.event": {
+          "n": 3,
+          "total": 0.00407075003022328,
+          "mean": 0.0013569166767410934,
+          "p50": 0.0014118750113993883,
+          "p95": 0.002326791000086814,
+          "maximum": 0.002326791000086814
+        },
+        "store.metadata": {
+          "n": 26,
+          "total": 0.23165587690891698,
+          "mean": 0.00890984141957373,
+          "p50": 0.008005791518371552,
+          "p95": 0.010826124984305352,
+          "maximum": 0.029811832995619625
+        },
+        "store.put": {
+          "n": 982,
+          "total": 3.3859019860974513,
+          "mean": 0.0034479653626246958,
+          "p50": 0.0006321250111795962,
+          "p95": 0.006887291034217924,
+          "maximum": 0.11101195897208527
+        },
+        "store.receipt": {
+          "n": 48,
+          "total": 0.07473795698024333,
+          "mean": 0.001557040770421736,
+          "p50": 0.001418583036866039,
+          "p95": 0.002272791985888034,
+          "maximum": 0.004406750027555972
+        },
+        "transaction.inclusive": {
+          "n": 152,
+          "total": 8.660873835033271,
+          "mean": 0.056979433125218894,
+          "p50": 0.007138500019209459,
+          "p95": 0.1935462910332717,
+          "maximum": 0.23482933297054842
+        },
+        "worker.book": {
+          "n": 16,
+          "total": 3.599543375952635,
+          "mean": 0.22497146099703969,
+          "p50": 0.21752841651323251,
+          "p95": 0.2674406669684686,
+          "maximum": 0.2674406669684686
+        },
+        "worker.depth": {
+          "n": 1,
+          "total": 0.10852291597984731,
+          "mean": 0.10852291597984731,
+          "p50": 0.10852291597984731,
+          "p95": 0.10852291597984731,
+          "maximum": 0.10852291597984731
+        },
+        "worker.disconnect": {
+          "n": 1,
+          "total": 0.2085000830120407,
+          "mean": 0.2085000830120407,
+          "p50": 0.2085000830120407,
+          "p95": 0.2085000830120407,
+          "maximum": 0.2085000830120407
+        },
+        "worker.finish": {
+          "n": 1,
+          "total": 0.005379625014029443,
+          "mean": 0.005379625014029443,
+          "p50": 0.005379625014029443,
+          "p95": 0.005379625014029443,
+          "maximum": 0.005379625014029443
+        },
+        "worker.start": {
+          "n": 1,
+          "total": 0.004024082969408482,
+          "mean": 0.004024082969408482,
+          "p50": 0.004024082969408482,
+          "p95": 0.004024082969408482,
+          "maximum": 0.004024082969408482
+        },
+        "worker.synthetic_bootstrap": {
+          "n": 1,
+          "total": 2.0074575420003384,
+          "mean": 2.0074575420003384,
+          "p50": 2.0074575420003384,
+          "p95": 2.0074575420003384,
+          "maximum": 2.0074575420003384
+        }
+      },
+      "input_rate": 9.190594624710645,
+      "input_span": 1.7409102080273442,
+      "elapsed": 6.902408041991293
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "timing": false,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.09904020581598161,
+      "book_service_max": 0.19205829198472202,
+      "book_service_rate": 10.096909550632569,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 2.1124957129359245e-05,
+      "worker_queue_wait_max": 0.00010833400301635265,
+      "accepted_queue_wait_max": 0.00012341700494289398,
+      "item_stage_totals": {},
+      "session_stage_summary": {},
+      "input_rate": 4.027179139023234,
+      "input_span": 3.9730042910086922,
+      "elapsed": 7.746590958035085
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "timing": false,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 40,
+        "committed_receipts": 40,
+        "attempted_receipt_writes": 40,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 8,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.09371517449108069,
+      "book_service_max": 0.10696466598892584,
+      "book_service_rate": 10.670630508137982,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 3.38749960064888e-05,
+      "worker_queue_wait_max": 0.0001400840119458735,
+      "accepted_queue_wait_max": 0.00016483297804370522,
+      "item_stage_totals": {},
+      "session_stage_summary": {},
+      "input_rate": 4.028153054733019,
+      "input_span": 3.9720437090145424,
+      "elapsed": 7.727432666986715
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "timing": false,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.22601655461767223,
+      "book_service_max": 0.2647616250324063,
+      "book_service_rate": 4.424454667453859,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 1.270900247618556e-05,
+      "worker_queue_wait_max": 7.137499051168561e-05,
+      "accepted_queue_wait_max": 0.027439208992291242,
+      "item_stage_totals": {},
+      "session_stage_summary": {},
+      "input_rate": 4.028721088054304,
+      "input_span": 3.971483666973654,
+      "elapsed": 9.264994500030298
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "timing": false,
+      "counts": {
+        "offered": 17,
+        "accepted": 17,
+        "rejected": 0,
+        "processed": 17,
+        "unprocessed": 0,
+        "retained_per_side_observations": 48,
+        "committed_receipts": 48,
+        "attempted_receipt_writes": 48,
+        "wire_messages": null,
+        "upstream_offered": null,
+        "upstream_lost": null
+      },
+      "unit_counts": {
+        "book": {
+          "offered": 16,
+          "accepted": 16,
+          "processed": 16
+        },
+        "disconnect": {
+          "offered": 1,
+          "accepted": 1,
+          "processed": 1
+        }
+      },
+      "bootstrap_side_receipts": 16,
+      "checks": {
+        "item_equation": true,
+        "accepted_equation": true,
+        "all_receipts_bound": true,
+        "unique_items": true,
+        "processed_have_committed_writes": true,
+        "one_binding_per_committed_receipt": true,
+        "expected_bootstrap_sides": true,
+        "each_processed_book_two_committed_sides": true,
+        "each_processed_item_one_committed_evaluation": true,
+        "each_processed_disconnect_committed_event": true,
+        "queue_matches_explicit_unprocessed": true,
+        "side_rows_equal_receipts": true,
+        "synthetic_session": true,
+        "calculation_bindings_exist": true
+      },
+      "book_service_mean": 0.22851823956807493,
+      "book_service_max": 0.26686499995412305,
+      "book_service_rate": 4.376018307729448,
+      "queue_high_water": 1,
+      "estimated_bytes_high_water": 1236,
+      "oldest_seconds": 1.029198756441474e-05,
+      "worker_queue_wait_max": 6.016704719513655e-05,
+      "accepted_queue_wait_max": 0.02313429198693484,
+      "item_stage_totals": {},
+      "session_stage_summary": {},
+      "input_rate": 4.029131416900365,
+      "input_span": 3.971079209004529,
+      "elapsed": 9.347474084002897
+    }
+  ],
+  "timing_overhead": {
+    "2": {
+      "enabled_mean": 0.0951208450987906,
+      "disabled_mean": 0.09637769015353115,
+      "difference_fraction": -0.013040829809662147,
+      "limitation": "two sequential trials per arm; measures detailed timers only; ledger, wrappers and guard retained"
+    },
+    "4": {
+      "enabled_mean": 0.24779036321524472,
+      "disabled_mean": 0.22726739709287358,
+      "difference_fraction": 0.09030316879980971,
+      "limitation": "two sequential trials per arm; measures detailed timers only; ledger, wrappers and guard retained"
+    }
+  },
+  "gate": "PASS: all 24 trial ledgers independently reconciled; expected failure remains unfixed"
+}

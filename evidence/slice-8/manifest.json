@@ -1,0 +1,171 @@
+{
+  "created_at": "2026-09-12T03:05:41.811878+00:00",
+  "scope": "Slice 8 local implementation and offline verification",
+  "files": [
+    {
+      "file": "PLAN.md",
+      "sha256": "d7cc3c1a0d991ae3afe175b9c1d64820aab7ce853a78911b34ac8c08cdd9e91c",
+      "bytes": 40124
+    },
+    {
+      "file": "README.md",
+      "sha256": "e4f7f17b9038a7d56e2331e41058bae817b47fda5c1827d5f0ece5b839179661",
+      "bytes": 6471
+    },
+    {
+      "file": "app/fixtures/moneyline_rule_assessments.json",
+      "sha256": "29db390d603590bb3e94ee363d13966ea97ee33467042f127b22956c32c83b27",
+      "bytes": 48554
+    },
+    {
+      "file": "app/moneyline.py",
+      "sha256": "4bd509e5672b4c39129be2afbd974394fcdeeaecf7805b8802aea8f276974b92",
+      "bytes": 18597
+    },
+    {
+      "file": "app/moneyline_captures.py",
+      "sha256": "4e3a90a8d9b3e981818b97fbb5eb32f3fb2f59a7d838daa0d83a82cd233a7f2a",
+      "bytes": 6388
+    },
+    {
+      "file": "app/moneyline_example.py",
+      "sha256": "f6290ad3a08aa6114f531de2803767244b12329be174c2da609c11ebf7e7e526",
+      "bytes": 3667
+    },
+    {
+      "file": "app/settlement.py",
+      "sha256": "ee4045476e987e337d60ac466f2537a6aac3fec3b8a84e6c35ab3338075c3ebf",
+      "bytes": 7468
+    },
+    {
+      "file": "docs/slice-8.md",
+      "sha256": "5a1303cd4024027e2b3d04ccc62f064acb3efb3066982351a15f3f0453e64891",
+      "bytes": 11820
+    },
+    {
+      "file": "evidence/slice-8/build_assessments.py",
+      "sha256": "de19d0314f7ee837a31539bfcb3577b20ccfffb8b35aecaf98da8ebb2a3686ec",
+      "bytes": 4841
+    },
+    {
+      "file": "evidence/slice-8/captured-store.json",
+      "sha256": "4049682e5b64f1d65ac059e188a305806fda315b86f2e09f1a3c63e365465eb9",
+      "bytes": 988128
+    },
+    {
+      "file": "evidence/slice-8/example.txt",
+      "sha256": "f2fcee4e077b04dc31ccafb1bc4f37c9dd42e8ffe521f85f049bc2387e56b81f",
+      "bytes": 595
+    },
+    {
+      "file": "evidence/slice-8/focused-tests.txt",
+      "sha256": "8fe2c40334e60ee40a97750b604384bec9a34e08d561993bee889856d582e6bf",
+      "bytes": 4921
+    },
+    {
+      "file": "evidence/slice-8/kalshi_example.txt",
+      "sha256": "dd5e3ced47e249d51a33d5217b0e4abc17d9fca48e1de0965ea8a10a22198d5d",
+      "bytes": 449
+    },
+    {
+      "file": "evidence/slice-8/matching_example.json",
+      "sha256": "7e0be0ecb08f94bc2e01de96384c0b943ac7b654050c66ab142b0a951d6f46db",
+      "bytes": 16308849
+    },
+    {
+      "file": "evidence/slice-8/moneyline-example.json",
+      "sha256": "291a86371559adcfebc61cce649684d6027ecae0cb04798ff1b9baf27c33ee42",
+      "bytes": 1755335
+    },
+    {
+      "file": "evidence/slice-8/normalization_example.json",
+      "sha256": "fbd9bb1ad309441be4e54b6039f0c51e4ad2723179fd1952e8681f8535c1dc98",
+      "bytes": 174950
+    },
+    {
+      "file": "evidence/slice-8/novig_example.txt",
+      "sha256": "7261d386aef10167f761a4429d5a783f3b7f01d6afe5d8ff9681176019baed3f",
+      "bytes": 2708
+    },
+    {
+      "file": "evidence/slice-8/polymarket_us_example.txt",
+      "sha256": "963cfaece87428fb47b1b35559365957b618020d33fc1582e381b64e45465cda",
+      "bytes": 1022
+    },
+    {
+      "file": "evidence/slice-8/preservation.json",
+      "sha256": "b5558f336fff2c4e1e963eca356deb653d6671d9e9d602e4b929796bf0c5a158",
+      "bytes": 207
+    },
+    {
+      "file": "evidence/slice-8/preserved-before.json",
+      "sha256": "fd3ef689965d68685be482f019bce4360a0e165f571af436cc8572b6bfb3128b",
+      "bytes": 55232
+    },
+    {
+      "file": "evidence/slice-8/prophetx_example.txt",
+      "sha256": "c6a05c4322bdd8a47eabb481b33ff377b76fc284ec41a1957013e450221e3ff8",
+      "bytes": 688
+    },
+    {
+      "file": "evidence/slice-8/research/findings.md",
+      "sha256": "6c6af9196f9682542b1421d7a7bf219039fd0fd8458b6a7588f00c7439e5d975",
+      "bytes": 3656
+    },
+    {
+      "file": "evidence/slice-8/research/kalshi-nfl-rules.pdf",
+      "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+      "bytes": 40044
+    },
+    {
+      "file": "evidence/slice-8/research/kalshi-nfl-rules.txt",
+      "sha256": "a421357f7e3d246b1e936cc5f6e251862ed7b24119ddfd76aff3214fcf688731",
+      "bytes": 11782
+    },
+    {
+      "file": "evidence/slice-8/research/pmus-market-schema.md",
+      "sha256": "7c60d0dc99950a2c9e422f307a6f584b74d65d327863b05b5c45688eb2bf5617",
+      "bytes": 17082
+    },
+    {
+      "file": "evidence/slice-8/research/pmus-sports.md",
+      "sha256": "b3e1ccb06ead7fd3d9ee663ecf6086d9134378a94b60f595d4d7090b04718f3c",
+      "bytes": 18606
+    },
+    {
+      "file": "evidence/slice-8/research/sources.json",
+      "sha256": "cae0098ef57bf759100255b0a8071f47cc844c15d144020ae387180dfc76828a",
+      "bytes": 858
+    },
+    {
+      "file": "evidence/slice-8/summary.json",
+      "sha256": "553f5e8f0936080761c7587b45fdfcdac15f0da62135228233c5aefec62c559d",
+      "bytes": 609
+    },
+    {
+      "file": "evidence/slice-8/tests.txt",
+      "sha256": "049218b1c2907aa1236e0098f1fd521282d9a27303f2d2423ef777c08cbff3ea",
+      "bytes": 29511
+    },
+    {
+      "file": "evidence/slice-8/verification.json",
+      "sha256": "9ed3103550f3dbfe79c9c8f1ddf3156f2ecaf33c03d84214ab8b705df89ea7d2",
+      "bytes": 2116
+    },
+    {
+      "file": "evidence/slice-8/verify.py",
+      "sha256": "59aaa4439a4139d0ea19165db0b7195ca7d6c9ab11d9f17539e65c4acb774790",
+      "bytes": 1183
+    },
+    {
+      "file": "tests/test_moneyline.py",
+      "sha256": "1741996b4cfba5d56faa0bf97ee42e47d65497bfd5ad266b6d9d7a8bfcb4c9f3",
+      "bytes": 22178
+    },
+    {
+      "file": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md",
+      "sha256": "7f099d39fd5da68c613a166cbf1bd11563d2b1928eacda050ceef0918f307b06",
+      "bytes": 31626
+    }
+  ]
+}

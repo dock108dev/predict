@@ -1,0 +1,17 @@
+usage: python -m app.prophetx_verify [-h] [--live]
+                                     [--environment {sandbox,production}]
+                                     [--configure-keychain]
+                                     [--tournament TOURNAMENT] [--event EVENT]
+                                     [--output OUTPUT]
+
+Explicitly opted-in, finite read-only verification; separate Keychain entries.
+Run --help. Authentication and subscription responses never enter evidence.
+
+options:
+  -h, --help            show this help message and exit
+  --live
+  --environment {sandbox,production}
+  --configure-keychain
+  --tournament TOURNAMENT
+  --event EVENT
+  --output OUTPUT

@@ -1,0 +1,9 @@
+SYNTHETIC ONLY: invented identities and numbers; not a venue capture.
+invented-a native price: -125.25 native quantity: 12.345 unit: unknown
+invented-b native price: 110 native quantity: 5.25 unit: unknown
+Native window: synchronized advertised depth: partial
+Normalized ask probability: 0.55604883462819089900110987791342952275249722530522 ; sizing: None
+Normalized ask probability: 0.47619047619047619047619047619047619047619047619048 ; sizing: None
+Normalized sized book: unknown ; market state: unknown
+American conversion is corroborated by separate sandbox evidence. This example is synthetic.
+Quantity ownership, executable capacity and exchange timestamp scale remain unresolved.

@@ -1,0 +1,128 @@
+[
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/authentication.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_authentication.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/data-model.md",
+    "file": "evidence/slice-5/research/api-reference_data-model.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/llms.txt",
+    "file": "evidence/slice-5/research/llms.txt",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/authentication.md",
+    "file": "evidence/slice-5/research/api-reference_authentication.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/events/get-events.md",
+    "file": "evidence/slice-5/research/api-reference_events_get-events.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/orderbook-channel.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_orderbook-channel.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/example.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_example.md",
+    "evidence_kind": "documentation",
+    "status": 404,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/markets/get-lock-status.md",
+    "file": "evidence/slice-5/research/api-reference_markets_get-lock-status.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/affiliates/odds-screens.md",
+    "file": "evidence/slice-5/research/affiliates_odds-screens.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/lifecycle-channel.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_lifecycle-channel.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/rest-api.md",
+    "file": "evidence/slice-5/research/api-reference_rest-api.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/fees.md",
+    "file": "evidence/slice-5/research/fees.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/heartbeat.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_heartbeat.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/WSS/code-examples.md",
+    "file": "evidence/slice-5/research/api-reference_WSS_code-examples.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/markets/get-order-book.md",
+    "file": "evidence/slice-5/research/api-reference_markets_get-order-book.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/orders/place-order.md",
+    "file": "evidence/slice-5/research/api-reference_orders_place-order.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/markets/get-markets-by-event.md",
+    "file": "evidence/slice-5/research/api-reference_markets_get-markets-by-event.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  },
+  {
+    "url": "https://docs.novig.com/api-reference/markets/get-open-markets.md",
+    "file": "evidence/slice-5/research/api-reference_markets_get-open-markets.md",
+    "evidence_kind": "documentation",
+    "status": 200,
+    "fetched_date_utc": "2026-09-12"
+  }
+]

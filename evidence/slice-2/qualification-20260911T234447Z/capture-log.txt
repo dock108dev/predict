@@ -1,0 +1,36 @@
+{
+  "elapsed_seconds": 46.00838370801648,
+  "connections": 2,
+  "frames": 42,
+  "frame_bytes": 187214,
+  "markets": [
+    {
+      "event_id": "74902",
+      "market_id": "381955",
+      "slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event_id": "74903",
+      "market_id": "381956",
+      "slug": "aec-nfl-atl-pit-2026-09-13"
+    },
+    {
+      "event_id": "74901",
+      "market_id": "381953",
+      "slug": "aec-nfl-chi-car-2026-09-13"
+    }
+  ],
+  "initial_image_markets_by_connection": {
+    "1": [
+      "aec-nfl-atl-pit-2026-09-13",
+      "aec-nfl-bal-ind-2026-09-13",
+      "aec-nfl-chi-car-2026-09-13"
+    ],
+    "2": [
+      "aec-nfl-atl-pit-2026-09-13",
+      "aec-nfl-bal-ind-2026-09-13",
+      "aec-nfl-chi-car-2026-09-13"
+    ]
+  },
+  "stop_reason": "membership_change_and_reconnected_images_obtained"
+}

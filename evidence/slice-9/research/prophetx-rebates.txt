@@ -1,0 +1,264 @@
+August 14, 2026
+SUBMITTED VIA CFTC PORTAL
+Secretary of the Commission
+Office of the Secretariat
+U.S. Commodity Futures Trading Commission
+Three Lafayette Centre
+1155 21st Street, N.W.
+Washington, D.C. 20581
+Re: ProphetX LLC – Trading Fee Schedule and Make Volume Fee Rebate Program
+Dear Sir or Madam,
+ProphetX LLC (“ProphetX” or the “Exchange”) hereby certifies that, pursuant to ProphetX Rule
+3.6, Section 5c(c) of the Commodity Exchange Act (“CEA”), and Commodity Futures Trading
+Commission (“CFTC”) Regulation 40.6(a), it is extending the trading fee schedule and Make
+Volume Fee Rebate Program (together, the “Program”) set forth in Appendix A, which the
+Exchange previously self-certified on June 12, 2026 and which became effective on June 29,
+2026. The Program extension will become effective no earlier than ten (10) business days
+following the date of this certification, and the Program will continue in effect without
+interruption on the terms set forth in Appendix A. The Exchange is extending the Program for a
+term of twelve (12) months, subject to a monthly review by senior management to determine
+whether to continue, amend, or terminate the Program.
+Under the Program, the Exchange will assess a trading fee of 2% on net proceeds, calculated on a
+per-market basis upon settlement, on single-event contracts transacted on the Exchange platform.
+To reward Market Participants that contribute significant liquidity, the Exchange will process
+monthly fee rebates based on each participant’s monthly make volume, according to the marginal
+rebate schedule set forth in Appendix A, which contains the Program’s terms.
+Compliance with Core Principles
+ProphetX has concluded that the Program is not inconsistent with the CEA and the CFTC’s
+regulations thereunder. The following core principles most directly pertain to the Program: Core
+Principle 2 – Compliance with Rules; Core Principle 3 – Contracts not Readily Susceptible to
+Manipulation; Core Principle 4 – Prevention of Market Disruption; Core Principle 7 – Availability
+of General Information; Core Principle 9 – Execution of Transactions; Core Principle 12 –
+Protection of Markets and Market Participants; Core Principle 18 – Recordkeeping; and Core
+Principle 21 – Financial Resources.
+ProphetX Rule 3.6(b) authorizes the Exchange to charge fees for trading, settlement, and account
+activity, and Rule 3.6(d) requires that fee structures be applied in a fair, transparent, and nondiscriminatory manner. The fees set forth in the Program apply uniformly to all Market
+
+Participants, and the fee rebate is available to all Market Participants on the same terms based
+solely on objective monthly make-volume thresholds. Rule 3.6(f) permits the Exchange to
+establish incentive programs to encourage market participation and trading, and the Make Volume
+Fee Rebate Program is consistent with this authority. The Program does not affect the Exchange's
+ability to perform its trade practice and market surveillance obligations under the CEA and does
+not render the Exchange’s contracts readily susceptible to manipulation.
+ProphetX Rule 4.12 (Prohibited Transactions and Activities), within Chapter 4 (Access and
+Trading), includes prohibitions against fraudulent, non-competitive, unfair, or abusive practices,
+all of which apply to trading under the Program, and ProphetX will continue to monitor for
+manipulative trading, market abuse, and other trading violations, including by participants in the
+Program. The Exchange’s systems will track make volume and trading fees paid to ensure accurate
+calculation and distribution of rebates. The terms of the Program will be posted on the Exchange’s
+website and publicly available. The Program does not affect the Exchange's execution of
+transactions. The Program is anticipated to be economically sustainable and is not expected to
+adversely affect ProphetX's satisfaction of its financial resources requirements.
+ProphetX accordingly certifies that the Program complies with the requirements of the CEA and
+the CFTC’s regulations promulgated thereunder, and further certifies that, concurrent with this
+filing, a copy of this submission has been posted on the ProphetX website and may be accessed at:
+https://www.prophetx.co/lobby/t-c/filings.
+If you have any questions or comments or require further information, please do not hesitate to
+contact me.
+Sincerely,
+/s/ Gabe Wong
+Chief Regulatory Officer
+ProphetX LLC
+gabe.wong@prophetexchange.com
+Enclosures:
+Appendix A – Amended Program terms (clean - public)
+Appendix B – Amended Program terms (redlined - public)
+Appendix C - Core Principle Analysis (confidential)
+
+APPENDIX A
+TRADING FEE SCHEDULE AND MAKE VOLUME FEE REBATE PROGRAM
+Purpose
+The Trading Fee Schedule and Make Volume Fee Rebate Program (the “Program”) establishes the
+trading fees applicable to transactions on ProphetX (the “Exchange”) and is designed to recognize
+Market Participants that contribute significant liquidity to the Exchange through a monthly fee
+rebate. Increased trading volume and liquidity benefit all participants through tighter bid/ask
+spreads and greater size available at each price level.
+Scope and Effective Date
+The Program will become effective on June 29, 2026, which is no earlier than ten (10) business
+days following the date of its certification to the CFTC (the “Effective Date”), and will continue
+until amended or terminated by the Exchange. Rebate tiers are calculated on a calendar-month
+basis. If the Effective Date does not fall on the first day of a calendar month, the tier thresholds for
+that month will be prorated based on the number of calendar days remaining in the month.
+For purposes of the Program, "make volume" means the aggregate notional matched volume of
+single-event contract transactions during a calendar month in which the Market Participant
+provided resting liquidity to the Exchange.
+On-Platform Trading Fees
+•
+
+A trading fee of 2% of net proceeds is assessed on each single-event contract transacted on
+the Exchange and is calculated on a per-market basis upon settlement of the relevant
+market.
+
+•
+
+Multi-event contracts and requests for quote ("RFQs") are not currently subject to trading
+fees. If the Exchange elects to assess fees on multi-event contracts or RFQs in the future,
+such fees will be filed with the CFTC in accordance with Rule 3.6(e) and CFTC Regulation
+40.6 prior to taking effect and, once effective, will be eligible for rebates under the
+Program.
+
+Make Volume Fee Rebate Program
+To award value to high-volume liquidity providers, the Exchange will process a fee rebate at the
+end of each calendar month based on a Market Participant’s monthly make volume, according to
+the following marginal rebate schedule:
+Monthly Make Volume Tier
+
+Marginal Rebate Rate
+
+$0 – $50,000
+
+0%
+
+$50,000 – $750,000
+
+20%
+
+$750,000 – $3,000,000
+
+40%
+
+$3,000,000 – $7,500,000
+
+60%
+
+Over $7,500,000
+
+80%
+
+The rebate is applied on a marginal basis: each portion of a participant’s monthly make volume is
+rebated at the marginal rate corresponding to its tier. The participant’s effective rebate rate equals
+the volume-weighted average of the applicable marginal rates, and the monthly rebate equals that
+effective rate multiplied by the trading fees the participant paid to the Exchange during the month.
+Illustrative examples:
+•
+
+A participant with $75,000 of monthly make volume who paid $1,000 in trading fees has
+an effective rebate rate of ($50,000 × 0% + $25,000 × 20%) ÷ $75,000 = 6.67%, and would
+receive a rebate of $66.66.
+
+•
+
+A participant with $7,500,000 of monthly make volume who paid $100,000 in trading fees
+has an effective rebate rate of ($50,000 × 0% + $700,000 × 20% + $2,250,000 × 40% +
+$4,500,000 × 60%) ÷ $7,500,000 = 49.86%, and would receive a rebate of $49,860.
+
+Program Term
+The initial term of the Make Volume Fee Rebate Program is twelve (12) months from the
+Effective Date. Following the Effective Date, senior management of the Exchange will review
+the Program on a monthly cycle to determine whether to continue it for the following month or
+to amend, phase out, or terminate it prior to the expiration of the twelve (12) month term. In each
+review, senior management will consider the Program's effect on trading volume and liquidity,
+any adverse effects on market integrity, and the Program's continued consistency with the
+Exchange's regulatory obligations. The Exchange may amend, phase out, or terminate the
+Program at any time following any such review, subject to any required CFTC filings,
+certifications, or approvals. The Exchange may amend the fee schedule and rebate tiers
+following the initial term; any such amendment will be filed with the CFTC in accordance with
+Rule 3.6(e) and CFTC Regulation 40.6 prior to taking effect. The Program may be extended on
+the same or modified terms, subject to any required CFTC filings, certifications, or approvals.
+Program Administration
+The Program is subject to the Exchange's Rulebook and all applicable provisions of the
+Commodity Exchange Act and CFTC regulations promulgated thereunder. Participation in the
+Program is subject to the Exchange's authority and obligations under its Rulebook and applicable
+law. The Exchange may modify, suspend, terminate, withdraw, or otherwise amend the Program
+from time to time, subject to any required CFTC filings, certifications, or approvals.
+
+APPENDIX B
+TRADING FEE SCHEDULE AND MAKE VOLUME FEE REBATE PROGRAM
+(REDLINED)
+Purpose
+The Trading Fee Schedule and Make Volume Fee Rebate Program (the “Program”) establishes the
+trading fees applicable to transactions on ProphetX (the “Exchange”) and is designed to recognize
+Market Participants that contribute significant liquidity to the Exchange through a monthly fee
+rebate. Increased trading volume and liquidity benefit all participants through tighter bid/ask
+spreads and greater size available at each price level.
+Scope and Effective Date
+The Program will become effective on June 29, 2026, which is no earlier than ten (10) business
+days following the date of its certification to the CFTC (the “Effective Date”), and will continue
+until amended or terminated by the Exchange. Rebate tiers are calculated on a calendar-month
+basis. If the Effective Date does not fall on the first day of a calendar month, the tier thresholds for
+that month will be prorated based on the number of calendar days remaining in the month.
+For purposes of the Program, "make volume" means the aggregate notional matched volume of
+single-event contract transactions during a calendar month in which the Market Participant
+provided resting liquidity to the Exchange.
+On-Platform Trading Fees
+•
+
+A trading fee of 2% of net proceeds is assessed on each single-event contract transacted on
+the Exchange and is calculated on a per-market basis upon settlement of the relevant
+market.
+
+•
+
+Multi-event contracts and requests for quote ("RFQs") are not currently subject to trading
+fees. If the Exchange elects to assess fees on multi-event contracts or RFQs in the future,
+such fees will be filed with the CFTC in accordance with Rule 3.6(e) and CFTC Regulation
+40.6 prior to taking effect and, once effective, will be eligible for rebates under the
+Program.
+
+Make Volume Fee Rebate Program
+To award value to high-volume liquidity providers, the Exchange will process a fee rebate at the
+end of each calendar month based on a Market Participant’s monthly make volume, according to
+the following marginal rebate schedule:
+Monthly Make Volume Tier
+
+Marginal Rebate Rate
+
+$0 – $50,000
+
+0%
+
+$50,000 – $750,000
+
+20%
+
+$750,000 – $3,000,000
+
+40%
+
+$3,000,000 – $7,500,000
+
+60%
+
+Over $7,500,000
+
+80%
+
+The rebate is applied on a marginal basis: each portion of a participant’s monthly make volume is
+rebated at the marginal rate corresponding to its tier. The participant’s effective rebate rate equals
+the volume-weighted average of the applicable marginal rates, and the monthly rebate equals that
+effective rate multiplied by the trading fees the participant paid to the Exchange during the month.
+Illustrative examples:
+•
+
+A participant with $75,000 of monthly make volume who paid $1,000 in trading fees has
+an effective rebate rate of ($50,000 × 0% + $25,000 × 20%) ÷ $75,000 = 6.67%, and would
+receive a rebate of $66.66.
+
+•
+
+A participant with $7,500,000 of monthly make volume who paid $100,000 in trading fees
+has an effective rebate rate of ($50,000 × 0% + $700,000 × 20% + $2,250,000 × 40% +
+$4,500,000 × 60%) ÷ $7,500,000 = 49.86%, and would receive a rebate of $49,860.
+
+Program Term
+The initial term of the Make Volume Fee Rebate Program is two (2) monthstwelve (12) months
+from the Effective Date. Following the Effective Date, senior management of the Exchange will
+review the Program on a monthly cycle to determine whether to continue it for the following
+month or to amend, phase out, or terminate it prior to the expiration of the twelve (12) month
+term. In each review, senior management will consider the Program's effect on trading volume
+and liquidity, any adverse effects on market integrity, and the Program's continued consistency
+with the Exchange's regulatory obligations. The Exchange may amend, phase out, or terminate
+the Program at any time following any such review, subject to any required CFTC filings,
+certifications, or approvals. The Exchange may amend the fee schedule and rebate tiers
+following the initial term; any such amendment will be filed with the CFTC in accordance with
+Rule 3.6(e) and CFTC Regulation
+40.6 prior to taking effect. The Program may be extended on the same or modified terms, subject
+to any required CFTC filings, certifications, or approvals.
+Program Administration
+The Program is subject to the Exchange's Rulebook and all applicable provisions of the
+Commodity Exchange Act and CFTC regulations promulgated thereunder. Participation in the
+Program is subject to the Exchange's authority and obligations under its Rulebook and applicable
+law. The Exchange may modify, suspend, terminate, withdraw, or otherwise amend the Program
+from time to time, subject to any required CFTC filings, certifications, or approvals.
+
+

@@ -1,0 +1,1628 @@
+{
+  "checked_at": "2026-09-14T00:24:07.779685+00:00",
+  "manifest_sha256": "35fd07e7a1f8c5284d5d75e5d67fe7630546976c54f06a86cfe1b6863bfaf931",
+  "manifest_mismatches": [],
+  "runtime": {
+    "state": "scanning",
+    "mode": "synthetic",
+    "sid": "486fa7d8-e96a-44e8-a25c-e07f28c78bd5",
+    "limits": {
+      "seconds": 60,
+      "markets": 2,
+      "receipts": 1000,
+      "storage_bytes": 134217728
+    },
+    "started_at": "2026-09-14T00:23:34.864006+00:00",
+    "error": null,
+    "venues": {
+      "kalshi": {
+        "state": "connected",
+        "note": "Invented prices \u00b7 no venue connection",
+        "at": "2026-09-14T00:23:34.968365+00:00"
+      },
+      "polymarket_us": {
+        "state": "connected",
+        "note": "Invented prices \u00b7 no venue connection",
+        "at": "2026-09-14T00:23:34.968386+00:00"
+      }
+    },
+    "messages": 0,
+    "queue": 0,
+    "depth_busy": false,
+    "view": {
+      "sequence": 17,
+      "at": "2026-09-14T00:24:06.989656+00:00",
+      "markets": [
+        {
+          "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+          "venue_key": "kalshi",
+          "venue": "Kalshi",
+          "event_id": "ka",
+          "market_id": "contract",
+          "title": "Synthetic contract",
+          "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+          "quotes": [
+            {
+              "environment": "synthetic",
+              "evidence_class": "synthetic",
+              "sync": "synchronized",
+              "depth": "partial",
+              "source_time_progress": "advanced",
+              "source_time_semantics": "snapshot",
+              "source_time_problem": null,
+              "locks_clear": true,
+              "units_verified": true,
+              "minimum": "1",
+              "increment": "1",
+              "sizing_evidence": "invented sizing fixture",
+              "role": "taker",
+              "venue": "kalshi",
+              "event_id": "ka",
+              "market_id": "contract",
+              "side": "yes",
+              "state": "active",
+              "raw_kind": "synthetic",
+              "source": "synthetic:slice-10",
+              "source_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "exchange_at": "2026-09-14T00:24:06.984502+00:00",
+              "ask": "0.40",
+              "available": "3",
+              "unit": "contracts",
+              "side_label": "ATL wins",
+              "receipt_age_seconds": "0.791439",
+              "source_age_seconds": "0.791439",
+              "live_eligible": true,
+              "display_state": "Observed price"
+            }
+          ],
+          "reasons": [],
+          "connection": "connected"
+        },
+        {
+          "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+          "venue_key": "polymarket_us",
+          "venue": "Polymarket US",
+          "event_id": "pm",
+          "market_id": "market",
+          "title": "Synthetic market",
+          "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+          "quotes": [
+            {
+              "environment": "synthetic",
+              "evidence_class": "synthetic",
+              "sync": "synchronized",
+              "depth": "partial",
+              "source_time_progress": "advanced",
+              "source_time_semantics": "snapshot",
+              "source_time_problem": null,
+              "locks_clear": true,
+              "units_verified": true,
+              "minimum": "1",
+              "increment": "1",
+              "sizing_evidence": "invented sizing fixture",
+              "role": "taker",
+              "venue": "polymarket_us",
+              "event_id": "pm",
+              "market_id": "market",
+              "side": "b",
+              "state": "active",
+              "raw_kind": "synthetic",
+              "source": "synthetic:slice-10",
+              "source_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "exchange_at": "2026-09-14T00:24:06.984502+00:00",
+              "ask": "0.40",
+              "available": "3",
+              "unit": "contracts",
+              "side_label": "PIT wins",
+              "receipt_age_seconds": "0.791439",
+              "source_age_seconds": "0.791439",
+              "live_eligible": true,
+              "display_state": "Observed price"
+            }
+          ],
+          "reasons": [],
+          "connection": "connected"
+        }
+      ],
+      "candidates": [
+        {
+          "id": "top-bf4723eb55b9d9d018c6c50f",
+          "pair_id": "market-pair-575d7b88cfb540683605197c",
+          "title": "Synthetic contract",
+          "classification": "Pricing diagnostic",
+          "reasons": [
+            "Fee assumption required",
+            "Missing price or book",
+            "Sizing not verified"
+          ],
+          "technical_reasons": [
+            "leg-0:fee-context-unavailable",
+            "leg-0:ask-observation-unavailable",
+            "leg-1:fee-context-unavailable",
+            "leg-1:ask-observation-unavailable",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown"
+          ],
+          "legs": [
+            {
+              "venue": "Price unavailable",
+              "side": "no",
+              "side_label": "ATL does not win",
+              "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+              "title": "Synthetic contract",
+              "price": null,
+              "size": null,
+              "unit": null,
+              "received_at": null,
+              "source_at": null,
+              "source_time_meaning": null,
+              "state": null,
+              "sync": null,
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+              "receipt_age_seconds": null,
+              "source_age_seconds": null
+            },
+            {
+              "venue": "Price unavailable",
+              "side": "a",
+              "side_label": "ATL wins",
+              "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+              "title": "Synthetic market",
+              "price": null,
+              "size": null,
+              "unit": null,
+              "received_at": null,
+              "source_at": null,
+              "source_time_meaning": null,
+              "state": null,
+              "sync": null,
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+              "receipt_age_seconds": null,
+              "source_age_seconds": null
+            }
+          ],
+          "ask_sum": null,
+          "raw_gap": null,
+          "skew_seconds": null,
+          "profit": null,
+          "roi": null,
+          "minimum_known_profit": null,
+          "fees": [],
+          "outcomes": {},
+          "assumptions": [],
+          "quantity": null,
+          "quantity_mode": null,
+          "qualified": false,
+          "current_opportunity": false,
+          "scope": "unobserved"
+        },
+        {
+          "id": "top-d7a70f50006b31869f9b27d7",
+          "pair_id": "market-pair-575d7b88cfb540683605197c",
+          "title": "Synthetic contract",
+          "classification": "Conditional calculation",
+          "reasons": [
+            "Additional evidence required",
+            "Fee assumption required",
+            "Settlement rules unresolved"
+          ],
+          "technical_reasons": [
+            "leg-0:non-production-environment",
+            "leg-1:non-production-environment",
+            "leg-0:fee:schedule effective time unknown; explicitly pinned documentation scenario",
+            "leg-0:fee:production schedule applied hypothetically to synthetic",
+            "leg-0:fee:event override history incomplete",
+            "leg-0:fee:supplied account precision; FCM/additional account charges excluded and unverified",
+            "leg-1:fee:production schedule applied hypothetically to synthetic",
+            "leg-1:fee:assumed no independent settlement fee; not established by trading schedule"
+          ],
+          "legs": [
+            {
+              "venue": "Kalshi",
+              "side": "yes",
+              "side_label": "ATL wins",
+              "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+              "title": "Synthetic contract",
+              "price": "0.40",
+              "size": "3",
+              "unit": "contracts",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_time_meaning": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+              "receipt_age_seconds": "0.791439",
+              "source_age_seconds": "0.791439"
+            },
+            {
+              "venue": "Polymarket US",
+              "side": "b",
+              "side_label": "PIT wins",
+              "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+              "title": "Synthetic market",
+              "price": "0.40",
+              "size": "3",
+              "unit": "contracts",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_time_meaning": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+              "receipt_age_seconds": "0.791439",
+              "source_age_seconds": "0.791439"
+            }
+          ],
+          "ask_sum": "0.80",
+          "raw_gap": "0.20",
+          "skew_seconds": "0",
+          "profit": "0.500000",
+          "roi": "0.2",
+          "minimum_known_profit": "0.500000",
+          "fees": [
+            {
+              "engine": "fees-1",
+              "entry_fees": "0.060000",
+              "entry_cash_requirement": "1.260000",
+              "assumptions": [
+                "schedule effective time unknown; explicitly pinned documentation scenario",
+                "production schedule applied hypothetically to synthetic",
+                "event override history incomplete",
+                "supplied account precision; FCM/additional account charges excluded and unverified"
+              ],
+              "unsupported": [],
+              "qualification": "conditional"
+            },
+            {
+              "engine": "fees-1",
+              "entry_fees": "0.04",
+              "entry_cash_requirement": "1.24",
+              "assumptions": [
+                "production schedule applied hypothetically to synthetic",
+                "assumed no independent settlement fee; not established by trading schedule"
+              ],
+              "unsupported": [],
+              "qualification": "conditional"
+            }
+          ],
+          "outcomes": {
+            "abandoned": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "canceled": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "discretionary_review": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "postponed_outside_window": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "pregame_forfeit": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "shortened_game": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "tie": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3.0"
+            },
+            "winner:NFL:ATL": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3"
+            },
+            "winner:NFL:PIT": {
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0",
+              "net_payout": "3"
+            }
+          },
+          "assumptions": [
+            "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+          ],
+          "quantity": "3",
+          "quantity_mode": "common-visible-top",
+          "qualified": false,
+          "current_opportunity": false,
+          "scope": "synthetic"
+        }
+      ],
+      "receipts": 34,
+      "raw_bytes": 11169,
+      "engine": "top-of-book-1",
+      "freshness_seconds": 10,
+      "mode": "synthetic",
+      "depth_available": true,
+      "active": true,
+      "current_opportunities": 0
+    }
+  },
+  "saved_sessions": [
+    {
+      "at": "2026-09-14T00:24:06.989656+00:00",
+      "candidates": [
+        {
+          "ask_sum": null,
+          "assumptions": [],
+          "classification": "Pricing diagnostic",
+          "current_opportunity": false,
+          "fees": [],
+          "id": "top-bf4723eb55b9d9d018c6c50f",
+          "legs": [
+            {
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+              "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+              "price": null,
+              "received_at": null,
+              "side": "no",
+              "side_label": "ATL does not win",
+              "size": null,
+              "source_at": null,
+              "source_time_meaning": null,
+              "state": null,
+              "sync": null,
+              "title": "Synthetic contract",
+              "unit": null,
+              "venue": "Price unavailable",
+              "receipt_age_seconds": null,
+              "source_age_seconds": null
+            },
+            {
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+              "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+              "price": null,
+              "received_at": null,
+              "side": "a",
+              "side_label": "ATL wins",
+              "size": null,
+              "source_at": null,
+              "source_time_meaning": null,
+              "state": null,
+              "sync": null,
+              "title": "Synthetic market",
+              "unit": null,
+              "venue": "Price unavailable",
+              "receipt_age_seconds": null,
+              "source_age_seconds": null
+            }
+          ],
+          "minimum_known_profit": null,
+          "outcomes": {},
+          "pair_id": "market-pair-575d7b88cfb540683605197c",
+          "profit": null,
+          "qualified": false,
+          "quantity": null,
+          "quantity_mode": null,
+          "raw_gap": null,
+          "reasons": [
+            "Fee assumption required",
+            "Missing price or book",
+            "Sizing not verified"
+          ],
+          "roi": null,
+          "scope": "unobserved",
+          "skew_seconds": null,
+          "technical_reasons": [
+            "leg-0:fee-context-unavailable",
+            "leg-0:ask-observation-unavailable",
+            "leg-1:fee-context-unavailable",
+            "leg-1:ask-observation-unavailable",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown"
+          ],
+          "title": "Synthetic contract"
+        },
+        {
+          "ask_sum": "0.80",
+          "assumptions": [
+            "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+          ],
+          "classification": "Conditional calculation",
+          "current_opportunity": false,
+          "fees": [
+            {
+              "assumptions": [
+                "schedule effective time unknown; explicitly pinned documentation scenario",
+                "production schedule applied hypothetically to synthetic",
+                "event override history incomplete",
+                "supplied account precision; FCM/additional account charges excluded and unverified"
+              ],
+              "engine": "fees-1",
+              "entry_cash_requirement": "1.260000",
+              "entry_fees": "0.060000",
+              "qualification": "conditional",
+              "unsupported": []
+            },
+            {
+              "assumptions": [
+                "production schedule applied hypothetically to synthetic",
+                "assumed no independent settlement fee; not established by trading schedule"
+              ],
+              "engine": "fees-1",
+              "entry_cash_requirement": "1.24",
+              "entry_fees": "0.04",
+              "qualification": "conditional",
+              "unsupported": []
+            }
+          ],
+          "id": "top-d7a70f50006b31869f9b27d7",
+          "legs": [
+            {
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+              "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+              "price": "0.40",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "side": "yes",
+              "side_label": "ATL wins",
+              "size": "3",
+              "source_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_time_meaning": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Synthetic contract",
+              "unit": "contracts",
+              "venue": "Kalshi",
+              "receipt_age_seconds": "0.819526",
+              "source_age_seconds": "0.819526"
+            },
+            {
+              "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+              "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+              "price": "0.40",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "side": "b",
+              "side_label": "PIT wins",
+              "size": "3",
+              "source_at": "2026-09-14T00:24:06.984502+00:00",
+              "source_time_meaning": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Synthetic market",
+              "unit": "contracts",
+              "venue": "Polymarket US",
+              "receipt_age_seconds": "0.819526",
+              "source_age_seconds": "0.819526"
+            }
+          ],
+          "minimum_known_profit": "0.500000",
+          "outcomes": {
+            "abandoned": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "canceled": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "discretionary_review": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "postponed_outside_window": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "pregame_forfeit": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "shortened_game": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "tie": {
+              "net_payout": "3.0",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "winner:NFL:ATL": {
+              "net_payout": "3",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            },
+            "winner:NFL:PIT": {
+              "net_payout": "3",
+              "profit": "0.500000",
+              "roi": "0.2",
+              "settlement_fees": "0"
+            }
+          },
+          "pair_id": "market-pair-575d7b88cfb540683605197c",
+          "profit": "0.500000",
+          "qualified": false,
+          "quantity": "3",
+          "quantity_mode": "common-visible-top",
+          "raw_gap": "0.20",
+          "reasons": [
+            "Additional evidence required",
+            "Fee assumption required",
+            "Settlement rules unresolved"
+          ],
+          "roi": "0.2",
+          "scope": "synthetic",
+          "skew_seconds": "0",
+          "technical_reasons": [
+            "leg-0:non-production-environment",
+            "leg-1:non-production-environment",
+            "leg-0:fee:schedule effective time unknown; explicitly pinned documentation scenario",
+            "leg-0:fee:production schedule applied hypothetically to synthetic",
+            "leg-0:fee:event override history incomplete",
+            "leg-0:fee:supplied account precision; FCM/additional account charges excluded and unverified",
+            "leg-1:fee:production schedule applied hypothetically to synthetic",
+            "leg-1:fee:assumed no independent settlement fee; not established by trading schedule"
+          ],
+          "title": "Synthetic contract"
+        }
+      ],
+      "depth_available": true,
+      "engine": "top-of-book-1",
+      "freshness_seconds": 10,
+      "markets": [
+        {
+          "event_id": "ka",
+          "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+          "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+          "market_id": "contract",
+          "quotes": [
+            {
+              "ask": "0.40",
+              "available": "3",
+              "depth": "partial",
+              "environment": "synthetic",
+              "event_id": "ka",
+              "evidence_class": "synthetic",
+              "exchange_at": "2026-09-14T00:24:06.984502+00:00",
+              "increment": "1",
+              "locks_clear": true,
+              "market_id": "contract",
+              "minimum": "1",
+              "raw_kind": "synthetic",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "role": "taker",
+              "side": "yes",
+              "side_label": "ATL wins",
+              "sizing_evidence": "invented sizing fixture",
+              "source": "synthetic:slice-10",
+              "source_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+              "source_time_problem": null,
+              "source_time_progress": "advanced",
+              "source_time_semantics": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": true,
+              "venue": "kalshi",
+              "receipt_age_seconds": "0.819526",
+              "source_age_seconds": "0.819526",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Synthetic contract",
+          "venue": "Kalshi",
+          "venue_key": "kalshi",
+          "connection": "saved"
+        },
+        {
+          "event_id": "pm",
+          "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+          "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+          "market_id": "market",
+          "quotes": [
+            {
+              "ask": "0.40",
+              "available": "3",
+              "depth": "partial",
+              "environment": "synthetic",
+              "event_id": "pm",
+              "evidence_class": "synthetic",
+              "exchange_at": "2026-09-14T00:24:06.984502+00:00",
+              "increment": "1",
+              "locks_clear": true,
+              "market_id": "market",
+              "minimum": "1",
+              "raw_kind": "synthetic",
+              "received_at": "2026-09-14T00:24:06.984502+00:00",
+              "role": "taker",
+              "side": "b",
+              "side_label": "PIT wins",
+              "sizing_evidence": "invented sizing fixture",
+              "source": "synthetic:slice-10",
+              "source_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+              "source_time_problem": null,
+              "source_time_progress": "advanced",
+              "source_time_semantics": "snapshot",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": true,
+              "venue": "polymarket_us",
+              "receipt_age_seconds": "0.819526",
+              "source_age_seconds": "0.819526",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Synthetic market",
+          "venue": "Polymarket US",
+          "venue_key": "polymarket_us",
+          "connection": "saved"
+        }
+      ],
+      "mode": "synthetic",
+      "raw_bytes": 11169,
+      "receipts": 34,
+      "sequence": 17,
+      "session": {
+        "id": "486fa7d8-e96a-44e8-a25c-e07f28c78bd5",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "started_at": "2026-09-13T20:23:34.870418-04:00",
+        "state": "running"
+      },
+      "coverage": [
+        {
+          "original_time": "2026-09-14T00:23:34.872100+00:00",
+          "kind": "coverage",
+          "detail": {
+            "mode": "synthetic",
+            "limits": {
+              "markets": 2,
+              "seconds": 60,
+              "receipts": 1000,
+              "storage_bytes": 134217728
+            },
+            "continuous_survival": false,
+            "stream_reconstruction": false
+          }
+        }
+      ],
+      "active": false,
+      "current_opportunities": 0
+    },
+    {
+      "at": "2026-09-14T00:20:53.771920+00:00",
+      "candidates": [
+        {
+          "ask_sum": null,
+          "assumptions": [],
+          "classification": "Pricing diagnostic",
+          "current_opportunity": false,
+          "fees": [],
+          "id": "top-b6592e6e9542205b5f76c9d8",
+          "legs": [
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\"]",
+              "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-KC\"]",
+              "price": "0.4500",
+              "received_at": "2026-09-14T00:20:46.850944+00:00",
+              "side": "no",
+              "side_label": "KC does not win",
+              "size": "152111.25",
+              "source_at": "2026-09-14T00:20:46.863000+00:00",
+              "source_time_meaning": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "title": "Denver vs Kansas City Pro Football game: Kansas City wins?",
+              "unit": "contracts",
+              "venue": "Kalshi",
+              "receipt_age_seconds": "200.957064",
+              "source_age_seconds": "200.945008"
+            },
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74914\"]",
+              "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74914\",\"381972\"]",
+              "price": null,
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "side": "763459",
+              "side_label": "KC wins",
+              "size": null,
+              "source_at": "2026-09-14T00:20:46.667095+00:00",
+              "source_time_meaning": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Who will win in the upcoming football event Denver Broncos vs Kansas City Chiefs scheduled for September 15, 2026 at 12:15 AM UTC?",
+              "unit": null,
+              "venue": "Polymarket US",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913"
+            }
+          ],
+          "minimum_known_profit": null,
+          "outcomes": {},
+          "pair_id": "market-pair-623386ad4994ba4d840034e2",
+          "profit": null,
+          "qualified": false,
+          "quantity": null,
+          "quantity_mode": null,
+          "raw_gap": null,
+          "reasons": [
+            "Settlement rules unresolved",
+            "Market is not confirmed active",
+            "Market lock status unresolved",
+            "Stale observation or clock mismatch",
+            "Source clock meaning unresolved",
+            "Additional evidence required",
+            "Missing price or book",
+            "Sizing not verified"
+          ],
+          "roi": null,
+          "scope": "current",
+          "skew_seconds": "0.004474",
+          "technical_reasons": [
+            "settlement:UNKNOWN",
+            "no-proven-complementary-legs",
+            "settlement-not-qualified",
+            "complementary-payouts-UNKNOWN",
+            "leg-0:market-unknown",
+            "leg-0:locked-or-lock-status-unknown",
+            "leg-0:source-time-ahead-of-receipt",
+            "leg-0:source-time-semantics-unknown",
+            "leg-1:locked-or-lock-status-unknown",
+            "leg-1:depth-unknown",
+            "leg-1:ask-unavailable",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown"
+          ],
+          "title": "Denver vs Kansas City Pro Football game: Kansas City wins?"
+        },
+        {
+          "ask_sum": "1.0000",
+          "assumptions": [
+            "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+          ],
+          "classification": "Conditional calculation",
+          "current_opportunity": false,
+          "fees": [
+            {
+              "assumptions": [],
+              "engine": "fees-1",
+              "entry_cash_requirement": null,
+              "entry_fees": null,
+              "qualification": "unsupported",
+              "unsupported": [
+                "unknown effective schedule could apply; explicit version required"
+              ]
+            },
+            {
+              "assumptions": [
+                "native market applicability not independently established",
+                "net payout unavailable where settlement charge is unresolved"
+              ],
+              "engine": "fees-1",
+              "entry_cash_requirement": "0.4500",
+              "entry_fees": "0.01",
+              "qualification": "conditional",
+              "unsupported": []
+            }
+          ],
+          "id": "top-74abe4922c829746f0576a02",
+          "legs": [
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\"]",
+              "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-KC\"]",
+              "price": "0.5600",
+              "received_at": "2026-09-14T00:20:46.850944+00:00",
+              "side": "yes",
+              "side_label": "KC wins",
+              "size": "11896.07",
+              "source_at": "2026-09-14T00:20:46.863000+00:00",
+              "source_time_meaning": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "title": "Denver vs Kansas City Pro Football game: Kansas City wins?",
+              "unit": "contracts",
+              "venue": "Kalshi",
+              "receipt_age_seconds": "200.957064",
+              "source_age_seconds": "200.945008"
+            },
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74914\"]",
+              "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74914\",\"381972\"]",
+              "price": "0.4400",
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "side": "763458",
+              "side_label": "DEN wins",
+              "size": "1255736.2700",
+              "source_at": "2026-09-14T00:20:46.667095+00:00",
+              "source_time_meaning": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Who will win in the upcoming football event Denver Broncos vs Kansas City Chiefs scheduled for September 15, 2026 at 12:15 AM UTC?",
+              "unit": "contracts",
+              "venue": "Polymarket US",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913"
+            }
+          ],
+          "minimum_known_profit": null,
+          "outcomes": {
+            "abandoned": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "canceled": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "discretionary_review": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "postponed_outside_window": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "pregame_forfeit": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "shortened_game": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "tie": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "winner:NFL:DEN": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "winner:NFL:KC": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            }
+          },
+          "pair_id": "market-pair-623386ad4994ba4d840034e2",
+          "profit": null,
+          "qualified": false,
+          "quantity": "1",
+          "quantity_mode": "hypothetical",
+          "raw_gap": "0.0000",
+          "reasons": [
+            "Settlement rules unresolved",
+            "Market is not confirmed active",
+            "Market lock status unresolved",
+            "Stale observation or clock mismatch",
+            "Source clock meaning unresolved",
+            "Sizing not verified",
+            "Fee assumption required",
+            "Some outcome results are unknown"
+          ],
+          "roi": null,
+          "scope": "current",
+          "skew_seconds": "0.004474",
+          "technical_reasons": [
+            "settlement:UNKNOWN",
+            "no-proven-complementary-legs",
+            "settlement-not-qualified",
+            "complementary-payouts-UNKNOWN",
+            "leg-0:market-unknown",
+            "leg-0:locked-or-lock-status-unknown",
+            "leg-0:source-time-ahead-of-receipt",
+            "leg-0:source-time-semantics-unknown",
+            "leg-1:locked-or-lock-status-unknown",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown",
+            "leg-0:fee:unknown effective schedule could apply; explicit version required",
+            "leg-1:fee:native market applicability not independently established",
+            "leg-1:fee:net payout unavailable where settlement charge is unresolved",
+            "material-outcome-net-guarantee-unknown"
+          ],
+          "title": "Denver vs Kansas City Pro Football game: Kansas City wins?"
+        },
+        {
+          "ask_sum": "1.0000",
+          "assumptions": [
+            "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+          ],
+          "classification": "Conditional calculation",
+          "current_opportunity": false,
+          "fees": [
+            {
+              "assumptions": [],
+              "engine": "fees-1",
+              "entry_cash_requirement": null,
+              "entry_fees": null,
+              "qualification": "unsupported",
+              "unsupported": [
+                "unknown effective schedule could apply; explicit version required"
+              ]
+            },
+            {
+              "assumptions": [
+                "native market applicability not independently established",
+                "net payout unavailable where settlement charge is unresolved"
+              ],
+              "engine": "fees-1",
+              "entry_cash_requirement": "0.4500",
+              "entry_fees": "0.01",
+              "qualification": "conditional",
+              "unsupported": []
+            }
+          ],
+          "id": "top-1c2e54d388c88bb3ba2f848d",
+          "legs": [
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\"]",
+              "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-DEN\"]",
+              "price": "0.5600",
+              "received_at": "2026-09-14T00:20:46.848966+00:00",
+              "side": "no",
+              "side_label": "DEN does not win",
+              "size": "17345.06",
+              "source_at": "2026-09-14T00:20:46.860000+00:00",
+              "source_time_meaning": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "title": "Denver vs Kansas City Pro Football game: Denver wins?",
+              "unit": "contracts",
+              "venue": "Kalshi",
+              "receipt_age_seconds": "200.959042",
+              "source_age_seconds": "200.948008"
+            },
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74914\"]",
+              "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74914\",\"381972\"]",
+              "price": "0.4400",
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "side": "763458",
+              "side_label": "DEN wins",
+              "size": "1255736.2700",
+              "source_at": "2026-09-14T00:20:46.667095+00:00",
+              "source_time_meaning": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Who will win in the upcoming football event Denver Broncos vs Kansas City Chiefs scheduled for September 15, 2026 at 12:15 AM UTC?",
+              "unit": "contracts",
+              "venue": "Polymarket US",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913"
+            }
+          ],
+          "minimum_known_profit": null,
+          "outcomes": {
+            "abandoned": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "canceled": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "discretionary_review": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "postponed_outside_window": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "pregame_forfeit": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "shortened_game": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "tie": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "winner:NFL:DEN": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            },
+            "winner:NFL:KC": {
+              "net_payout": null,
+              "profit": null,
+              "roi": null,
+              "settlement_fees": null
+            }
+          },
+          "pair_id": "market-pair-af5505e72506fbb47fe03806",
+          "profit": null,
+          "qualified": false,
+          "quantity": "1",
+          "quantity_mode": "hypothetical",
+          "raw_gap": "0.0000",
+          "reasons": [
+            "Settlement rules unresolved",
+            "Market is not confirmed active",
+            "Market lock status unresolved",
+            "Stale observation or clock mismatch",
+            "Source clock meaning unresolved",
+            "Sizing not verified",
+            "Fee assumption required",
+            "Some outcome results are unknown"
+          ],
+          "roi": null,
+          "scope": "current",
+          "skew_seconds": "0.002496",
+          "technical_reasons": [
+            "settlement:UNKNOWN",
+            "no-proven-complementary-legs",
+            "settlement-not-qualified",
+            "complementary-payouts-UNKNOWN",
+            "leg-0:market-unknown",
+            "leg-0:locked-or-lock-status-unknown",
+            "leg-0:source-time-ahead-of-receipt",
+            "leg-0:source-time-semantics-unknown",
+            "leg-1:locked-or-lock-status-unknown",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown",
+            "leg-0:fee:unknown effective schedule could apply; explicit version required",
+            "leg-1:fee:native market applicability not independently established",
+            "leg-1:fee:net payout unavailable where settlement charge is unresolved",
+            "material-outcome-net-guarantee-unknown"
+          ],
+          "title": "Denver vs Kansas City Pro Football game: Denver wins?"
+        },
+        {
+          "ask_sum": null,
+          "assumptions": [],
+          "classification": "Pricing diagnostic",
+          "current_opportunity": false,
+          "fees": [],
+          "id": "top-cc90ca5423c1d79400217e39",
+          "legs": [
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\"]",
+              "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-DEN\"]",
+              "price": "0.4500",
+              "received_at": "2026-09-14T00:20:46.848966+00:00",
+              "side": "yes",
+              "side_label": "DEN wins",
+              "size": "3519223.99",
+              "source_at": "2026-09-14T00:20:46.860000+00:00",
+              "source_time_meaning": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "title": "Denver vs Kansas City Pro Football game: Denver wins?",
+              "unit": "contracts",
+              "venue": "Kalshi",
+              "receipt_age_seconds": "200.959042",
+              "source_age_seconds": "200.948008"
+            },
+            {
+              "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74914\"]",
+              "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74914\",\"381972\"]",
+              "price": null,
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "side": "763459",
+              "side_label": "KC wins",
+              "size": null,
+              "source_at": "2026-09-14T00:20:46.667095+00:00",
+              "source_time_meaning": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "title": "Who will win in the upcoming football event Denver Broncos vs Kansas City Chiefs scheduled for September 15, 2026 at 12:15 AM UTC?",
+              "unit": null,
+              "venue": "Polymarket US",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913"
+            }
+          ],
+          "minimum_known_profit": null,
+          "outcomes": {},
+          "pair_id": "market-pair-af5505e72506fbb47fe03806",
+          "profit": null,
+          "qualified": false,
+          "quantity": null,
+          "quantity_mode": null,
+          "raw_gap": null,
+          "reasons": [
+            "Settlement rules unresolved",
+            "Market is not confirmed active",
+            "Market lock status unresolved",
+            "Stale observation or clock mismatch",
+            "Source clock meaning unresolved",
+            "Additional evidence required",
+            "Missing price or book",
+            "Sizing not verified"
+          ],
+          "roi": null,
+          "scope": "current",
+          "skew_seconds": "0.002496",
+          "technical_reasons": [
+            "settlement:UNKNOWN",
+            "no-proven-complementary-legs",
+            "settlement-not-qualified",
+            "complementary-payouts-UNKNOWN",
+            "leg-0:market-unknown",
+            "leg-0:locked-or-lock-status-unknown",
+            "leg-0:source-time-ahead-of-receipt",
+            "leg-0:source-time-semantics-unknown",
+            "leg-1:locked-or-lock-status-unknown",
+            "leg-1:depth-unknown",
+            "leg-1:ask-unavailable",
+            "leg-0:size-or-economic-rules-unknown",
+            "leg-1:size-or-economic-rules-unknown"
+          ],
+          "title": "Denver vs Kansas City Pro Football game: Denver wins?"
+        }
+      ],
+      "depth_available": true,
+      "engine": "top-of-book-1",
+      "freshness_seconds": 10,
+      "markets": [
+        {
+          "event_id": "KXNFLGAME-26SEP14DENKC",
+          "event_title": "Denver vs Kansas City",
+          "key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-KC\"]",
+          "market_id": "KXNFLGAME-26SEP14DENKC-KC",
+          "quotes": [
+            {
+              "ask": "0.5600",
+              "available": "11896.07",
+              "depth": "full",
+              "environment": "production",
+              "event_id": "KXNFLGAME-26SEP14DENKC",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.863000+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "KXNFLGAME-26SEP14DENKC-KC",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.850944+00:00",
+              "role": "taker",
+              "side": "yes",
+              "side_label": "KC wins",
+              "sizing_evidence": null,
+              "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:yes:bid=native;ask=1-no-bid;ask_quantity=no-bid-contracts",
+              "source_sha256": "46ed7553c67cf05fd1f74b614bb3d0bdcc67591b932b4c362b56f71c6b2688c7",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "kalshi",
+              "receipt_age_seconds": "200.957064",
+              "source_age_seconds": "200.945008",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            },
+            {
+              "ask": "0.4500",
+              "available": "152111.25",
+              "depth": "full",
+              "environment": "production",
+              "event_id": "KXNFLGAME-26SEP14DENKC",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.863000+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "KXNFLGAME-26SEP14DENKC-KC",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.850944+00:00",
+              "role": "taker",
+              "side": "no",
+              "side_label": "KC does not win",
+              "sizing_evidence": null,
+              "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:no:bid=native;ask=1-yes-bid;ask_quantity=yes-bid-contracts",
+              "source_sha256": "46ed7553c67cf05fd1f74b614bb3d0bdcc67591b932b4c362b56f71c6b2688c7",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "kalshi",
+              "receipt_age_seconds": "200.957064",
+              "source_age_seconds": "200.945008",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Denver vs Kansas City Pro Football game: Kansas City wins?",
+          "venue": "Kalshi",
+          "venue_key": "kalshi",
+          "connection": "saved"
+        },
+        {
+          "event_id": "KXNFLGAME-26SEP14DENKC",
+          "event_title": "Denver vs Kansas City",
+          "key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP14DENKC\",\"KXNFLGAME-26SEP14DENKC-DEN\"]",
+          "market_id": "KXNFLGAME-26SEP14DENKC-DEN",
+          "quotes": [
+            {
+              "ask": "0.4500",
+              "available": "3519223.99",
+              "depth": "full",
+              "environment": "production",
+              "event_id": "KXNFLGAME-26SEP14DENKC",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.860000+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "KXNFLGAME-26SEP14DENKC-DEN",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.848966+00:00",
+              "role": "taker",
+              "side": "yes",
+              "side_label": "DEN wins",
+              "sizing_evidence": null,
+              "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:yes:bid=native;ask=1-no-bid;ask_quantity=no-bid-contracts",
+              "source_sha256": "0e1873c247fcf59f50ad8b5a710585aa8e934e7a0d350f88cf5b4ba5abb8952b",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "kalshi",
+              "receipt_age_seconds": "200.959042",
+              "source_age_seconds": "200.948008",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            },
+            {
+              "ask": "0.5600",
+              "available": "17345.06",
+              "depth": "full",
+              "environment": "production",
+              "event_id": "KXNFLGAME-26SEP14DENKC",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.860000+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "KXNFLGAME-26SEP14DENKC-DEN",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.848966+00:00",
+              "role": "taker",
+              "side": "no",
+              "side_label": "DEN does not win",
+              "sizing_evidence": null,
+              "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:no:bid=native;ask=1-yes-bid;ask_quantity=yes-bid-contracts",
+              "source_sha256": "0e1873c247fcf59f50ad8b5a710585aa8e934e7a0d350f88cf5b4ba5abb8952b",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "unknown",
+              "state": "unknown",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "kalshi",
+              "receipt_age_seconds": "200.959042",
+              "source_age_seconds": "200.948008",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Denver vs Kansas City Pro Football game: Denver wins?",
+          "venue": "Kalshi",
+          "venue_key": "kalshi",
+          "connection": "saved"
+        },
+        {
+          "event_id": "74914",
+          "event_title": "DEN Broncos vs KC Chiefs",
+          "key": "[\"observation\",\"production\",\"polymarket_us\",\"74914\",\"381972\"]",
+          "market_id": "381972",
+          "quotes": [
+            {
+              "ask": "0.4400",
+              "available": "1255736.2700",
+              "depth": "partial",
+              "environment": "production",
+              "event_id": "74914",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.667095+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "381972",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "role": "taker",
+              "side": "763458",
+              "side_label": "DEN wins",
+              "sizing_evidence": null,
+              "source": "wss://api.polymarket.us/v1/ws/markets",
+              "source_sha256": "cb15eebefb1d56c2b7be282199cdbc2cb72ab4908f66acb0f3cbed5e7fd608c0",
+              "source_time_problem": null,
+              "source_time_progress": "advanced",
+              "source_time_semantics": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "polymarket_us",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            },
+            {
+              "ask": null,
+              "available": null,
+              "depth": "unknown",
+              "environment": "production",
+              "event_id": "74914",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:46.667095+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "381972",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:46.846470+00:00",
+              "role": "taker",
+              "side": "763459",
+              "side_label": "KC wins",
+              "sizing_evidence": null,
+              "source": "wss://api.polymarket.us/v1/ws/markets",
+              "source_sha256": "cb15eebefb1d56c2b7be282199cdbc2cb72ab4908f66acb0f3cbed5e7fd608c0",
+              "source_time_problem": null,
+              "source_time_progress": "advanced",
+              "source_time_semantics": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": null,
+              "units_verified": false,
+              "venue": "polymarket_us",
+              "receipt_age_seconds": "200.961538",
+              "source_age_seconds": "201.140913",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Who will win in the upcoming football event Denver Broncos vs Kansas City Chiefs scheduled for September 15, 2026 at 12:15 AM UTC?",
+          "venue": "Polymarket US",
+          "venue_key": "polymarket_us",
+          "connection": "saved"
+        },
+        {
+          "event_id": "101466",
+          "event_title": "DET Lions vs BUF Bills",
+          "key": "[\"observation\",\"production\",\"polymarket_us\",\"101466\",\"657964\"]",
+          "market_id": "657964",
+          "quotes": [
+            {
+              "ask": "0.3800",
+              "available": "3377.7600",
+              "depth": "partial",
+              "environment": "production",
+              "event_id": "101466",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:19.941672+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "657964",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:45.610145+00:00",
+              "role": "taker",
+              "side": "1315440",
+              "side_label": "DET wins",
+              "sizing_evidence": null,
+              "source": "wss://api.polymarket.us/v1/ws/markets",
+              "source_sha256": "5ef491fb2a54c55680fcf9262a429997b8d5699d509eb5fa5d71fdf049082cc6",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": "contracts",
+              "units_verified": false,
+              "venue": "polymarket_us",
+              "receipt_age_seconds": "202.197863",
+              "source_age_seconds": "227.866336",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            },
+            {
+              "ask": null,
+              "available": null,
+              "depth": "unknown",
+              "environment": "production",
+              "event_id": "101466",
+              "evidence_class": "current",
+              "exchange_at": "2026-09-14T00:20:19.941672+00:00",
+              "increment": null,
+              "locks_clear": null,
+              "market_id": "657964",
+              "minimum": null,
+              "raw_kind": "observation",
+              "received_at": "2026-09-14T00:20:45.610145+00:00",
+              "role": "taker",
+              "side": "1315441",
+              "side_label": "BUF wins",
+              "sizing_evidence": null,
+              "source": "wss://api.polymarket.us/v1/ws/markets",
+              "source_sha256": "5ef491fb2a54c55680fcf9262a429997b8d5699d509eb5fa5d71fdf049082cc6",
+              "source_time_problem": null,
+              "source_time_progress": "first",
+              "source_time_semantics": "last_change",
+              "state": "active",
+              "sync": "synchronized",
+              "unit": null,
+              "units_verified": false,
+              "venue": "polymarket_us",
+              "receipt_age_seconds": "202.197863",
+              "source_age_seconds": "227.866336",
+              "live_eligible": false,
+              "display_state": "Saved observation"
+            }
+          ],
+          "reasons": [],
+          "title": "Who will win in the upcoming football event Detroit Lions vs Buffalo Bills scheduled for September 18, 2026 at 12:15 AM UTC?",
+          "venue": "Polymarket US",
+          "venue_key": "polymarket_us",
+          "connection": "saved"
+        }
+      ],
+      "mode": "live",
+      "raw_bytes": 10671688,
+      "receipts": 22,
+      "sequence": 12,
+      "session": {
+        "id": "ed06c7d1-ae22-4ed8-8b90-bec4e22e2917",
+        "environment": "production",
+        "evidence_class": "current",
+        "started_at": "2026-09-13T20:20:40.559469-04:00",
+        "state": "complete"
+      },
+      "coverage": [
+        {
+          "original_time": "2026-09-14T00:20:54.565999+00:00",
+          "kind": "shutdown",
+          "detail": {
+            "state": "complete",
+            "reason": "Backpressure: bounded queue filled; capture gap recorded",
+            "censored": true
+          }
+        },
+        {
+          "original_time": "2026-09-14T00:20:54.565565+00:00",
+          "kind": "gap",
+          "detail": {
+            "reason": "Backpressure: bounded queue filled; capture gap recorded",
+            "censored": true,
+            "queued_unprocessed": 32,
+            "continuous_coverage": false
+          }
+        },
+        {
+          "original_time": "2026-09-14T00:20:44.138877+00:00",
+          "kind": "coverage",
+          "detail": {
+            "note": "2 current markets selected",
+            "venue": "polymarket_us",
+            "requests": 3,
+            "selected_events": 2,
+            "selected_markets": 2,
+            "discovered_events": 7,
+            "discovery_truncated": true,
+            "fee_metadata_events": 0
+          }
+        },
+        {
+          "original_time": "2026-09-14T00:20:44.130735+00:00",
+          "kind": "coverage",
+          "detail": {
+            "note": "2 current markets selected",
+            "venue": "kalshi",
+            "requests": 7,
+            "selected_events": 1,
+            "selected_markets": 2,
+            "discovered_events": 9,
+            "discovery_truncated": {
+              "/markets{'event_ticker': 'KXNFLGAME-26SEP14DENKC'}": false,
+              "/events/fee_changes{'event_ticker': 'KXNFLGAME-26SEP14DENKC'}": false,
+              "/events{'series_ticker': 'KXNFLGAME', 'status': 'open', 'with_milestones': 'true'}": true
+            },
+            "fee_metadata_events": 1
+          }
+        },
+        {
+          "original_time": "2026-09-14T00:20:40.560798+00:00",
+          "kind": "coverage",
+          "detail": {
+            "mode": "live",
+            "limits": {
+              "markets": 2,
+              "seconds": 60,
+              "receipts": 1000,
+              "storage_bytes": 134217728
+            },
+            "continuous_survival": false,
+            "stream_reconstruction": false
+          }
+        }
+      ],
+      "active": false,
+      "current_opportunities": 0
+    }
+  ]
+}

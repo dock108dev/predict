@@ -1,0 +1,13 @@
+{
+  "candidate_sha256": "66af90a9384e2d01304d18e6183c07c4e34b34f96f57deb7c4b99592f2207fcc",
+  "offline_tests": 26,
+  "postgres_tests": 8,
+  "javascript": "syntax and saved-counter DOM assertions passed",
+  "browser": "Both legacy summaries/picker, synthetic Start/update/Stop/reopen/details; no console errors",
+  "preserved_artifacts": 816,
+  "preservation_mismatches": [],
+  "owner_database_access": false,
+  "owner_app_restart": false,
+  "live_requests": false,
+  "disposable_cluster": "stopped and removed"
+}

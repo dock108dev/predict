@@ -1,0 +1,1052 @@
+{
+  "environment": "sandbox",
+  "classification": "sandbox observation",
+  "budgets": {
+    "rest_attempts": 20,
+    "seconds": 90,
+    "frames": 200,
+    "storage_bytes": 5000000,
+    "events": 1,
+    "markets": 3,
+    "connections": 2
+  },
+  "authentication": true,
+  "catalog": true,
+  "initial_image": false,
+  "reconnect_image": false,
+  "disconnect_requested": false,
+  "cancellation_propagated": false,
+  "changed_selection_window": false,
+  "tournaments": [
+    {
+      "id": 1600000249,
+      "name": "Pop Culture Specials"
+    },
+    {
+      "id": 2739,
+      "name": "ATP Indian Wells"
+    },
+    {
+      "id": 1600000280,
+      "name": "SB Quick Hits"
+    },
+    {
+      "id": 463,
+      "name": "AFC Champions League"
+    },
+    {
+      "id": 5017,
+      "name": "WTA Monterrey"
+    },
+    {
+      "id": 5004,
+      "name": "ATP Barcelona"
+    },
+    {
+      "id": 3163,
+      "name": "WTA San Diego"
+    },
+    {
+      "id": 1600000161,
+      "name": "Fade Trent"
+    },
+    {
+      "id": 1600000186,
+      "name": "Oscars"
+    },
+    {
+      "id": 1600000149,
+      "name": "US Open Mens"
+    },
+    {
+      "id": 5034,
+      "name": "ATP Hong Kong"
+    },
+    {
+      "id": 5011,
+      "name": "ATP Bastad"
+    },
+    {
+      "id": 3028,
+      "name": "ATP Japan Open"
+    },
+    {
+      "id": 495,
+      "name": "US Open Cup"
+    },
+    {
+      "id": 1036,
+      "name": "NPB"
+    },
+    {
+      "id": 37,
+      "name": "Brazilian Serie A"
+    },
+    {
+      "id": 132,
+      "name": "NBA"
+    },
+    {
+      "id": 1600000146,
+      "name": "NFL Futures"
+    },
+    {
+      "id": 5061,
+      "name": "WTA Athens"
+    },
+    {
+      "id": 5045,
+      "name": "WTA Bogota"
+    },
+    {
+      "id": 8843,
+      "name": "WTA Beijing"
+    },
+    {
+      "id": 5001,
+      "name": "WTA Merida"
+    },
+    {
+      "id": 5005,
+      "name": "WTA Strasbourg"
+    },
+    {
+      "id": 803,
+      "name": "MLB All Star Game"
+    },
+    {
+      "id": 5014,
+      "name": "WTA Hamburg"
+    },
+    {
+      "id": 1600000179,
+      "name": "NCAAB"
+    },
+    {
+      "id": 5013,
+      "name": "ATP Umag"
+    },
+    {
+      "id": 1500000000,
+      "name": "Bet Against Mattress Mack"
+    },
+    {
+      "id": 4221,
+      "name": "WTA Doha"
+    },
+    {
+      "id": 5010,
+      "name": "ATP Gstaad"
+    },
+    {
+      "id": 5008,
+      "name": "WTA London"
+    },
+    {
+      "id": 2983,
+      "name": "ATP Cincinnati"
+    },
+    {
+      "id": 1600000335,
+      "name": "NASCAR"
+    },
+    {
+      "id": 1600000269,
+      "name": "2025 Exposure Event"
+    },
+    {
+      "id": 1600000183,
+      "name": "Super Bowl Coin Toss"
+    },
+    {
+      "id": 44,
+      "name": "English Championship"
+    },
+    {
+      "id": 4848,
+      "name": "WTA Eastbourne"
+    },
+    {
+      "id": 5043,
+      "name": "ATP Santiago"
+    },
+    {
+      "id": 5002,
+      "name": "ATP Acapulco"
+    },
+    {
+      "id": 5053,
+      "name": "WTA Rabat"
+    },
+    {
+      "id": 5006,
+      "name": "ATP Hamburg"
+    },
+    {
+      "id": 1600000178,
+      "name": "Cross Sport Parlays"
+    },
+    {
+      "id": 5058,
+      "name": "ATP Eastbourne"
+    },
+    {
+      "id": 3333,
+      "name": "ATP Auckland"
+    },
+    {
+      "id": 7,
+      "name": "UEFA Champions League"
+    },
+    {
+      "id": 33586,
+      "name": "WTA Guadalajara"
+    },
+    {
+      "id": 4847,
+      "name": "WTA Stuttgart"
+    },
+    {
+      "id": 2745,
+      "name": "ATP Miami"
+    },
+    {
+      "id": 5018,
+      "name": "ATP Winston Salem"
+    },
+    {
+      "id": 1500000004,
+      "name": "NFL Regular Season Wins"
+    },
+    {
+      "id": 5015,
+      "name": "WTA Prague"
+    },
+    {
+      "id": 2541,
+      "name": "KBO League"
+    },
+    {
+      "id": 1600000265,
+      "name": "Golf Outrights"
+    },
+    {
+      "id": 5026,
+      "name": "WTA Ningbo"
+    },
+    {
+      "id": 42,
+      "name": "Norwegian Eliteserien"
+    },
+    {
+      "id": 1600000184,
+      "name": "Super Bowl Game Props"
+    },
+    {
+      "id": 0,
+      "name": "N/A"
+    },
+    {
+      "id": 5052,
+      "name": "ATP Geneva"
+    },
+    {
+      "id": 52,
+      "name": "Europe WC Qualification"
+    },
+    {
+      "id": 18,
+      "name": "Championship"
+    },
+    {
+      "id": 1600000337,
+      "name": "Other MMA"
+    },
+    {
+      "id": 2591,
+      "name": "US Open (M)"
+    },
+    {
+      "id": 5055,
+      "name": "ATP S-Hertogenbosch"
+    },
+    {
+      "id": 5016,
+      "name": "WTA Iasi Open"
+    },
+    {
+      "id": 1600000160,
+      "name": "NFL Parlays"
+    },
+    {
+      "id": 5067,
+      "name": "WTA Singapore Women Singles"
+    },
+    {
+      "id": 3085,
+      "name": "ATP Shanghai"
+    },
+    {
+      "id": 27653,
+      "name": "College Football"
+    },
+    {
+      "id": 233,
+      "name": "NFL Preseason"
+    },
+    {
+      "id": 1600000159,
+      "name": "MLB Early Win"
+    },
+    {
+      "id": 5044,
+      "name": "WTA Austin"
+    },
+    {
+      "id": 486,
+      "name": "WNBA"
+    },
+    {
+      "id": 1600000330,
+      "name": "World Baseball Classic"
+    },
+    {
+      "id": 4927,
+      "name": "WTA Madrid"
+    },
+    {
+      "id": 5003,
+      "name": "ATP Munich"
+    },
+    {
+      "id": 4846,
+      "name": "WTA Berlin"
+    },
+    {
+      "id": 1600000336,
+      "name": "EuroLeague"
+    },
+    {
+      "id": 15574,
+      "name": "T20 Blast"
+    },
+    {
+      "id": 5049,
+      "name": "ATP Houston"
+    },
+    {
+      "id": 5021,
+      "name": "WTA Korea Open"
+    },
+    {
+      "id": 28416,
+      "name": "NCAA"
+    },
+    {
+      "id": 5037,
+      "name": "ATP Adelaide"
+    },
+    {
+      "id": 1600000268,
+      "name": "ESPY's"
+    },
+    {
+      "id": 1600000148,
+      "name": "CFB Futures"
+    },
+    {
+      "id": 11129,
+      "name": "ATP Rio de Janeiro"
+    },
+    {
+      "id": 5027,
+      "name": "Nitto ATP Finals"
+    },
+    {
+      "id": 3167,
+      "name": "ATP Dubai"
+    },
+    {
+      "id": 5022,
+      "name": "ATP Chengdu Open"
+    },
+    {
+      "id": 4489,
+      "name": "WTA Dubai"
+    },
+    {
+      "id": 34,
+      "name": "Ligue 1"
+    },
+    {
+      "id": 2977,
+      "name": "WTA Montreal"
+    },
+    {
+      "id": 40,
+      "name": "Colombia Primera A"
+    },
+    {
+      "id": 1600000340,
+      "name": "Golf Round Matchups"
+    },
+    {
+      "id": 5056,
+      "name": "ATP Stuttgart"
+    },
+    {
+      "id": 3164,
+      "name": "WTA Ostrava"
+    },
+    {
+      "id": 5029,
+      "name": "WTA Hong Kong"
+    },
+    {
+      "id": 1600000157,
+      "name": "MLB Up 2 Early Win"
+    },
+    {
+      "id": 851,
+      "name": "Int. Friendly Games"
+    },
+    {
+      "id": 5033,
+      "name": "WTA Finals"
+    },
+    {
+      "id": 5059,
+      "name": "ATP Mallorca"
+    },
+    {
+      "id": 1600000150,
+      "name": "Tennis Futures"
+    },
+    {
+      "id": 23,
+      "name": "Serie A"
+    },
+    {
+      "id": 3103,
+      "name": "ATP Vienna"
+    },
+    {
+      "id": 5042,
+      "name": "ATP Dallas"
+    },
+    {
+      "id": 1600000275,
+      "name": "Boxing"
+    },
+    {
+      "id": 5062,
+      "name": "WTA Memphis"
+    },
+    {
+      "id": 16628,
+      "name": "Caribbean Premier League"
+    },
+    {
+      "id": 5068,
+      "name": "ATP Almaty"
+    },
+    {
+      "id": 1600000263,
+      "name": "Horse Racing"
+    },
+    {
+      "id": 1600000153,
+      "name": "US Open Singles (M)"
+    },
+    {
+      "id": 1600000281,
+      "name": "SB Player Prop Specials"
+    },
+    {
+      "id": 1600000180,
+      "name": "Discord Markets"
+    },
+    {
+      "id": 1500000056,
+      "name": "Parlay Specials"
+    },
+    {
+      "id": 8,
+      "name": "LaLiga"
+    },
+    {
+      "id": 1600000266,
+      "name": "1600000266 CFL"
+    },
+    {
+      "id": 3165,
+      "name": "WTA Pan Pacific Open"
+    },
+    {
+      "id": 5023,
+      "name": "ATP Hangzhou Open"
+    },
+    {
+      "id": 35,
+      "name": "Bundesliga"
+    },
+    {
+      "id": 1600000145,
+      "name": "Soccer Props"
+    },
+    {
+      "id": 5050,
+      "name": "ATP Montpellier"
+    },
+    {
+      "id": 268,
+      "name": "KHL"
+    },
+    {
+      "id": 2555,
+      "name": "Wimbledon (M)"
+    },
+    {
+      "id": 1600000229,
+      "name": "Fun Markets"
+    },
+    {
+      "id": 49,
+      "name": "Africa WC Qualification"
+    },
+    {
+      "id": 1600000353,
+      "name": "Politics"
+    },
+    {
+      "id": 1600000279,
+      "name": "SB Game Props"
+    },
+    {
+      "id": 5032,
+      "name": "ATP Athens"
+    },
+    {
+      "id": 4775,
+      "name": "WTA Rome"
+    },
+    {
+      "id": 24135,
+      "name": "National Invitation Tournament"
+    },
+    {
+      "id": 45,
+      "name": "League One"
+    },
+    {
+      "id": 5066,
+      "name": "WTA Sao Paulo"
+    },
+    {
+      "id": 1600000250,
+      "name": "NHL Futures"
+    },
+    {
+      "id": 31293,
+      "name": "WTA Adelaide"
+    },
+    {
+      "id": 1600000204,
+      "name": "NFL Draft"
+    },
+    {
+      "id": 1600000065,
+      "name": "Prophet Boosts"
+    },
+    {
+      "id": 465,
+      "name": "UEFA Super Cup"
+    },
+    {
+      "id": 8363,
+      "name": "WTA Cincinnati"
+    },
+    {
+      "id": 5047,
+      "name": "ATP Marrakech"
+    },
+    {
+      "id": 5030,
+      "name": "ATP Stockholm"
+    },
+    {
+      "id": 1600000158,
+      "name": "Early Win"
+    },
+    {
+      "id": 4589,
+      "name": "WTA Indian Wells"
+    },
+    {
+      "id": 1600000234,
+      "name": "Golf"
+    },
+    {
+      "id": 31292,
+      "name": "WTA Sydney"
+    },
+    {
+      "id": 1500000003,
+      "name": "UFC"
+    },
+    {
+      "id": 5046,
+      "name": "ATP Bucharest"
+    },
+    {
+      "id": 38,
+      "name": "Brazilian Serie B"
+    },
+    {
+      "id": 1600000264,
+      "name": "F1 Races"
+    },
+    {
+      "id": 3334,
+      "name": "WTA Auckland"
+    },
+    {
+      "id": 5054,
+      "name": "WTA S-Hertogenbosch"
+    },
+    {
+      "id": 50,
+      "name": "N/C America WC Qualification"
+    },
+    {
+      "id": 2661,
+      "name": "ATP Paris"
+    },
+    {
+      "id": 5069,
+      "name": "ATP Antwerp"
+    },
+    {
+      "id": 28372,
+      "name": "College Basketball Invitational"
+    },
+    {
+      "id": 5070,
+      "name": "WTA Chennai"
+    },
+    {
+      "id": 8177,
+      "name": "WTA Washington"
+    },
+    {
+      "id": 19,
+      "name": "FA Cup"
+    },
+    {
+      "id": 3027,
+      "name": "ATP Queen's Club - London"
+    },
+    {
+      "id": 1600000152,
+      "name": "US Open Singles (W)"
+    },
+    {
+      "id": 5038,
+      "name": "ATP Rotterdam"
+    },
+    {
+      "id": 1600000278,
+      "name": "SB Coin Toss"
+    },
+    {
+      "id": 5035,
+      "name": "ATP Brisbane"
+    },
+    {
+      "id": 5039,
+      "name": "ATP Delray Beach"
+    },
+    {
+      "id": 1600000251,
+      "name": "NBA Series Prices"
+    },
+    {
+      "id": 17,
+      "name": "Premier League"
+    },
+    {
+      "id": 4691,
+      "name": "WTA Miami"
+    },
+    {
+      "id": 1600000163,
+      "name": "Presidents Cup"
+    },
+    {
+      "id": 2571,
+      "name": "Australian Open (W)"
+    },
+    {
+      "id": 1600000339,
+      "name": "Football"
+    },
+    {
+      "id": 3026,
+      "name": "ATP Halle"
+    },
+    {
+      "id": 5060,
+      "name": "ATP Estoril"
+    },
+    {
+      "id": 34480,
+      "name": "UEFA Europa Conference League"
+    },
+    {
+      "id": 1600000155,
+      "name": "New WNBA"
+    },
+    {
+      "id": 43,
+      "name": "Leagues Cup"
+    },
+    {
+      "id": 5025,
+      "name": "WTA Wuhan"
+    },
+    {
+      "id": 1600000276,
+      "name": "Golf Markets"
+    },
+    {
+      "id": 1600000162,
+      "name": "MLB Props"
+    },
+    {
+      "id": 1600000267,
+      "name": "Hot Dog Eating Contest"
+    },
+    {
+      "id": 13,
+      "name": "FIFA World Cup"
+    },
+    {
+      "id": 5009,
+      "name": "ATP Los Cabos"
+    },
+    {
+      "id": 1600000151,
+      "name": "US Open Singles"
+    },
+    {
+      "id": 1600000182,
+      "name": "Super Bowl Novelty Props"
+    },
+    {
+      "id": 4222,
+      "name": "ATP Doha"
+    },
+    {
+      "id": 41,
+      "name": "Japan J League"
+    },
+    {
+      "id": 602,
+      "name": "AFF Championship"
+    },
+    {
+      "id": 2613,
+      "name": "ATP Basel"
+    },
+    {
+      "id": 234,
+      "name": "NHL"
+    },
+    {
+      "id": 5036,
+      "name": "WTA Hobart"
+    },
+    {
+      "id": 51,
+      "name": "Oceania WC Qualification"
+    },
+    {
+      "id": 3166,
+      "name": "WTA San Jose"
+    },
+    {
+      "id": 47,
+      "name": "South America WC"
+    },
+    {
+      "id": 2583,
+      "name": "French Open Women Singles"
+    },
+    {
+      "id": 36,
+      "name": "Club World Cup"
+    },
+    {
+      "id": 2787,
+      "name": "ATP Madrid"
+    },
+    {
+      "id": 1600000333,
+      "name": "NCAAM Conference Tournaments"
+    },
+    {
+      "id": 242,
+      "name": "MLS"
+    },
+    {
+      "id": 46,
+      "name": "Argentinian Liga Profesional de Futbol"
+    },
+    {
+      "id": 3025,
+      "name": "ATP Beijing"
+    },
+    {
+      "id": 5041,
+      "name": "WTA Abu Dhabi"
+    },
+    {
+      "id": 2559,
+      "name": "Wimbledon (W)"
+    },
+    {
+      "id": 2100,
+      "name": "Davis Cup"
+    },
+    {
+      "id": 1600000140,
+      "name": "NFL Props"
+    },
+    {
+      "id": 3121,
+      "name": "ATP Monte Carlo"
+    },
+    {
+      "id": 1600000334,
+      "name": "NHL Series Prices"
+    },
+    {
+      "id": 5065,
+      "name": "ATP Challenger Men Singles"
+    },
+    {
+      "id": 5031,
+      "name": "ATP Moselle Open"
+    },
+    {
+      "id": 648,
+      "name": "College Basketball"
+    },
+    {
+      "id": 1600000147,
+      "name": "TD Scorers"
+    },
+    {
+      "id": 2572,
+      "name": "French Open (W)"
+    },
+    {
+      "id": 346,
+      "name": "Community Shield"
+    },
+    {
+      "id": 5007,
+      "name": "WTA Bad Homburg"
+    },
+    {
+      "id": 1600000228,
+      "name": "Luka Specials"
+    },
+    {
+      "id": 1600000272,
+      "name": "war"
+    },
+    {
+      "id": 1600000338,
+      "name": "Indian Premier League"
+    },
+    {
+      "id": 2595,
+      "name": "US Open (W)"
+    },
+    {
+      "id": 109,
+      "name": "MLB"
+    },
+    {
+      "id": 1600000156,
+      "name": "NFL First TD Scorers"
+    },
+    {
+      "id": 1600000282,
+      "name": "Olympic Hockey"
+    },
+    {
+      "id": 53,
+      "name": "World Cup"
+    },
+    {
+      "id": 679,
+      "name": "UEFA Europa League"
+    },
+    {
+      "id": 1600000181,
+      "name": "Farmers Insurance Open"
+    },
+    {
+      "id": 329,
+      "name": "Copa del Rey"
+    },
+    {
+      "id": 54,
+      "name": "International Friendlies"
+    },
+    {
+      "id": 5057,
+      "name": "WTA Nottingham"
+    },
+    {
+      "id": 5063,
+      "name": "ITF Men Singles"
+    },
+    {
+      "id": 5051,
+      "name": "WTA Rouen"
+    },
+    {
+      "id": 1600000154,
+      "name": "NFL TD Scorers"
+    },
+    {
+      "id": 2568,
+      "name": "French Open (M)"
+    },
+    {
+      "id": 853,
+      "name": "Club Friendly Games"
+    },
+    {
+      "id": 2971,
+      "name": "ATP Washington"
+    },
+    {
+      "id": 2567,
+      "name": "Australian Open (M)"
+    },
+    {
+      "id": 48,
+      "name": "Asia WC Qualification"
+    },
+    {
+      "id": 1600000138,
+      "name": "MLB Homerun Props"
+    },
+    {
+      "id": 5040,
+      "name": "ATP Buenos Aires"
+    },
+    {
+      "id": 2781,
+      "name": "ATP Rome"
+    },
+    {
+      "id": 39,
+      "name": "Chilean Primera Division"
+    },
+    {
+      "id": 5019,
+      "name": "WTA Cleveland"
+    },
+    {
+      "id": 5012,
+      "name": "ATP Kitzbuhel"
+    },
+    {
+      "id": 23755,
+      "name": "UEFA Nations League"
+    },
+    {
+      "id": 1600000274,
+      "name": "NFL Specials"
+    },
+    {
+      "id": 1600000271,
+      "name": "Tennis Specials"
+    },
+    {
+      "id": 328,
+      "name": "Coppa Italia"
+    },
+    {
+      "id": 5024,
+      "name": "WTA Japan Open"
+    },
+    {
+      "id": 1600000401,
+      "name": "CFL"
+    },
+    {
+      "id": 31,
+      "name": "NFL"
+    },
+    {
+      "id": 2763,
+      "name": "WTA Charleston"
+    },
+    {
+      "id": 1600000185,
+      "name": "Super Bowl Player Prop Specials"
+    },
+    {
+      "id": 5048,
+      "name": "WTA Linz"
+    },
+    {
+      "id": 28370,
+      "name": "NCAA Division I National Championship"
+    },
+    {
+      "id": 2978,
+      "name": "ATP Montreal"
+    },
+    {
+      "id": 1600000270,
+      "name": "MLB Specials"
+    },
+    {
+      "id": 5064,
+      "name": "ITF Women Singles"
+    },
+    {
+      "id": 5028,
+      "name": "WTA Guangzhou Open"
+    }
+  ],
+  "stop": "catalog complete; select a returned sports tournament ID",
+  "rest": [
+    {
+      "path": "/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/mm/get_tournaments",
+      "status": 200
+    }
+  ],
+  "stream": [],
+  "frames": 0,
+  "records": [
+    {
+      "file": "market-001.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_tournaments",
+      "received_at": "2026-09-12T00:57:09.661765+00:00",
+      "sha256": "1c927184897e77fe055576ad6d398c4f72be30f854ffc7052a248fbb2a9972fc"
+    }
+  ],
+  "units_verified": false
+}

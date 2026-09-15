@@ -1,0 +1,31 @@
+Obtaining file:///Users/michaelfuscoletti/Desktop/prediction-arb
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: httpx<0.29,>=0.28 in ./.venv/lib/python3.14/site-packages (from prediction-arb==0.1.0) (0.28.1)
+Requirement already satisfied: websockets<17,>=15 in ./.venv/lib/python3.14/site-packages (from prediction-arb==0.1.0) (16.1.1)
+Requirement already satisfied: cryptography<49,>=46 in ./.venv/lib/python3.14/site-packages (from prediction-arb==0.1.0) (48.0.1)
+Requirement already satisfied: cffi>=2.0.0 in ./.venv/lib/python3.14/site-packages (from cryptography<49,>=46->prediction-arb==0.1.0) (2.1.1)
+Requirement already satisfied: anyio in ./.venv/lib/python3.14/site-packages (from httpx<0.29,>=0.28->prediction-arb==0.1.0) (4.15.1)
+Requirement already satisfied: certifi in ./.venv/lib/python3.14/site-packages (from httpx<0.29,>=0.28->prediction-arb==0.1.0) (2026.7.22)
+Requirement already satisfied: httpcore==1.* in ./.venv/lib/python3.14/site-packages (from httpx<0.29,>=0.28->prediction-arb==0.1.0) (1.0.9)
+Requirement already satisfied: idna in ./.venv/lib/python3.14/site-packages (from httpx<0.29,>=0.28->prediction-arb==0.1.0) (3.19)
+Requirement already satisfied: h11>=0.16 in ./.venv/lib/python3.14/site-packages (from httpcore==1.*->httpx<0.29,>=0.28->prediction-arb==0.1.0) (0.16.0)
+Requirement already satisfied: pycparser in ./.venv/lib/python3.14/site-packages (from cffi>=2.0.0->cryptography<49,>=46->prediction-arb==0.1.0) (3.0)
+Requirement already satisfied: typing_extensions>=4.16.0 in ./.venv/lib/python3.14/site-packages (from anyio->httpx<0.29,>=0.28->prediction-arb==0.1.0) (4.16.0)
+Building wheels for collected packages: prediction-arb
+  Building editable for prediction-arb (pyproject.toml): started
+  Building editable for prediction-arb (pyproject.toml): finished with status 'done'
+  Created wheel for prediction-arb: filename=prediction_arb-0.1.0-0.editable-py3-none-any.whl size=2871 sha256=bed3b6a8f6c056b4a9e75f45e966db37f0e3da7bf61f49d9f5643e565e72b92b
+  Stored in directory: /private/var/folders/2k/njrlmfj97sv5pjrqxl22hq8w0000gn/T/pip-ephem-wheel-cache-0x0g0jfw/wheels/c9/66/e5/3a5fb396c90eb2f680dbed9fc08064d36d939267a24b7598de
+Successfully built prediction-arb
+Installing collected packages: prediction-arb
+Successfully installed prediction-arb-0.1.0
+
+[notice] A new release of pip is available: 26.1.1 -> 26.2.1
+[notice] To update, run: /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python -m pip install --upgrade pip

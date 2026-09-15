@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-12T00:41:45.595509+00:00",
+  "sandbox": {
+    "browser": "login required",
+    "designated_project_keychain_entry": "absent",
+    "api_enablement": "unverified",
+    "authenticated_requests": 0
+  },
+  "production": {
+    "designated_project_keychain_entry": "absent",
+    "api_enablement": "unverified",
+    "authenticated_requests": 0
+  },
+  "owner_action": "Sign into sandbox, complete MFA, check API integration menu; never send secrets in chat.",
+  "outreach_sent": false
+}

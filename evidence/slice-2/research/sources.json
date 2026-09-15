@@ -1,0 +1,86 @@
+[
+  {
+    "file": "authentication.md",
+    "url": "https://docs.polymarket.us/api-reference/authentication.md",
+    "retrieved_at_utc": "2026-09-11T22:58:32.663690+00:00",
+    "kind": "official_documentation",
+    "sha256": "e34367cf9dc27fd5a672bce6fc2ef8af10d7efbae9368086737de3ec9027d12c"
+  },
+  {
+    "file": "events-get-events.md",
+    "url": "https://docs.polymarket.us/api-reference/events/get-events.md",
+    "retrieved_at_utc": "2026-09-11T22:58:35.645448+00:00",
+    "kind": "official_documentation",
+    "sha256": "caa1deae335a53619bdf39bf09ac75f8a8b833c1c48dbcfc026627e92aa36d64"
+  },
+  {
+    "file": "markets-get-market-bbo.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-market-bbo.md",
+    "retrieved_at_utc": "2026-09-11T22:58:34.647990+00:00",
+    "kind": "official_documentation",
+    "sha256": "f3f9712e3ef77313a25e50393a650d8c25efe592b4c6981d06194c56b31616eb"
+  },
+  {
+    "file": "markets-get-market-book.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-market-book.md",
+    "retrieved_at_utc": "2026-09-11T22:58:34.359631+00:00",
+    "kind": "official_documentation",
+    "sha256": "7075d31d65e5be1f5e468c1383427bd52c0d0ed84898abfd1e07e92fd7711ce3"
+  },
+  {
+    "file": "markets-get-market-settlement.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-market-settlement.md",
+    "retrieved_at_utc": "2026-09-11T22:58:36.447057+00:00",
+    "kind": "official_documentation",
+    "sha256": "5add6610544cecdb000f881aed46fa2cf1afe63307ef5e5d963be1fd523ed0b5"
+  },
+  {
+    "file": "markets-get-markets.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-markets.md",
+    "retrieved_at_utc": "2026-09-11T22:58:35.103985+00:00",
+    "kind": "official_documentation",
+    "sha256": "077677d4c8aaabe5a3e8db4136620ea7397de4e06764500b0f12c6d66ad62ed7"
+  },
+  {
+    "file": "rate-limits.md",
+    "url": "https://docs.polymarket.us/api-reference/rate-limits.md",
+    "retrieved_at_utc": "2026-09-11T22:58:33.175623+00:00",
+    "kind": "official_documentation",
+    "sha256": "670610f351c22e395960b58b0538ee312e1d42017faf64c1e4b1517abae41f09"
+  },
+  {
+    "file": "sports-get-events-by-league-slug.md",
+    "url": "https://docs.polymarket.us/api-reference/sports/get-events-by-league-slug.md",
+    "retrieved_at_utc": "2026-09-11T22:58:36.146885+00:00",
+    "kind": "official_documentation",
+    "sha256": "8cbedad5571da4bc9b5f3ed7f01824e4e16f50f4fcb4a9e95f11a4fa5b2c7b1f"
+  },
+  {
+    "file": "websocket-markets.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets.md",
+    "retrieved_at_utc": "2026-09-11T22:58:31.882521+00:00",
+    "kind": "official_documentation",
+    "sha256": "fa2c5f97199dd2b4614916df7875d281322854f158ed6feb51c67505d6703986"
+  },
+  {
+    "file": "websocket-overview.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/overview.md",
+    "retrieved_at_utc": "2026-09-11T22:58:32.225146+00:00",
+    "kind": "official_documentation",
+    "sha256": "75fbcd19679904a728f8c14760f94763b1f53cbbd59b579c5eb0797c6b95295f"
+  },
+  {
+    "file": "tos.html",
+    "url": "https://polymarket.us/tos",
+    "retrieved_at_utc": "2026-09-11T22:58:45.989112+00:00",
+    "kind": "official_public_terms",
+    "sha256": "fdcd0f1b82a6c4050b608ad4f68685e54b3a1b633f62f06d6999e8c3a7cb5c8a"
+  },
+  {
+    "file": "retail-terms.txt",
+    "url": "https://docs.google.com/document/d/e/2PACX-1vQ-86JK7kI6jAkpUNEyTCSpkeP_7cZMKhAW0rtti9rjzXqhdqm-27YSrX9Bun8LjQ/pub",
+    "retrieved_at_utc": "2026-09-11T23:03:57.533496+00:00",
+    "kind": "official_public_terms",
+    "sha256": "af69e04dd17c23e8b3f556c0474f2ee742e81c658b3ca89a3a787164ea404116"
+  }
+]

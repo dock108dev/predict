@@ -1,0 +1,164 @@
+[
+  {
+    "name": "offline-tests",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ],
+    "exit_code": 0,
+    "log": "offline-tests.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "integration-tests",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "integration_tests",
+      "-v"
+    ],
+    "exit_code": 0,
+    "log": "integration-tests.txt",
+    "class_": "PostgreSQL integration"
+  },
+  {
+    "name": "example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.example"
+    ],
+    "exit_code": 0,
+    "log": "example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "polymarket_us_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.polymarket_us_example"
+    ],
+    "exit_code": 0,
+    "log": "polymarket_us_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "prophetx_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.prophetx_example"
+    ],
+    "exit_code": 0,
+    "log": "prophetx_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "kalshi_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.kalshi_example"
+    ],
+    "exit_code": 0,
+    "log": "kalshi_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "novig_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.novig_example"
+    ],
+    "exit_code": 0,
+    "log": "novig_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "normalization_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.normalization_example"
+    ],
+    "exit_code": 0,
+    "log": "normalization_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "matching_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.matching_example"
+    ],
+    "exit_code": 0,
+    "log": "matching_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "moneyline_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.moneyline_example"
+    ],
+    "exit_code": 0,
+    "log": "moneyline_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "fee_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.fee_example"
+    ],
+    "exit_code": 0,
+    "log": "fee_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "arbitrage_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.arbitrage_example"
+    ],
+    "exit_code": 0,
+    "log": "arbitrage_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "depth_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.depth_example"
+    ],
+    "exit_code": 0,
+    "log": "depth_example.txt",
+    "class_": "offline"
+  },
+  {
+    "name": "storage_example",
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.storage_example"
+    ],
+    "exit_code": 0,
+    "log": "storage_example.txt",
+    "class_": "PostgreSQL integration"
+  }
+]

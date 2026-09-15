@@ -1,0 +1,48 @@
+{
+  "slice": "13A",
+  "status": "complete",
+  "real_storage_reproduction": "PASS",
+  "independent_accounting": "PASS: 24/24; each side receipt, bootstrap, control and calculation binding checked",
+  "expected_failure": "PASS: four trials retain 32 unprocessed; defect remains present",
+  "offline": {
+    "tests": 345,
+    "result": "PASS",
+    "log": "offline-final-tests.txt",
+    "candidate": "full measured baseline before diagnostic rejection label correction"
+  },
+  "integration": {
+    "tests": 35,
+    "result": "PASS",
+    "log": "integration-final-tests.txt",
+    "storage": "isolated real PostgreSQL"
+  },
+  "javascript_syntax": "PASS: node --check app/dashboard/static/app.js; unchanged source",
+  "source_identity_sha256": "324ad7de79b0873fe09099b3278d58bda4cdc805d9e4131ad98020a4f839397a",
+  "fixture_sha256": "54eaf221ebbd0c5eb32c091076468f14c50bef53f094ec74bee648369f74dd26",
+  "preservation": "PASS: only Desktop tracker differs among preexisting files",
+  "disposable_cluster_cleanup": "PASS: all supervisor cleanup records",
+  "owner_acceptance": "not evaluated",
+  "historical_owner_root_cause": "unproven; no original stage/arrival measurements",
+  "production_qualification": "not performed",
+  "repairs_13b_13c": "not implemented",
+  "stop": "before 13B",
+  "checked_at": "2026-09-14T00:51:45.313200+00:00",
+  "measured_baseline_source_identity_sha256": "b918fb0a8b49452151819f8a1f7d025d19f8f0a8250108675d7459e6e89781a0",
+  "final_source_delta": {
+    "files": [
+      "app/dashboard/diagnostics.py",
+      "tests/test_capture_diagnostics.py",
+      "integration_tests/test_capture_diagnostics.py"
+    ],
+    "scope": "diagnostic rejection labels and assertions only; baseline raw ledger unchanged"
+  },
+  "focused_after_label_correction": {
+    "offline_tests": 24,
+    "postgres_tests": 35,
+    "result": "PASS",
+    "logs": [
+      "rejection-label-offline-tests.txt",
+      "rejection-label-tests.txt"
+    ]
+  }
+}

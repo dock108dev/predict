@@ -1,0 +1,50 @@
+{
+  "final-integration/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "drain-budget/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "smoke1/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "final-matrix/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "final-candidate/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "integration1/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "optimization1/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "examples/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "final-faults/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "matrix1/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "smoke2/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  },
+  "faults1/cleanup.json": {
+    "isolated_cluster_removed": true,
+    "owner_cluster_touched": false
+  }
+}

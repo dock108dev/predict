@@ -1,0 +1,88 @@
+[
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ],
+    "output": "tests.txt",
+    "started_at_utc": "2026-09-12T02:20:21.404442+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "tests.test_normalization",
+      "-v"
+    ],
+    "output": "normalization-tests.txt",
+    "started_at_utc": "2026-09-12T02:20:32.380962+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.example"
+    ],
+    "output": "example-example.txt",
+    "started_at_utc": "2026-09-12T02:20:39.749054+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.polymarket_us_example"
+    ],
+    "output": "polymarket_us_example-example.txt",
+    "started_at_utc": "2026-09-12T02:20:39.837387+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.prophetx_example"
+    ],
+    "output": "prophetx_example-example.txt",
+    "started_at_utc": "2026-09-12T02:20:40.322384+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.kalshi_example"
+    ],
+    "output": "kalshi_example-example.txt",
+    "started_at_utc": "2026-09-12T02:20:40.417436+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.novig_example"
+    ],
+    "output": "novig_example-example.txt",
+    "started_at_utc": "2026-09-12T02:20:40.513940+00:00",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.normalization_example"
+    ],
+    "output": "normalization-example.json",
+    "started_at_utc": "2026-09-12T02:20:40.607742+00:00",
+    "exit_code": 0
+  }
+]

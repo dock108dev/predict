@@ -1,0 +1,99 @@
+{
+  "observations": [
+    {
+      "session_id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+      "calculation_id": "depth:7",
+      "candidate_id": "top-12f6e403f2f443fef128c0a1",
+      "observed_at": "2026-09-11 22:00:00-04:00",
+      "engine": "depth-1",
+      "structural": null,
+      "conditional_positive": false,
+      "qualified": false,
+      "state": "unavailable-or-ineligible",
+      "reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:fee-context-unavailable",
+        "leg-0:ask-observation-unavailable",
+        "leg-1:fee-context-unavailable",
+        "leg-1:stale-receipt",
+        "leg-1:reconstruction-unknown",
+        "leg-1:locked-or-lock-status-unknown",
+        "leg-1:depth-unknown",
+        "leg-1:source-time-problem:subscription lifecycle not replayed; retained image only",
+        "leg-1:ask-unavailable",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown",
+        "leg-0:acquisition-ladder-unavailable",
+        "leg-1:acquisition-ladder-unavailable"
+      ],
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]"
+      ],
+      "result_hash": "4a67c0cf67ac612865d783b1380a5cc425d776e8cb430de663a8b58a7558bf7e",
+      "changed": true
+    },
+    {
+      "session_id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+      "calculation_id": "detector:0",
+      "candidate_id": "top-12f6e403f2f443fef128c0a1",
+      "observed_at": "2026-09-11 22:00:00-04:00",
+      "engine": "detector-capture-1",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "state": "unavailable-or-ineligible",
+      "reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:fee-context-unavailable",
+        "leg-0:ask-observation-unavailable",
+        "leg-1:fee-context-unavailable",
+        "leg-1:stale-receipt",
+        "leg-1:reconstruction-unknown",
+        "leg-1:locked-or-lock-status-unknown",
+        "leg-1:depth-unknown",
+        "leg-1:source-time-problem:subscription lifecycle not replayed; retained image only",
+        "leg-1:ask-unavailable",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown"
+      ],
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]"
+      ],
+      "result_hash": "5608c31217017a764a7c762d2b95b508b67677c4b837bcc174fbe755c7f04411",
+      "changed": true
+    }
+  ],
+  "coverage": [
+    {
+      "original_time": "2026-09-12T02:00:00+00:00",
+      "kind": "gap",
+      "detail": {
+        "reason": "intervals between retained images were not observed; source clocks/venue skew retained",
+        "censored": true
+      }
+    },
+    {
+      "original_time": "2026-09-12T22:19:47.688674+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "finite input exhausted",
+        "censored": true
+      }
+    }
+  ],
+  "first_observed": "2026-09-11 22:00:00-04:00",
+  "last_observed": "2026-09-11 22:00:00-04:00",
+  "observed_duration_seconds": "0",
+  "duration_basis": "discrete samples only; intervals between samples unproven",
+  "censored": true,
+  "liquidity_note": "Related liquidity families cannot be summed as independent profit."
+}

@@ -1,0 +1,34 @@
+{
+  "matcher_version": "event-matcher-1",
+  "schema_version": 1,
+  "tests_passed": 176,
+  "focused_matcher_tests": 25,
+  "examples_passed": 7,
+  "coverage": [
+    {
+      "evidence_kind": "observation",
+      "environment": "production",
+      "input_observations": 15,
+      "distinct_native_events": 15,
+      "canonical_events": 10,
+      "outcomes": {
+        "matched": 10,
+        "unmatched": 5
+      }
+    },
+    {
+      "evidence_kind": "observation",
+      "environment": "sandbox",
+      "input_observations": 32,
+      "distinct_native_events": 32,
+      "canonical_events": 4,
+      "outcomes": {
+        "ambiguous": 28,
+        "unmatched": 4
+      }
+    }
+  ],
+  "next_action": "Slice 8 \u2014 moneyline market matching",
+  "slice_8_started": false,
+  "external_dependencies": "ProphetX limitations and Novig live qualification remain separate."
+}

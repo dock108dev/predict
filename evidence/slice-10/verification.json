@@ -1,0 +1,105 @@
+[
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/tests.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.polymarket_us_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/polymarket_us_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.prophetx_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/prophetx_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.kalshi_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/kalshi_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.novig_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/novig_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.normalization_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/normalization_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.matching_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/matching_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.moneyline_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/moneyline_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.fee_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/fee_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.arbitrage_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-10/arbitrage_example.txt"
+  }
+]

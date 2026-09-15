@@ -1,0 +1,26 @@
+[
+  {
+    "file": "discovery-1.json",
+    "source": "https://gateway.polymarket.us/v2/leagues/nfl/events?limit=3&offset=0",
+    "received_at": "2026-09-11T23:46:08.886954+00:00",
+    "http_status": 200
+  },
+  {
+    "file": "discovery-2.json",
+    "source": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-bal-ind-2026-09-13",
+    "received_at": "2026-09-11T23:46:09.057834+00:00",
+    "http_status": 200
+  },
+  {
+    "file": "discovery-3.json",
+    "source": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-atl-pit-2026-09-13",
+    "received_at": "2026-09-11T23:46:09.103877+00:00",
+    "http_status": 200
+  },
+  {
+    "file": "discovery-4.json",
+    "source": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-chi-car-2026-09-13",
+    "received_at": "2026-09-11T23:46:09.181885+00:00",
+    "http_status": 200
+  }
+]

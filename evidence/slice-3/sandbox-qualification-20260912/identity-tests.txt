@@ -1,0 +1,26 @@
+test_discovery_and_no_stale_snapshot_on_omission (tests.test_prophetx.AdapterStreamTests.test_discovery_and_no_stale_snapshot_on_omission) ... ok
+test_duration_budget_cleanup (tests.test_prophetx.AdapterStreamTests.test_duration_budget_cleanup) ... ok
+test_malformed_message_invalidates_atomic_and_retry_exhausts (tests.test_prophetx.AdapterStreamTests.test_malformed_message_invalidates_atomic_and_retry_exhausts) ... ok
+test_quiet_receipt_stale_does_not_disconnect (tests.test_prophetx.AdapterStreamTests.test_quiet_receipt_stale_does_not_disconnect) ... ok
+test_reconnect_resubscription_invalidation_and_cancel (tests.test_prophetx.AdapterStreamTests.test_reconnect_resubscription_invalidation_and_cancel) ... ok
+test_allowlist_timeout_and_cancel (tests.test_prophetx.ClientTests.test_allowlist_timeout_and_cancel) ... ok
+test_byte_limit (tests.test_prophetx.ClientTests.test_byte_limit) ... ok
+test_expiry_and_expired_refresh (tests.test_prophetx.ClientTests.test_expiry_and_expired_refresh) ... ok
+test_no_early_retry_on_large_retry_after (tests.test_prophetx.ClientTests.test_no_early_retry_on_large_retry_after) ... ok
+test_rate_retry_budget_and_error_redaction (tests.test_prophetx.ClientTests.test_rate_retry_budget_and_error_redaction) ... ok
+test_refresh_401_and_redaction (tests.test_prophetx.ClientTests.test_refresh_401_and_redaction) ... ok
+test_nested_secret_rejected_and_exact_market_bytes_preserved (tests.test_prophetx.EvidenceTests.test_nested_secret_rejected_and_exact_market_bytes_preserved) ... ok
+test_stream_contract_shape (tests.test_prophetx.EvidenceTests.test_stream_contract_shape) ... ok
+test_discovery_malformed_is_atomic (tests.test_prophetx.MoreLifecycleTests.test_discovery_malformed_is_atomic) ... ok
+test_handshake_rejection_closes_and_bounded_message_count (tests.test_prophetx.MoreLifecycleTests.test_handshake_rejection_closes_and_bounded_message_count) ... ok
+test_dynamic_transport_and_no_unsafe_url (tests.test_prophetx.ParseTests.test_dynamic_transport_and_no_unsafe_url) ... ok
+test_malformed_nested_scope_and_decimal (tests.test_prophetx.ParseTests.test_malformed_nested_scope_and_decimal) ... ok
+test_native_precision_identity_unknown_units (tests.test_prophetx.ParseTests.test_native_precision_identity_unknown_units) ... ok
+test_placeholders_delete_and_missing (tests.test_prophetx.ParseTests.test_placeholders_delete_and_missing) ... ok
+test_status_not_borrowed_from_order_enums (tests.test_prophetx.ParseTests.test_status_not_borrowed_from_order_enums) ... ok
+test_window_replacement_not_delta (tests.test_prophetx.ParseTests.test_window_replacement_not_delta) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.091s
+
+OK

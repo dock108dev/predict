@@ -1,0 +1,562 @@
+{
+  "elapsed_seconds": 46.00838370801648,
+  "connections": 2,
+  "frames": 42,
+  "frame_bytes": 187214,
+  "markets": [
+    {
+      "event_id": "74902",
+      "market_id": "381955",
+      "slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event_id": "74903",
+      "market_id": "381956",
+      "slug": "aec-nfl-atl-pit-2026-09-13"
+    },
+    {
+      "event_id": "74901",
+      "market_id": "381953",
+      "slug": "aec-nfl-chi-car-2026-09-13"
+    }
+  ],
+  "initial_image_markets_by_connection": {
+    "1": [
+      "aec-nfl-atl-pit-2026-09-13",
+      "aec-nfl-bal-ind-2026-09-13",
+      "aec-nfl-chi-car-2026-09-13"
+    ],
+    "2": [
+      "aec-nfl-atl-pit-2026-09-13",
+      "aec-nfl-bal-ind-2026-09-13",
+      "aec-nfl-chi-car-2026-09-13"
+    ]
+  },
+  "changes": [
+    {
+      "frame_index": 4,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:45:59.135874660Z",
+      "time": "2026-09-11T23:46:10.355622451Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 6,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:10.390163121Z",
+      "time": "2026-09-11T23:46:12.087447741Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 6,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:10.390163121Z",
+      "time": "2026-09-11T23:46:12.087447741Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6050"
+      ]
+    },
+    {
+      "frame_index": 7,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:01.704616163Z",
+      "time": "2026-09-11T23:46:12.097115759Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2900"
+      ]
+    },
+    {
+      "frame_index": 7,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:01.704616163Z",
+      "time": "2026-09-11T23:46:12.097115759Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.3000"
+      ]
+    },
+    {
+      "frame_index": 8,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:07.036179507Z",
+      "time": "2026-09-11T23:46:12.089949209Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 8,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:07.036179507Z",
+      "time": "2026-09-11T23:46:12.089949209Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 9,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:12.087447741Z",
+      "time": "2026-09-11T23:46:12.343466323Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100",
+        "0.6150"
+      ]
+    },
+    {
+      "frame_index": 10,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:12.097115759Z",
+      "time": "2026-09-11T23:46:12.521667074Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2900"
+      ]
+    },
+    {
+      "frame_index": 11,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:12.089949209Z",
+      "time": "2026-09-11T23:46:12.604469013Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 11,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:12.089949209Z",
+      "time": "2026-09-11T23:46:12.604469013Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6150",
+        "0.6200"
+      ]
+    },
+    {
+      "frame_index": 12,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:12.521667074Z",
+      "time": "2026-09-11T23:46:13.315758686Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.3000",
+        "0.3050"
+      ]
+    },
+    {
+      "frame_index": 13,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:13.315758686Z",
+      "time": "2026-09-11T23:46:13.364648255Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2800",
+        "0.2850"
+      ]
+    },
+    {
+      "frame_index": 14,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:13.364648255Z",
+      "time": "2026-09-11T23:46:14.221228596Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.3000",
+        "0.3050"
+      ]
+    },
+    {
+      "frame_index": 15,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:14.221228596Z",
+      "time": "2026-09-11T23:46:14.266325086Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2850"
+      ]
+    },
+    {
+      "frame_index": 16,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:14.266325086Z",
+      "time": "2026-09-11T23:46:14.513301159Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2800"
+      ]
+    },
+    {
+      "frame_index": 17,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:12.604469013Z",
+      "time": "2026-09-11T23:46:14.907871136Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6150",
+        "0.6200"
+      ]
+    },
+    {
+      "frame_index": 18,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:14.907871136Z",
+      "time": "2026-09-11T23:46:15.072051983Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 19,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:12.343466323Z",
+      "time": "2026-09-11T23:46:15.641377116Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5950"
+      ]
+    },
+    {
+      "frame_index": 19,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:12.343466323Z",
+      "time": "2026-09-11T23:46:15.641377116Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 20,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:15.641377116Z",
+      "time": "2026-09-11T23:46:15.681492866Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6150"
+      ]
+    },
+    {
+      "frame_index": 21,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:15.681492866Z",
+      "time": "2026-09-11T23:46:15.903668945Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5700"
+      ]
+    },
+    {
+      "frame_index": 22,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:15.903668945Z",
+      "time": "2026-09-11T23:46:16.823667306Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5950"
+      ]
+    },
+    {
+      "frame_index": 23,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:15.072051983Z",
+      "time": "2026-09-11T23:46:17.818754595Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5900"
+      ]
+    },
+    {
+      "frame_index": 24,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:17.818754595Z",
+      "time": "2026-09-11T23:46:18.176032381Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5800"
+      ]
+    },
+    {
+      "frame_index": 25,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:14.513301159Z",
+      "time": "2026-09-11T23:46:19.870763697Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2900"
+      ]
+    },
+    {
+      "frame_index": 25,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:14.513301159Z",
+      "time": "2026-09-11T23:46:19.870763697Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.3050"
+      ]
+    },
+    {
+      "frame_index": 26,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:18.176032381Z",
+      "time": "2026-09-11T23:46:23.185482693Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5800"
+      ]
+    },
+    {
+      "frame_index": 27,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:16.823667306Z",
+      "time": "2026-09-11T23:46:24.008054523Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5700"
+      ]
+    },
+    {
+      "frame_index": 28,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:24.008054523Z",
+      "time": "2026-09-11T23:46:24.201898489Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 29,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:24.201898489Z",
+      "time": "2026-09-11T23:46:24.455366824Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 30,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:24.455366824Z",
+      "time": "2026-09-11T23:46:25.405881644Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5700",
+        "0.5900",
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 30,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:24.455366824Z",
+      "time": "2026-09-11T23:46:25.405881644Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6050"
+      ]
+    },
+    {
+      "frame_index": 34,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:23.185482693Z",
+      "time": "2026-09-11T23:46:33.875857788Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6000"
+      ]
+    },
+    {
+      "frame_index": 34,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:23.185482693Z",
+      "time": "2026-09-11T23:46:33.875857788Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 35,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:25.405881644Z",
+      "time": "2026-09-11T23:46:34.021278588Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6050"
+      ]
+    },
+    {
+      "frame_index": 36,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:19.870763697Z",
+      "time": "2026-09-11T23:46:36.329478446Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2700"
+      ]
+    },
+    {
+      "frame_index": 37,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:34.021278588Z",
+      "time": "2026-09-11T23:46:36.837727592Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.5700"
+      ]
+    },
+    {
+      "frame_index": 38,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:33.875857788Z",
+      "time": "2026-09-11T23:46:39.360486752Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.6100"
+      ]
+    },
+    {
+      "frame_index": 39,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:36.329478446Z",
+      "time": "2026-09-11T23:46:47.698395387Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2700"
+      ]
+    },
+    {
+      "frame_index": 40,
+      "market_slug": "aec-nfl-atl-pit-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:47.698395387Z",
+      "time": "2026-09-11T23:46:54.027468280Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.2500"
+      ]
+    },
+    {
+      "frame_index": 41,
+      "market_slug": "aec-nfl-chi-car-2026-09-13",
+      "side": "offers",
+      "previous_time": "2026-09-11T23:46:36.837727592Z",
+      "time": "2026-09-11T23:46:54.088830942Z",
+      "removed": [],
+      "added": [],
+      "quantity_changed": [
+        "0.7000"
+      ]
+    },
+    {
+      "frame_index": 42,
+      "market_slug": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "previous_time": "2026-09-11T23:46:39.360486752Z",
+      "time": "2026-09-11T23:46:54.061491597Z",
+      "removed": [
+        "0.5000"
+      ],
+      "added": [],
+      "quantity_changed": []
+    }
+  ],
+  "stop_reason": "membership_change_and_reconnected_images_obtained"
+}

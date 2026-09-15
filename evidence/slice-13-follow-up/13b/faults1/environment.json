@@ -1,0 +1,30 @@
+{
+  "python": "3.14.5",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "postgres": "PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin25.1.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit",
+  "settings": [
+    {
+      "name": "fsync",
+      "setting": "on"
+    },
+    {
+      "name": "full_page_writes",
+      "setting": "on"
+    },
+    {
+      "name": "max_connections",
+      "setting": "12"
+    },
+    {
+      "name": "shared_buffers",
+      "setting": "4096"
+    },
+    {
+      "name": "synchronous_commit",
+      "setting": "on"
+    }
+  ],
+  "timing_note": "Detailed timing enabled vs disabled retains identity ledger, SQL wrapper, scope adapters and storage guard in both arms.",
+  "timing_context_seconds_per_call": 1.0002041002735495e-06
+}

@@ -1,0 +1,53 @@
+waiting for server to start.... done
+server started
+Running synthetic 2 markets/venue ordinary timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 7.728596042026766}
+Running synthetic 2 markets/venue ordinary timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 7.814449249999598}
+Running synthetic 2 markets/venue burst24 timing=True
+{"gates": true, "counts": {"offered": 24, "accepted": 24, "rejected": 0, "processed": 24, "unprocessed": 0, "retained_per_side_observations": 56, "committed_receipts": 56, "attempted_receipt_writes": 56, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 3.8400648750248365}
+Running synthetic 2 markets/venue burst24 timing=True
+{"gates": true, "counts": {"offered": 24, "accepted": 24, "rejected": 0, "processed": 24, "unprocessed": 0, "retained_per_side_observations": 56, "committed_receipts": 56, "attempted_receipt_writes": 56, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 3.6792545830248855}
+Running synthetic 2 markets/venue overflow40 timing=True
+{"gates": true, "counts": {"offered": 41, "accepted": 33, "rejected": 8, "processed": 1, "unprocessed": 32, "retained_per_side_observations": 10, "committed_receipts": 10, "attempted_receipt_writes": 10, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 1.6861701660091057}
+Running synthetic 2 markets/venue overflow40 timing=True
+{"gates": true, "counts": {"offered": 41, "accepted": 33, "rejected": 8, "processed": 1, "unprocessed": 32, "retained_per_side_observations": 10, "committed_receipts": 10, "attempted_receipt_writes": 10, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 1.71296633296879}
+Running synthetic 2 markets/venue slow timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.777099375030957}
+Running synthetic 2 markets/venue slow timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.726998917001765}
+Running synthetic 2 markets/venue depth timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.382775040983688}
+Running synthetic 2 markets/venue depth timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.49316308303969}
+Running synthetic 4 markets/venue ordinary timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 9.344611834036186}
+Running synthetic 4 markets/venue ordinary timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 9.350323375023436}
+Running synthetic 4 markets/venue burst24 timing=True
+{"gates": true, "counts": {"offered": 24, "accepted": 24, "rejected": 0, "processed": 12, "unprocessed": 12, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.5599256660207175}
+Running synthetic 4 markets/venue burst24 timing=True
+{"gates": true, "counts": {"offered": 24, "accepted": 24, "rejected": 0, "processed": 12, "unprocessed": 12, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 5.472197833994869}
+Running synthetic 4 markets/venue overflow40 timing=True
+{"gates": true, "counts": {"offered": 41, "accepted": 33, "rejected": 8, "processed": 1, "unprocessed": 32, "retained_per_side_observations": 18, "committed_receipts": 18, "attempted_receipt_writes": 18, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 4.50141824997263}
+Running synthetic 4 markets/venue overflow40 timing=True
+{"gates": true, "counts": {"offered": 41, "accepted": 33, "rejected": 8, "processed": 1, "unprocessed": 32, "retained_per_side_observations": 18, "committed_receipts": 18, "attempted_receipt_writes": 18, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 4.595627832983155}
+Running synthetic 4 markets/venue slow timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 14, "unprocessed": 3, "retained_per_side_observations": 42, "committed_receipts": 42, "attempted_receipt_writes": 42, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 8.063514917041175}
+Running synthetic 4 markets/venue slow timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 14, "unprocessed": 3, "retained_per_side_observations": 42, "committed_receipts": 42, "attempted_receipt_writes": 42, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 8.12679141596891}
+Running synthetic 4 markets/venue depth timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 7.025671500014141}
+Running synthetic 4 markets/venue depth timing=True
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 6.902408041991293}
+Running synthetic 2 markets/venue ordinary timing=False
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 7.746590958035085}
+Running synthetic 2 markets/venue ordinary timing=False
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 40, "committed_receipts": 40, "attempted_receipt_writes": 40, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 7.727432666986715}
+Running synthetic 4 markets/venue ordinary timing=False
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 9.264994500030298}
+Running synthetic 4 markets/venue ordinary timing=False
+{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 9.347474084002897}
+13A real-storage reproduction/accounting gates passed
+waiting for server to shut down.... done
+server stopped

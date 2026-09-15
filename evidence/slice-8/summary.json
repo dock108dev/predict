@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-09-12T03:05:41.810927+00:00",
+  "tests_passed": 213,
+  "new_tests": 37,
+  "examples_passed": 8,
+  "confirmed_event_pairs": 5,
+  "events_with_both_venues_covered": 5,
+  "native_moneyline_markets": 15,
+  "structurally_matched_pairs": 10,
+  "same_exposure_relationships": 10,
+  "opposing_sporting_relationships": 10,
+  "settlement_statuses": {
+    "UNKNOWN": 10
+  },
+  "qualified_pairs": 0,
+  "excluded_captured_spreads_totals": 1680,
+  "owner_acceptance": null,
+  "production_compatible_approvals": [],
+  "next_project_action": "Slice 9 \u2014 fee engine",
+  "slice_9_started": false
+}

@@ -1,0 +1,337 @@
+{
+  "outage_error_type": "AdminShutdown",
+  "interrupted_before_recovery": "running",
+  "interrupted_after_recovery": "interrupted",
+  "failure_journals_imported": 1,
+  "source_summary": {
+    "sessions": [
+      {
+        "id": "dd3f294a-d1be-4e92-8e91-024cdbebe3a8",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "failed",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "85ac2f47-a61f-4e22-8711-c61790802094",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "31026b40-3369-4b52-8502-4e4b6215e690",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "10abdf35-9f55-4be6-b82a-1c4211384603",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      },
+      {
+        "id": "9bf9dbee-1000-4956-b77d-2a73fcaf69b0",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "failed",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      },
+      {
+        "id": "c1f75ce4-8e64-4b20-8c4a-b28bde8607b1",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      }
+    ],
+    "counts": {
+      "artifact": 434,
+      "artifact_edge": 524,
+      "capture_session": 13,
+      "receipt": 59,
+      "quote_observation": 59,
+      "metadata_version": 462,
+      "calculation": 96,
+      "calculation_receipt": 696,
+      "candidate_observation": 176,
+      "coverage_event": 39
+    },
+    "replay": "saved calculations and retained images only; no complete stream or exchange-event history"
+  },
+  "source_replayed": 96,
+  "bundle": {
+    "file": "evidence/slice-12/replay-bundle.json",
+    "bytes": 42259193,
+    "sha256": "e9f70718913b2b99b41d6b93b1eefafbb19174b05a2be7e6072ee00cbb13ba40"
+  },
+  "bundle_restore": {
+    "database": "prediction_arb_bundle_restore_04fe1711",
+    "replayed": 96,
+    "counts_equal": true
+  },
+  "corrupt_restore_rolled_back": true,
+  "pg_restore": {
+    "database": "prediction_arb_backup_restore_3ad1ee5c",
+    "replayed": 96,
+    "counts_equal": true
+  },
+  "backup": {
+    "file": "evidence/slice-12/project-postgres.dump",
+    "bytes": 3087777,
+    "sha256": "715b23212a86d1f50dd47f31bcd9082bb4b6f190830bb99b62cb1baf779258ad"
+  },
+  "server_configuration": {
+    "listen_addresses": "",
+    "socket_permissions": "0700",
+    "version": "PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin25.1.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit"
+  },
+  "indexes": [
+    {
+      "query": "SELECT * FROM receipt WHERE session_id=%s AND venue=%s AND market_id=%s ORDER BY received_at",
+      "natural_plan": [
+        {
+          "QUERY PLAN": "Sort  (cost=5.04..5.05 rows=1 width=415) (actual time=0.014..0.014 rows=2 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Sort Key: received_at"
+        },
+        {
+          "QUERY PLAN": "  Sort Method: quicksort  Memory: 27kB"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=4"
+        },
+        {
+          "QUERY PLAN": "  ->  Seq Scan on receipt  (cost=0.00..5.03 rows=1 width=415) (actual time=0.002..0.009 rows=2 loops=1)"
+        },
+        {
+          "QUERY PLAN": "        Filter: ((session_id = 'dd3f294a-d1be-4e92-8e91-024cdbebe3a8'::text) AND (venue = 'kalshi'::text) AND (market_id = 'KXNFLGAME-26SEP13ATLPIT-PIT'::text))"
+        },
+        {
+          "QUERY PLAN": "        Rows Removed by Filter: 57"
+        },
+        {
+          "QUERY PLAN": "        Buffers: shared hit=4"
+        },
+        {
+          "QUERY PLAN": "Planning:"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=33 dirtied=1"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.057 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.017 ms"
+        }
+      ],
+      "index_access_path": [
+        {
+          "QUERY PLAN": "Index Scan using receipt_market_time on receipt  (cost=0.14..8.16 rows=1 width=415) (actual time=0.002..0.003 rows=2 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Index Cond: ((session_id = 'dd3f294a-d1be-4e92-8e91-024cdbebe3a8'::text) AND (venue = 'kalshi'::text) AND (market_id = 'KXNFLGAME-26SEP13ATLPIT-PIT'::text))"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=2"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.015 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.005 ms"
+        }
+      ],
+      "note": "small retained dataset; forced index path is not a performance benchmark"
+    },
+    {
+      "query": "SELECT * FROM candidate_observation WHERE session_id=%s AND candidate_id=%s AND engine=%s ORDER BY observed_at",
+      "natural_plan": [
+        {
+          "QUERY PLAN": "Index Scan using candidate_history on candidate_observation  (cost=0.27..8.29 rows=1 width=783) (actual time=0.004..0.005 rows=1 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Index Cond: ((session_id = '85ac2f47-a61f-4e22-8711-c61790802094'::text) AND (candidate_id = 'top-53c01d7104bdbdc0b7d52d4f'::text) AND (engine = 'detector-capture-1'::text))"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=3"
+        },
+        {
+          "QUERY PLAN": "Planning:"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=47"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.047 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.007 ms"
+        }
+      ],
+      "index_access_path": [
+        {
+          "QUERY PLAN": "Index Scan using candidate_history on candidate_observation  (cost=0.27..8.29 rows=1 width=783) (actual time=0.001..0.001 rows=1 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Index Cond: ((session_id = '85ac2f47-a61f-4e22-8711-c61790802094'::text) AND (candidate_id = 'top-53c01d7104bdbdc0b7d52d4f'::text) AND (engine = 'detector-capture-1'::text))"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=3"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.015 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.003 ms"
+        }
+      ],
+      "note": "small retained dataset; forced index path is not a performance benchmark"
+    },
+    {
+      "query": "SELECT * FROM coverage_event WHERE session_id=%s ORDER BY observed_at",
+      "natural_plan": [
+        {
+          "QUERY PLAN": "Sort  (cost=9.51..9.52 rows=2 width=168) (actual time=0.005..0.005 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Sort Key: observed_at"
+        },
+        {
+          "QUERY PLAN": "  Sort Method: quicksort  Memory: 26kB"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=2"
+        },
+        {
+          "QUERY PLAN": "  ->  Bitmap Heap Scan on coverage_event  (cost=4.16..9.50 rows=2 width=168) (actual time=0.004..0.004 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "        Recheck Cond: (session_id = '76b2faca-5f8f-44a9-888e-22a5667e6391'::text)"
+        },
+        {
+          "QUERY PLAN": "        Heap Blocks: exact=1"
+        },
+        {
+          "QUERY PLAN": "        Buffers: shared hit=2"
+        },
+        {
+          "QUERY PLAN": "        ->  Bitmap Index Scan on coverage_time  (cost=0.00..4.16 rows=2 width=0) (actual time=0.002..0.002 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "              Index Cond: (session_id = '76b2faca-5f8f-44a9-888e-22a5667e6391'::text)"
+        },
+        {
+          "QUERY PLAN": "              Buffers: shared hit=1"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.020 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.009 ms"
+        }
+      ],
+      "index_access_path": [
+        {
+          "QUERY PLAN": "Sort  (cost=9.51..9.52 rows=2 width=168) (actual time=0.002..0.003 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "  Sort Key: observed_at"
+        },
+        {
+          "QUERY PLAN": "  Sort Method: quicksort  Memory: 26kB"
+        },
+        {
+          "QUERY PLAN": "  Buffers: shared hit=2"
+        },
+        {
+          "QUERY PLAN": "  ->  Bitmap Heap Scan on coverage_event  (cost=4.16..9.50 rows=2 width=168) (actual time=0.001..0.002 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "        Recheck Cond: (session_id = '76b2faca-5f8f-44a9-888e-22a5667e6391'::text)"
+        },
+        {
+          "QUERY PLAN": "        Heap Blocks: exact=1"
+        },
+        {
+          "QUERY PLAN": "        Buffers: shared hit=2"
+        },
+        {
+          "QUERY PLAN": "        ->  Bitmap Index Scan on coverage_time  (cost=0.00..4.16 rows=2 width=0) (actual time=0.001..0.001 rows=3 loops=1)"
+        },
+        {
+          "QUERY PLAN": "              Index Cond: (session_id = '76b2faca-5f8f-44a9-888e-22a5667e6391'::text)"
+        },
+        {
+          "QUERY PLAN": "              Buffers: shared hit=1"
+        },
+        {
+          "QUERY PLAN": "Planning Time: 0.010 ms"
+        },
+        {
+          "QUERY PLAN": "Execution Time: 0.006 ms"
+        }
+      ],
+      "note": "small retained dataset; forced index path is not a performance benchmark"
+    }
+  ],
+  "disposable_databases_removed": [
+    "prediction_arb_bundle_restore_04fe1711",
+    "prediction_arb_corrupt_test_fbeca01b",
+    "prediction_arb_backup_restore_3ad1ee5c"
+  ]
+}

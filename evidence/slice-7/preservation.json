@@ -1,0 +1,16 @@
+{
+  "baseline_files": 425,
+  "changed_existing_files": [
+    "README.md"
+  ],
+  "all_other_baseline_files_unchanged": true,
+  "preserved_plan_sha256": "d7cc3c1a0d991ae3afe175b9c1d64820aab7ce853a78911b34ac8c08cdd9e91c",
+  "new_paths": [
+    "app/matching.py",
+    "app/matching_example.py",
+    "tests/test_matching.py",
+    "docs/slice-7.md",
+    "evidence/slice-7/"
+  ],
+  "external_tracker_updated": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md"
+}

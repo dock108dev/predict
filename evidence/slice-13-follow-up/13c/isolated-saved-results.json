@@ -1,0 +1,77 @@
+[
+  {
+    "session": {
+      "id": "818052be-d19b-4680-91d2-b359f2d3149e",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "started_at": "2026-09-13 22:00:34.203343-04:00",
+      "state": "complete",
+      "saved_status": {
+        "lifecycle": "complete",
+        "coverage": "saved",
+        "label": "Saved successfully",
+        "explanation": "Observations were saved successfully within the bounded capture. Continuous coverage is not claimed.",
+        "stop_reason": "Stopped by owner",
+        "unprocessed": 0,
+        "rejected": 0,
+        "messages": 0,
+        "origin": "Invented synthetic observations",
+        "current_status": "Saved observations\u2014not live"
+      }
+    },
+    "receipts": 22,
+    "messages": 0,
+    "current_opportunities": 0,
+    "coverage_total": 3
+  },
+  {
+    "session": {
+      "id": "ed06c7d1-ae22-4ed8-8b90-bec4e22e2917",
+      "environment": "production",
+      "evidence_class": "current",
+      "started_at": "2026-09-13 20:20:40.559469-04:00",
+      "state": "complete",
+      "saved_status": {
+        "lifecycle": "complete",
+        "coverage": "gaps",
+        "label": "Saved with capture gaps",
+        "explanation": "Saved observations are available, but capture has recorded gaps.",
+        "stop_reason": "Backpressure: bounded queue filled; capture gap recorded",
+        "unprocessed": 32,
+        "rejected": null,
+        "messages": null,
+        "origin": "Captured from a live feed",
+        "current_status": "Saved observations\u2014not live"
+      }
+    },
+    "receipts": 0,
+    "messages": null,
+    "current_opportunities": 0,
+    "coverage_total": 5
+  },
+  {
+    "session": {
+      "id": "c93f79fe-d2c0-4c33-bf97-7ba5fe61a17f",
+      "environment": "production",
+      "evidence_class": "current",
+      "started_at": "2026-09-13 20:20:14-04:00",
+      "state": "complete",
+      "saved_status": {
+        "lifecycle": "complete",
+        "coverage": "gaps",
+        "label": "Saved with capture gaps",
+        "explanation": "Saved observations are available, but capture has recorded gaps.",
+        "stop_reason": "Backpressure: bounded queue filled; capture gap recorded",
+        "unprocessed": 32,
+        "rejected": null,
+        "messages": null,
+        "origin": "Captured from a live feed",
+        "current_status": "Saved observations\u2014not live"
+      }
+    },
+    "receipts": 0,
+    "messages": null,
+    "current_opportunities": 0,
+    "coverage_total": 2
+  }
+]

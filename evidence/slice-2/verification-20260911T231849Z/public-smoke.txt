@@ -1,0 +1,10 @@
+NEW PUBLIC REST
+event=74902 market=381955 title=Who will win in the upcoming football event Baltimore Ravens vs Indianapolis Colts scheduled for September 13, 2026 at 5:00 PM UTC?
+sides=[('763424', 'Ravens'), ('763425', 'Colts')]
+state=active sync=unknown exchange=2026-09-11 23:06:03.697243+00:00 receipt=2026-09-11 23:19:00.463148+00:00
+763424 bids levels=26 depth=unknown top=(BookLevel(price=Probability(value=Decimal('0.6050')), quantity=Quantity(value=Decimal('145489.5600'), unit='contracts')),)
+763424 asks levels=27 depth=unknown top=(BookLevel(price=Probability(value=Decimal('0.6100')), quantity=Quantity(value=Decimal('64690.8500'), unit='contracts')),)
+763425 bids unavailable
+763425 asks unavailable
+rules_available=True; bbo=Quote(raw=RawPayload(ref=NativeRef(venue=<Venue.POLYMARKET_US: 'polymarket_us'>, event_id='74902', market_id='381955'), source='https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/bbo', received_at=datetime.datetime(2026, 9, 11, 23, 19, 0, 540911, tzinfo=datetime.timezone.utc), json_text='{"marketData":{"marketSlug":"aec-nfl-bal-ind-2026-09-13","currentPx":{"value":"0.6070","currency":"USD"},"lastTradePx":{"value":"0.6050","currency":"USD"},"settlementPx":{"value":"0.6050","currency":"USD"},"sharesTraded":"6225.8100","openInterest":"90973.7900","bestAsk":{"value":"0.6100","currency":"USD"},"bestBid":{"value":"0.6050","currency":"USD"},"askDepth":27,"bidDepth":26,"lastPriceSample":{"longPx":{"value":"0.6050","currency":"USD"},"shortPx":{"value":"0.395","currency":"USD"},"ts":"2026-09-11T23:06:03.697243528Z"},"longQuote":{"value":"0.6100","currency":"USD"},"shortQuote":{"value":"0.395","currency":"USD"},"state":"MARKET_STATE_OPEN"}}', exchange_at=None, kind=<EvidenceKind.OBSERVATION: 'observation'>), outcome_id='763424', bid=QuoteSide(price=Probability(value=Decimal('0.6050')), quantity=None), ask=QuoteSide(price=Probability(value=Decimal('0.6100')), quantity=None), state=<MarketState.ACTIVE: 'active'>); compatibility=unknown
+HTTP attempts=5; discovery_truncated=True

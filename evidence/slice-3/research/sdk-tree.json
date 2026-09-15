@@ -1,0 +1,126 @@
+{
+  "sha": "e172c150489b10a399efdf60115dfb2919008dc4",
+  "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/trees/e172c150489b10a399efdf60115dfb2919008dc4",
+  "tree": [
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "04d58bb4c90cbfdba43005a30ccfcca4ff9536ff",
+      "size": 1889,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/04d58bb4c90cbfdba43005a30ccfcca4ff9536ff"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a180a2ca24e36228916f12e0f63fe2b204c01620",
+      "size": 1068,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/a180a2ca24e36228916f12e0f63fe2b204c01620"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c348d917099a17015f08d5438618b9646d49b16",
+      "size": 85,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/9c348d917099a17015f08d5438618b9646d49b16"
+    },
+    {
+      "path": "calibrate_balance_fixture.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c661bbb23643cac2bfc5ecd531330012f8ad1f7a",
+      "size": 6172,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/c661bbb23643cac2bfc5ecd531330012f8ad1f7a"
+    },
+    {
+      "path": "replicate_yesterday_balance_check.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d68b147ef6815363e5eeed455de6ef8b9448b8ed",
+      "size": 18355,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/d68b147ef6815363e5eeed455de6ef8b9448b8ed"
+    },
+    {
+      "path": "reproduce_market_order_race_condition.py",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "34aad291ff82cdb6b37409d7440b8de2cf95cea1",
+      "size": 37022,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/34aad291ff82cdb6b37409d7440b8de2cf95cea1"
+    },
+    {
+      "path": "requirements.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d01d73bdc7670cb730eec243cdbbd8b1bfd6dc9b",
+      "size": 144,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/d01d73bdc7670cb730eec243cdbbd8b1bfd6dc9b"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7d2f7ecb99cdcedceacd39ab6789308b0a1c6acc",
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/trees/7d2f7ecb99cdcedceacd39ab6789308b0a1c6acc"
+    },
+    {
+      "path": "src/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "src/config.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5297ad217be74963b0be6a6e4c6b238dd9c92b71",
+      "size": 1109,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/5297ad217be74963b0be6a6e4c6b238dd9c92b71"
+    },
+    {
+      "path": "src/constants.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0e582b47432cf4113b87a40fe4e200bf11a77c2c",
+      "size": 1954,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/0e582b47432cf4113b87a40fe4e200bf11a77c2c"
+    },
+    {
+      "path": "src/log.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f3bbf4bac6fde13adbbb8881958075e4c68710e8",
+      "size": 147,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/f3bbf4bac6fde13adbbb8881958075e4c68710e8"
+    },
+    {
+      "path": "src/main.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a6b63ddb7548ccfd9a1b6eb78878d58eb5d4c935",
+      "size": 403,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/a6b63ddb7548ccfd9a1b6eb78878d58eb5d4c935"
+    },
+    {
+      "path": "src/mm_calls.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "51774e914133479d35ad904c6a40f225d9deca92",
+      "size": 20919,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/51774e914133479d35ad904c6a40f225d9deca92"
+    },
+    {
+      "path": "src/user_info.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba2b94c3d7fc0531079c39ca482cdb342daca777",
+      "size": 398,
+      "url": "https://api.github.com/repos/betprophet1/mm-api-integration-guide/git/blobs/ba2b94c3d7fc0531079c39ca482cdb342daca777"
+    }
+  ],
+  "truncated": false
+}

@@ -1,0 +1,18 @@
+{
+  "frames_replayed": 42,
+  "connection_generations": 2,
+  "markets_per_generation": {
+    "1": 3,
+    "2": 3
+  },
+  "removed_levels": [
+    {
+      "file": "market-frame-042.json",
+      "market": "aec-nfl-bal-ind-2026-09-13",
+      "side": "bids",
+      "price": "0.5000"
+    }
+  ],
+  "all_images_equal_supplied_nonzero_window": true,
+  "basis": "offline replay of live raw frames through revised adapter; not another live session"
+}

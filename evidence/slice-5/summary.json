@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-09-12T02:01:54.110584+00:00",
+  "offline_test_count": 138,
+  "new_novig_tests": 28,
+  "exit_codes": {
+    "tests": 0,
+    "shared-example": 0,
+    "polymarket-example": 0,
+    "prophetx-example": 0,
+    "kalshi-example": 0,
+    "novig-example": 0
+  },
+  "live_requests": 0,
+  "live_qualified": false,
+  "qa_credentials_available": false,
+  "production_credentials_available": false,
+  "next_action": "Obtain Novig-issued QA OAuth credentials and provisioned instructions, enter into dedicated Keychain, run bounded verifier. Independent later work is not blocked.",
+  "preservation_changes": [
+    "README.md"
+  ]
+}

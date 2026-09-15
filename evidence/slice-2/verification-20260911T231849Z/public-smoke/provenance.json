@@ -1,0 +1,32 @@
+[
+  {
+    "file": "response-1.json",
+    "source": "https://gateway.polymarket.us/v2/leagues/nfl/events?limit=3&offset=0",
+    "received_at": "2026-09-11T23:19:00.289597+00:00",
+    "kind": "new_public_observation"
+  },
+  {
+    "file": "response-2.json",
+    "source": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-bal-ind-2026-09-13",
+    "received_at": "2026-09-11T23:19:00.431206+00:00",
+    "kind": "new_public_observation"
+  },
+  {
+    "file": "response-3.json",
+    "source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/book",
+    "received_at": "2026-09-11T23:19:00.463148+00:00",
+    "kind": "new_public_observation"
+  },
+  {
+    "file": "response-4.json",
+    "source": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-bal-ind-2026-09-13",
+    "received_at": "2026-09-11T23:19:00.513676+00:00",
+    "kind": "new_public_observation"
+  },
+  {
+    "file": "response-5.json",
+    "source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/bbo",
+    "received_at": "2026-09-11T23:19:00.540911+00:00",
+    "kind": "new_public_observation"
+  }
+]

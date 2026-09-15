@@ -1,0 +1,7 @@
+waiting for server to start.... done
+server started
+Running synthetic 2 markets/venue overflow40 timing=True
+{"gates": false, "counts": {"offered": 40, "accepted": 32, "rejected": 8, "processed": 1, "unprocessed": 31, "retained_per_side_observations": 10, "committed_receipts": 10, "attempted_receipt_writes": 10, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 0.5732382910209708}
+13A required gate failed; evidence saved
+waiting for server to shut down.... done
+server stopped

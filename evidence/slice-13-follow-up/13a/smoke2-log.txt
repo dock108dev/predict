@@ -1,0 +1,23 @@
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 308, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 291, in main
+    fixtures={str(n):dict(books=[serial(asdict(b)) for b in fixture(n)[-1]],rows=fixture(n)[3],
+                                                            ~~~~~~~^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 79, in fixture
+    matcher=MoneylineMatcher();matcher.update(parents,expanded)
+                               ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/moneyline.py", line 161, in update
+    row=clone(row); validate_market(row)
+                    ~~~~~~~~~~~~~~~^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/moneyline.py", line 141, in validate_market
+    if row['id']!='native-market-'+digest(row['key'])[:24]: raise ValueError('invalid stable market ID')
+                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: invalid stable market ID
+waiting for server to shut down.... done
+server stopped

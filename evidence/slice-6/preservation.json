@@ -1,0 +1,13 @@
+{
+  "checked_at_utc": "2026-09-12T02:21:11.440933+00:00",
+  "baseline_files": 393,
+  "historical_evidence_files_checked": 340,
+  "allowed_changed_existing_files": [
+    "README.md",
+    "pyproject.toml"
+  ],
+  "unexpected_changes": [],
+  "PLAN_unchanged": true,
+  "credentials_file_unchanged": true,
+  "all_historical_evidence_unchanged": true
+}

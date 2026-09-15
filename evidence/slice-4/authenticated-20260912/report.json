@@ -1,0 +1,123 @@
+{
+  "kind": "live_read_only",
+  "authenticated_requested": true,
+  "stream_verified": false,
+  "limits": {
+    "REST_attempts": 24,
+    "stream_seconds": 30,
+    "connections": 2,
+    "messages": 500
+  },
+  "started_at": "2026-09-12T01:31:25.446219+00:00",
+  "events": [
+    "KXNFLGAME-26SEP13ATLPIT",
+    "KXNFLGAME-26SEP13BALIND",
+    "KXNFLGAME-26SEP13BUFHOU",
+    "KXNFLGAME-26SEP13CHICAR",
+    "KXNFLGAME-26SEP13CLEJAC"
+  ],
+  "markets": [
+    "KXNFLGAME-26SEP13ATLPIT-ATL",
+    "KXNFLGAME-26SEP13ATLPIT-PIT"
+  ],
+  "result": "REST_verified",
+  "selected_market": "KXNFLGAME-26SEP13ATLPIT-ATL",
+  "schedule": "2026-09-13T17:00:00+00:00",
+  "rules_present": true,
+  "rule_link": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+  "rest_sync": "synchronized",
+  "source_timestamp": null,
+  "depth": [
+    "partial",
+    "partial"
+  ],
+  "level_counts": [
+    20,
+    20
+  ],
+  "quotes": [
+    {
+      "outcome": "yes",
+      "bid": "0.2900",
+      "ask": "0.3000"
+    },
+    {
+      "outcome": "no",
+      "bid": "0.7000",
+      "ask": "0.7100"
+    }
+  ],
+  "stream": {
+    "diagnostics": [
+      {
+        "event": "subscribed_request",
+        "generation": 1
+      }
+    ],
+    "observations": [
+      {
+        "sync": "synchronized",
+        "sequence": "1",
+        "source_progress": "missing"
+      },
+      {
+        "sync": "synchronized",
+        "sequence": "1",
+        "source_progress": "missing"
+      },
+      {
+        "sync": "unsynchronized",
+        "sequence": "1",
+        "source_progress": "missing"
+      }
+    ],
+    "reason": "bounded_complete",
+    "health": "disconnected"
+  },
+  "recovery_snapshots_generations": [
+    1
+  ],
+  "REST_attempts": 7,
+  "discovery_truncated": {
+    "/events{'series_ticker': 'KXNFLGAME', 'status': 'open', 'with_milestones': 'true'}": true,
+    "/markets{'event_ticker': 'KXNFLGAME-26SEP13ATLPIT'}": false,
+    "/events/fee_changes{'event_ticker': 'KXNFLGAME-26SEP13ATLPIT'}": false
+  },
+  "responses": [
+    {
+      "file": "rest-00.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/series/KXNFLGAME",
+      "received_at": "2026-09-12T01:31:25.738458+00:00"
+    },
+    {
+      "file": "rest-01.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events?series_ticker=KXNFLGAME&status=open&with_milestones=true&limit=5&cursor=",
+      "received_at": "2026-09-12T01:31:25.917171+00:00"
+    },
+    {
+      "file": "rest-02.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/markets?event_ticker=KXNFLGAME-26SEP13ATLPIT&limit=5&cursor=",
+      "received_at": "2026-09-12T01:31:26.054126+00:00"
+    },
+    {
+      "file": "rest-03.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/markets/KXNFLGAME-26SEP13ATLPIT-ATL",
+      "received_at": "2026-09-12T01:31:26.381508+00:00"
+    },
+    {
+      "file": "rest-04.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/markets/KXNFLGAME-26SEP13ATLPIT-ATL/orderbook?depth=20",
+      "received_at": "2026-09-12T01:31:26.533817+00:00"
+    },
+    {
+      "file": "rest-05.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+      "received_at": "2026-09-12T01:31:26.671255+00:00"
+    },
+    {
+      "file": "rest-06.json",
+      "source": "https://external-api.kalshi.com/trade-api/v2/events/fee_changes?event_ticker=KXNFLGAME-26SEP13ATLPIT&limit=5&cursor=",
+      "received_at": "2026-09-12T01:31:26.818846+00:00"
+    }
+  ]
+}

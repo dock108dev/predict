@@ -1,0 +1,34 @@
+{
+  "engine": "top-of-book-1",
+  "files": {
+    "README.md": "e0e99c110d64d4e510bd7f2778287a50a3b20ab66320aa660a187a46ddfa632e",
+    "app/arbitrage.py": "19317c14219aed42dafdf35024d848eb38674199cd7a78c5c1b8eb10db094772",
+    "app/arbitrage_example.py": "00e881a344f3c08496577d2f08798e55ee4e9e09e2ea36ac96b884f40c3be5de",
+    "docs/slice-10.md": "21e54b711f998294f1a30aeb9fa6fa59cdfce536e62f46dd66cfbcaf947de7a0",
+    "evidence/slice-10/arbitrage_example.txt": "e24ab53b3042963a7334c6254bdf48f90e299ae55ab6b8083238a349b318c5ea",
+    "evidence/slice-10/baseline.json": "33759cef3d486bf53e9c9f5ca8893ae6c3b2b32d1aeb5cf9518b6eecad197b45",
+    "evidence/slice-10/detector-example.json": "e24ab53b3042963a7334c6254bdf48f90e299ae55ab6b8083238a349b318c5ea",
+    "evidence/slice-10/detector-tests-initial.txt": "7cf27cab3b87b628419f72179a17a7818e8028338d7252e93961682c7bda09d4",
+    "evidence/slice-10/detector-tests.txt": "1396d375d5535f2a93a1ed2d471d7b7d034316509d9756504ae15dc263af81e6",
+    "evidence/slice-10/example.txt": "f2fcee4e077b04dc31ccafb1bc4f37c9dd42e8ffe521f85f049bc2387e56b81f",
+    "evidence/slice-10/fee_example.txt": "63ca9ce675a03c5baf37847662f24fe0b911f42a57e7b6e81d929842597acd1e",
+    "evidence/slice-10/finalize.py": "21b1bf3db178715b30ec55dcc9077318424365d828dbda4da68834a873b81aef",
+    "evidence/slice-10/kalshi_example.txt": "dd5e3ced47e249d51a33d5217b0e4abc17d9fca48e1de0965ea8a10a22198d5d",
+    "evidence/slice-10/matching_example.txt": "7e0be0ecb08f94bc2e01de96384c0b943ac7b654050c66ab142b0a951d6f46db",
+    "evidence/slice-10/moneyline_example.txt": "291a86371559adcfebc61cce649684d6027ecae0cb04798ff1b9baf27c33ee42",
+    "evidence/slice-10/normalization_example.txt": "fbd9bb1ad309441be4e54b6039f0c51e4ad2723179fd1952e8681f8535c1dc98",
+    "evidence/slice-10/novig_example.txt": "fda1601b2583b14fedbf2d36e838534ce90ee952a5556fb2192a620ab11438f2",
+    "evidence/slice-10/polymarket_us_example.txt": "963cfaece87428fb47b1b35559365957b618020d33fc1582e381b64e45465cda",
+    "evidence/slice-10/preservation.json": "ea8dd62cdf24d6085342774ee2c271740313246520f72606c3118dba3f1b1b8a",
+    "evidence/slice-10/prophetx_example.txt": "c6a05c4322bdd8a47eabb481b33ff377b76fc284ec41a1957013e450221e3ff8",
+    "evidence/slice-10/report.md": "d708950bbd8142deb145dcde60ea105716e8a7e8ea4fda643ce505a27ce36efb",
+    "evidence/slice-10/tests.txt": "36667eca65949b635d601c1a6571921a03f55bbdf7e4e2fdcd8b6e02f4151a03",
+    "evidence/slice-10/verification.json": "1c544d9964ad729610f920496fbb20b1c6384f77f266e223f18e2c1cfc439f33",
+    "evidence/slice-10/verify.py": "034b140aed30d034a57a84da08e33304bbf965bccafa2c4234bfdefaf62a5ea3",
+    "tests/test_arbitrage.py": "42e1f9b2ac33f7cbbfbb03caa645881f58cbacc4454b2e33cddc21978499b68b"
+  },
+  "desktop_tracker": {
+    "path": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md",
+    "sha256": "8719872563432042f037c71d7e6124591417fd83b7bf49ada2ce27429e5361ce"
+  }
+}

@@ -1,0 +1,855 @@
+{
+  "at": "2026-09-13T00:01:13.347234+00:00",
+  "candidates": [
+    {
+      "ask_sum": "1.0000",
+      "assumptions": [
+        "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+      ],
+      "classification": "Conditional calculation",
+      "current_opportunity": false,
+      "fees": [
+        {
+          "assumptions": [],
+          "engine": "fees-1",
+          "entry_cash_requirement": null,
+          "entry_fees": null,
+          "qualification": "unsupported",
+          "unsupported": [
+            "unknown effective schedule could apply; explicit version required"
+          ]
+        },
+        {
+          "assumptions": [
+            "native market applicability not independently established",
+            "net payout unavailable where settlement charge is unresolved"
+          ],
+          "engine": "fees-1",
+          "entry_cash_requirement": "0.2900",
+          "entry_fees": "0.01",
+          "qualification": "conditional",
+          "unsupported": []
+        }
+      ],
+      "id": "top-bcffef067ea51a6ad007c27d",
+      "legs": [
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+          "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-ATL\"]",
+          "price": "0.7200",
+          "received_at": "2026-09-13T00:00:46.316477+00:00",
+          "side": "no",
+          "side_label": "ATL does not win",
+          "size": "54896.60",
+          "source_at": "2026-09-13T00:00:46.266000+00:00",
+          "source_time_meaning": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "title": "Atlanta vs Pittsburgh Pro Football game: Atlanta wins?",
+          "unit": "contracts",
+          "venue": "Kalshi"
+        },
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]",
+          "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74903\",\"381956\"]",
+          "price": "0.2800",
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "side": "763426",
+          "side_label": "ATL wins",
+          "size": "336621.2700",
+          "source_at": "2026-09-13T00:01:03.145105+00:00",
+          "source_time_meaning": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "title": "Who will win in the upcoming football event Atlanta Falcons vs Pittsburgh Steelers scheduled for September 13, 2026 at 5:00 PM UTC?",
+          "unit": "contracts",
+          "venue": "Polymarket US"
+        }
+      ],
+      "minimum_known_profit": null,
+      "outcomes": {
+        "abandoned": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "canceled": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "discretionary_review": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "postponed_outside_window": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "pregame_forfeit": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "shortened_game": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "tie": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "winner:NFL:ATL": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "winner:NFL:PIT": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        }
+      },
+      "pair_id": "market-pair-598fd0a19e7be22d5073a0ae",
+      "profit": null,
+      "qualified": false,
+      "quantity": "1",
+      "quantity_mode": "hypothetical",
+      "raw_gap": "0.0000",
+      "reasons": [
+        "Settlement rules unresolved",
+        "Stale observation or clock mismatch",
+        "Market is not confirmed active",
+        "Market lock status unresolved",
+        "Source clock meaning unresolved",
+        "Sizing not verified",
+        "Fee assumption required",
+        "Some outcome results are unknown"
+      ],
+      "roi": null,
+      "scope": "current",
+      "skew_seconds": "16.902389",
+      "technical_reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:stale-receipt",
+        "leg-0:market-unknown",
+        "leg-0:locked-or-lock-status-unknown",
+        "leg-0:source-time-semantics-unknown",
+        "leg-1:stale-receipt",
+        "leg-1:locked-or-lock-status-unknown",
+        "cross-leg-observation-skew",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown",
+        "leg-0:fee:unknown effective schedule could apply; explicit version required",
+        "leg-1:fee:native market applicability not independently established",
+        "leg-1:fee:net payout unavailable where settlement charge is unresolved",
+        "material-outcome-net-guarantee-unknown"
+      ],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Atlanta wins?"
+    },
+    {
+      "ask_sum": null,
+      "assumptions": [],
+      "classification": "Pricing diagnostic",
+      "current_opportunity": false,
+      "fees": [],
+      "id": "top-12f6e403f2f443fef128c0a1",
+      "legs": [
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+          "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-ATL\"]",
+          "price": "0.2900",
+          "received_at": "2026-09-13T00:00:46.316477+00:00",
+          "side": "yes",
+          "side_label": "ATL wins",
+          "size": "2186551.80",
+          "source_at": "2026-09-13T00:00:46.266000+00:00",
+          "source_time_meaning": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "title": "Atlanta vs Pittsburgh Pro Football game: Atlanta wins?",
+          "unit": "contracts",
+          "venue": "Kalshi"
+        },
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]",
+          "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74903\",\"381956\"]",
+          "price": null,
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "side": "763427",
+          "side_label": "PIT wins",
+          "size": null,
+          "source_at": "2026-09-13T00:01:03.145105+00:00",
+          "source_time_meaning": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "title": "Who will win in the upcoming football event Atlanta Falcons vs Pittsburgh Steelers scheduled for September 13, 2026 at 5:00 PM UTC?",
+          "unit": null,
+          "venue": "Polymarket US"
+        }
+      ],
+      "minimum_known_profit": null,
+      "outcomes": {},
+      "pair_id": "market-pair-598fd0a19e7be22d5073a0ae",
+      "profit": null,
+      "qualified": false,
+      "quantity": null,
+      "quantity_mode": null,
+      "raw_gap": null,
+      "reasons": [
+        "Settlement rules unresolved",
+        "Stale observation or clock mismatch",
+        "Market is not confirmed active",
+        "Market lock status unresolved",
+        "Source clock meaning unresolved",
+        "Additional evidence required",
+        "Missing price or book",
+        "Sizing not verified"
+      ],
+      "roi": null,
+      "scope": "current",
+      "skew_seconds": "16.902389",
+      "technical_reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:stale-receipt",
+        "leg-0:market-unknown",
+        "leg-0:locked-or-lock-status-unknown",
+        "leg-0:source-time-semantics-unknown",
+        "leg-1:stale-receipt",
+        "leg-1:locked-or-lock-status-unknown",
+        "leg-1:depth-unknown",
+        "leg-1:ask-unavailable",
+        "cross-leg-observation-skew",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown"
+      ],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Atlanta wins?"
+    },
+    {
+      "ask_sum": null,
+      "assumptions": [],
+      "classification": "Pricing diagnostic",
+      "current_opportunity": false,
+      "fees": [],
+      "id": "top-87bc4aeb1f47350e80708b66",
+      "legs": [
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+          "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-PIT\"]",
+          "price": "0.2900",
+          "received_at": "2026-09-13T00:00:52.935597+00:00",
+          "side": "no",
+          "side_label": "PIT does not win",
+          "size": "170045.56",
+          "source_at": "2026-09-13T00:00:52.915000+00:00",
+          "source_time_meaning": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "title": "Atlanta vs Pittsburgh Pro Football game: Pittsburgh wins?",
+          "unit": "contracts",
+          "venue": "Kalshi"
+        },
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]",
+          "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74903\",\"381956\"]",
+          "price": null,
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "side": "763427",
+          "side_label": "PIT wins",
+          "size": null,
+          "source_at": "2026-09-13T00:01:03.145105+00:00",
+          "source_time_meaning": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "title": "Who will win in the upcoming football event Atlanta Falcons vs Pittsburgh Steelers scheduled for September 13, 2026 at 5:00 PM UTC?",
+          "unit": null,
+          "venue": "Polymarket US"
+        }
+      ],
+      "minimum_known_profit": null,
+      "outcomes": {},
+      "pair_id": "market-pair-d7fce1b416d6c741248323fb",
+      "profit": null,
+      "qualified": false,
+      "quantity": null,
+      "quantity_mode": null,
+      "raw_gap": null,
+      "reasons": [
+        "Settlement rules unresolved",
+        "Stale observation or clock mismatch",
+        "Market is not confirmed active",
+        "Market lock status unresolved",
+        "Source clock meaning unresolved",
+        "Additional evidence required",
+        "Missing price or book",
+        "Sizing not verified"
+      ],
+      "roi": null,
+      "scope": "current",
+      "skew_seconds": "10.283269",
+      "technical_reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:stale-receipt",
+        "leg-0:market-unknown",
+        "leg-0:locked-or-lock-status-unknown",
+        "leg-0:source-time-semantics-unknown",
+        "leg-1:stale-receipt",
+        "leg-1:locked-or-lock-status-unknown",
+        "leg-1:depth-unknown",
+        "leg-1:ask-unavailable",
+        "cross-leg-observation-skew",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown"
+      ],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Pittsburgh wins?"
+    },
+    {
+      "ask_sum": "1.0000",
+      "assumptions": [
+        "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+      ],
+      "classification": "Conditional calculation",
+      "current_opportunity": false,
+      "fees": [
+        {
+          "assumptions": [],
+          "engine": "fees-1",
+          "entry_cash_requirement": null,
+          "entry_fees": null,
+          "qualification": "unsupported",
+          "unsupported": [
+            "unknown effective schedule could apply; explicit version required"
+          ]
+        },
+        {
+          "assumptions": [
+            "native market applicability not independently established",
+            "net payout unavailable where settlement charge is unresolved"
+          ],
+          "engine": "fees-1",
+          "entry_cash_requirement": "0.2900",
+          "entry_fees": "0.01",
+          "qualification": "conditional",
+          "unsupported": []
+        }
+      ],
+      "id": "top-6233038d07d17e409310395e",
+      "legs": [
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+          "market_key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-PIT\"]",
+          "price": "0.7200",
+          "received_at": "2026-09-13T00:00:52.935597+00:00",
+          "side": "yes",
+          "side_label": "PIT wins",
+          "size": "57857.66",
+          "source_at": "2026-09-13T00:00:52.915000+00:00",
+          "source_time_meaning": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "title": "Atlanta vs Pittsburgh Pro Football game: Pittsburgh wins?",
+          "unit": "contracts",
+          "venue": "Kalshi"
+        },
+        {
+          "liquidity_family": "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]",
+          "market_key": "[\"observation\",\"production\",\"polymarket_us\",\"74903\",\"381956\"]",
+          "price": "0.2800",
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "side": "763426",
+          "side_label": "ATL wins",
+          "size": "336621.2700",
+          "source_at": "2026-09-13T00:01:03.145105+00:00",
+          "source_time_meaning": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "title": "Who will win in the upcoming football event Atlanta Falcons vs Pittsburgh Steelers scheduled for September 13, 2026 at 5:00 PM UTC?",
+          "unit": "contracts",
+          "venue": "Polymarket US"
+        }
+      ],
+      "minimum_known_profit": null,
+      "outcomes": {
+        "abandoned": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "canceled": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "discretionary_review": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "postponed_outside_window": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "pregame_forfeit": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "shortened_game": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "tie": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "winner:NFL:ATL": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        },
+        "winner:NFL:PIT": {
+          "net_payout": null,
+          "profit": null,
+          "roi": null,
+          "settlement_fees": null
+        }
+      },
+      "pair_id": "market-pair-d7fce1b416d6c741248323fb",
+      "profit": null,
+      "qualified": false,
+      "quantity": "1",
+      "quantity_mode": "hypothetical",
+      "raw_gap": "0.0000",
+      "reasons": [
+        "Settlement rules unresolved",
+        "Stale observation or clock mismatch",
+        "Market is not confirmed active",
+        "Market lock status unresolved",
+        "Source clock meaning unresolved",
+        "Sizing not verified",
+        "Fee assumption required",
+        "Some outcome results are unknown"
+      ],
+      "roi": null,
+      "scope": "current",
+      "skew_seconds": "10.283269",
+      "technical_reasons": [
+        "settlement:UNKNOWN",
+        "no-proven-complementary-legs",
+        "settlement-not-qualified",
+        "complementary-payouts-UNKNOWN",
+        "leg-0:stale-receipt",
+        "leg-0:market-unknown",
+        "leg-0:locked-or-lock-status-unknown",
+        "leg-0:source-time-semantics-unknown",
+        "leg-1:stale-receipt",
+        "leg-1:locked-or-lock-status-unknown",
+        "cross-leg-observation-skew",
+        "leg-0:size-or-economic-rules-unknown",
+        "leg-1:size-or-economic-rules-unknown",
+        "leg-0:fee:unknown effective schedule could apply; explicit version required",
+        "leg-1:fee:native market applicability not independently established",
+        "leg-1:fee:net payout unavailable where settlement charge is unresolved",
+        "material-outcome-net-guarantee-unknown"
+      ],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Pittsburgh wins?"
+    }
+  ],
+  "depth_available": true,
+  "engine": "top-of-book-1",
+  "freshness_seconds": 10,
+  "markets": [
+    {
+      "event_id": "KXNFLGAME-26SEP13ATLPIT",
+      "event_title": "Atlanta vs Pittsburgh",
+      "key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-PIT\"]",
+      "market_id": "KXNFLGAME-26SEP13ATLPIT-PIT",
+      "quotes": [
+        {
+          "ask": "0.7200",
+          "available": "57857.66",
+          "depth": "full",
+          "environment": "production",
+          "event_id": "KXNFLGAME-26SEP13ATLPIT",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:00:52.915000+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "KXNFLGAME-26SEP13ATLPIT-PIT",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:00:52.935597+00:00",
+          "role": "taker",
+          "side": "yes",
+          "side_label": "PIT wins",
+          "sizing_evidence": null,
+          "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:yes:bid=native;ask=1-no-bid;ask_quantity=no-bid-contracts",
+          "source_sha256": "d75218bae3d7bc89eab34fecc1a080d2a8d1ce01b00bee25c1058a6f045cd212",
+          "source_time_problem": null,
+          "source_time_progress": "first",
+          "source_time_semantics": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "kalshi"
+        },
+        {
+          "ask": "0.2900",
+          "available": "170045.56",
+          "depth": "full",
+          "environment": "production",
+          "event_id": "KXNFLGAME-26SEP13ATLPIT",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:00:52.915000+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "KXNFLGAME-26SEP13ATLPIT-PIT",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:00:52.935597+00:00",
+          "role": "taker",
+          "side": "no",
+          "side_label": "PIT does not win",
+          "sizing_evidence": null,
+          "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:no:bid=native;ask=1-yes-bid;ask_quantity=yes-bid-contracts",
+          "source_sha256": "d75218bae3d7bc89eab34fecc1a080d2a8d1ce01b00bee25c1058a6f045cd212",
+          "source_time_problem": null,
+          "source_time_progress": "first",
+          "source_time_semantics": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "kalshi"
+        }
+      ],
+      "reasons": [],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Pittsburgh wins?",
+      "venue": "Kalshi",
+      "venue_key": "kalshi"
+    },
+    {
+      "event_id": "KXNFLGAME-26SEP13ATLPIT",
+      "event_title": "Atlanta vs Pittsburgh",
+      "key": "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\",\"KXNFLGAME-26SEP13ATLPIT-ATL\"]",
+      "market_id": "KXNFLGAME-26SEP13ATLPIT-ATL",
+      "quotes": [
+        {
+          "ask": "0.2900",
+          "available": "2186551.80",
+          "depth": "full",
+          "environment": "production",
+          "event_id": "KXNFLGAME-26SEP13ATLPIT",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:00:46.266000+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "KXNFLGAME-26SEP13ATLPIT-ATL",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:00:46.316477+00:00",
+          "role": "taker",
+          "side": "yes",
+          "side_label": "ATL wins",
+          "sizing_evidence": null,
+          "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:yes:bid=native;ask=1-no-bid;ask_quantity=no-bid-contracts",
+          "source_sha256": "64d84c250d0322b6383fe838a8fcd186da88b05529382cc9584c34abdb89c86f",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "kalshi"
+        },
+        {
+          "ask": "0.7200",
+          "available": "54896.60",
+          "depth": "full",
+          "environment": "production",
+          "event_id": "KXNFLGAME-26SEP13ATLPIT",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:00:46.266000+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "KXNFLGAME-26SEP13ATLPIT-ATL",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:00:46.316477+00:00",
+          "role": "taker",
+          "side": "no",
+          "side_label": "ATL does not win",
+          "sizing_evidence": null,
+          "source": "wss://external-api-ws.kalshi.com/trade-api/ws/v2#sid=1;generation=1;book#quote:no:bid=native;ask=1-yes-bid;ask_quantity=yes-bid-contracts",
+          "source_sha256": "64d84c250d0322b6383fe838a8fcd186da88b05529382cc9584c34abdb89c86f",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "unknown",
+          "state": "unknown",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "kalshi"
+        }
+      ],
+      "reasons": [],
+      "title": "Atlanta vs Pittsburgh Pro Football game: Atlanta wins?",
+      "venue": "Kalshi",
+      "venue_key": "kalshi"
+    },
+    {
+      "event_id": "74903",
+      "event_title": "Atlanta vs. Pittsburgh",
+      "key": "[\"observation\",\"production\",\"polymarket_us\",\"74903\",\"381956\"]",
+      "market_id": "381956",
+      "quotes": [
+        {
+          "ask": "0.2800",
+          "available": "336621.2700",
+          "depth": "partial",
+          "environment": "production",
+          "event_id": "74903",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:01:03.145105+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "381956",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "role": "taker",
+          "side": "763426",
+          "side_label": "ATL wins",
+          "sizing_evidence": null,
+          "source": "wss://api.polymarket.us/v1/ws/markets",
+          "source_sha256": "ead3d5a81c5c8cd05a471474b702cd4bca2a5d30d5e9117ec9d8219249be40bb",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "polymarket_us"
+        },
+        {
+          "ask": null,
+          "available": null,
+          "depth": "unknown",
+          "environment": "production",
+          "event_id": "74903",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:01:03.145105+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "381956",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:01:03.218866+00:00",
+          "role": "taker",
+          "side": "763427",
+          "side_label": "PIT wins",
+          "sizing_evidence": null,
+          "source": "wss://api.polymarket.us/v1/ws/markets",
+          "source_sha256": "ead3d5a81c5c8cd05a471474b702cd4bca2a5d30d5e9117ec9d8219249be40bb",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "unit": null,
+          "units_verified": false,
+          "venue": "polymarket_us"
+        }
+      ],
+      "reasons": [],
+      "title": "Who will win in the upcoming football event Atlanta Falcons vs Pittsburgh Steelers scheduled for September 13, 2026 at 5:00 PM UTC?",
+      "venue": "Polymarket US",
+      "venue_key": "polymarket_us"
+    },
+    {
+      "event_id": "74902",
+      "event_title": "Baltimore vs. Indianapolis",
+      "key": "[\"observation\",\"production\",\"polymarket_us\",\"74902\",\"381955\"]",
+      "market_id": "381955",
+      "quotes": [
+        {
+          "ask": "0.6100",
+          "available": "41780.0500",
+          "depth": "partial",
+          "environment": "production",
+          "event_id": "74902",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:01:09.300329+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "381955",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:01:09.385997+00:00",
+          "role": "taker",
+          "side": "763424",
+          "side_label": "BAL wins",
+          "sizing_evidence": null,
+          "source": "wss://api.polymarket.us/v1/ws/markets",
+          "source_sha256": "fd9a461a267c96c9fea3381dad88f68a07fb5d1a5023ce94f3363201f97545c5",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "unit": "contracts",
+          "units_verified": false,
+          "venue": "polymarket_us"
+        },
+        {
+          "ask": null,
+          "available": null,
+          "depth": "unknown",
+          "environment": "production",
+          "event_id": "74902",
+          "evidence_class": "current",
+          "exchange_at": "2026-09-13T00:01:09.300329+00:00",
+          "increment": null,
+          "locks_clear": null,
+          "market_id": "381955",
+          "minimum": null,
+          "raw_kind": "observation",
+          "received_at": "2026-09-13T00:01:09.385997+00:00",
+          "role": "taker",
+          "side": "763425",
+          "side_label": "IND wins",
+          "sizing_evidence": null,
+          "source": "wss://api.polymarket.us/v1/ws/markets",
+          "source_sha256": "fd9a461a267c96c9fea3381dad88f68a07fb5d1a5023ce94f3363201f97545c5",
+          "source_time_problem": null,
+          "source_time_progress": "advanced",
+          "source_time_semantics": "last_change",
+          "state": "active",
+          "sync": "synchronized",
+          "unit": null,
+          "units_verified": false,
+          "venue": "polymarket_us"
+        }
+      ],
+      "reasons": [],
+      "title": "Who will win in the upcoming football event Baltimore Ravens vs Indianapolis Colts scheduled for September 13, 2026 at 5:00 PM UTC?",
+      "venue": "Polymarket US",
+      "venue_key": "polymarket_us"
+    }
+  ],
+  "mode": "live",
+  "raw_bytes": 12115641,
+  "receipts": 64,
+  "sequence": 33,
+  "session": {
+    "id": "ecb8e401-cb51-46fb-8542-0347ea0c5950",
+    "environment": "production",
+    "evidence_class": "current",
+    "started_at": "2026-09-12 20:00:17.444841-04:00",
+    "state": "complete"
+  },
+  "coverage": [
+    {
+      "original_time": "2026-09-13T00:01:17.476709+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "Scan deadline reached",
+        "censored": true
+      }
+    },
+    {
+      "original_time": "2026-09-13T00:01:17.475775+00:00",
+      "kind": "gap",
+      "detail": {
+        "reason": "Scan deadline reached",
+        "censored": true,
+        "queued_unprocessed": 0,
+        "continuous_coverage": false
+      }
+    },
+    {
+      "original_time": "2026-09-13T00:00:21.761203+00:00",
+      "kind": "coverage",
+      "detail": {
+        "note": "2 current markets selected",
+        "venue": "polymarket_us",
+        "requests": 3,
+        "selected_events": 2,
+        "selected_markets": 2,
+        "discovered_events": 8,
+        "discovery_truncated": true,
+        "fee_metadata_events": 0
+      }
+    },
+    {
+      "original_time": "2026-09-13T00:00:21.752355+00:00",
+      "kind": "coverage",
+      "detail": {
+        "note": "2 current markets selected",
+        "venue": "kalshi",
+        "requests": 7,
+        "selected_events": 1,
+        "selected_markets": 2,
+        "discovered_events": 10,
+        "discovery_truncated": {
+          "/markets{'event_ticker': 'KXNFLGAME-26SEP13ATLPIT'}": false,
+          "/events/fee_changes{'event_ticker': 'KXNFLGAME-26SEP13ATLPIT'}": false,
+          "/events{'series_ticker': 'KXNFLGAME', 'status': 'open', 'with_milestones': 'true'}": true
+        },
+        "fee_metadata_events": 1
+      }
+    },
+    {
+      "original_time": "2026-09-13T00:00:17.445883+00:00",
+      "kind": "coverage",
+      "detail": {
+        "mode": "live",
+        "limits": {
+          "markets": 2,
+          "seconds": 60,
+          "receipts": 1000,
+          "storage_bytes": 134217728
+        },
+        "continuous_survival": false,
+        "stream_reconstruction": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+SYNTHETIC ONLY: Comets at Lanterns; venue=synthetic
+native event=invented-event-001; market=invented-moneyline-001; canonical=None
+state=unknown; sync=unknown; exchange_at=None
+comets-win: bid levels=2; depth=partial; asks=None; unit=synthetic_lots
+lanterns-win: bid levels=1; depth=partial; asks=None; unit=synthetic_lots
+first price=0.410000000000000000000000001
+overtime=None; cancellation=None
+quote: bid=0.42; size=None; ask=None; exchange_at=2026-09-11T11:59:59.500000+00:00
+market update: state=suspended; exchange_at=None
+Complete: finite synthetic demonstration; no live qualification.

@@ -1,0 +1,45 @@
+{
+  "final_state": "stopped",
+  "data_preserved": true,
+  "restart_summary_equal": true,
+  "databases": [
+    "prediction_arb"
+  ],
+  "server": {
+    "tcp": "",
+    "socket_permissions": "0700",
+    "version": "PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin25.1.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit"
+  },
+  "dependencies": {
+    "psycopg": "3.3.5",
+    "psycopg-binary": "3.3.5",
+    "httpx": "0.28.1"
+  },
+  "control_log": [
+    {
+      "action": "start",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "action": "stop",
+      "exit_code": 0,
+      "output": "waiting for server to shut down.... done\nserver stopped\n"
+    },
+    {
+      "action": "start",
+      "exit_code": 0,
+      "output": "waiting for server to start.... done\nserver started\n"
+    },
+    {
+      "action": "stop",
+      "exit_code": 0,
+      "output": "waiting for server to shut down.... done\nserver stopped\n"
+    },
+    {
+      "action": "status",
+      "exit_code": 3,
+      "output": "pg_ctl: no server running\n"
+    }
+  ]
+}

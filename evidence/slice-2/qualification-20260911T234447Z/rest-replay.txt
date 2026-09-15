@@ -1,0 +1,10 @@
+PRESERVED PHASE 0 REPLAY; historical pregame selection
+event=74905 market=381958 title=Who will win in the upcoming football event Tampa Bay Buccaneers vs Cincinnati Bengals scheduled for September 13, 2026 at 5:00 PM UTC?
+sides=[('763430', 'Buccaneers'), ('763431', 'Bengals')]
+state=active sync=unknown exchange=2026-09-11 21:53:15.642893+00:00 receipt=2026-09-11 21:53:43.907944+00:00
+763430 bids levels=27 depth=unknown top=(BookLevel(price=Probability(value=Decimal('0.3600')), quantity=Quantity(value=Decimal('77566.0300'), unit='contracts')),)
+763430 asks levels=24 depth=unknown top=(BookLevel(price=Probability(value=Decimal('0.3650')), quantity=Quantity(value=Decimal('179882.1500'), unit='contracts')),)
+763431 bids unavailable
+763431 asks unavailable
+rules_available=True; bbo=None; compatibility=unknown
+HTTP attempts=4; discovery_truncated=True

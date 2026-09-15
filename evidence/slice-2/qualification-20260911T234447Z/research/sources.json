@@ -1,0 +1,50 @@
+[
+  {
+    "file": "markets.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets.md",
+    "sha256": "fa2c5f97199dd2b4614916df7875d281322854f158ed6feb51c67505d6703986",
+    "retrieved_at": "2026-09-11T23:44:48.028858+00:00"
+  },
+  {
+    "file": "overview.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/overview.md",
+    "sha256": "75fbcd19679904a728f8c14760f94763b1f53cbbd59b579c5eb0797c6b95295f",
+    "retrieved_at": "2026-09-11T23:44:48.392766+00:00"
+  },
+  {
+    "file": "book-schema.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-market-book.md",
+    "sha256": "7075d31d65e5be1f5e468c1383427bd52c0d0ed84898abfd1e07e92fd7711ce3",
+    "retrieved_at": "2026-09-11T23:44:48.695903+00:00"
+  },
+  {
+    "file": "sdk-README.md.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/aa38c1620b2898d953ba65b6a36687ddec3dd3bb/README.md",
+    "sha256": "55cd8509f3f5f055e8f06915d2f87165973518fc31acaac104bd6c4c8dc14dc0",
+    "retrieved_at": "2026-09-11T23:44:48.943954+00:00"
+  },
+  {
+    "file": "sdk-polymarket_us-websocket-markets.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/aa38c1620b2898d953ba65b6a36687ddec3dd3bb/polymarket_us/websocket/markets.py",
+    "sha256": "ed03ef390c7ed90eccc231785058d0989ef09dd3f82bdb1350f7042a8f5b2145",
+    "retrieved_at": "2026-09-11T23:44:49.200636+00:00"
+  },
+  {
+    "file": "sdk-polymarket_us-websocket-base.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/aa38c1620b2898d953ba65b6a36687ddec3dd3bb/polymarket_us/websocket/base.py",
+    "sha256": "42369a4d3fc757d8c4516881023212d7122235b2f3928075d0143c9e0099b757",
+    "retrieved_at": "2026-09-11T23:44:49.404646+00:00"
+  },
+  {
+    "file": "sdk-polymarket_us-websocket-types.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/aa38c1620b2898d953ba65b6a36687ddec3dd3bb/polymarket_us/websocket/types.py",
+    "sha256": "cc446b2e9a6eb304e9b40698001c8a6c66363283d1c6de026794855a272aa080",
+    "retrieved_at": "2026-09-11T23:44:49.640424+00:00"
+  },
+  {
+    "file": "sdk-examples-websocket_example.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/aa38c1620b2898d953ba65b6a36687ddec3dd3bb/examples/websocket_example.py",
+    "sha256": "a14cf005954752d3283d7b33fbcc872c8bfd236151bf9168a55a3897c505afba",
+    "retrieved_at": "2026-09-11T23:44:49.755480+00:00"
+  }
+]

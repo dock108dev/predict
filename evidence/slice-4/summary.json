@@ -1,0 +1,19 @@
+{
+  "qualified_scope": "bounded NFL REST and authenticated book reconstruction/recovery/cancellation",
+  "offline_tests": 110,
+  "kalshi_tests": 30,
+  "examples_passed": 4,
+  "http_attempts": 21,
+  "http_200": 21,
+  "connections": 4,
+  "frames": 23,
+  "frame_types": {
+    "subscribed": 4,
+    "orderbook_snapshot": 6,
+    "orderbook_delta": 13
+  },
+  "credential_storage": "dedicated macOS Keychain",
+  "key_permission": "owner-supplied Full access; read-only implementation",
+  "no_natural_zero_removal_or_halt_observed": true,
+  "slice_5_started": false
+}

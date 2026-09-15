@@ -1,0 +1,6 @@
+SYNTHETIC ONLY: invented identities and numbers; not a venue capture.
+invented-a native price: -125.25 native quantity: 12.345 unit: unknown
+invented-b native price: 110 native quantity: 5.25 unit: unknown
+Native window: synchronized advertised depth: partial
+Normalized book: unknown ; market state: unknown
+No verified price/quantity units, executable capacity, or exchange time inferred.

@@ -1,0 +1,199 @@
+{
+  "sessions": [
+    "93f1e6a8-b07c-4128-a1fc-008b5209f8ad",
+    "c40e0065-2c36-4a54-a9d3-2d56ff067f50"
+  ],
+  "round_trip_audits": 281,
+  "summary": {
+    "sessions": [
+      {
+        "id": "dd3f294a-d1be-4e92-8e91-024cdbebe3a8",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "failed",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "85ac2f47-a61f-4e22-8711-c61790802094",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "31026b40-3369-4b52-8502-4e4b6215e690",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "10abdf35-9f55-4be6-b82a-1c4211384603",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      },
+      {
+        "id": "9bf9dbee-1000-4956-b77d-2a73fcaf69b0",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "failed",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      },
+      {
+        "id": "c1f75ce4-8e64-4b20-8c4a-b28bde8607b1",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "interrupted",
+        "provenance": "actual PostgreSQL connection termination verification"
+      },
+      {
+        "id": "7e509ef9-ec4b-4405-8e14-ab3a95f5e9c1",
+        "environment": "production",
+        "evidence_class": "current",
+        "state": "complete",
+        "provenance": "Slice 13 supervised live dashboard scan"
+      },
+      {
+        "id": "945ae59f-22f9-4c35-a85b-126ae1b808fd",
+        "environment": "production",
+        "evidence_class": "current",
+        "state": "complete",
+        "provenance": "Slice 13 supervised live dashboard scan"
+      },
+      {
+        "id": "adf52cf2-b19e-4973-8e07-f0635115b533",
+        "environment": "production",
+        "evidence_class": "current",
+        "state": "complete",
+        "provenance": "Slice 13 supervised live dashboard scan"
+      },
+      {
+        "id": "49aeb518-798c-4e2e-a754-c834e3bfcf7e",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "failed",
+        "provenance": "Slice 13 supervised synthetic dashboard scan"
+      },
+      {
+        "id": "f43b9050-eddb-459f-ac67-feceaa838557",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "0ccef444-5226-446d-ac6c-2ad0f4f80d8c",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      },
+      {
+        "id": "3051bf0a-b3a0-476f-b512-db225bbf7a0e",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 13 supervised synthetic dashboard scan"
+      },
+      {
+        "id": "b85f46e3-8842-4e05-b29b-b13e8afe4715",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 13 supervised synthetic dashboard scan"
+      },
+      {
+        "id": "24f1eb56-e1a8-46ec-9f37-0a87817012e5",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 13 supervised synthetic dashboard scan"
+      },
+      {
+        "id": "ecb8e401-cb51-46fb-8542-0347ea0c5950",
+        "environment": "production",
+        "evidence_class": "current",
+        "state": "complete",
+        "provenance": "Slice 13 supervised live dashboard scan"
+      },
+      {
+        "id": "93f1e6a8-b07c-4128-a1fc-008b5209f8ad",
+        "environment": "production",
+        "evidence_class": "historical",
+        "state": "complete",
+        "provenance": "Slice 12 finite preserved-image import"
+      },
+      {
+        "id": "c40e0065-2c36-4a54-a9d3-2d56ff067f50",
+        "environment": "synthetic",
+        "evidence_class": "synthetic",
+        "state": "complete",
+        "provenance": "Slice 11 invented-depth fixture"
+      }
+    ],
+    "counts": {
+      "artifact": 2669,
+      "artifact_edge": 4526,
+      "capture_session": 25,
+      "receipt": 337,
+      "quote_observation": 337,
+      "metadata_version": 858,
+      "calculation": 281,
+      "calculation_receipt": 1864,
+      "candidate_observation": 725,
+      "coverage_event": 77
+    },
+    "replay": "saved calculations and retained images only; no complete stream or exchange-event history"
+  }
+}

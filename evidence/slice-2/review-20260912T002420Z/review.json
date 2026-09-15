@@ -1,0 +1,12 @@
+{
+  "gap": "Caller Decimal precision rounded source ordering values, misclassifying source progression.",
+  "reproduction_before_fix": "Under localcontext precision 3, source_time_value for 2026-09-11T01:00:00.123456789Z equaled the value for 2026-09-11T01:00:00.123456788Z.",
+  "fix": "Compare (integer UTC seconds, exact Decimal fractional text) without Decimal addition.",
+  "tests": 50,
+  "offline_examples_passed": 2,
+  "official_pages_rechecked": [
+    "https://docs.polymarket.us/api-reference/websocket/markets",
+    "https://docs.polymarket.us/api-reference/markets/get-market-book"
+  ],
+  "scope": "Bounded ingestion qualification remains complete; no new capture or Slice 3 work."
+}

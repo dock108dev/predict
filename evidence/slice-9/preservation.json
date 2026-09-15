@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-09-12T03:26:44.217989+00:00",
+  "baseline_files": 476,
+  "changed": [
+    "README.md"
+  ],
+  "allowed_changes": [
+    "README.md"
+  ],
+  "unexpected_changes": [],
+  "credentials": "not read or modified; excluded from hash collection"
+}

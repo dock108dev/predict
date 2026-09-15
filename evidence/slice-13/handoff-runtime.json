@@ -1,0 +1,8 @@
+{
+  "dashboard_url": "http://127.0.0.1:8765/",
+  "state": "idle",
+  "scan_active": false,
+  "dashboard_pid": 43541,
+  "database_pid": 41741,
+  "processes": "Dashboard and dedicated socket-only PostgreSQL remain running. No collector is active."
+}

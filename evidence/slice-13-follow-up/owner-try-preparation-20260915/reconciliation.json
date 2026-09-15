@@ -1,0 +1,17 @@
+{
+  "at": "2026-09-15T15:09:08.175124+00:00",
+  "13c_candidate_sha256": "66af90a9384e2d01304d18e6183c07c4e34b34f96f57deb7c4b99592f2207fcc",
+  "13c_files": 103,
+  "13c_mismatches": [],
+  "13b_differences": [
+    "app/dashboard/controller.py",
+    "app/dashboard/repository.py",
+    "app/dashboard/static/index.html",
+    "app/dashboard/static/style.css",
+    "app/dashboard/static/app.js",
+    "integration_tests/test_dashboard_storage.py"
+  ],
+  "previous_pid": 43541,
+  "preserved_files": 833,
+  "intervening_source_changes": []
+}

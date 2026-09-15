@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-09-14T00:51:45.313200+00:00",
+  "preexisting_files": 672,
+  "changed": [
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md"
+  ],
+  "allowed_changed": [
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md"
+  ],
+  "unchanged_count": 671,
+  "plan_sha256": "d7cc3c1a0d991ae3afe175b9c1d64820aab7ce853a78911b34ac8c08cdd9e91c",
+  "historical_manifest_sha256": "35fd07e7a1f8c5284d5d75e5d67fe7630546976c54f06a86cfe1b6863bfaf931",
+  "historical_manifest_matching_entries": 54,
+  "historical_manifest_total_entries": 55,
+  "source_candidate_matches": true,
+  "baseline_to_final_source_delta": [
+    "app/dashboard/diagnostics.py",
+    "tests/test_capture_diagnostics.py",
+    "integration_tests/test_capture_diagnostics.py"
+  ]
+}

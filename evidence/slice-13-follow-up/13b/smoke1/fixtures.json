@@ -1,0 +1,4590 @@
+{
+  "2": {
+    "books": [
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-0\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-0",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-0\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-0",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-1\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-1",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-1\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-1",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      }
+    ],
+    "rows": [
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "daed17e366e7b768094f6c97617348bafddda4b04620036310d1fab5e9ec0318",
+        "id": "native-market-95118f08741be5e52af9fc1c",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-0\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-0",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-0",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-0",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "9425f1603f5040563aeef19797c69721eb3d37a650e06c80575040608592cb69",
+        "id": "native-market-2c9882d4f3c0fdb3084d3296",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-0\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-0",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-0",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-0",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "8e7c4b2cef6a72d5d79a3e725e84a6e0b5adb3b33b4a8a2a08fb1b02a0c65c93",
+        "id": "native-market-032c0ce2b0f5c6ae5e90091f",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-1\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-1",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-1",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-1",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "98d61f67a6cb3a24b23a4189e0a28f6a4f44074981489e598e87d897aa080262",
+        "id": "native-market-2472dfcb152377e8e88e213d",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-1\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-1",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-1",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-1",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      }
+    ],
+    "schedules": {
+      "burst24": [
+        {
+          "count": 24,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ],
+      "depth": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 0,
+          "kind": "depth",
+          "quiet_seconds": 0
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ],
+      "ordinary": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        }
+      ],
+      "overflow40": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 40,
+          "kind": "book",
+          "quiet_seconds": 0
+        }
+      ],
+      "slow": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ]
+    }
+  },
+  "4": {
+    "books": [
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-0\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-0",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-0\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-0",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-1\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-1",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-1\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-1",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-2\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-2",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-2\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-2",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "no"
+          },
+          {
+            "asks": null,
+            "bids": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "outcome_id": "yes"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"contract-3\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-3",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      },
+      {
+        "outcomes": [
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "a"
+          },
+          {
+            "asks": {
+              "depth": "partial",
+              "levels": [
+                {
+                  "price": {
+                    "value": "0.2"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.3"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.4"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                },
+                {
+                  "price": {
+                    "value": "0.5"
+                  },
+                  "quantity": {
+                    "unit": "contracts",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            "bids": null,
+            "outcome_id": "b"
+          }
+        ],
+        "quantity_unit": "contracts",
+        "raw": {
+          "exchange_at": null,
+          "json_text": "{\"fixture\": \"13a\", \"market\": \"market-3\", \"levels\": [\"0.2\", \"0.3\", \"0.4\", \"0.5\"]}",
+          "kind": "synthetic",
+          "received_at": "2026-09-14T00:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-3",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:13a"
+        },
+        "receipt_freshness": "unknown",
+        "sequence": null,
+        "source_time_progress": "unknown",
+        "state": "active",
+        "sync": "synchronized"
+      }
+    ],
+    "rows": [
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "daed17e366e7b768094f6c97617348bafddda4b04620036310d1fab5e9ec0318",
+        "id": "native-market-95118f08741be5e52af9fc1c",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-0\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-0",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-0",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-0",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "9425f1603f5040563aeef19797c69721eb3d37a650e06c80575040608592cb69",
+        "id": "native-market-2c9882d4f3c0fdb3084d3296",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-0\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-0",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-0",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-0",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "8e7c4b2cef6a72d5d79a3e725e84a6e0b5adb3b33b4a8a2a08fb1b02a0c65c93",
+        "id": "native-market-032c0ce2b0f5c6ae5e90091f",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-1\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-1",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-1",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-1",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "98d61f67a6cb3a24b23a4189e0a28f6a4f44074981489e598e87d897aa080262",
+        "id": "native-market-2472dfcb152377e8e88e213d",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-1\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-1",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-1",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-1",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "d6a9f695d2fcb59d8f8520d7aac44600df87db83797cfdd643d48d5d17be88b9",
+        "id": "native-market-ae3339a951c6944c628db0a5",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-2\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-2",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-2",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-2",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "e9cd29a75db5168aabdbebb5b7c2c537afc9df98771c189a7b9feb92f9f1a3bf",
+        "id": "native-market-ef6be54462f5537922328e2d",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-2\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-2",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-2",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-2",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "product_metadata": {
+            "competition_scope": "Game"
+          },
+          "series_ticker": "KXNFLGAME"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "d38bab57afe1d36894a48ab1bc7e4d058e5a447f89476bc5e83f1bf9279021d5",
+        "id": "native-market-6ef62673bfcfcfa2eef49be8",
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract-3\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "event_ticker": "ka",
+          "market_type": "binary",
+          "rules_primary": "If Atlanta wins the Atlanta vs Pittsburgh professional football game originally scheduled for Sep 13, 2026, then the market resolves to Yes.",
+          "ticker": "contract-3",
+          "title": "Synthetic contract",
+          "yes_sub_title": "Atlanta"
+        },
+        "native_event_id": "ka",
+        "native_market_id": "contract-3",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+        "parent_observation_hash": "0f81aaac5eaf0a801bd1c1a1615c2f31609305d25315c49ff8ccc9af4567f43b",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "ka",
+            "market_id": "contract-3",
+            "venue": "kalshi"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "no",
+            "participant": "NFL:ATL",
+            "predicate": "not_win",
+            "representation": "no"
+          },
+          {
+            "evidence": "rules_primary + yes_sub_title; FOOTBALLGAMEWIN binary settlement",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "native_id": "yes",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "yes"
+          }
+        ],
+        "venue": "kalshi",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]"
+      },
+      {
+        "artifact": "synthetic:slice-10",
+        "context": {
+          "id": "pm"
+        },
+        "event_matcher_version": "event-matcher-1",
+        "hash": "13c21567e6a57cef3462f5c9c6cb32482853ce974af8c5aec407faa033b37dcb",
+        "id": "native-market-d604d671ddd53eca655ae31c",
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market-3\"]",
+        "liquidity_note": "Sides share native instrument liquidity; related venue markets are not independent opportunity claims.",
+        "mapping_version": "moneyline-matcher-1",
+        "market_type": "moneyline",
+        "native": {
+          "id": "market-3",
+          "marketSides": [
+            {
+              "id": "a",
+              "long": true,
+              "marketId": "market",
+              "team": {
+                "id": 49,
+                "name": "Atlanta Falcons"
+              },
+              "teamId": 49
+            },
+            {
+              "id": "b",
+              "long": false,
+              "marketId": "market",
+              "team": {
+                "id": 74,
+                "name": "Pittsburgh Steelers"
+              },
+              "teamId": 74
+            }
+          ],
+          "marketType": "moneyline",
+          "sportsMarketType": "football_team_full_game_winner",
+          "title": "Synthetic market"
+        },
+        "native_event_id": "pm",
+        "native_market_id": "market-3",
+        "parent_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+        "parent_observation_hash": "d0e5d5387ffeaa413b33251d668459422c01036fe61881bc0cefff9135508444",
+        "participants": [
+          "NFL:ATL",
+          "NFL:PIT"
+        ],
+        "period": "full_game",
+        "profile": {
+          "actor": "synthetic-fixture",
+          "dimensions": {
+            "abandonment": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "cancellation": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "deadlines": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "fair_value": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "forfeit": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "listed_pitchers": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "overtime": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "postponement": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "result_corrections": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "resumption": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "settlement_sources": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "shortened_game": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "tie": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            },
+            "venue_change": {
+              "certainty": "exact",
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "reason": null,
+              "value": "synthetic-common"
+            }
+          },
+          "effective_date": null,
+          "hash": "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "payouts": {
+            "abandoned": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "canceled": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "discretionary_review": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "postponed_outside_window": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "pregame_forfeit": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "shortened_game": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "tie": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "sources": [
+            {
+              "sha256": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "text": "Invented Slice 10 rules, not venue settlement evidence.",
+              "url": "synthetic:slice-10"
+            }
+          ],
+          "version": "moneyline-rules-1"
+        },
+        "raw": {
+          "exchange_at": null,
+          "kind": "synthetic",
+          "received_at": "2026-09-12T02:00:00+00:00",
+          "ref": {
+            "event_id": "pm",
+            "market_id": "market-3",
+            "venue": "polymarket_us"
+          },
+          "source": "synthetic:slice-10",
+          "source_body_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e"
+        },
+        "reasons": [],
+        "registry": [
+          [
+            "2026-09-12.1",
+            "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf"
+          ]
+        ],
+        "rule_binding": true,
+        "scope": [
+          "synthetic",
+          "synthetic"
+        ],
+        "sides": [
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "a",
+            "participant": "NFL:ATL",
+            "predicate": "win",
+            "representation": "long"
+          },
+          {
+            "evidence": "marketSides.id, marketId, teamId, team.id/name, long; full-game winner taxonomy",
+            "liquidity_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "native_id": "b",
+            "participant": "NFL:PIT",
+            "predicate": "win",
+            "representation": "short"
+          }
+        ],
+        "venue": "polymarket_us",
+        "venue_event_liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]"
+      }
+    ],
+    "schedules": {
+      "burst24": [
+        {
+          "count": 24,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ],
+      "depth": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 0,
+          "kind": "depth",
+          "quiet_seconds": 0
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ],
+      "ordinary": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.25
+        }
+      ],
+      "overflow40": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 40,
+          "kind": "book",
+          "quiet_seconds": 0
+        }
+      ],
+      "slow": [
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "disconnect",
+          "quiet_seconds": 0.2
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        },
+        {
+          "count": 1,
+          "kind": "book",
+          "quiet_seconds": 0.1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+[
+  {
+    "module": "example",
+    "passed": true,
+    "seconds": 0.011124458047561347
+  },
+  {
+    "module": "polymarket_us_example",
+    "passed": true,
+    "seconds": 0.35895287501625717
+  },
+  {
+    "module": "prophetx_example",
+    "passed": true,
+    "seconds": 0.003422625013627112
+  },
+  {
+    "module": "kalshi_example",
+    "passed": true,
+    "seconds": 0.006179874995723367
+  },
+  {
+    "module": "novig_example",
+    "passed": true,
+    "seconds": 0.0018350830068811774
+  },
+  {
+    "module": "normalization_example",
+    "passed": true,
+    "seconds": 1.0059060420026071
+  },
+  {
+    "module": "matching_example",
+    "passed": true,
+    "seconds": 6.288000499946065
+  },
+  {
+    "module": "moneyline_example",
+    "passed": true,
+    "seconds": 2.6123631250229664
+  },
+  {
+    "module": "fee_example",
+    "passed": true,
+    "seconds": 0.016293375054374337
+  },
+  {
+    "module": "arbitrage_example",
+    "passed": true,
+    "seconds": 3.4531529169762507
+  },
+  {
+    "module": "depth_example",
+    "passed": true,
+    "seconds": 4.159508625045419
+  },
+  {
+    "module": "storage_example",
+    "passed": true,
+    "replayed": 24,
+    "database_bytes": 17752867
+  }
+]

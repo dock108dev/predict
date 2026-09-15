@@ -1,0 +1,75 @@
+{
+  "environment": "sandbox",
+  "classification": "sandbox observation",
+  "budgets": {
+    "rest_attempts": 20,
+    "seconds": 90,
+    "frames": 200,
+    "storage_bytes": 5000000,
+    "events": 1,
+    "markets": 3,
+    "connections": 2
+  },
+  "authentication": true,
+  "catalog": true,
+  "initial_image": false,
+  "reconnect_image": false,
+  "disconnect_requested": false,
+  "cancellation_propagated": false,
+  "changed_selection_window": false,
+  "event_id": "19458",
+  "stop": "verification stopped",
+  "error_class": "ValueError",
+  "rest": [
+    {
+      "path": "/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/mm/get_tournaments",
+      "status": 200
+    },
+    {
+      "path": "/mm/get_sport_events",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/get_price_ladder",
+      "status": 200
+    },
+    {
+      "path": "/v4/mm/get_multiple_markets",
+      "status": 200
+    }
+  ],
+  "stream": [],
+  "frames": 0,
+  "records": [
+    {
+      "file": "market-001.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_tournaments",
+      "received_at": "2026-09-12T01:01:25.379563+00:00",
+      "sha256": "1cd081a17bef5aa1383ceb27489a081f38b4894bb6cf81e88af700544cdf2360"
+    },
+    {
+      "file": "market-002.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/mm/get_sport_events",
+      "received_at": "2026-09-12T01:01:25.430082+00:00",
+      "sha256": "a706d169fed8da32dcce9a2acd1c746fc5caa308aec087fc5d746c78f8ea1c24"
+    },
+    {
+      "file": "market-003.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/v4/mm/get_price_ladder",
+      "received_at": "2026-09-12T01:01:25.520043+00:00",
+      "sha256": "567393f22ec9a5872eed619823aafaa5c2b376ea571813e2efebb04e720aaa9b"
+    },
+    {
+      "file": "market-004.json",
+      "source": "https://api.sandbox.prophetx.dev/partner/v4/mm/get_multiple_markets",
+      "received_at": "2026-09-12T01:01:25.651824+00:00",
+      "sha256": "89f4333191111af01a6a2121d82f9c1fce6a5affdab3c7e06ec405909244a244"
+    }
+  ],
+  "price_convention": "American_odds; corroborated Trading V4 REST/sandbox UI",
+  "quantity_unit_verified": false
+}

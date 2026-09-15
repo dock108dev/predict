@@ -1,0 +1,29 @@
+test_aliases_and_reversed_order (tests.test_matching.MatchingTests.test_aliases_and_reversed_order) ... ok
+test_conflicting_update_retains_identity_and_audit (tests.test_matching.MatchingTests.test_conflicting_update_retains_identity_and_audit) ... ok
+test_cross_venue_reschedule_requires_group_consistency (tests.test_matching.MatchingTests.test_cross_venue_reschedule_requires_group_consistency) ... ok
+test_doubleheaders_and_unknown_game_number (tests.test_matching.MatchingTests.test_doubleheaders_and_unknown_game_number) ... ok
+test_duplicate_observations_and_native_listings (tests.test_matching.MatchingTests.test_duplicate_observations_and_native_listings) ... ok
+test_environment_and_evidence_kind_isolation (tests.test_matching.MatchingTests.test_environment_and_evidence_kind_isolation) ... ok
+test_equivalent_timestamp_same_reference (tests.test_matching.MatchingTests.test_equivalent_timestamp_same_reference) ... ok
+test_existing_capture_coverage_offline (tests.test_matching.MatchingTests.test_existing_capture_coverage_offline) ... ok
+test_failed_atomic_write_keeps_previous_store (tests.test_matching.MatchingTests.test_failed_atomic_write_keeps_previous_store) ... ok
+test_identity_change_cannot_be_schedule_override (tests.test_matching.MatchingTests.test_identity_change_cannot_be_schedule_override) ... ok
+test_incremental_group_constraint (tests.test_matching.MatchingTests.test_incremental_group_constraint) ... ok
+test_input_order_independence (tests.test_matching.MatchingTests.test_input_order_independence) ... ok
+test_league_and_participants_required (tests.test_matching.MatchingTests.test_league_and_participants_required) ... ok
+test_missing_and_conflicting_roles (tests.test_matching.MatchingTests.test_missing_and_conflicting_roles) ... ok
+test_missing_uncertain_and_postponed (tests.test_matching.MatchingTests.test_missing_uncertain_and_postponed) ... ok
+test_partial_and_uninterpreted_roles (tests.test_matching.MatchingTests.test_partial_and_uninterpreted_roles) ... ok
+test_persistence_equivalence_and_corruption (tests.test_matching.MatchingTests.test_persistence_equivalence_and_corruption) ... ok
+test_raw_provenance_and_defensive_copy (tests.test_matching.MatchingTests.test_raw_provenance_and_defensive_copy) ... ok
+test_repeat_games_separate_even_same_day (tests.test_matching.MatchingTests.test_repeat_games_separate_even_same_day) ... ok
+test_reschedule_review_preserves_canonical_and_history (tests.test_matching.MatchingTests.test_reschedule_review_preserves_canonical_and_history) ... ok
+test_timezone_and_midnight (tests.test_matching.MatchingTests.test_timezone_and_midnight) ... ok
+test_tolerance_inclusive_and_configurable (tests.test_matching.MatchingTests.test_tolerance_inclusive_and_configurable) ... ok
+test_transitive_chain_no_merge (tests.test_matching.MatchingTests.test_transitive_chain_no_merge) ... ok
+test_update_batch_order_independence (tests.test_matching.MatchingTests.test_update_batch_order_independence) ... ok
+
+----------------------------------------------------------------------
+Ran 24 tests in 9.619s
+
+OK

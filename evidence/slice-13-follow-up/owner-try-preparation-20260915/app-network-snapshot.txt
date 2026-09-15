@@ -1,0 +1,4 @@
+COMMAND   PID              USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+Python  30583 michaelfuscoletti    7u  IPv4 0x1c6d7f8bd6c1a678      0t0  TCP 127.0.0.1:8765 (LISTEN)
+Python  30583 michaelfuscoletti    8u  IPv4 0x49a39bae62416684      0t0  TCP 127.0.0.1:8765->127.0.0.1:65174 (ESTABLISHED)
+Python  30583 michaelfuscoletti    9u  IPv4 0x270665b86a98d4f7      0t0  TCP 127.0.0.1:8765->127.0.0.1:65203 (ESTABLISHED)

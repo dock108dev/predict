@@ -1,0 +1,605 @@
+{
+  "sessions": [
+    {
+      "id": "dd3f294a-d1be-4e92-8e91-024cdbebe3a8",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "failed",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "31026b40-3369-4b52-8502-4e4b6215e690",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "10abdf35-9f55-4be6-b82a-1c4211384603",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    },
+    {
+      "id": "9bf9dbee-1000-4956-b77d-2a73fcaf69b0",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "failed",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    },
+    {
+      "id": "c1f75ce4-8e64-4b20-8c4a-b28bde8607b1",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    }
+  ],
+  "counts": {
+    "artifact": 434,
+    "artifact_edge": 524,
+    "capture_session": 13,
+    "receipt": 59,
+    "quote_observation": 59,
+    "metadata_version": 462,
+    "calculation": 96,
+    "calculation_receipt": 696,
+    "candidate_observation": 176,
+    "coverage_event": 39
+  },
+  "replay": "saved calculations and retained images only; no complete stream or exchange-event history",
+  "query_limit": 10,
+  "coverage": [
+    {
+      "session_id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "id": "f5c5adf4-4c48-42d7-8126-cfda5dd4a2a6",
+      "observed_at": "2026-09-12 18:19:54.228306-04:00",
+      "original_time": "2026-09-12T22:19:54.228306+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "interrupted",
+        "reason": "explicit interrupted-session recovery",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "id": "7c1f239e-9edb-447d-9a9c-c3ef109144d1",
+      "observed_at": "2026-09-12 18:19:54.227985-04:00",
+      "original_time": "2026-09-12T22:19:54.227985+00:00",
+      "kind": "restart",
+      "detail": {
+        "reason": "previous collector stopped; observation gap duration unknown",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "id": "journal:5f581763-013b-46c2-b3ef-12c393c9cbcc",
+      "observed_at": "2026-09-12 18:19:54.226670-04:00",
+      "original_time": "2026-09-12T22:19:54.226670+00:00",
+      "kind": "failure",
+      "detail": {
+        "at": "2026-09-12T22:19:54.226670+00:00",
+        "count": 0,
+        "error_type": "AdminShutdown",
+        "session_id": "76b2faca-5f8f-44a9-888e-22a5667e6391"
+      }
+    },
+    {
+      "session_id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+      "id": "3f8d3649-237f-48d8-8eba-b708bbf08581",
+      "observed_at": "2026-09-12 18:19:47.818434-04:00",
+      "original_time": "2026-09-12T22:19:47.818434+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "finite input exhausted",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+      "id": "3d1aa880-16a1-4dba-a785-b18d3f32fa13",
+      "observed_at": "2026-09-12 18:19:47.688674-04:00",
+      "original_time": "2026-09-12T22:19:47.688674+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "finite input exhausted",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+      "id": "255298ab-0fc5-497d-a9d3-213f32030aff",
+      "observed_at": "2026-09-12 18:17:55.745795-04:00",
+      "original_time": "2026-09-12T22:17:55.745795+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "finite input exhausted",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "c1f75ce4-8e64-4b20-8c4a-b28bde8607b1",
+      "id": "ded09ae8-e105-45ab-9a4f-79d5a457ae0e",
+      "observed_at": "2026-09-12 18:17:55.614916-04:00",
+      "original_time": "2026-09-12T22:17:55.614916+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "complete",
+        "reason": "finite input exhausted",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "id": "6f3adbb1-ff50-4649-81d7-3d312fd8ef22",
+      "observed_at": "2026-09-12 18:17:00.049362-04:00",
+      "original_time": "2026-09-12T22:17:00.049362+00:00",
+      "kind": "shutdown",
+      "detail": {
+        "state": "interrupted",
+        "reason": "explicit interrupted-session recovery",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "id": "26e8cf8f-4dd5-444f-a733-ce9e0f806e28",
+      "observed_at": "2026-09-12 18:17:00.048699-04:00",
+      "original_time": "2026-09-12T22:17:00.048699+00:00",
+      "kind": "restart",
+      "detail": {
+        "reason": "previous collector stopped; observation gap duration unknown",
+        "censored": true
+      }
+    },
+    {
+      "session_id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "id": "journal:e8eca5ac-725d-4eaf-b432-0e66affff076",
+      "observed_at": "2026-09-12 18:17:00.046819-04:00",
+      "original_time": "2026-09-12T22:17:00.046819+00:00",
+      "kind": "failure",
+      "detail": {
+        "at": "2026-09-12T22:17:00.046819+00:00",
+        "count": 0,
+        "error_type": "AdminShutdown",
+        "session_id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78"
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-b6118fe91238cc60b3189b45",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13CLEJAC\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74904\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-f78a29f96993ca6fff85f923",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13CHICAR\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74901\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-d5a530abfff2b0ed9f6ee32d",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13CHICAR\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74901\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-cd5a61e8e4c0565f3886c82a",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13BUFHOU\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74908\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-52adbab27d92cebbe7425db0",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13BUFHOU\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74908\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-bcffef067ea51a6ad007c27d",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-12f6e403f2f443fef128c0a1",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13ATLPIT\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74903\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-380a05db74e29325b7880d10",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13BALIND\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74902\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-5fbb6b292d545b9e5e4e6d46",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13BALIND\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74902\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    },
+    {
+      "session_id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "candidate_id": "top-53c01d7104bdbdc0b7d52d4f",
+      "engine": "detector-capture-1",
+      "state": "unavailable-or-ineligible",
+      "structural": true,
+      "conditional_positive": false,
+      "qualified": false,
+      "liquidity_families": [
+        "[\"observation\",\"production\",\"kalshi\",\"KXNFLGAME-26SEP13CLEJAC\"]",
+        "[\"observation\",\"production\",\"polymarket_us\",\"74904\"]"
+      ],
+      "observed_at": "2026-09-11 22:00:00-04:00"
+    }
+  ],
+  "observations": [
+    {
+      "session_id": "10abdf35-9f55-4be6-b82a-1c4211384603",
+      "id": "before-outage",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "bbo_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "id": "before-outage",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "bbo_hash": "43cba632444fb104abd5284b1dc986740896585f10eea798aa8eda23cf36713b",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "id": "before-outage",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "bbo_hash": "43cba632444fb104abd5284b1dc986740896585f10eea798aa8eda23cf36713b",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+      "id": "image:0",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "f801f910daeb17f8ef7b37b26b01b6665f5a5f0469781c5d521b6ffaeae5b5f5",
+      "bbo_hash": "43cba632444fb104abd5284b1dc986740896585f10eea798aa8eda23cf36713b",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+      "id": "image:0",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "f801f910daeb17f8ef7b37b26b01b6665f5a5f0469781c5d521b6ffaeae5b5f5",
+      "bbo_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+      "id": "image:0",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "f801f910daeb17f8ef7b37b26b01b6665f5a5f0469781c5d521b6ffaeae5b5f5",
+      "bbo_hash": "43cba632444fb104abd5284b1dc986740896585f10eea798aa8eda23cf36713b",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+      "id": "image:0",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "kalshi",
+      "event_id": "ka",
+      "market_id": "contract",
+      "source": "synthetic:slice-10",
+      "raw_hash": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+      "normalized_hash": "f801f910daeb17f8ef7b37b26b01b6665f5a5f0469781c5d521b6ffaeae5b5f5",
+      "bbo_hash": "55630f460d0725defe2233d94ea71b145f9254366e1902eff698aef99f21bbfb",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "yes",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+      "id": "image:1",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "polymarket_us",
+      "event_id": "pm",
+      "market_id": "market",
+      "source": "synthetic:slice-10",
+      "raw_hash": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+      "normalized_hash": "c30e7882cfa9208b6b82c8e96846ece4a401add8d33dbae54b05074f2f130d58",
+      "bbo_hash": "cc51ec83f942e139a8d19fa4a906fb23984399b67908e275fd547de0dab748be",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "b",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+      "id": "image:1",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "polymarket_us",
+      "event_id": "pm",
+      "market_id": "market",
+      "source": "synthetic:slice-10",
+      "raw_hash": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+      "normalized_hash": "c30e7882cfa9208b6b82c8e96846ece4a401add8d33dbae54b05074f2f130d58",
+      "bbo_hash": "cc51ec83f942e139a8d19fa4a906fb23984399b67908e275fd547de0dab748be",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "b",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    },
+    {
+      "session_id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+      "id": "image:1",
+      "received_at": "2026-09-11 22:00:00-04:00",
+      "received_text": "2026-09-12T02:00:00+00:00",
+      "source_time_text": "2026-09-12T02:00:00+00:00",
+      "venue": "polymarket_us",
+      "event_id": "pm",
+      "market_id": "market",
+      "source": "synthetic:slice-10",
+      "raw_hash": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+      "normalized_hash": "c30e7882cfa9208b6b82c8e96846ece4a401add8d33dbae54b05074f2f130d58",
+      "bbo_hash": "79bd5f494a6992ca1d8ee95f1ed00c7a5932660de1a881fbefbdc81d53f64ef3",
+      "changed": true,
+      "snapshot_reason": "initial",
+      "side": "b",
+      "ask": "0.2",
+      "ask_size": "3",
+      "bid": "0.01",
+      "bid_size": null,
+      "unit": "contracts",
+      "state": "active"
+    }
+  ]
+}

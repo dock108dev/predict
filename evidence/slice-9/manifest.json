@@ -1,0 +1,225 @@
+{
+  "created_at": "2026-09-12T03:26:44.218998+00:00",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "b6298d6f94450a6268f3684edd9fc3dbf86012dee4cef176fd63b0a2e93801de",
+      "bytes": 7765
+    },
+    {
+      "path": "app/fee_example.py",
+      "sha256": "4f42659d9482dec0d434d7c77ae0c21bfe52c1cced1a0c128eb03d58b6b5c4bd",
+      "bytes": 5586
+    },
+    {
+      "path": "app/fees/__init__.py",
+      "sha256": "937df09f44b4ae4c5229c5fd6b4ea8cf244670cf168c8eeba47c29371745ab22",
+      "bytes": 210
+    },
+    {
+      "path": "app/fees/engine.py",
+      "sha256": "d8aafedfe997140fab5d6678f14c1b2ff0f0507d574663ac21719f06cdf07743",
+      "bytes": 21433
+    },
+    {
+      "path": "app/fixtures/fee-schedules-v1.json",
+      "sha256": "f50e9bd0de615cdd1aafcb85eeb85f890cd52756076102961b0f42341c0d7eca",
+      "bytes": 8446
+    },
+    {
+      "path": "docs/slice-9.md",
+      "sha256": "39af0491f526c6763db193f53b73738ac9d007f9f020ddf690b4112c29d5d7c3",
+      "bytes": 8406
+    },
+    {
+      "path": "evidence/slice-9/baseline.json",
+      "sha256": "c3085d7715a38887bcf44fd29fc13cbf7aee43509065c3f12894d39cdbea7c15",
+      "bytes": 60315
+    },
+    {
+      "path": "evidence/slice-9/example.txt",
+      "sha256": "f2fcee4e077b04dc31ccafb1bc4f37c9dd42e8ffe521f85f049bc2387e56b81f",
+      "bytes": 595
+    },
+    {
+      "path": "evidence/slice-9/fee-example.json",
+      "sha256": "63ca9ce675a03c5baf37847662f24fe0b911f42a57e7b6e81d929842597acd1e",
+      "bytes": 394947
+    },
+    {
+      "path": "evidence/slice-9/fee-tests.txt",
+      "sha256": "e5f6f728b7308ba7316424dcd615506a947e6661ec0ccbed8aa6daf0c2c5b7b8",
+      "bytes": 2763
+    },
+    {
+      "path": "evidence/slice-9/fee_example.txt",
+      "sha256": "63ca9ce675a03c5baf37847662f24fe0b911f42a57e7b6e81d929842597acd1e",
+      "bytes": 394947
+    },
+    {
+      "path": "evidence/slice-9/finalize.py",
+      "sha256": "520144deda50058fca9bf2ed48ec3280b5397210dfeb404dbc5b197d56a7df52",
+      "bytes": 1460
+    },
+    {
+      "path": "evidence/slice-9/kalshi_example.txt",
+      "sha256": "dd5e3ced47e249d51a33d5217b0e4abc17d9fca48e1de0965ea8a10a22198d5d",
+      "bytes": 449
+    },
+    {
+      "path": "evidence/slice-9/matching_example.txt",
+      "sha256": "7e0be0ecb08f94bc2e01de96384c0b943ac7b654050c66ab142b0a951d6f46db",
+      "bytes": 16308849
+    },
+    {
+      "path": "evidence/slice-9/moneyline_example.txt",
+      "sha256": "291a86371559adcfebc61cce649684d6027ecae0cb04798ff1b9baf27c33ee42",
+      "bytes": 1755335
+    },
+    {
+      "path": "evidence/slice-9/normalization_example.txt",
+      "sha256": "fbd9bb1ad309441be4e54b6039f0c51e4ad2723179fd1952e8681f8535c1dc98",
+      "bytes": 174950
+    },
+    {
+      "path": "evidence/slice-9/novig_example.txt",
+      "sha256": "6a3eee4fbc3fb5ae8a640289f0037e8f2bdf83694007d5694cce9e604c26aa14",
+      "bytes": 2711
+    },
+    {
+      "path": "evidence/slice-9/polymarket_us_example.txt",
+      "sha256": "963cfaece87428fb47b1b35559365957b618020d33fc1582e381b64e45465cda",
+      "bytes": 1022
+    },
+    {
+      "path": "evidence/slice-9/preservation.json",
+      "sha256": "b8b334ed41ac1fe422465fc3229d3896bbc8fdc40f03359369f7376c35ccee75",
+      "bytes": 260
+    },
+    {
+      "path": "evidence/slice-9/prophetx_example.txt",
+      "sha256": "c6a05c4322bdd8a47eabb481b33ff377b76fc284ec41a1957013e450221e3ff8",
+      "bytes": 688
+    },
+    {
+      "path": "evidence/slice-9/research/captured-pmus-fees.json",
+      "sha256": "2ecee3b0333496adec5c53eef23ae9144b1976c3022422114e79ca4d5791b9d4",
+      "bytes": 233
+    },
+    {
+      "path": "evidence/slice-9/research/findings.md",
+      "sha256": "5c3776f0e1ac9b076af4e9481b07f5f7442f428323209ff63ba92d565ad75bb8",
+      "bytes": 5306
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-events.md",
+      "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e",
+      "bytes": 6642
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-mlb-history.json",
+      "sha256": "3602e9b2394d5bd9039964d9e35726919757fd6780007fdbd95813773d14c9d6",
+      "bytes": 373
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-nfl.json",
+      "sha256": "a8641f1750150022958250b77fd8f9c02e169cfe124d2e90c01bc9a524040b00",
+      "bytes": 1547
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-pdf-browser.json",
+      "sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f",
+      "bytes": 13716
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-rounding.md",
+      "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22",
+      "bytes": 4041
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-schedule.pdf",
+      "sha256": "2e48eb1925b8fa9824f5704b7362950d30daba2118ea152e84b1689c2cdb232d",
+      "bytes": 32188
+    },
+    {
+      "path": "evidence/slice-9/research/kalshi-series.md",
+      "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a",
+      "bytes": 10072
+    },
+    {
+      "path": "evidence/slice-9/research/novig-credits.md",
+      "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04",
+      "bytes": 14708
+    },
+    {
+      "path": "evidence/slice-9/research/novig-fees.md",
+      "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e",
+      "bytes": 10413
+    },
+    {
+      "path": "evidence/slice-9/research/novig-help.html",
+      "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149",
+      "bytes": 127977
+    },
+    {
+      "path": "evidence/slice-9/research/pmus-fees.md",
+      "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a",
+      "bytes": 13522
+    },
+    {
+      "path": "evidence/slice-9/research/pmus-fractional-current.md",
+      "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017",
+      "bytes": 1275
+    },
+    {
+      "path": "evidence/slice-9/research/pmus-fractions.md",
+      "sha256": "0c3cac041529a96aa4fb30dad3234c8d841bf0b2d2cf112b36d80d1f849c83a4",
+      "bytes": 674
+    },
+    {
+      "path": "evidence/slice-9/research/prophetx-fees.html",
+      "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c",
+      "bytes": 416252
+    },
+    {
+      "path": "evidence/slice-9/research/prophetx-rebates.pdf",
+      "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18",
+      "bytes": 173181
+    },
+    {
+      "path": "evidence/slice-9/research/prophetx-rebates.txt",
+      "sha256": "39294558e241e7766e4c59017e6d4861c52f091dad1101cff8871c892461fc12",
+      "bytes": 14260
+    },
+    {
+      "path": "evidence/slice-9/research/sources.json",
+      "sha256": "544f3c55fd3f55e8b21d4ba680c9bb92bb19762fd85be996008d9f96eef7e605",
+      "bytes": 3791
+    },
+    {
+      "path": "evidence/slice-9/tests.txt",
+      "sha256": "402a091826931697fa14f3f79f2e8f45e49c9cebd0ee547c41a77114e70286df",
+      "bytes": 32595
+    },
+    {
+      "path": "evidence/slice-9/verification.json",
+      "sha256": "2f0d64b6d968df7cd5e20c4944ce2b3aabf8d8e0fada86d620ac22fa806bc315",
+      "bytes": 2211
+    },
+    {
+      "path": "evidence/slice-9/verify.py",
+      "sha256": "5210217fa37d0fb115874a1a44281ed3cbe132fa779d2ff0fbff2a5593934efc",
+      "bytes": 862
+    },
+    {
+      "path": "tests/test_fees.py",
+      "sha256": "f0e54bfad430fe7c208b3ec7f4bb87c92cf9bc24236ad1316bbda14250b3207b",
+      "bytes": 11877
+    },
+    {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md",
+      "sha256": "94fd32181aca08715cd734e1f95603bf9b1f9357512a1595fccfec710b4dd452",
+      "bytes": 33757
+    }
+  ]
+}

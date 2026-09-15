@@ -1,0 +1,23 @@
+[
+  {
+    "file": "kalshi-nfl-rules.pdf",
+    "source": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+    "retrieved_at": "2026-09-12T02:48:58.647528+00:00",
+    "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+    "effective_date": null
+  },
+  {
+    "file": "pmus-sports.md",
+    "source": "https://docs.polymarket.us/faqs/sports-faqs.md",
+    "retrieved_at": "2026-09-12T02:48:58.871518+00:00",
+    "sha256": "b3e1ccb06ead7fd3d9ee663ecf6086d9134378a94b60f595d4d7090b04718f3c",
+    "effective_date": null
+  },
+  {
+    "file": "pmus-market-schema.md",
+    "source": "https://docs.polymarket.us/api-reference/markets/get-market-by-slug.md",
+    "retrieved_at": "2026-09-12T02:48:59.433078+00:00",
+    "sha256": "7c60d0dc99950a2c9e422f307a6f584b74d65d327863b05b5c45688eb2bf5617",
+    "effective_date": null
+  }
+]

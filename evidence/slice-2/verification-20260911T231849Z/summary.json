@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-09-11T23:33:12.019897+00:00",
+  "public_smoke_http_200": 5,
+  "public_request_budget_including_followups": 15,
+  "public_bodies_preserved": 12,
+  "authenticated_sessions": 2,
+  "authenticated_connections": 4,
+  "market_frames": 17,
+  "key_storage": "macOS Keychain; explicit named project entry; no values in artifacts",
+  "tests_passed": 41,
+  "slice_1_tests_included": 16,
+  "examples": "both exit 0",
+  "credential_scan": "passed across source/tests/docs/evidence/tracker; values not emitted",
+  "preservation": {
+    "baseline_files": 38,
+    "all_hashes_match": true
+  },
+  "access_blocker": null,
+  "slice_2_status": "partial_book_synchronization_qualification",
+  "remaining": "Retail replacement/omitted-level semantics not established; current REST does not corroborate newer stream images."
+}

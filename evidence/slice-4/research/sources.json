@@ -1,0 +1,15 @@
+{
+  "retrieved_at_utc": "2026-09-12T01:23:55.734013+00:00",
+  "sources": [
+    {
+      "url": "https://docs.kalshi.com/openapi.yaml",
+      "file": "openapi.yaml",
+      "sha256": "cac311c870e469ddfbceedfd363fe9e9b54e1996e4d00eeeb327fdbff84af915"
+    },
+    {
+      "url": "https://docs.kalshi.com/asyncapi.yaml",
+      "file": "asyncapi.yaml",
+      "sha256": "dd2089ce4f8f9521d27d137a44adbb1a3aed5290bfe3f9a1f11cd31539672c8c"
+    }
+  ]
+}

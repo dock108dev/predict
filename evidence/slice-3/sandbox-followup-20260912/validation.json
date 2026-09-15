@@ -1,0 +1,18 @@
+[
+  {
+    "check": "tests",
+    "exit_code": 0
+  },
+  {
+    "check": "shared-example",
+    "exit_code": 0
+  },
+  {
+    "check": "polymarket-example",
+    "exit_code": 0
+  },
+  {
+    "check": "prophetx-example",
+    "exit_code": 0
+  }
+]

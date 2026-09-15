@@ -1,0 +1,80 @@
+[
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/tests.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.polymarket_us_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/polymarket_us_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.prophetx_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/prophetx_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.kalshi_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/kalshi_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.novig_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/novig_example.txt"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.normalization_example"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/normalization_example.json"
+  },
+  {
+    "command": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python",
+      "-m",
+      "app.matching_example",
+      "--store",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/slice-7/captured-store.json"
+    ],
+    "exit_code": 0,
+    "log": "evidence/slice-7/matching-example.json"
+  }
+]

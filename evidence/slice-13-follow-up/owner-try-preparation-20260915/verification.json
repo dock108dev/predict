@@ -1,0 +1,38 @@
+{
+  "status": "OWNER TRY READY",
+  "prepared_candidate_sha256": "1579e314fb09dc38198d1160cbfb8bc23375acfc90819cbadc770d65ce10f582",
+  "retained_application_files_match": 103,
+  "preserved_evidence_and_plan_files": 833,
+  "preservation_mismatches": [],
+  "owner_database_logical_fingerprint_unchanged": true,
+  "owner_database_access": "read-only; all 11 public tables fingerprinted; legacy status read through GET endpoints",
+  "reused_checks": {
+    "13B_offline": 365,
+    "13B_postgres": 42,
+    "13C_focused_offline": 26,
+    "13C_disposable_postgres": 8,
+    "13C_browser": "isolated synthetic Start, updates, inspect, manual Stop, reopen; saved ineligibility; gap/error states",
+    "13C_javascript": "syntax and saved-counter DOM checks"
+  },
+  "new_checks": [
+    "start-existing app-only dispatch",
+    "database-not-running refusal",
+    "shell syntax",
+    "restarted app reachable and exact 13C static assets",
+    "read-only legacy status and historical ineligibility on existing database",
+    "visible stopped interface and no console warnings/errors",
+    "database and evidence preservation"
+  ],
+  "no_new_synthetic_run": true,
+  "no_new_live_scan": true,
+  "no_owner_review": true,
+  "no_venue_credentials_accessed": true,
+  "no_venue_requests": true,
+  "no_migrations_or_database_repairs": true,
+  "app_restarted": true,
+  "pid": 30583,
+  "collection": "idle; no session, queue, messages, depth work or connected venues",
+  "outbound_network_snapshot": "loopback only",
+  "strict_timing_qualification": "deferred; earlier failures preserved",
+  "owner_acceptance": "not established"
+}

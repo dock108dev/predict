@@ -1,0 +1,138 @@
+{
+  "evidence_kind": "live_authenticated_market_stream",
+  "market_id": "381955",
+  "market_slug": "aec-nfl-bal-ind-2026-09-13",
+  "events": [
+    {
+      "event": "connected",
+      "received_at": "2026-09-11T23:27:57.973837+00:00",
+      "connection_number": 1
+    },
+    {
+      "event": "subscribed",
+      "received_at": "2026-09-11T23:27:57.974007+00:00",
+      "request_id": "37c8e3cb-1ee8-43b8-9ed4-9bb3272ece85",
+      "dialect": "camel"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:27:58.016051+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:27:59.325739+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:27:59.426497+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:28:00.282060+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "deliberate_local_disconnect",
+      "received_at": "2026-09-11T23:28:02.974688+00:00"
+    },
+    {
+      "event": "disconnected",
+      "received_at": "2026-09-11T23:28:02.997439+00:00"
+    },
+    {
+      "event": "connection_closed",
+      "received_at": "2026-09-11T23:28:02.997505+00:00"
+    },
+    {
+      "event": "connected",
+      "received_at": "2026-09-11T23:28:04.090255+00:00",
+      "connection_number": 2
+    },
+    {
+      "event": "subscribed",
+      "received_at": "2026-09-11T23:28:04.090695+00:00",
+      "request_id": "6325ca38-d6b6-46a3-8b5e-f5dd96dfe269",
+      "dialect": "camel"
+    },
+    {
+      "event": "market_observation",
+      "received_at": "2026-09-11T23:28:04.130878+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "market_data_stale",
+      "received_at": "2026-09-11T23:28:07.132119+00:00",
+      "market_slug": "aec-nfl-bal-ind-2026-09-13"
+    },
+    {
+      "event": "cancelled",
+      "received_at": "2026-09-11T23:28:11.869525+00:00"
+    },
+    {
+      "event": "connection_closed",
+      "received_at": "2026-09-11T23:28:11.893606+00:00"
+    },
+    {
+      "event": "stopped",
+      "received_at": "2026-09-11T23:28:11.893630+00:00"
+    },
+    {
+      "event": "closed",
+      "received_at": "2026-09-11T23:28:11.893681+00:00"
+    },
+    {
+      "event": "closed",
+      "received_at": "2026-09-11T23:28:11.893810+00:00"
+    }
+  ],
+  "diagnostics": [
+    "disconnected",
+    "market_data_stale",
+    "cancelled",
+    "stopped",
+    "closed",
+    "closed"
+  ],
+  "exercise": {
+    "local_disconnect_requested": true,
+    "local_disconnect_completed": true,
+    "cancellation_requested": true,
+    "cancellation_propagated": true
+  },
+  "messages": [
+    {
+      "file": "market-frame-001.json",
+      "received_at": "2026-09-11T23:27:58.015369+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "6ba1f0d0c13a63e30fae107b567c54b8e932b463a86a5fd7dc25d9bce5895229"
+    },
+    {
+      "file": "market-frame-002.json",
+      "received_at": "2026-09-11T23:27:59.324811+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "871229121b7c393df820d3ace848172f6d444e52724ed1e7e8e2b041c491ef72"
+    },
+    {
+      "file": "market-frame-003.json",
+      "received_at": "2026-09-11T23:27:59.425690+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "7e74803316a1f9f1aeb4a3c1af9d096768645e757233b5ead717bc35343f864b"
+    },
+    {
+      "file": "market-frame-004.json",
+      "received_at": "2026-09-11T23:28:00.280404+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "a6fb2a920f6382ee1d8452ccf08be310b3b91da60c9b8e6fd954727fb6f54585"
+    },
+    {
+      "file": "market-frame-005.json",
+      "received_at": "2026-09-11T23:28:04.129540+00:00",
+      "source": "wss://api.polymarket.us/v1/ws/markets",
+      "sha256": "e794b2d4975481e23750e422fec5928f7e272ae9852c57a008533c2af60f7295"
+    }
+  ],
+  "qualification": "unknown_snapshot_and_recovery_semantics"
+}

@@ -1,0 +1,23 @@
+[project]
+name = "prediction-arb"
+version = "0.1.0"
+description = "Read-only prediction market adapters and shared models"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.28,<0.29", "psycopg[binary]>=3.2,<4", "aiohttp>=3.12,<4"]
+
+[project.optional-dependencies]
+stream = ["websockets>=15,<17", "cryptography>=46,<49", "keyring>=25,<26"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.fixtures" = ["*.json"]
+"app.normalization" = ["registry-v1.json"]
+
+"app.storage" = ["migrations/*.sql"]
+"app.dashboard" = ["static/*"]

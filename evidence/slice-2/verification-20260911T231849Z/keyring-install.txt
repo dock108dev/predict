@@ -1,0 +1,26 @@
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting keyring<26,>=25
+  Downloading keyring-25.7.0-py3-none-any.whl.metadata (21 kB)
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting jaraco.classes (from keyring<26,>=25)
+  Downloading jaraco.classes-3.4.0-py3-none-any.whl.metadata (2.6 kB)
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting jaraco.functools (from keyring<26,>=25)
+  Downloading jaraco_functools-4.6.0-py3-none-any.whl.metadata (2.9 kB)
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting jaraco.context (from keyring<26,>=25)
+  Downloading jaraco_context-6.1.2-py3-none-any.whl.metadata (4.2 kB)
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting more-itertools (from jaraco.classes->keyring<26,>=25)
+  Downloading more_itertools-11.1.0-py3-none-any.whl.metadata (41 kB)
+Using cached keyring-25.7.0-py3-none-any.whl (39 kB)
+Using cached jaraco.classes-3.4.0-py3-none-any.whl (6.8 kB)
+Using cached jaraco_context-6.1.2-py3-none-any.whl (7.9 kB)
+Using cached jaraco_functools-4.6.0-py3-none-any.whl (11 kB)
+Using cached more_itertools-11.1.0-py3-none-any.whl (72 kB)
+Installing collected packages: more-itertools, jaraco.context, jaraco.functools, jaraco.classes, keyring
+
+Successfully installed jaraco.classes-3.4.0 jaraco.context-6.1.2 jaraco.functools-4.6.0 keyring-25.7.0 more-itertools-11.1.0
+
+[notice] A new release of pip is available: 26.1.1 -> 26.2.1
+[notice] To update, run: /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/bin/python -m pip install --upgrade pip

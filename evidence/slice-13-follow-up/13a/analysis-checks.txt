@@ -1,0 +1,12 @@
+PASS: 24 trial ledgers, per-side bindings, control events, calculation links, and known overflow
+2 ordinary processed [17, 17] unprocessed [0, 0] book_ms [85.9, 104.4] hwm [1, 1]
+2 burst24 processed [24, 24] unprocessed [0, 0] book_ms [79.3, 78.2] hwm [24, 24]
+2 overflow40 processed [1, 1] unprocessed [32, 32] book_ms [305.8, 315.1] hwm [32, 32]
+2 slow processed [17, 17] unprocessed [0, 0] book_ms [193.4, 189.6] hwm [7, 7]
+2 depth processed [17, 17] unprocessed [0, 0] book_ms [76.9, 79.6] hwm [1, 1]
+4 ordinary processed [17, 17] unprocessed [0, 0] book_ms [240.7, 254.9] hwm [1, 1]
+4 burst24 processed [12, 12] unprocessed [12, 12] book_ms [266.5, 251.0] hwm [24, 24]
+4 overflow40 processed [1, 1] unprocessed [32, 32] book_ms [453.3, 481.9] hwm [32, 32]
+4 slow processed [14, 14] unprocessed [3, 3] book_ms [356.9, 366.2] hwm [11, 12]
+4 depth processed [17, 17] unprocessed [0, 0] book_ms [244.0, 225.0] hwm [10, 9]
+timing_overhead {"2": {"enabled_mean": 0.0951208450987906, "disabled_mean": 0.09637769015353115, "difference_fraction": -0.013040829809662147, "limitation": "two sequential trials per arm; measures detailed timers only; ledger, wrappers and guard retained"}, "4": {"enabled_mean": 0.24779036321524472, "disabled_mean": 0.22726739709287358, "difference_fraction": 0.09030316879980971, "limitation": "two sequential trials per arm; measures detailed timers only; ledger, wrappers and guard retained"}}

@@ -1,0 +1,108 @@
+{
+  "sessions": [
+    {
+      "id": "dd3f294a-d1be-4e92-8e91-024cdbebe3a8",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "failed",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "85ac2f47-a61f-4e22-8711-c61790802094",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "a819a391-dc2f-4b2c-bdcd-76c984cf793b",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "31026b40-3369-4b52-8502-4e4b6215e690",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "d3ea4839-6167-4bd5-80f3-2d5980bdf160",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "10abdf35-9f55-4be6-b82a-1c4211384603",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    },
+    {
+      "id": "9bf9dbee-1000-4956-b77d-2a73fcaf69b0",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "failed",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "2391a9bb-9890-4cf1-b720-18f4d4c0da78",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    },
+    {
+      "id": "c1f75ce4-8e64-4b20-8c4a-b28bde8607b1",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "14dd97f9-8eff-48b1-b3f9-7df2caff6429",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "82dad64f-c0b5-4a4e-b8af-a7147f49e5e1",
+      "environment": "production",
+      "evidence_class": "historical",
+      "state": "complete",
+      "provenance": "Slice 12 finite preserved-image import"
+    },
+    {
+      "id": "86943896-54d0-40e0-9b0f-1c803a8ec1f2",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "complete",
+      "provenance": "Slice 11 invented-depth fixture"
+    },
+    {
+      "id": "76b2faca-5f8f-44a9-888e-22a5667e6391",
+      "environment": "synthetic",
+      "evidence_class": "synthetic",
+      "state": "interrupted",
+      "provenance": "actual PostgreSQL connection termination verification"
+    }
+  ],
+  "counts": {
+    "artifact": 434,
+    "artifact_edge": 524,
+    "capture_session": 13,
+    "receipt": 59,
+    "quote_observation": 59,
+    "metadata_version": 462,
+    "calculation": 96,
+    "calculation_receipt": 696,
+    "candidate_observation": 176,
+    "coverage_event": 39
+  },
+  "replay": "saved calculations and retained images only; no complete stream or exchange-event history"
+}

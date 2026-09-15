@@ -1,0 +1,55 @@
+{
+  "classification": "sandbox UI observation",
+  "observed_at_utc": "2026-09-12T01:00:00Z",
+  "time_precision": "approximate minute; tool observations in task record",
+  "url": "https://sandbox.prophetx.dev/american-football/nfl/chicago-bears-vs-carolina-panthers-19458?currency=cash",
+  "event_id": "19458",
+  "schedule_display": "Sep 13, 2026 1:00 PM America/New_York",
+  "rest_schedule": "2026-09-13T17:00:00Z",
+  "market": "Moneyline",
+  "prices": [
+    {
+      "native_price": "146",
+      "display_price": "+146",
+      "ui_probability_percent": "40.65",
+      "ui_dollars": "17",
+      "rest_quantity": "91.71",
+      "rest_value": "17.12"
+    },
+    {
+      "native_price": "-164",
+      "display_price": "-164",
+      "ui_probability_percent": "62.12",
+      "ui_dollars": "81",
+      "rest_quantity": "56.26",
+      "rest_value": "81"
+    },
+    {
+      "native_price": "-2200",
+      "ui_probability_percent": "95.65",
+      "ui_dollars": "181",
+      "rest_quantity": "10",
+      "rest_value": "181.5"
+    },
+    {
+      "native_price": "-4500",
+      "ui_probability_percent": "97.83",
+      "ui_dollars": "450",
+      "rest_quantity": "10",
+      "rest_value": "450"
+    },
+    {
+      "native_price": "-265",
+      "ui_probability_percent": "72.6",
+      "ui_dollars": "10",
+      "rest_quantity": "10",
+      "rest_value": "10.47"
+    }
+  ],
+  "ticket_labels": [
+    "$ Cost",
+    "$ To Gain"
+  ],
+  "action": "Viewed unsubmitted selection ticket, then closed it; no input, order or deposit.",
+  "inference": "American odds conversion corroborated by exact event, display_price and five UI percentages. Dollar display matches value, not quantity; quantity ownership/unit is unresolved."
+}

@@ -1,0 +1,46 @@
+{
+  "artifact": {
+    "row_digest_sha256": "ceec159d2c5231cef3c4d58dcf85db021494582d3c6dc0c7b2584ca66422cca9",
+    "rows": 3651
+  },
+  "artifact_edge": {
+    "row_digest_sha256": "ab3f4a090c8bbab366a7b90b0973c3c1a42e6e4ab371761566a90af11df87f2a",
+    "rows": 6064
+  },
+  "calculation": {
+    "row_digest_sha256": "008f75b6cff1a001bc79b2dc452b7fad973441cbef6f8aa27926a447d9478df6",
+    "rows": 344
+  },
+  "calculation_receipt": {
+    "row_digest_sha256": "f57913491e5e5958faebea510a1c6f278bd2b2622a0b45b6cff4157eb58328ba",
+    "rows": 2148
+  },
+  "candidate_observation": {
+    "row_digest_sha256": "c3d219166af16f930fd4e61a67f39aa114c82ea22827e90790ef325b4635c6b7",
+    "rows": 917
+  },
+  "capture_session": {
+    "row_digest_sha256": "451869a174fad97c5530fd3be91ecc13eb9d67ddced508d8623e981f963763c7",
+    "rows": 28
+  },
+  "coverage_event": {
+    "row_digest_sha256": "e44e5b93aca3801eb98a04151e3a8e697068c70423939eabf3dce595f671d945",
+    "rows": 90
+  },
+  "metadata_version": {
+    "row_digest_sha256": "f091db2e99c1779effa9a0447f7148d4b7652fba5adb06cdd78b7a2df366798d",
+    "rows": 957
+  },
+  "quote_observation": {
+    "row_digest_sha256": "a25e91b3e970c225793608f9898ef019594185f117d02132b79ef7609340edf9",
+    "rows": 459
+  },
+  "receipt": {
+    "row_digest_sha256": "33200487b7adc43c9591553bf7a885cb5817f1f50742b4da594e474e064c8d66",
+    "rows": 459
+  },
+  "schema_migration": {
+    "row_digest_sha256": "25f161310951e7a1fd321e3d580608e47d43dc2b2d38818529121d90e5faa932",
+    "rows": 3
+  }
+}

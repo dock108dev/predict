@@ -1,0 +1,33 @@
+test_ambiguous_overrides (tests.test_fees.FeeTests.test_ambiguous_overrides) ... ok
+test_bad_inputs (tests.test_fees.FeeTests.test_bad_inputs) ... ok
+test_decimal_context_independent (tests.test_fees.FeeTests.test_decimal_context_independent) ... ok
+test_duplicate_and_incomplete_history (tests.test_fees.FeeTests.test_duplicate_and_incomplete_history) ... ok
+test_flat_unknown_and_wrong_scope (tests.test_fees.FeeTests.test_flat_unknown_and_wrong_scope) ... ok
+test_floats_and_nonfinite (tests.test_fees.FeeTests.test_floats_and_nonfinite) ... ok
+test_input_mutation_and_sell (tests.test_fees.FeeTests.test_input_mutation_and_sell) ... ok
+test_kalshi_accumulator_mixed_roles_and_cap (tests.test_fees.FeeTests.test_kalshi_accumulator_mixed_roles_and_cap) ... ok
+test_kalshi_official_fractional_example (tests.test_fees.FeeTests.test_kalshi_official_fractional_example) ... ok
+test_kalshi_precision (tests.test_fees.FeeTests.test_kalshi_precision) ... ok
+test_kalshi_roles (tests.test_fees.FeeTests.test_kalshi_roles) ... ok
+test_no_assumed_volume_rebate (tests.test_fees.FeeTests.test_no_assumed_volume_rebate) ... ok
+test_novig_credit_separate (tests.test_fees.FeeTests.test_novig_credit_separate) ... ok
+test_novig_futures_and_exemptions (tests.test_fees.FeeTests.test_novig_futures_and_exemptions) ... ok
+test_novig_parlay_api_restriction (tests.test_fees.FeeTests.test_novig_parlay_api_restriction) ... ok
+test_novig_unit_and_minimum (tests.test_fees.FeeTests.test_novig_unit_and_minimum) ... ok
+test_official_and_paired_examples (tests.test_fees.FeeTests.test_official_and_paired_examples) ... ok
+test_overrides_independent_null_clearing (tests.test_fees.FeeTests.test_overrides_independent_null_clearing) ... ok
+test_pmus_cumulative_can_only_reduce (tests.test_fees.FeeTests.test_pmus_cumulative_can_only_reduce) ... ok
+test_pmus_maker_per_fill (tests.test_fees.FeeTests.test_pmus_maker_per_fill) ... ok
+test_prophetx_market_netting (tests.test_fees.FeeTests.test_prophetx_market_netting) ... ok
+test_prophetx_native_forbidden (tests.test_fees.FeeTests.test_prophetx_native_forbidden) ... ok
+test_replay_independent_future_registry (tests.test_fees.FeeTests.test_replay_independent_future_registry) ... ok
+test_round_half_even (tests.test_fees.FeeTests.test_round_half_even) ... ok
+test_schedule_boundaries_and_overlap (tests.test_fees.FeeTests.test_schedule_boundaries_and_overlap) ... ok
+test_timezone (tests.test_fees.FeeTests.test_timezone) ... ok
+test_unknown_effective_requires_pin (tests.test_fees.FeeTests.test_unknown_effective_requires_pin) ... ok
+test_unknown_settlement_not_zero (tests.test_fees.FeeTests.test_unknown_settlement_not_zero) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.035s
+
+OK

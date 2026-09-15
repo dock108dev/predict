@@ -1,0 +1,1888 @@
+{
+  "description": "Invented fills, real PMUS fee model: one new order versus separate orders. Neither partition is actual execution evidence.",
+  "allocation": {
+    "provenance": {
+      "id": "top-d7a70f50006b31869f9b27d7",
+      "pair_id": "market-pair-575d7b88cfb540683605197c",
+      "pair_revision": 1,
+      "market_hashes": [
+        "c15635990f8aa999bc59998b939059226ceb13c8f550638b17c9f59f13680995",
+        "8326313f9641ce68e694df5d74f06ce9f9af9b33ef29e09252d8f33f4405c6ac"
+      ],
+      "parent_snapshot_hash": "ac611ef1cc9cf3fd2dd00d9a23c1249176039fb6dfb0d56f715a888f6607c740",
+      "relationship": {
+        "complementary_payoffs": "YES",
+        "left_side": "yes",
+        "noncomplementary_cases": [],
+        "opposing_sporting_outcomes": true,
+        "opposite_predicates": false,
+        "right_side": "b",
+        "same_exposure": false,
+        "scenarios": {
+          "abandoned": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "canceled": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "discretionary_review": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "postponed_outside_window": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "pregame_forfeit": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "shortened_game": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "tie": {
+            "left": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            },
+            "right": {
+              "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+              "kind": "fraction",
+              "value": "0.5"
+            }
+          },
+          "winner:NFL:ATL": {
+            "left": {
+              "kind": "fraction",
+              "value": "1"
+            },
+            "right": {
+              "kind": "fraction",
+              "value": "0"
+            }
+          },
+          "winner:NFL:PIT": {
+            "left": {
+              "kind": "fraction",
+              "value": "0"
+            },
+            "right": {
+              "kind": "fraction",
+              "value": "1"
+            }
+          }
+        },
+        "unresolved_cases": []
+      },
+      "settlement": {
+        "approvals": [],
+        "conflicts": [],
+        "equivalent_dimensions": [],
+        "profiles": [
+          "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047",
+          "1939fea6c8378ab08ff5378aba6a4c10c3bb48f5793a52a8606781eebda47047"
+        ],
+        "qualified": true,
+        "reason": "supported material equivalence",
+        "status": "EXACT",
+        "unknown": [],
+        "version": "settlement-comparator-1"
+      },
+      "scope": "synthetic"
+    },
+    "quantities": [
+      "3",
+      "3"
+    ],
+    "legs": [
+      {
+        "quantity": "3",
+        "consumed_levels": [
+          {
+            "price": "0.4",
+            "quantity": "2",
+            "provenance": "synthetic:slice-11:invented-level-0",
+            "available": "2"
+          },
+          {
+            "price": "0.5",
+            "quantity": "1",
+            "provenance": "synthetic:slice-11:invented-level-1",
+            "available": "2"
+          }
+        ],
+        "weighted_average_price": "0.4333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+        "entry_cost": "1.3",
+        "entry_fees": "0.0600",
+        "required_cash": "1.3600",
+        "credits": [
+          {
+            "kind": "order_rounding_refund",
+            "amount": "0.00",
+            "timing": "fill",
+            "conditional": false
+          }
+        ],
+        "fee_audit": {
+          "scope": "hypothetical venue trading fees; excludes unverified account-specific charges",
+          "engine": "fees-1",
+          "context": {
+            "venue": "kalshi",
+            "environment": "synthetic",
+            "market_id": "contract",
+            "product": "event_contract",
+            "trade_time": "2026-09-12T02:00:00+00:00",
+            "calculation_time": "2026-09-12T02:00:00+00:00",
+            "schedule_version": "kalshi-july7-observed-sep12",
+            "complete_order_history": true,
+            "settlement_status": "EXACT",
+            "series_id": "KXNFLGAME",
+            "event_id": "synthetic-event",
+            "balance_precision": "0.01",
+            "kalshi_metadata": {
+              "source": "synthetic event assumptions; series type corroborated by research/kalshi-nfl.json",
+              "series_id": "KXNFLGAME",
+              "event_id": "synthetic-event",
+              "event_history_complete": false,
+              "series_changes": [
+                {
+                  "scheduled_ts": "2026-07-07T04:00:00Z",
+                  "fee_type": "quadratic_with_maker_fees",
+                  "fee_multiplier": "1"
+                }
+              ],
+              "event_changes": []
+            },
+            "applicability_evidence": "invented synthetic scenario",
+            "assume_no_settlement_fee": true,
+            "outcomes": {
+              "abandoned": "0.5",
+              "canceled": "0.5",
+              "discretionary_review": "0.5",
+              "postponed_outside_window": "0.5",
+              "pregame_forfeit": "0.5",
+              "shortened_game": "0.5",
+              "tie": "0.5",
+              "winner:NFL:ATL": "1",
+              "winner:NFL:PIT": "0"
+            },
+            "fills": [
+              {
+                "fill_id": "level-0",
+                "order_id": "modeled-new-order",
+                "match_id": "modeled-match",
+                "role": "taker",
+                "price": "0.4",
+                "quantity": "2",
+                "unit": "contracts"
+              },
+              {
+                "fill_id": "level-1",
+                "order_id": "modeled-new-order",
+                "match_id": "modeled-match",
+                "role": "taker",
+                "price": "0.5",
+                "quantity": "1",
+                "unit": "contracts"
+              }
+            ]
+          },
+          "context_hash": "c20b7c28f93406a83208efa781758a1bbea10338b7795c045257fcbb5802f6fb",
+          "currency": "USD",
+          "registry": {
+            "schema": 1,
+            "schedules": [
+              {
+                "venue": "kalshi",
+                "product": "event_contract",
+                "version": "kalshi-july7-observed-sep12",
+                "coefficient": "0.07",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "kalshi-rounding.md",
+                    "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+                    "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+                    "status": 200,
+                    "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+                  },
+                  {
+                    "file": "kalshi-events.md",
+                    "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+                    "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+                    "status": 200,
+                    "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+                  },
+                  {
+                    "file": "kalshi-series.md",
+                    "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+                    "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+                    "status": 200,
+                    "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+                  }
+                ],
+                "published_effective_date": "2026-07-07",
+                "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+                "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+                "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+                "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+              },
+              {
+                "venue": "polymarket_us",
+                "product": "event_contract",
+                "version": "pmus-2026-07-01",
+                "coefficient": "0.06",
+                "effective_from": "2026-07-01T04:00:00Z",
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "pmus-fees.md",
+                    "url": "https://docs.polymarket.us/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+                    "status": 200,
+                    "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+                  },
+                  {
+                    "file": "pmus-fractional-current.md",
+                    "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+                    "status": 200,
+                    "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+                    "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+                  }
+                ],
+                "maker_coefficient": "0.0125"
+              },
+              {
+                "venue": "prophetx",
+                "product": "straight",
+                "version": "prophetx-2026-08-19-v1",
+                "coefficient": "0.02",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "prophetx-fees.html",
+                    "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+                    "retrieved_at": "2026-09-12T03:13:19.773372+00:00",
+                    "status": 200,
+                    "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c"
+                  },
+                  {
+                    "file": "prophetx-rebates.pdf",
+                    "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+                    "retrieved_at": "2026-09-12T03:13:19.945020+00:00",
+                    "status": 200,
+                    "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18"
+                  }
+                ],
+                "published_update_date": "2026-08-19",
+                "effective_note": "Update date is not an exact effective instant"
+              },
+              {
+                "venue": "novig",
+                "product": "pregame",
+                "version": "novig-pregame-observed-sep12",
+                "coefficient": "0",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "live",
+                "version": "novig-live-observed-sep12",
+                "coefficient": "0.03",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "futures",
+                "version": "novig-futures-observed-sep12",
+                "coefficient": "0.06",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "parlay",
+                "version": "novig-parlay-observed-sep12",
+                "coefficient": "0.10",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              }
+            ]
+          },
+          "registry_hash": "2e6f8ca6df34a4a86ac7d5e13efa51ae57fd55cb98c8023beaae02398746c211",
+          "schedule": {
+            "venue": "kalshi",
+            "product": "event_contract",
+            "version": "kalshi-july7-observed-sep12",
+            "coefficient": "0.07",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "kalshi-rounding.md",
+                "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+                "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+                "status": 200,
+                "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+              },
+              {
+                "file": "kalshi-events.md",
+                "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+                "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+                "status": 200,
+                "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+              },
+              {
+                "file": "kalshi-series.md",
+                "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+                "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+                "status": 200,
+                "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+              }
+            ],
+            "published_effective_date": "2026-07-07",
+            "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+            "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+            "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+            "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+          },
+          "schedule_hash": "a5c33d8d26f9e5978cbb01f287418ce3c6c17d50ea15bd0bad471275a02c78c2",
+          "schedule_applicability": "conditional",
+          "formula_support": "implemented",
+          "rounding_qualification": "documented",
+          "entry_notional": "1.3",
+          "entry_fees": "0.0600",
+          "entry_cash_requirement": "1.3600",
+          "credits": [
+            {
+              "kind": "order_rounding_refund",
+              "amount": "0.00",
+              "timing": "fill",
+              "conditional": false
+            }
+          ],
+          "outcomes": {
+            "abandoned": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "canceled": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "discretionary_review": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "postponed_outside_window": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "pregame_forfeit": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "shortened_game": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "tie": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "0.1400"
+            },
+            "winner:NFL:ATL": {
+              "gross_payout": "3",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "3",
+              "net_cashflow": "1.6400"
+            },
+            "winner:NFL:PIT": {
+              "gross_payout": "0",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "0",
+              "net_cashflow": "-1.3600"
+            }
+          },
+          "trace": [
+            {
+              "fill_id": "level-0",
+              "terms": {
+                "fee_type": "quadratic_with_maker_fees",
+                "fee_multiplier": "1"
+              },
+              "raw": "0.0336",
+              "trade_fee": "0.0336",
+              "rounding_fee": "0.0064",
+              "rounding_refund": "0.00",
+              "accumulator": "0.0064"
+            },
+            {
+              "fill_id": "level-1",
+              "terms": {
+                "fee_type": "quadratic_with_maker_fees",
+                "fee_multiplier": "1"
+              },
+              "raw": "0.0175",
+              "trade_fee": "0.0175",
+              "rounding_fee": "0.0025",
+              "rounding_refund": "0.00",
+              "accumulator": "0.0089"
+            }
+          ],
+          "assumptions": [
+            "schedule effective time unknown; explicitly pinned documentation scenario",
+            "production schedule applied hypothetically to synthetic",
+            "event override history incomplete",
+            "supplied account precision; FCM/additional account charges excluded and unverified"
+          ],
+          "unsupported": [],
+          "qualification": "conditional",
+          "fill_reconciliation": "unverified",
+          "settlement_status": "EXACT",
+          "resolved_terms": {
+            "fee_type": "quadratic_with_maker_fees",
+            "fee_multiplier": "1"
+          },
+          "entry_balance_debit": "1.3600"
+        },
+        "reasons": [
+          "schedule effective time unknown; explicitly pinned documentation scenario",
+          "production schedule applied hypothetically to synthetic",
+          "event override history incomplete",
+          "supplied account precision; FCM/additional account charges excluded and unverified",
+          "fill-fragmentation-unbounded: one fill per consumed price level; different subfills can change rounded charges; no conservative fee bound asserted"
+        ],
+        "outcomes": {
+          "abandoned": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "canceled": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "discretionary_review": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "postponed_outside_window": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "pregame_forfeit": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "shortened_game": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "tie": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "0.1400"
+          },
+          "winner:NFL:ATL": {
+            "gross_payout": "3",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "3",
+            "net_cashflow": "1.6400"
+          },
+          "winner:NFL:PIT": {
+            "gross_payout": "0",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "0",
+            "net_cashflow": "-1.3600"
+          }
+        },
+        "identity": {
+          "native_market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+          "side": "yes",
+          "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+          "instrument_liquidity": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+          "observation": {
+            "environment": "synthetic",
+            "evidence_class": "synthetic",
+            "sync": "synchronized",
+            "depth": "partial",
+            "source_time_progress": "advanced",
+            "source_time_semantics": "snapshot",
+            "source_time_problem": null,
+            "locks_clear": true,
+            "units_verified": true,
+            "minimum": "1",
+            "increment": "1",
+            "sizing_evidence": "invented sizing fixture",
+            "role": "taker",
+            "venue": "kalshi",
+            "event_id": "ka",
+            "market_id": "contract",
+            "side": "yes",
+            "state": "active",
+            "raw_kind": "synthetic",
+            "source": "synthetic:slice-10",
+            "source_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+            "received_at": "2026-09-12T02:00:00+00:00",
+            "exchange_at": "2026-09-12T02:00:00+00:00",
+            "ask": "0.4",
+            "available": "2",
+            "unit": "contracts"
+          }
+        },
+        "depth_scope": "partial"
+      },
+      {
+        "quantity": "3",
+        "consumed_levels": [
+          {
+            "price": "0.5",
+            "quantity": "1",
+            "provenance": "synthetic:slice-11:invented-level-0",
+            "available": "1"
+          },
+          {
+            "price": "0.6",
+            "quantity": "2",
+            "provenance": "synthetic:slice-11:invented-level-1",
+            "available": "3"
+          }
+        ],
+        "weighted_average_price": "0.5666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666667",
+        "entry_cost": "1.7",
+        "entry_fees": "0.04",
+        "required_cash": "1.74",
+        "credits": [
+          {
+            "kind": "maker_rebate",
+            "amount": "0",
+            "timing": "fill",
+            "conditional": false
+          },
+          {
+            "kind": "volume_rebate",
+            "unrounded": null,
+            "amount": null,
+            "timing": "weekly",
+            "conditional": true
+          }
+        ],
+        "fee_audit": {
+          "scope": "hypothetical venue trading fees; excludes unverified account-specific charges",
+          "engine": "fees-1",
+          "context": {
+            "venue": "polymarket_us",
+            "environment": "synthetic",
+            "market_id": "market",
+            "product": "event_contract",
+            "trade_time": "2026-09-12T02:00:00+00:00",
+            "calculation_time": "2026-09-12T02:00:00+00:00",
+            "schedule_version": "pmus-2026-07-01",
+            "complete_order_history": true,
+            "settlement_status": "EXACT",
+            "applicability_evidence": "invented synthetic scenario",
+            "assume_no_settlement_fee": true,
+            "outcomes": {
+              "abandoned": "0.5",
+              "canceled": "0.5",
+              "discretionary_review": "0.5",
+              "postponed_outside_window": "0.5",
+              "pregame_forfeit": "0.5",
+              "shortened_game": "0.5",
+              "tie": "0.5",
+              "winner:NFL:ATL": "0",
+              "winner:NFL:PIT": "1"
+            },
+            "fills": [
+              {
+                "fill_id": "level-0",
+                "order_id": "modeled-new-order",
+                "match_id": "modeled-match",
+                "role": "taker",
+                "price": "0.5",
+                "quantity": "1",
+                "unit": "contracts"
+              },
+              {
+                "fill_id": "level-1",
+                "order_id": "modeled-new-order",
+                "match_id": "modeled-match",
+                "role": "taker",
+                "price": "0.6",
+                "quantity": "2",
+                "unit": "contracts"
+              }
+            ]
+          },
+          "context_hash": "b4005e3d164efa2fc87abd81f3e9c1af9fd65be51cde38d0aa8c302fea4612fc",
+          "currency": "USD",
+          "registry": {
+            "schema": 1,
+            "schedules": [
+              {
+                "venue": "kalshi",
+                "product": "event_contract",
+                "version": "kalshi-july7-observed-sep12",
+                "coefficient": "0.07",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "kalshi-rounding.md",
+                    "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+                    "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+                    "status": 200,
+                    "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+                  },
+                  {
+                    "file": "kalshi-events.md",
+                    "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+                    "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+                    "status": 200,
+                    "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+                  },
+                  {
+                    "file": "kalshi-series.md",
+                    "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+                    "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+                    "status": 200,
+                    "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+                  }
+                ],
+                "published_effective_date": "2026-07-07",
+                "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+                "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+                "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+                "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+              },
+              {
+                "venue": "polymarket_us",
+                "product": "event_contract",
+                "version": "pmus-2026-07-01",
+                "coefficient": "0.06",
+                "effective_from": "2026-07-01T04:00:00Z",
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "pmus-fees.md",
+                    "url": "https://docs.polymarket.us/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+                    "status": 200,
+                    "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+                  },
+                  {
+                    "file": "pmus-fractional-current.md",
+                    "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+                    "status": 200,
+                    "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+                    "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+                  }
+                ],
+                "maker_coefficient": "0.0125"
+              },
+              {
+                "venue": "prophetx",
+                "product": "straight",
+                "version": "prophetx-2026-08-19-v1",
+                "coefficient": "0.02",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "prophetx-fees.html",
+                    "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+                    "retrieved_at": "2026-09-12T03:13:19.773372+00:00",
+                    "status": 200,
+                    "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c"
+                  },
+                  {
+                    "file": "prophetx-rebates.pdf",
+                    "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+                    "retrieved_at": "2026-09-12T03:13:19.945020+00:00",
+                    "status": 200,
+                    "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18"
+                  }
+                ],
+                "published_update_date": "2026-08-19",
+                "effective_note": "Update date is not an exact effective instant"
+              },
+              {
+                "venue": "novig",
+                "product": "pregame",
+                "version": "novig-pregame-observed-sep12",
+                "coefficient": "0",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "live",
+                "version": "novig-live-observed-sep12",
+                "coefficient": "0.03",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "futures",
+                "version": "novig-futures-observed-sep12",
+                "coefficient": "0.06",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              },
+              {
+                "venue": "novig",
+                "product": "parlay",
+                "version": "novig-parlay-observed-sep12",
+                "coefficient": "0.10",
+                "effective_from": null,
+                "effective_to": null,
+                "sources": [
+                  {
+                    "file": "novig-fees.md",
+                    "url": "https://docs.novig.com/fees.md",
+                    "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                    "status": 200,
+                    "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+                  },
+                  {
+                    "file": "novig-credits.md",
+                    "url": "https://docs.novig.com/maker-credit-program.md",
+                    "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                    "status": 200,
+                    "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+                  },
+                  {
+                    "file": "novig-help.html",
+                    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                    "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                    "status": 200,
+                    "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+                  }
+                ],
+                "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+              }
+            ]
+          },
+          "registry_hash": "2e6f8ca6df34a4a86ac7d5e13efa51ae57fd55cb98c8023beaae02398746c211",
+          "schedule": {
+            "venue": "polymarket_us",
+            "product": "event_contract",
+            "version": "pmus-2026-07-01",
+            "coefficient": "0.06",
+            "effective_from": "2026-07-01T04:00:00Z",
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "pmus-fees.md",
+                "url": "https://docs.polymarket.us/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+                "status": 200,
+                "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+              },
+              {
+                "file": "pmus-fractional-current.md",
+                "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+                "status": 200,
+                "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+                "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+              }
+            ],
+            "maker_coefficient": "0.0125"
+          },
+          "schedule_hash": "deddd2df56b316630050f43f931635c41e42f2f6c9ee5e0f96e956bcdd97e2a7",
+          "schedule_applicability": "documented_schedule_with_caller_applicability_evidence",
+          "formula_support": "implemented",
+          "rounding_qualification": "documented",
+          "entry_notional": "1.7",
+          "entry_fees": "0.04",
+          "entry_cash_requirement": "1.74",
+          "credits": [
+            {
+              "kind": "maker_rebate",
+              "amount": "0",
+              "timing": "fill",
+              "conditional": false
+            },
+            {
+              "kind": "volume_rebate",
+              "unrounded": null,
+              "amount": null,
+              "timing": "weekly",
+              "conditional": true
+            }
+          ],
+          "outcomes": {
+            "abandoned": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "canceled": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "discretionary_review": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "postponed_outside_window": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "pregame_forfeit": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "shortened_game": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "tie": {
+              "gross_payout": "1.5",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "1.5",
+              "net_cashflow": "-0.24"
+            },
+            "winner:NFL:ATL": {
+              "gross_payout": "0",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "0",
+              "net_cashflow": "-1.74"
+            },
+            "winner:NFL:PIT": {
+              "gross_payout": "3",
+              "settlement_fee_unrounded": "0",
+              "settlement_fee": "0",
+              "net_payout": "3",
+              "net_cashflow": "1.26"
+            }
+          },
+          "trace": [
+            {
+              "fill_id": "level-0",
+              "raw": "0.0150",
+              "amount": "0.02",
+              "role": "taker",
+              "order_state": [
+                "0.0150",
+                "0.02"
+              ]
+            },
+            {
+              "fill_id": "level-1",
+              "raw": "0.0288",
+              "amount": "0.02",
+              "role": "taker",
+              "order_state": [
+                "0.0438",
+                "0.04"
+              ]
+            }
+          ],
+          "assumptions": [
+            "production schedule applied hypothetically to synthetic",
+            "assumed no independent settlement fee; not established by trading schedule"
+          ],
+          "unsupported": [],
+          "qualification": "conditional",
+          "fill_reconciliation": "unverified",
+          "settlement_status": "EXACT",
+          "entry_balance_debit": "1.74"
+        },
+        "reasons": [
+          "production schedule applied hypothetically to synthetic",
+          "assumed no independent settlement fee; not established by trading schedule",
+          "fill-fragmentation-unbounded: one fill per consumed price level; different subfills can change rounded charges; no conservative fee bound asserted"
+        ],
+        "outcomes": {
+          "abandoned": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "canceled": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "discretionary_review": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "postponed_outside_window": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "pregame_forfeit": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "shortened_game": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "tie": {
+            "gross_payout": "1.5",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "1.5",
+            "net_cashflow": "-0.24"
+          },
+          "winner:NFL:ATL": {
+            "gross_payout": "0",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "0",
+            "net_cashflow": "-1.74"
+          },
+          "winner:NFL:PIT": {
+            "gross_payout": "3",
+            "settlement_fee_unrounded": "0",
+            "settlement_fee": "0",
+            "net_payout": "3",
+            "net_cashflow": "1.26"
+          }
+        },
+        "identity": {
+          "native_market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+          "side": "b",
+          "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+          "instrument_liquidity": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+          "observation": {
+            "environment": "synthetic",
+            "evidence_class": "synthetic",
+            "sync": "synchronized",
+            "depth": "partial",
+            "source_time_progress": "advanced",
+            "source_time_semantics": "snapshot",
+            "source_time_problem": null,
+            "locks_clear": true,
+            "units_verified": true,
+            "minimum": "1",
+            "increment": "1",
+            "sizing_evidence": "invented sizing fixture",
+            "role": "taker",
+            "venue": "polymarket_us",
+            "event_id": "pm",
+            "market_id": "market",
+            "side": "b",
+            "state": "active",
+            "raw_kind": "synthetic",
+            "source": "synthetic:slice-10",
+            "source_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+            "received_at": "2026-09-12T02:00:00+00:00",
+            "exchange_at": "2026-09-12T02:00:00+00:00",
+            "ask": "0.5",
+            "available": "1",
+            "unit": "contracts"
+          }
+        },
+        "depth_scope": "partial"
+      }
+    ],
+    "entry_cost": "3.0",
+    "entry_fees": "0.1000",
+    "required_cash_per_venue": [
+      "1.3600",
+      "1.74"
+    ],
+    "required_cash": "3.1000",
+    "execution_reserve": "0",
+    "roi_denominator": "3.1000",
+    "outcomes": {
+      "abandoned": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "canceled": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "discretionary_review": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "postponed_outside_window": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "pregame_forfeit": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "shortened_game": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "tie": {
+        "payout_evidence": {
+          "left": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          },
+          "right": {
+            "evidence": "d1def7c13dce4bd65d94dcc70254370298a58ef860edc732533a921be8f2c9cc",
+            "kind": "fraction",
+            "value": "0.5"
+          }
+        },
+        "net_payout": "3.0",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "winner:NFL:ATL": {
+        "payout_evidence": {
+          "left": {
+            "kind": "fraction",
+            "value": "1"
+          },
+          "right": {
+            "kind": "fraction",
+            "value": "0"
+          }
+        },
+        "net_payout": "3",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      },
+      "winner:NFL:PIT": {
+        "payout_evidence": {
+          "left": {
+            "kind": "fraction",
+            "value": "0"
+          },
+          "right": {
+            "kind": "fraction",
+            "value": "1"
+          }
+        },
+        "net_payout": "3",
+        "settlement_fees": "0",
+        "profit": "-0.1000"
+      }
+    },
+    "worst_case_profit": "-0.1000",
+    "worst_case_roi": "-0.03225806451612903225806451612903225806451612903225806451612903225806451612903225806451612903225806452",
+    "minimum_known_profit": "-0.1000",
+    "reasons": [
+      "leg-0:non-production-environment",
+      "leg-1:non-production-environment",
+      "leg-0:schedule effective time unknown; explicitly pinned documentation scenario",
+      "leg-0:production schedule applied hypothetically to synthetic",
+      "leg-0:event override history incomplete",
+      "leg-0:supplied account precision; FCM/additional account charges excluded and unverified",
+      "leg-0:fill-fragmentation-unbounded: one fill per consumed price level; different subfills can change rounded charges; no conservative fee bound asserted",
+      "leg-1:production schedule applied hypothetically to synthetic",
+      "leg-1:assumed no independent settlement fee; not established by trading schedule",
+      "leg-1:fill-fragmentation-unbounded: one fill per consumed price level; different subfills can change rounded charges; no conservative fee bound asserted"
+    ],
+    "constraint_reasons": [],
+    "feasible": true,
+    "no_trade": false,
+    "qualified_modeled_arbitrage": false,
+    "passes_reporting_thresholds": false,
+    "current_production_opportunity": false,
+    "fill_partition": "One new taker order per leg; one fill per consumed level in cheapest-first order; actual fragmentation unknown."
+  },
+  "separate_order_fee_audit": {
+    "scope": "hypothetical venue trading fees; excludes unverified account-specific charges",
+    "engine": "fees-1",
+    "context": {
+      "venue": "polymarket_us",
+      "environment": "synthetic",
+      "market_id": "market",
+      "product": "event_contract",
+      "trade_time": "2026-09-12T02:00:00+00:00",
+      "calculation_time": "2026-09-12T02:00:00+00:00",
+      "schedule_version": "pmus-2026-07-01",
+      "complete_order_history": true,
+      "settlement_status": "EXACT",
+      "applicability_evidence": "invented synthetic scenario",
+      "assume_no_settlement_fee": true,
+      "outcomes": {
+        "abandoned": "0.5",
+        "canceled": "0.5",
+        "discretionary_review": "0.5",
+        "postponed_outside_window": "0.5",
+        "pregame_forfeit": "0.5",
+        "shortened_game": "0.5",
+        "tie": "0.5",
+        "winner:NFL:ATL": "0",
+        "winner:NFL:PIT": "1"
+      },
+      "fills": [
+        {
+          "fill_id": "level-0",
+          "order_id": "hypothetical-separate-order-0",
+          "match_id": "modeled-match",
+          "role": "taker",
+          "price": "0.5",
+          "quantity": "1",
+          "unit": "contracts"
+        },
+        {
+          "fill_id": "level-1",
+          "order_id": "hypothetical-separate-order-1",
+          "match_id": "modeled-match",
+          "role": "taker",
+          "price": "0.6",
+          "quantity": "2",
+          "unit": "contracts"
+        }
+      ]
+    },
+    "context_hash": "dae81cedadc151c1a3467ab8c0ff3c2bdb491515985572fcb69bc300676ae202",
+    "currency": "USD",
+    "registry": {
+      "schema": 1,
+      "schedules": [
+        {
+          "venue": "kalshi",
+          "product": "event_contract",
+          "version": "kalshi-july7-observed-sep12",
+          "coefficient": "0.07",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "kalshi-rounding.md",
+              "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+              "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+              "status": 200,
+              "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+            },
+            {
+              "file": "kalshi-events.md",
+              "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+              "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+              "status": 200,
+              "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+            },
+            {
+              "file": "kalshi-series.md",
+              "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+              "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+              "status": 200,
+              "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+            }
+          ],
+          "published_effective_date": "2026-07-07",
+          "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+          "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+          "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+          "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+        },
+        {
+          "venue": "polymarket_us",
+          "product": "event_contract",
+          "version": "pmus-2026-07-01",
+          "coefficient": "0.06",
+          "effective_from": "2026-07-01T04:00:00Z",
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "pmus-fees.md",
+              "url": "https://docs.polymarket.us/fees.md",
+              "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+              "status": 200,
+              "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+            },
+            {
+              "file": "pmus-fractional-current.md",
+              "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+              "status": 200,
+              "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+              "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+            }
+          ],
+          "maker_coefficient": "0.0125"
+        },
+        {
+          "venue": "prophetx",
+          "product": "straight",
+          "version": "prophetx-2026-08-19-v1",
+          "coefficient": "0.02",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "prophetx-fees.html",
+              "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+              "retrieved_at": "2026-09-12T03:13:19.773372+00:00",
+              "status": 200,
+              "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c"
+            },
+            {
+              "file": "prophetx-rebates.pdf",
+              "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+              "retrieved_at": "2026-09-12T03:13:19.945020+00:00",
+              "status": 200,
+              "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18"
+            }
+          ],
+          "published_update_date": "2026-08-19",
+          "effective_note": "Update date is not an exact effective instant"
+        },
+        {
+          "venue": "novig",
+          "product": "pregame",
+          "version": "novig-pregame-observed-sep12",
+          "coefficient": "0",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "novig-fees.md",
+              "url": "https://docs.novig.com/fees.md",
+              "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+              "status": 200,
+              "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+            },
+            {
+              "file": "novig-credits.md",
+              "url": "https://docs.novig.com/maker-credit-program.md",
+              "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+              "status": 200,
+              "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+            },
+            {
+              "file": "novig-help.html",
+              "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+              "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+              "status": 200,
+              "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+            }
+          ],
+          "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+        },
+        {
+          "venue": "novig",
+          "product": "live",
+          "version": "novig-live-observed-sep12",
+          "coefficient": "0.03",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "novig-fees.md",
+              "url": "https://docs.novig.com/fees.md",
+              "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+              "status": 200,
+              "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+            },
+            {
+              "file": "novig-credits.md",
+              "url": "https://docs.novig.com/maker-credit-program.md",
+              "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+              "status": 200,
+              "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+            },
+            {
+              "file": "novig-help.html",
+              "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+              "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+              "status": 200,
+              "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+            }
+          ],
+          "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+        },
+        {
+          "venue": "novig",
+          "product": "futures",
+          "version": "novig-futures-observed-sep12",
+          "coefficient": "0.06",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "novig-fees.md",
+              "url": "https://docs.novig.com/fees.md",
+              "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+              "status": 200,
+              "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+            },
+            {
+              "file": "novig-credits.md",
+              "url": "https://docs.novig.com/maker-credit-program.md",
+              "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+              "status": 200,
+              "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+            },
+            {
+              "file": "novig-help.html",
+              "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+              "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+              "status": 200,
+              "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+            }
+          ],
+          "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+        },
+        {
+          "venue": "novig",
+          "product": "parlay",
+          "version": "novig-parlay-observed-sep12",
+          "coefficient": "0.10",
+          "effective_from": null,
+          "effective_to": null,
+          "sources": [
+            {
+              "file": "novig-fees.md",
+              "url": "https://docs.novig.com/fees.md",
+              "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+              "status": 200,
+              "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+            },
+            {
+              "file": "novig-credits.md",
+              "url": "https://docs.novig.com/maker-credit-program.md",
+              "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+              "status": 200,
+              "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+            },
+            {
+              "file": "novig-help.html",
+              "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+              "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+              "status": 200,
+              "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+            }
+          ],
+          "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+        }
+      ]
+    },
+    "registry_hash": "2e6f8ca6df34a4a86ac7d5e13efa51ae57fd55cb98c8023beaae02398746c211",
+    "schedule": {
+      "venue": "polymarket_us",
+      "product": "event_contract",
+      "version": "pmus-2026-07-01",
+      "coefficient": "0.06",
+      "effective_from": "2026-07-01T04:00:00Z",
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "pmus-fees.md",
+          "url": "https://docs.polymarket.us/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+          "status": 200,
+          "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+        },
+        {
+          "file": "pmus-fractional-current.md",
+          "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+          "status": 200,
+          "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+          "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+        }
+      ],
+      "maker_coefficient": "0.0125"
+    },
+    "schedule_hash": "deddd2df56b316630050f43f931635c41e42f2f6c9ee5e0f96e956bcdd97e2a7",
+    "schedule_applicability": "documented_schedule_with_caller_applicability_evidence",
+    "formula_support": "implemented",
+    "rounding_qualification": "documented",
+    "entry_notional": "1.7",
+    "entry_fees": "0.05",
+    "entry_cash_requirement": "1.75",
+    "credits": [
+      {
+        "kind": "maker_rebate",
+        "amount": "0",
+        "timing": "fill",
+        "conditional": false
+      },
+      {
+        "kind": "volume_rebate",
+        "unrounded": null,
+        "amount": null,
+        "timing": "weekly",
+        "conditional": true
+      }
+    ],
+    "outcomes": {
+      "abandoned": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "canceled": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "discretionary_review": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "postponed_outside_window": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "pregame_forfeit": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "shortened_game": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "tie": {
+        "gross_payout": "1.5",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "1.5",
+        "net_cashflow": "-0.25"
+      },
+      "winner:NFL:ATL": {
+        "gross_payout": "0",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "0",
+        "net_cashflow": "-1.75"
+      },
+      "winner:NFL:PIT": {
+        "gross_payout": "3",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "3",
+        "net_cashflow": "1.25"
+      }
+    },
+    "trace": [
+      {
+        "fill_id": "level-0",
+        "raw": "0.0150",
+        "amount": "0.02",
+        "role": "taker",
+        "order_state": [
+          "0.0150",
+          "0.02"
+        ]
+      },
+      {
+        "fill_id": "level-1",
+        "raw": "0.0288",
+        "amount": "0.03",
+        "role": "taker",
+        "order_state": [
+          "0.0288",
+          "0.03"
+        ]
+      }
+    ],
+    "assumptions": [
+      "production schedule applied hypothetically to synthetic",
+      "assumed no independent settlement fee; not established by trading schedule"
+    ],
+    "unsupported": [],
+    "qualification": "conditional",
+    "fill_reconciliation": "unverified",
+    "settlement_status": "EXACT",
+    "entry_balance_debit": "1.75"
+  },
+  "independent_expected_fees": {
+    "grouped": ".04",
+    "separate": ".05"
+  }
+}

@@ -1,0 +1,55 @@
+test_bad_ids_and_subscriptions_fail (tests.test_adapter.AdapterTests.test_bad_ids_and_subscriptions_fail) ... ok
+test_context_closes_on_failure (tests.test_adapter.AdapterTests.test_context_closes_on_failure) ... ok
+test_example_runs_against_abstract_contract (tests.test_adapter.AdapterTests.test_example_runs_against_abstract_contract) ... ok
+test_full_synthetic_contract_without_network (tests.test_adapter.AdapterTests.test_full_synthetic_contract_without_network) ... ok
+test_read_only_surface (tests.test_adapter.AdapterTests.test_read_only_surface) ... ok
+test_stream_cancellation_propagates (tests.test_adapter.AdapterTests.test_stream_cancellation_propagates) ... ok
+test_invalid_ladders (tests.test_models.BookTests.test_invalid_ladders) ... ok
+test_unavailable_empty_and_partial_are_distinct (tests.test_models.BookTests.test_unavailable_empty_and_partial_are_distinct) ... ok
+test_units_and_outcome_identity (tests.test_models.BookTests.test_units_and_outcome_identity) ... ok
+test_exact_precision_without_context_rounding (tests.test_models.NumericTests.test_exact_precision_without_context_rounding) ... ok
+test_invalid_numeric_inputs (tests.test_models.NumericTests.test_invalid_numeric_inputs) ... ok
+test_ranges_and_units (tests.test_models.NumericTests.test_ranges_and_units) ... ok
+test_native_ids_and_unmapped_ingestion (tests.test_models.ObservationTests.test_native_ids_and_unmapped_ingestion) ... ok
+test_raw_text_and_nested_payload_preservation (tests.test_models.ObservationTests.test_raw_text_and_nested_payload_preservation) ... ok
+test_timestamps_and_unknown_exchange_clock (tests.test_models.ObservationTests.test_timestamps_and_unknown_exchange_clock) ... ok
+test_unknown_quotes_and_settlement (tests.test_models.ObservationTests.test_unknown_quotes_and_settlement) ... ok
+test_authoritative_mapping_not_array_order (tests.test_polymarket_us.Parsing.test_authoritative_mapping_not_array_order) ... ok
+test_decimal_initial_decode_low_context (tests.test_polymarket_us.Parsing.test_decimal_initial_decode_low_context) ... ok
+test_invalid_book_and_json (tests.test_polymarket_us.Parsing.test_invalid_book_and_json) ... ok
+test_missing_empty_status_and_bbo (tests.test_polymarket_us.Parsing.test_missing_empty_status_and_bbo) ... ok
+test_preserved_samples_and_original_provenance (tests.test_polymarket_us.Parsing.test_preserved_samples_and_original_provenance) ... ok
+test_captured_full_flow_offline_and_cleanup (tests.test_polymarket_us.REST.test_captured_full_flow_offline_and_cleanup) ... Executing <Task finished name='Task-32' coro=<REST.test_captured_full_flow_offline_and_cleanup() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_polymarket_us.py:96> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.328 seconds
+ok
+test_market_filter_pagination_and_identity (tests.test_polymarket_us.REST.test_market_filter_pagination_and_identity) ... ok
+test_missing_rules_and_settlement_metadata (tests.test_polymarket_us.REST.test_missing_rules_and_settlement_metadata) ... ok
+test_pagination_filters_cap_and_duplicates (tests.test_polymarket_us.REST.test_pagination_filters_cap_and_duplicates) ... ok
+test_retry_rate_limit_exhaustion_and_not_found (tests.test_polymarket_us.REST.test_retry_rate_limit_exhaustion_and_not_found) ... ok
+test_timeout_invalid_and_cancellation (tests.test_polymarket_us.REST.test_timeout_invalid_and_cancellation) ... ok
+test_missing_regressing_and_submicrosecond_clock_across_reconnect (tests.test_polymarket_us_hardening.HardeningTests.test_missing_regressing_and_submicrosecond_clock_across_reconnect) ... ok
+test_old_and_future_source_ages_are_signed_and_not_eligibility (tests.test_polymarket_us_hardening.HardeningTests.test_old_and_future_source_ages_are_signed_and_not_eligibility) ... ok
+test_replayed_reconnect_source_is_repeated_despite_recent_receipt (tests.test_polymarket_us_hardening.HardeningTests.test_replayed_reconnect_source_is_repeated_despite_recent_receipt) ... ok
+test_status_transitions_and_status_only_reopen_cannot_refresh_book (tests.test_polymarket_us_hardening.HardeningTests.test_status_transitions_and_status_only_reopen_cannot_refresh_book) ... ok
+test_adapter_stream_and_early_close (tests.test_polymarket_us_stream.StreamTests.test_adapter_stream_and_early_close) ... ok
+test_authenticated_transport_mock_only (tests.test_polymarket_us_stream.StreamTests.test_authenticated_transport_mock_only) ... ok
+test_connection_failure_retries_within_bound (tests.test_polymarket_us_stream.StreamTests.test_connection_failure_retries_within_bound) ... ok
+test_disconnect_resubscribe_replacement_and_bounds (tests.test_polymarket_us_stream.StreamTests.test_disconnect_resubscribe_replacement_and_bounds) ... ok
+test_malformed_ambiguous_and_unknown (tests.test_polymarket_us_stream.StreamTests.test_malformed_ambiguous_and_unknown) ... ok
+test_missing_sides_no_inherited_depth (tests.test_polymarket_us_stream.StreamTests.test_missing_sides_no_inherited_depth) ... ok
+test_quiet_market_keeps_connection_and_pending_message (tests.test_polymarket_us_stream.StreamTests.test_quiet_market_keeps_connection_and_pending_message) ... ok
+test_stale_heartbeat_and_cancellation (tests.test_polymarket_us_stream.StreamTests.test_stale_heartbeat_and_cancellation) ... ok
+test_subscription_and_signing (tests.test_polymarket_us_stream.StreamTests.test_subscription_and_signing) ... ok
+test_atomic_replacement_omission_quantity_zero_and_empty (tests.test_polymarket_us_stream.WindowContractTests.test_atomic_replacement_omission_quantity_zero_and_empty) ... ok
+test_malformed_invalidates_atomically_and_new_subscription_recovers (tests.test_polymarket_us_stream.WindowContractTests.test_malformed_invalidates_atomically_and_new_subscription_recovers) ... ok
+test_old_epoch_and_subscription_cannot_replace_recovered_image (tests.test_polymarket_us_stream.WindowContractTests.test_old_epoch_and_subscription_cannot_replace_recovered_image) ... ok
+test_authenticated_capture_native_images_and_reconnect (tests.test_polymarket_us_verification.Verification.test_authenticated_capture_native_images_and_reconnect) ... ok
+test_deliberate_disconnect_reconnect_cancel_runner (tests.test_polymarket_us_verification.Verification.test_deliberate_disconnect_reconnect_cancel_runner) ... ok
+test_evidence_excludes_credentials_and_unknown_envelopes (tests.test_polymarket_us_verification.Verification.test_evidence_excludes_credentials_and_unknown_envelopes) ... ok
+test_failed_response_and_safe_cache_metadata_preserved (tests.test_polymarket_us_verification.Verification.test_failed_response_and_safe_cache_metadata_preserved) ... ok
+test_new_public_capture_preserves_units_identity_and_clocks (tests.test_polymarket_us_verification.Verification.test_new_public_capture_preserves_units_identity_and_clocks) ... ok
+test_live_window_replacement_and_initial_recovery_images (tests.test_polymarket_us_window_capture.WindowCaptureTests.test_live_window_replacement_and_initial_recovery_images) ... ok
+
+----------------------------------------------------------------------
+Ran 49 tests in 0.648s
+
+OK

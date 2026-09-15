@@ -1,0 +1,17 @@
+[
+  {
+    "root": "4c9ddd90e346ca332128b39ad498a1cbf7a3b58d8a6060f6dba65bd6fbd04a67",
+    "artifacts": 1,
+    "edges": 0
+  },
+  {
+    "root": "35d4e7a0e3525ffc993bc0fcecb5d29b8d6cf92680a58d8fc031e2f9eed18f31",
+    "artifacts": 3,
+    "edges": 2
+  },
+  {
+    "root": "dd0ec80a94c290b17e9e289ca0c5dd7f0562d4d0dbb82bfd614664d75e0905ea",
+    "artifacts": 1,
+    "edges": 0
+  }
+]

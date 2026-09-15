@@ -1,0 +1,40 @@
+test_actual_five_pairs_and_ten_structural_matches (tests.test_moneyline.CapturedMoneylineTests.test_actual_five_pairs_and_ten_structural_matches) ... ok
+test_actual_sources_and_native_sides (tests.test_moneyline.CapturedMoneylineTests.test_actual_sources_and_native_sides) ... ok
+test_changed_listing_text_not_auto_reinterpreted (tests.test_moneyline.CapturedMoneylineTests.test_changed_listing_text_not_auto_reinterpreted) ... ok
+test_production_replay_input_order_idempotency (tests.test_moneyline.CapturedMoneylineTests.test_production_replay_input_order_idempotency) ... ok
+test_atomic_persistence_restart_and_idempotency (tests.test_moneyline.MoneylineTests.test_atomic_persistence_restart_and_idempotency) ... ok
+test_compatible_needs_pair_bound_explicit_review (tests.test_moneyline.MoneylineTests.test_compatible_needs_pair_bound_explicit_review) ... ok
+test_conflicting_authoritative_team_fields_block (tests.test_moneyline.MoneylineTests.test_conflicting_authoritative_team_fields_block) ... ok
+test_conflicting_same_native_batch_blocks (tests.test_moneyline.MoneylineTests.test_conflicting_same_native_batch_blocks) ... ok
+test_current_parents_required (tests.test_moneyline.MoneylineTests.test_current_parents_required) ... ok
+test_duplicate_input_is_one_liquidity_reference (tests.test_moneyline.MoneylineTests.test_duplicate_input_is_one_liquidity_reference) ... ok
+test_environment_isolation (tests.test_moneyline.MoneylineTests.test_environment_isolation) ... ok
+test_kalshi_no_subtitle_and_suffix_do_not_map_no_to_other_team (tests.test_moneyline.MoneylineTests.test_kalshi_no_subtitle_and_suffix_do_not_map_no_to_other_team) ... ok
+test_missing_long_flag_or_duplicate_side_identity_block (tests.test_moneyline.MoneylineTests.test_missing_long_flag_or_duplicate_side_identity_block) ... ok
+test_missing_side_is_not_invented (tests.test_moneyline.MoneylineTests.test_missing_side_is_not_invented) ... ok
+test_multiple_venue_markets_share_canonical_market_without_same_venue_pairs (tests.test_moneyline.MoneylineTests.test_multiple_venue_markets_share_canonical_market_without_same_venue_pairs) ... ok
+test_native_yes_no_vs_long_short (tests.test_moneyline.MoneylineTests.test_native_yes_no_vs_long_short) ... ok
+test_non_moneyline_rejection (tests.test_moneyline.MoneylineTests.test_non_moneyline_rejection) ... ok
+test_period_rejection (tests.test_moneyline.MoneylineTests.test_period_rejection) ... ok
+test_rule_revision_invalidates_without_erasing_evidence (tests.test_moneyline.MoneylineTests.test_rule_revision_invalidates_without_erasing_evidence) ... ok
+test_same_exposure_opposing_outcome_and_complement_are_separate (tests.test_moneyline.MoneylineTests.test_same_exposure_opposing_outcome_and_complement_are_separate) ... ok
+test_scope_mismatch_rejected (tests.test_moneyline.MoneylineTests.test_scope_mismatch_rejected) ... ok
+test_side_array_order_price_and_title_do_not_determine_identity (tests.test_moneyline.MoneylineTests.test_side_array_order_price_and_title_do_not_determine_identity) ... ok
+test_stable_native_and_canonical_ids_on_revision (tests.test_moneyline.MoneylineTests.test_stable_native_and_canonical_ids_on_revision) ... ok
+test_store_corruption_and_history_rejected (tests.test_moneyline.MoneylineTests.test_store_corruption_and_history_rejected) ... ok
+test_unknown_and_conflict_cannot_be_approved (tests.test_moneyline.MoneylineTests.test_unknown_and_conflict_cannot_be_approved) ... ok
+test_unmatched_parent_cannot_match_via_historical_id (tests.test_moneyline.MoneylineTests.test_unmatched_parent_cannot_match_via_historical_id) ... ok
+test_withdrawn_market_invalidates_qualification (tests.test_moneyline.MoneylineTests.test_withdrawn_market_invalidates_qualification) ... ok
+test_wrong_rule_game_and_unresolved_participant_block (tests.test_moneyline.MoneylineTests.test_wrong_rule_game_and_unresolved_participant_block) ... ok
+test_all_material_dimensions_unknown_block_exact (tests.test_moneyline.SettlementTests.test_all_material_dimensions_unknown_block_exact) ... ok
+test_known_conflicts_preserve_dimension (tests.test_moneyline.SettlementTests.test_known_conflicts_preserve_dimension) ... ok
+test_known_rules_require_retained_evidence (tests.test_moneyline.SettlementTests.test_known_rules_require_retained_evidence) ... ok
+test_missing_payout_fields_block_exact (tests.test_moneyline.SettlementTests.test_missing_payout_fields_block_exact) ... ok
+test_no_fraction_complement_and_three_way_tie (tests.test_moneyline.SettlementTests.test_no_fraction_complement_and_three_way_tie) ... ok
+test_refund_fraction_and_discretion_are_distinct (tests.test_moneyline.SettlementTests.test_refund_fraction_and_discretion_are_distinct) ... ok
+test_synthetic_cases_are_separately_labeled (tests.test_moneyline.SettlementTests.test_synthetic_cases_are_separately_labeled) ... ok
+
+----------------------------------------------------------------------
+Ran 35 tests in 3.547s
+
+OK

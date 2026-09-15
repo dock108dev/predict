@@ -1,0 +1,13 @@
+{
+  "old_pid": 43541,
+  "new_pid": 30583,
+  "command": "scripts/dashboard start-existing",
+  "state": "idle",
+  "assets_match_13c": {
+    "app/dashboard/static/index.html": "d7653ccd01b144c9dc53c6e6b70c738ff70cc9883a59477ddb8710d2556c3d56",
+    "app/dashboard/static/app.js": "f134623c333b7fe081b70005ea7f168f5fb0f7eec5074f0067cc999df6b68bde",
+    "app/dashboard/static/style.css": "b922cac39578442a55925b72bd799cd2ced619093a92cce1fbbd71bb9b06a0e5"
+  },
+  "migration_run": false,
+  "live_scan_started": false
+}

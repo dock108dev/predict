@@ -1,0 +1,28 @@
+         251048 function calls (205382 primitive calls) in 0.105 seconds
+
+   Ordered by: cumulative time
+   List reduced from 36 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       99    0.000    0.000    0.105    0.001 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:99(put)
+  7170/99    0.010    0.000    0.105    0.001 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:106(node)
+     8652    0.003    0.000    0.068    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:24(encoded)
+     8652    0.005    0.000    0.064    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py:185(dumps)
+     8652    0.005    0.000    0.058    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:185(encode)
+     8652    0.051    0.000    0.051    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:207(iterencode)
+      106    0.000    0.000    0.020    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:10(retained_bytes)
+13852/106    0.009    0.000    0.020    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:17(visit)
+ 6181/106    0.002    0.000    0.020    0.000 {built-in method builtins.sum}
+19341/636    0.002    0.000    0.020    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:21(<genexpr>)
+    62479    0.005    0.000    0.005    0.000 {built-in method builtins.isinstance}
+     1666    0.002    0.000    0.002    0.000 {method 'get' of 'dict' objects}
+     4194    0.001    0.000    0.002    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1476(is_dataclass)
+    24227    0.001    0.000    0.001    0.000 {built-in method builtins.id}
+     8652    0.001    0.000    0.001    0.000 {method 'encode' of 'str' objects}
+    10375    0.001    0.000    0.001    0.000 {built-in method sys.getsizeof}
+    10375    0.001    0.000    0.001    0.000 {method 'add' of 'set' objects}
+     8652    0.001    0.000    0.001    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:105(__init__)
+     8652    0.001    0.000    0.001    0.000 {method 'join' of 'str' objects}
+      346    0.000    0.000    0.001    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:20(<genexpr>)
+
+

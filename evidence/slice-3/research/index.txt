@@ -1,0 +1,85 @@
+# ProphetX APIs Documentation
+
+> Documentation for ProphetX APIs
+
+Append .md to any documentation page URL to get its markdown version.
+
+## Guides
+- [Build with ProphetX](https://docs.prophetx.co/docs/getting-started.md): Choose the ProphetX API that matches the Trading, Parlay, or Market Data integration you are building.
+- [Requesting API Access](https://docs.prophetx.co/docs/requesting-api-access.md): Request access to the ProphetX API by submitting the access form, contacting support, and reviewing the next steps for API onboarding.
+- [API STATUS](https://docs.prophetx.co/docs/api-status.md)
+- [Welcome to ProphetX!](https://docs.prophetx.co/docs/welcome-to-prophetx.md): Choose a ProphetX integration path for Trading, Parlay, Market Data, WebSocket, and production workflows.
+- [Production Transition / Going Live](https://docs.prophetx.co/docs/prophetx-service-api-switch-to-production.md): Move your Trading API integration from sandbox to production by creating production credentials and updating your base URL.
+- [Auto-Fill Integration Guide](https://docs.prophetx.co/docs/auto-fill-integration-guide.md): Generate ProphetX deep links that prefill an order ticket using CFTC market-data terminology and the required legacy deep-link parameters.
+- [Direct Linking Integration with the ProphetX Trading API](https://docs.prophetx.co/docs/order-aggregator-integration-with-the-prophetx-trading-api.md)
+- [FIX Order Entry](https://docs.prophetx.co/docs/prophetx-fix-order-entry.md)
+- [FIX Order Entry Onboarding](https://docs.prophetx.co/docs/fix-order-entry-onboarding.md)
+- [Bones for Building a Bot](https://docs.prophetx.co/docs/bones-for-building-a-bot.md): Build a sandbox trading bot that authenticates with the API, retrieves market data, submits orders, and runs scheduled automation safely.
+- [Integration](https://docs.prophetx.co/docs/integration.md): Configure a sandbox Trading API integration that authenticates, retrieves market data, receives WebSocket updates, and submits or cancels orders.
+- [Integration with Websockets](https://docs.prophetx.co/docs/integrate-with-websockets.md)
+- [WebSocket Events](https://docs.prophetx.co/docs/websocket-events.md): Understand Trading API WebSocket payloads, event and sub-markets channel routing, and `scope`-based classification.
+- [Meaning of Enums](https://docs.prophetx.co/docs/meaning-of-enums.md): Understand the current enum values returned for Trading API orders, markets, and events.
+- [Events Life Cycle](https://docs.prophetx.co/docs/sport-events-life-cycle.md): Handle Trading API `sport_event` WebSocket updates when events are listed, re-listed, or unlisted.
+- [Various Websocket Use Cases](https://docs.prophetx.co/docs/various-websocket-use-cases.md): Use Trading API WebSocket patterns to confirm order status, build market order books, monitor fills, and manage risk in real time.
+- [Wallets](https://docs.prophetx.co/docs/wallets.md)
+- [Parlay Integration](https://docs.prophetx.co/docs/prophetx-parlay-price-quotingconfirmation-integration.md): Provide Parlay price quotes and confirmation responses through the Market Maker API and Parlay WebSocket.
+- [Parlay Additional Information](https://docs.prophetx.co/docs/parlay-overview.md): Understand Parlay matching, offer validity, WebSocket events, status values, and common errors.
+- [Market Data Integration](https://docs.prophetx.co/docs/market-data-integration.md): Retrieve tournaments, sport events, markets, prices, and available quantities for a market-data or price-display application.
+
+## API Reference
+- [Authenticate session](https://docs.prophetx.co/reference/post_auth-login.md): Please access to our website, in Settings/Token to get/create a list of tokens to login with this endpoint
+- [Refresh session](https://docs.prophetx.co/reference/post_auth-refresh.md): Please use this endpoint to refresh your "access_token" after login, access_token will expire after 10 minutes and can be refresh using "refresh_token" given by /auth/login endpoint
+- [Cancel all orders](https://docs.prophetx.co/reference/post_v4-mm-cancel-all-orders.md): Cancel all orders
+- [Cancel multiple orders](https://docs.prophetx.co/reference/post_v4-mm-cancel-multiple-orders.md): Cancel multiple orders
+- [Cancel order](https://docs.prophetx.co/reference/post_v4-mm-cancel-order.md): cancel an order
+- [Cancel all unmatched orders related to an event](https://docs.prophetx.co/reference/post_v4-mm-cancel-orders-by-event.md): Cancel all unmatched orders related to an event
+- [Cancel all unmatched orders related to a market](https://docs.prophetx.co/reference/post_v4-mm-cancel-orders-by-market.md): Cancel all unmatched orders related to a market
+- [Get Order by Order ID](https://docs.prophetx.co/reference/get_v4-mm-get-order-id.md)
+- [Order history](https://docs.prophetx.co/reference/get_v4-mm-get-order-history.md): Date range filter. At least one of the following date ranges is required: `from`/`to` for the order creation time, or `updated_at_from`/`updated_at_to` for the order update time. For each date range, either the `from` or `to` parameter can be provided, or both.
+- [Get order matched detail](https://docs.prophetx.co/reference/get_v4-mm-get-order-matched-detail.md)
+- [Get price ladder](https://docs.prophetx.co/reference/get_v4-mm-get-price-ladder.md): Provide a list of valid prices
+- [Get all filled orders with matching details](https://docs.prophetx.co/reference/get_v4-mm-get-trades.md)
+- [Submit multiple orders](https://docs.prophetx.co/reference/post_v4-mm-submit-multiple-orders.md): ### Note for `failed_orders`  The `index` field of `failed_orders` is the index of the order in the request's order list  ```json {     "data": {         "succeed_orders": [],         "failed_orders": [             {                 "request": {                     "price": 100,                     "quantity": 1000,                     "strike_id": "c8151bb0106b4225132e1eed71214e8c",                     "external_id": "order-fbfd34c6-779a-11ed-a1eb-2242ac000000"                 },                 "error": "order_external_id_existed",                 "message": "given user id already has order with the same external id",                 "index": 0             },             {                 "request": {                     "price": 100,                     "quantity": 1000,                     "strike_id": "af92eecef365f00657df5da3f2d83d5c",                     "external_id": "order-fbfd34c6-779a-11ed-a1eb-2242ac000001"                 },                 "error": "order_external_id_existed",                 "message": "given user id already has order with the same external id",                 "index": 1             }         ]     } } ```
+- [Submit order](https://docs.prophetx.co/reference/post_v4-mm-submit-order.md): ### Submit an order `order_strategy` with value `fillOrKill` that will be auto-canceled if no match is made in 2 seconds `order_strategy` with value `ALO` (add-liquidity-only) rests and posts liquidity only; never takes For normal orders, just remove the `order_strategy` field
+- [Get Balance](https://docs.prophetx.co/reference/get_mm-get-balance.md): Get user balance
+- [Wallet transactions history](https://docs.prophetx.co/reference/get_mm-get-transactions.md): Get history wallet transactions
+- [Wallet transactions history v2](https://docs.prophetx.co/reference/get_v2-mm-get-transactions.md): Get history wallet transactions
+- [Get Balance v4](https://docs.prophetx.co/reference/get_v4-mm-get-balance.md)
+- [Wallet transactions history v4](https://docs.prophetx.co/reference/get_v4-mm-get-transactions.md): BET transactions surface as `transaction_type: "TRADE"`.
+- [List markets](https://docs.prophetx.co/reference/get_mm-get-markets.md): get the list of market
+- [List multiple markets](https://docs.prophetx.co/reference/get_mm-get-multiple-markets.md): list multiple markets of a list of events
+- [Search markets](https://docs.prophetx.co/reference/get_mm-search-markets.md): search the markets
+- [List markets v2](https://docs.prophetx.co/reference/get_v2-mm-get-markets.md): get the list of market, added new fields: category_name, sub_type
+- [List multiple markets v2](https://docs.prophetx.co/reference/get_v2-mm-get-multiple-markets.md): list multiple markets of a list of events, added new fields: category_name, sub_type
+- [List markets v4](https://docs.prophetx.co/reference/get_v4-mm-get-markets.md)
+- [List multiple markets v4](https://docs.prophetx.co/reference/get_v4-mm-get-multiple-markets.md)
+- [Get strikes](https://docs.prophetx.co/reference/get_v4-mm-get-strikes.md)
+- [List Players](https://docs.prophetx.co/reference/get_mm-get-players.md): Get players by tournament ID
+- [Get Player by ID](https://docs.prophetx.co/reference/get_mm-get-players-id.md): Get Player by ID
+- [List sport events](https://docs.prophetx.co/reference/get_mm-get-sport-events.md): get the list of all available sport events #### The list of tournaments  | Tournament ID   | Name                  | |----------       |-------------          | | 109             | MLB                   | | 2541            | KBO League            | | 1036            | Professional Baseball | | 233             | NFL Preseason         | | 31              | NFL                   | | 234             | NHL                   | | 132             | NBA                   |
+- [List tournaments](https://docs.prophetx.co/reference/get_mm-get-tournaments.md): list all available tournaments
+- [Register websocket v4](https://docs.prophetx.co/reference/post_v4-mm-websocket.md): Please use this endpoint to register websocket client (NOTE: for CFTC terminology)
+- [Websocket connection config](https://docs.prophetx.co/reference/get_websocket-connection-config.md): Get connection config for websocket client
+- [List markets](https://docs.prophetx.co/reference/get_affiliate-get-markets.md): get the list of market
+- [List multiple markets](https://docs.prophetx.co/reference/get_affiliate-get-multiple-markets.md): get the list of multiple markets
+- [List markets v2](https://docs.prophetx.co/reference/get_v2-affiliate-get-markets.md): get the list of markets. New fields added in v2 response: - category_name: the name of the market's category - sub_type: the sub-type of the market
+- [List multiple markets v2](https://docs.prophetx.co/reference/get_v2-affiliate-get-multiple-markets.md): get the list of markets. New fields added in v2 response: - category_name: the name of the market's category - sub_type: the sub-type of the market
+- [List markets v3](https://docs.prophetx.co/reference/get_v3-affiliate-get-markets.md): get the list of markets. Changes in v3 response: - selections: support multiple levels of liquidity
+- [List multiple markets v3](https://docs.prophetx.co/reference/get_v3-affiliate-get-multiple-markets.md): get the list of markets. Changes in v3 response: - selections: support multiple levels of liquidity
+- [List markets v4](https://docs.prophetx.co/reference/get_v4-affiliate-get-markets.md): get the list of markets.
+- [List multiple markets v4](https://docs.prophetx.co/reference/get_v4-affiliate-get-multiple-markets.md): get the list of markets.
+- [List sport events](https://docs.prophetx.co/reference/get_affiliate-get-sport-events.md): get the list of all available sport events #### The list of tournaments  | Tournament ID   | Name                  | |----------       |-------------          | | 109             | MLB                   | | 2541            | KBO League            | | 1036            | Professional Baseball | | 233             | NFL Preseason         | | 31              | NFL                   | | 234             | NHL                   | | 132             | NBA                   |
+- [List tournaments](https://docs.prophetx.co/reference/get_affiliate-get-tournaments.md): list all available tournaments
+- [Delete Supported Strikes](https://docs.prophetx.co/reference/delete_supported-strikes.md)
+- [Add Supported Strikes](https://docs.prophetx.co/reference/post_supported-strikes.md): Add Supported Strikes
+- [Get Supported Strikes](https://docs.prophetx.co/reference/get_supported-strikes.md): Get Supported Strikes by SP
+- [List Order Details](https://docs.prophetx.co/reference/get_orders.md): List Orders by User. Supports filtering by time range, relative time, p id, and status. Orders are sorted by update time in descending order.
+- [Price Confirmation Callback](https://docs.prophetx.co/reference/post_orders-confirmations.md): Price Confirmation Callback
+- [Price Offer Callback](https://docs.prophetx.co/reference/post_orders-offers.md): Price Offer Callback
+- [Get Order Detail](https://docs.prophetx.co/reference/get_orders-order-uuid.md): Get Order Detail by Order UUID
+- [Get Connection Config](https://docs.prophetx.co/reference/get_parlay-websocket-connection-config.md): Get Connection Config
+- [Register Client](https://docs.prophetx.co/reference/post_websocket-register.md): Register Client, support `application/json`, `application/x-www-form-urlencoded`
+
+## Changelog
+- [Release Notes — September 3, 2026](https://docs.prophetx.co/changelog/release-notes-september-3-2026.md)
+- [Release Notes — August 19, 2026](https://docs.prophetx.co/changelog/release-notes-august-19-2026.md)

@@ -1,0 +1,30 @@
+         2428204 function calls (1860743 primitive calls) in 0.737 seconds
+
+   Ordered by: cumulative time
+   List reduced from 149 to 22 due to restriction <22>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        3    0.000    0.000    0.722    0.241 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/refresh.py:37(compute)
+      102    0.000    0.000    0.355    0.003 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:106(compile)
+28911/102    0.042    0.000    0.355    0.003 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:113(node)
+    39699    0.027    0.000    0.273    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py:185(dumps)
+      323    0.000    0.000    0.261    0.001 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:10(retained_bytes)
+231362/323    0.114    0.000    0.260    0.001 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:17(visit)
+47590/425    0.019    0.000    0.260    0.001 {built-in method builtins.sum}
+    39699    0.022    0.000    0.241    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:185(encode)
+    34365    0.013    0.000    0.241    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py:24(encoded)
+68636/6027    0.010    0.000    0.237    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:21(<genexpr>)
+    39699    0.210    0.000    0.210    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:207(iterencode)
+117020/1121    0.027    0.000    0.196    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:20(<genexpr>)
+        3    0.001    0.000    0.145    0.048 /Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/replay.py:36(detector_audit)
+        3    0.001    0.000    0.099    0.033 /Users/michaelfuscoletti/Desktop/prediction-arb/app/arbitrage.py:156(detect)
+        3    0.001    0.000    0.052    0.017 /Users/michaelfuscoletti/Desktop/prediction-arb/app/moneyline.py:169(report)
+     4863    0.002    0.000    0.047    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/matching.py:29(clone)
+   526067    0.040    0.000    0.040    0.000 {built-in method builtins.isinstance}
+     5136    0.001    0.000    0.037    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/matching.py:21(packed)
+       96    0.002    0.000    0.030    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/arbitrage.py:204(_evaluate)
+        6    0.000    0.000    0.027    0.005 /Users/michaelfuscoletti/Desktop/prediction-arb/app/matching.py:372(envelope)
+    66740    0.017    0.000    0.026    0.000 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1476(is_dataclass)
+       48    0.001    0.000    0.023    0.000 /Users/michaelfuscoletti/Desktop/prediction-arb/app/settlement.py:69(compare_profiles)
+
+

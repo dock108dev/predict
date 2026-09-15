@@ -1,0 +1,203 @@
+{
+  "complete": false,
+  "runs": 28,
+  "faults": 18,
+  "failed_gates": [
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "burst24",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "burst24",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "overflow40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "overflow40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "slow",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "slow",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "depth",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "depth",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "burst24",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "burst24",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "overflow40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "overflow40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "slow",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "slow",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "depth",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "depth",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "ordinary",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "burst40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 2,
+      "scenario": "burst40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "burst40",
+      "failed": [
+        "view_cadence"
+      ]
+    },
+    {
+      "markets": 4,
+      "scenario": "burst40",
+      "failed": [
+        "view_cadence"
+      ]
+    }
+  ]
+}

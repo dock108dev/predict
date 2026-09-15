@@ -1,0 +1,14 @@
+[
+  {
+    "file": "retail-market-states.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets.md",
+    "retrieved_at": "2026-09-12T00:11:25.445729+00:00",
+    "sha256": "fa2c5f97199dd2b4614916df7875d281322854f158ed6feb51c67505d6703986"
+  },
+  {
+    "file": "retail-book-schema.md",
+    "url": "https://docs.polymarket.us/api-reference/markets/get-market-book.md",
+    "retrieved_at": "2026-09-12T00:11:25.907998+00:00",
+    "sha256": "7075d31d65e5be1f5e468c1383427bd52c0d0ed84898abfd1e07e92fd7711ce3"
+  }
+]

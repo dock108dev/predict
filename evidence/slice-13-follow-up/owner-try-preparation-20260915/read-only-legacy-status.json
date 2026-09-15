@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ed06c7d1-ae22-4ed8-8b90-bec4e22e2917",
+    "saved_status": {
+      "lifecycle": "complete",
+      "coverage": "gaps",
+      "label": "Saved with capture gaps",
+      "explanation": "Saved observations are available, but capture has recorded gaps.",
+      "stop_reason": "Backpressure: bounded queue filled; capture gap recorded",
+      "unprocessed": 32,
+      "rejected": null,
+      "messages": null,
+      "origin": "Captured from a live feed",
+      "current_status": "Saved observations\u2014not live"
+    },
+    "receipts": 22,
+    "messages": null,
+    "current_opportunities": 0
+  },
+  {
+    "id": "c93f79fe-d2c0-4c33-bf97-7ba5fe61a17f",
+    "saved_status": {
+      "lifecycle": "complete",
+      "coverage": "gaps",
+      "label": "Saved with capture gaps",
+      "explanation": "Saved observations are available, but capture has recorded gaps.",
+      "stop_reason": "Backpressure: bounded queue filled; capture gap recorded",
+      "unprocessed": 32,
+      "rejected": null,
+      "messages": null,
+      "origin": "Captured from a live feed",
+      "current_status": "Saved observations\u2014not live"
+    },
+    "receipts": 40,
+    "messages": null,
+    "current_opportunities": 0
+  }
+]

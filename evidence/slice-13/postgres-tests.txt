@@ -1,0 +1,36 @@
+test_disconnected_projection_recomputed (test_dashboard_storage.DashboardStorageTests.test_disconnected_projection_recomputed) ... ok
+test_on_demand_depth_repeat_is_distinct (test_dashboard_storage.DashboardStorageTests.test_on_demand_depth_repeat_is_distinct) ... ok
+test_real_database_disconnect_leaves_incomplete (test_dashboard_storage.DashboardStorageTests.test_real_database_disconnect_leaves_incomplete) ... ok
+test_saved_session_prices_candidates_and_replay (test_dashboard_storage.DashboardStorageTests.test_saved_session_prices_candidates_and_replay) ... ok
+test_worker_pipeline_stops_after_receipt_limit (test_dashboard_storage.DashboardStorageTests.test_worker_pipeline_stops_after_receipt_limit) ... ok
+test_bounded_ingestion_and_no_silent_drop (test_storage.PostgreSQLTests.test_bounded_ingestion_and_no_silent_drop) ... ok
+test_calculation_audit_bound (test_storage.PostgreSQLTests.test_calculation_audit_bound) ... ok
+test_calculations_roundtrip_versions_and_retry (test_storage.PostgreSQLTests.test_calculations_roundtrip_versions_and_retry) ... ok
+test_candidate_disappearance_is_not_negative_price (test_storage.PostgreSQLTests.test_candidate_disappearance_is_not_negative_price) ... ok
+test_candidate_positive_negative_missing_transitions (test_storage.PostgreSQLTests.test_candidate_positive_negative_missing_transitions) ... ok
+test_clock_regression_is_gap (test_storage.PostgreSQLTests.test_clock_regression_is_gap) ... ok
+test_failure_and_gap_recorded (test_storage.PostgreSQLTests.test_failure_and_gap_recorded) ... ok
+test_foreign_key_rollback (test_storage.PostgreSQLTests.test_foreign_key_rollback) ... ok
+test_history_is_censored_not_gap_duration (test_storage.PostgreSQLTests.test_history_is_censored_not_gap_duration) ... ok
+test_identity_collision_rejected (test_storage.PostgreSQLTests.test_identity_collision_rejected) ... ok
+test_ineligible_state_retains_positive_diagnostic (test_storage.PostgreSQLTests.test_ineligible_state_retains_positive_diagnostic) ... ok
+test_metadata_versions_append_without_rewrite (test_storage.PostgreSQLTests.test_metadata_versions_append_without_rewrite) ... ok
+test_migrations_idempotent (test_storage.PostgreSQLTests.test_migrations_idempotent) ... ok
+test_numeric_float_rejected (test_storage.PostgreSQLTests.test_numeric_float_rejected) ... ok
+test_oversized_payload_fails_explicitly (test_storage.PostgreSQLTests.test_oversized_payload_fails_explicitly) ... ok
+test_periodic_full_context (test_storage.PostgreSQLTests.test_periodic_full_context) ... ok
+test_raw_decimal_timestamp_precision (test_storage.PostgreSQLTests.test_raw_decimal_timestamp_precision) ... ok
+test_receipt_set_cannot_change_on_retry (test_storage.PostgreSQLTests.test_receipt_set_cannot_change_on_retry) ... ok
+test_representative_indexes (test_storage.PostgreSQLTests.test_representative_indexes) ... ok
+test_restart_leaves_incomplete_and_new_session (test_storage.PostgreSQLTests.test_restart_leaves_incomplete_and_new_session) ... ok
+test_retry_and_distinct_identical_receipts (test_storage.PostgreSQLTests.test_retry_and_distinct_identical_receipts) ... ok
+test_scope_isolation (test_storage.PostgreSQLTests.test_scope_isolation) ... ok
+test_shared_subtrees_exact_roundtrip (test_storage.PostgreSQLTests.test_shared_subtrees_exact_roundtrip) ... ok
+test_size_status_locks_clock_qualification_changes (test_storage.PostgreSQLTests.test_size_status_locks_clock_qualification_changes) ... ok
+test_submicrosecond_clock_regression (test_storage.PostgreSQLTests.test_submicrosecond_clock_regression) ... ok
+test_transaction_rollback (test_storage.PostgreSQLTests.test_transaction_rollback) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 1.209s
+
+OK

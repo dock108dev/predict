@@ -1,0 +1,77 @@
+{
+  "created_at": "2026-09-12T01:09:01.031741+00:00",
+  "sandbox_api_entitlement": "verified by API Integration UI and authenticated Trading responses",
+  "credential_storage": "designated sandbox Keychain; plaintext sandbox entries removed from .env",
+  "production": "not accessed or qualified",
+  "price": "American odds corroborated with five exact-event UI percentages; shared unsized ask quotes implemented",
+  "quantity": "unknown ownership/unit; sizing unavailable",
+  "timestamp": "native integers preserved; epoch/scale/meaning unresolved",
+  "states": {
+    "active": "corroborated ACTIVE",
+    "others": "UNKNOWN"
+  },
+  "captures": [
+    {
+      "path": "attempt-1/sandbox-20260912T005720Z/result.json",
+      "http_attempts": 5,
+      "frames": 0,
+      "records": 4,
+      "market_bytes": 391002,
+      "initial_image": false,
+      "reconnect_image": false,
+      "cancellation": false,
+      "stop": "verification stopped"
+    },
+    {
+      "path": "attempt-2/sandbox-20260912T005913Z/result.json",
+      "http_attempts": 10,
+      "frames": 6,
+      "records": 4,
+      "market_bytes": 391014,
+      "initial_image": false,
+      "reconnect_image": false,
+      "cancellation": true,
+      "stop": "bounded capture completed"
+    },
+    {
+      "path": "catalog/sandbox-20260912T005709Z/result.json",
+      "http_attempts": 2,
+      "frames": 0,
+      "records": 1,
+      "market_bytes": 45298,
+      "initial_image": false,
+      "reconnect_image": false,
+      "cancellation": false,
+      "stop": "catalog complete; select a returned sports tournament ID"
+    },
+    {
+      "path": "verification/sandbox-20260912T010125Z/result.json",
+      "http_attempts": 5,
+      "frames": 0,
+      "records": 4,
+      "market_bytes": 380541,
+      "initial_image": false,
+      "reconnect_image": false,
+      "cancellation": false,
+      "stop": "verification stopped"
+    },
+    {
+      "path": "verification-fixed/sandbox-20260912T010141Z/result.json",
+      "http_attempts": 10,
+      "frames": 6,
+      "records": 4,
+      "market_bytes": 380534,
+      "initial_image": false,
+      "reconnect_image": false,
+      "cancellation": true,
+      "stop": "bounded capture completed"
+    }
+  ],
+  "total_http_attempts": 32,
+  "total_websocket_frames": 12,
+  "retained_market_bytes": 1588389,
+  "live_market_message_qualification": false,
+  "tests_passed": 78,
+  "examples_passed": 3,
+  "next_action": "Obtain venue clarification using the unsent request in docs/slice-3.md; no contact performed."
+}

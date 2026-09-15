@@ -1,0 +1,9 @@
+{
+  "max_markets": 3,
+  "max_seconds": 600,
+  "max_frames": 1000,
+  "max_frame_bytes_total": 20000000,
+  "max_connections": 2,
+  "max_rest_attempts": 4,
+  "stop_early": "After natural level membership change and initial/reconnected images; no repeated quiet sessions."
+}

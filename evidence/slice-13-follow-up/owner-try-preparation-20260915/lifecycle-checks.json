@@ -1,0 +1,5 @@
+{
+  "existing_database_app_only": true,
+  "database_not_running_refuses_launch": true,
+  "shell_syntax": true
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "13a-v1",
+  "evidence_class": "synthetic",
+  "markets_per_venue": [
+    2,
+    4
+  ],
+  "scenarios": [
+    "ordinary",
+    "burst24",
+    "overflow40",
+    "slow",
+    "depth"
+  ],
+  "repeats": 2,
+  "max_seconds_per_session": 60,
+  "max_offered_per_session": 128,
+  "max_receipts_per_session": 512,
+  "raw_storage_bytes_per_session": 134217728,
+  "database_guard_bytes": 268435456,
+  "max_supervisor_seconds": 900,
+  "estimated_queue_bytes": "canonical serialized fixture; excludes Python heap",
+  "slow_receipt_delay_seconds": 0.05,
+  "overflow_receipt_delay_seconds": 0.1,
+  "network_requests": 0,
+  "historical_arrival_timing": "unknown; no historical timing replay",
+  "storage_guard": "checked after each serial worker operation; overshoot limited to one bounded operation",
+  "total_sessions": 24,
+  "depth_requests_per_depth_session": 1
+}

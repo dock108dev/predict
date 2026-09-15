@@ -1,0 +1,24 @@
+[
+  {
+    "markets_per_venue": 2,
+    "items": 40,
+    "serialized_bytes": 49430,
+    "recursive_item_bytes": 314278,
+    "tracemalloc_retained_growth": 54252,
+    "tracemalloc_peak_bytes": 543028,
+    "queue_item_limit": 48,
+    "queue_byte_limit": 1048576,
+    "interpretation": "Recursive item accounting conservatively recounts shared ladders across items; tracemalloc measures new allocations including queue bookkeeping. Neither is process RSS."
+  },
+  {
+    "markets_per_venue": 4,
+    "items": 40,
+    "serialized_bytes": 49430,
+    "recursive_item_bytes": 254510,
+    "tracemalloc_retained_growth": 49264,
+    "tracemalloc_peak_bytes": 536086,
+    "queue_item_limit": 48,
+    "queue_byte_limit": 1048576,
+    "interpretation": "Recursive item accounting conservatively recounts shared ladders across items; tracemalloc measures new allocations including queue bookkeeping. Neither is process RSS."
+  }
+]

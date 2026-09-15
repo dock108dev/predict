@@ -1,0 +1,222 @@
+[
+  {
+    "file": "kalshi-series.json",
+    "venue": "Kalshi",
+    "source_endpoint": "https://external-api.kalshi.com/trade-api/v2/series?category=Sports",
+    "request_started_at_utc": "2026-09-11T21:53:04.608991+00:00",
+    "retrieved_at_utc": "2026-09-11T21:53:05.280316+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:53:04 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": {
+      "selected_series_tickers": [
+        "KXNFLGAME",
+        "KXMLBGAME"
+      ],
+      "scope": "Sports series catalog; includes other series"
+    },
+    "sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+    "authentication_used": false
+  },
+  {
+    "file": "pmus-nfl-events.json",
+    "venue": "Polymarket US",
+    "source_endpoint": "https://gateway.polymarket.us/v2/leagues/nfl/events",
+    "request_started_at_utc": "2026-09-11T21:53:05.326710+00:00",
+    "retrieved_at_utc": "2026-09-11T21:53:06.513501+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:53:06 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": {
+      "league_slug": "nfl",
+      "selected_event_id": "74905",
+      "selected_event_slug": "nfl-tb-cin-2026-09-13",
+      "selected_market_id": "381958",
+      "scope": "Returned NFL events, including other events/markets"
+    },
+    "sha256": "ca1dfa52eb14e87e1c7388dc0b217eea7323c377522b8b8598f18cc9e70dc3f7",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-nfl-markets.json",
+    "venue": "Kalshi",
+    "source_endpoint": "https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=KXNFLGAME&status=open&limit=100",
+    "request_started_at_utc": "2026-09-11T21:53:43.631598+00:00",
+    "retrieved_at_utc": "2026-09-11T21:53:43.837278+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:53:43 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": {
+      "series_ticker": "KXNFLGAME",
+      "selected_event_ticker": "KXNFLGAME-26SEP13TBCIN",
+      "scope": "First requested open-markets page, limit 100; not exhaustive"
+    },
+    "sha256": "67f59bbf5ac1ed97ab6aaaf58c98dab2aefa9de90b8b754f244aca296f783b64",
+    "authentication_used": false
+  },
+  {
+    "file": "pmus-tb-cin-book.json",
+    "venue": "Polymarket US",
+    "source_endpoint": "https://gateway.polymarket.us/v1/markets/aec-nfl-tb-cin-2026-09-13/book",
+    "request_started_at_utc": "2026-09-11T21:53:43.838491+00:00",
+    "retrieved_at_utc": "2026-09-11T21:53:43.907944+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:53:43 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": {
+      "market_id": "381958",
+      "market_slug": "aec-nfl-tb-cin-2026-09-13",
+      "long_side_id": "763430",
+      "short_side_id": "763431",
+      "id_provenance": "Market/side IDs from pmus-tb-market.json; book embeds marketSlug"
+    },
+    "sha256": "9465b1f98d60b35b788be008519656e971ef0e53f8e82f0cdf9c6d27db214761",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-fee-changes.json",
+    "venue": "Kalshi",
+    "source_endpoint": "https://external-api.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXMLBGAME&show_historical=true",
+    "request_started_at_utc": "2026-09-11T21:53:43.908704+00:00",
+    "retrieved_at_utc": "2026-09-11T21:53:44.034206+00:00",
+    "http_status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "http_date": "Fri, 11 Sep 2026 21:53:44 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": {
+      "series_ticker": "KXMLBGAME"
+    },
+    "sha256": "3602e9b2394d5bd9039964d9e35726919757fd6780007fdbd95813773d14c9d6",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-tb-cin-event.json",
+    "venue": "Kalshi",
+    "source_endpoint": "https://external-api.kalshi.com/trade-api/v2/events/KXNFLGAME-26SEP13TBCIN?with_nested_markets=true",
+    "request_started_at_utc": "2026-09-11T21:54:26.484258+00:00",
+    "retrieved_at_utc": "2026-09-11T21:54:26.631142+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:54:26 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": [
+      "KXNFLGAME-26SEP13TBCIN"
+    ],
+    "sha256": "e9ef9a833e99cc0af41a726c9a521ce17e04a914f88587b48162855693007fe6",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-tb-book.json",
+    "venue": "Kalshi",
+    "source_endpoint": "https://external-api.kalshi.com/trade-api/v2/markets/KXNFLGAME-26SEP13TBCIN-TB/orderbook?depth=0",
+    "request_started_at_utc": "2026-09-11T21:54:26.631458+00:00",
+    "retrieved_at_utc": "2026-09-11T21:54:26.743674+00:00",
+    "http_status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "http_date": "Fri, 11 Sep 2026 21:54:26 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": [
+      "KXNFLGAME-26SEP13TBCIN-TB"
+    ],
+    "sha256": "c1db7d3764ee865d048ff395f55de6061ff45867088d6062e048b1c3d8ce6328",
+    "authentication_used": false
+  },
+  {
+    "file": "pmus-tb-market.json",
+    "venue": "Polymarket US",
+    "source_endpoint": "https://gateway.polymarket.us/v1/market/slug/aec-nfl-tb-cin-2026-09-13",
+    "request_started_at_utc": "2026-09-11T21:54:26.744001+00:00",
+    "retrieved_at_utc": "2026-09-11T21:54:26.830502+00:00",
+    "http_status": 200,
+    "content_type": "application/json",
+    "http_date": "Fri, 11 Sep 2026 21:54:26 GMT",
+    "evidence_type": "live_unauthenticated_observation",
+    "venue_identifiers": [
+      "aec-nfl-tb-cin-2026-09-13"
+    ],
+    "sha256": "db68d4d3391814154e10fae4a16d5ac1c49fe61fc27e347861d57576060f5712",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-nfl-rules.pdf",
+    "venue": "Kalshi",
+    "source_endpoint": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+    "request_started_at_utc": "2026-09-11T21:55:39.424960+00:00",
+    "retrieved_at_utc": "2026-09-11T21:55:39.665439+00:00",
+    "http_status": 200,
+    "content_type": "application/pdf",
+    "evidence_type": "official_document_not_live_market_data",
+    "venue_identifiers": [
+      "KXNFLGAME"
+    ],
+    "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+    "authentication_used": false
+  },
+  {
+    "file": "kalshi-mlb-rules.pdf",
+    "venue": "Kalshi",
+    "source_endpoint": "https://assets.kalshi.com/contract_terms/BASEBALLGAMEWIN.pdf",
+    "request_started_at_utc": "2026-09-11T21:55:39.816441+00:00",
+    "retrieved_at_utc": "2026-09-11T21:55:39.952877+00:00",
+    "http_status": 200,
+    "content_type": "application/pdf",
+    "evidence_type": "official_document_not_live_market_data",
+    "venue_identifiers": [
+      "KXMLBGAME"
+    ],
+    "sha256": "46b02443153f4692acb3bac3d3aedabe93e837b08c80323013c8dce117ebb6e7",
+    "authentication_used": false
+  },
+  {
+    "file": "prophetx-nfl-rules.pdf",
+    "venue": "ProphetX",
+    "source_endpoint": "https://framerusercontent.com/assets/3xBUPoodNIUMWAauxaaccjNRSo.pdf",
+    "request_started_at_utc": "2026-09-11T21:55:40.219343+00:00",
+    "retrieved_at_utc": "2026-09-11T21:55:40.361383+00:00",
+    "http_status": 200,
+    "content_type": "application/pdf",
+    "evidence_type": "official_document_not_live_market_data",
+    "venue_identifiers": {
+      "document": "NFL contract certification dated July 14, 2026",
+      "scope": "Official product rules, not a live event or book"
+    },
+    "sha256": "19b3914698c999f9ae3ee0007fda32967061b030316eab3865334837a816d3cc",
+    "authentication_used": false
+  },
+  {
+    "file": "prophetx-mlb-rules-amendment.pdf",
+    "venue": "ProphetX",
+    "source_endpoint": "https://framerusercontent.com/assets/xOPD9P6Y43gSYnXRNP45EYfPMs.pdf",
+    "request_started_at_utc": "2026-09-11T21:55:40.731344+00:00",
+    "retrieved_at_utc": "2026-09-11T21:55:40.876056+00:00",
+    "http_status": 200,
+    "content_type": "application/pdf",
+    "evidence_type": "official_document_not_live_market_data",
+    "venue_identifiers": {
+      "document": "MLB rules amendment dated July 8, 2026",
+      "scope": "Official product rules, not a live event or book"
+    },
+    "sha256": "ad8c4d01fc58e49807fc0fe7b3f48f5e805e469d9b794dd969d6758b1bf5ac4e",
+    "authentication_used": false
+  },
+  {
+    "file": "prophetx-fee-extension.pdf",
+    "venue": "ProphetX",
+    "source_endpoint": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+    "request_started_at_utc": "2026-09-11T21:55:41.265217+00:00",
+    "retrieved_at_utc": "2026-09-11T21:55:41.600201+00:00",
+    "http_status": 200,
+    "content_type": "application/pdf",
+    "evidence_type": "official_document_not_live_market_data",
+    "venue_identifiers": {
+      "document": "Fee program extension filing dated August 14, 2026",
+      "scope": "Official policy and worked examples, not live market data"
+    },
+    "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18",
+    "authentication_used": false
+  }
+]

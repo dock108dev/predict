@@ -1,0 +1,6 @@
+{
+  "candidate_audits_replayed": 44,
+  "all_equal": true,
+  "source": "depth-example.json",
+  "meaning": "Saved JSON arithmetic replay, not current matching requalification"
+}

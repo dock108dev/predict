@@ -1,0 +1,40 @@
+{
+  "observations": [
+    {
+      "connection": 1,
+      "stream_received_at": "2026-09-11T23:27:58.015369+00:00",
+      "stream_transact_time": "2026-09-11T23:27:57.067765263Z",
+      "rest_received_at": "2026-09-11T23:27:58.147289+00:00",
+      "rest_transact_time": "2026-09-11T23:06:03.697243528Z",
+      "same_exchange_timestamp": false,
+      "bids_equal": false,
+      "offers_equal": false,
+      "state_equal": true
+    },
+    {
+      "connection": 2,
+      "stream_received_at": "2026-09-11T23:28:04.129540+00:00",
+      "stream_transact_time": "2026-09-11T23:28:03.002308592Z",
+      "rest_received_at": "2026-09-11T23:28:04.205898+00:00",
+      "rest_transact_time": "2026-09-11T23:06:03.697243528Z",
+      "same_exchange_timestamp": false,
+      "bids_equal": false,
+      "offers_equal": false,
+      "state_equal": true
+    }
+  ],
+  "provenance": [
+    {
+      "file": "corroborating-rest-1.json",
+      "source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/book",
+      "received_at": "2026-09-11T23:27:58.147289+00:00",
+      "http_status": 200
+    },
+    {
+      "file": "corroborating-rest-2.json",
+      "source": "https://gateway.polymarket.us/v1/markets/aec-nfl-bal-ind-2026-09-13/book",
+      "received_at": "2026-09-11T23:28:04.205898+00:00",
+      "http_status": 200
+    }
+  ]
+}

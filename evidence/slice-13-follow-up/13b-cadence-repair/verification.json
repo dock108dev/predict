@@ -1,0 +1,26 @@
+{
+  "status": "13B complete for revised personal-prototype backend scope",
+  "owner_direction": "For the owner alone; prove the product works. Defer extreme performance logic and testing.",
+  "source_identity_sha256": "4c69af5851ee76b3224f9f53fb6a3eebc0273b6227e7862686fe1845cfdc35f1",
+  "source_identity_file": "personal-prototype-checks/source-identity.json",
+  "source_unchanged": true,
+  "offline_tests": 365,
+  "postgres_tests": 42,
+  "actual_synthetic_controller_loop": "Start, updated view, Stop, saved reopening, historical ineligibility and exact replay passed",
+  "javascript_syntax_passed": true,
+  "prior_matrix_application_source_identical": true,
+  "prior_matrix_source_identity_sha256": "c0cebb70c08b449b76f338ca3d0be86e3b670ff4e51e6b7f84cbe20b1d7812c5",
+  "prior_matrix_sessions": 28,
+  "prior_fault_sessions": 18,
+  "strict_250_ms_gate": "failed and preserved; explicitly deferred by owner, not passed",
+  "deferred": [
+    "strict cadence qualification",
+    "additional extreme performance, drain and memory trials",
+    "repeating all twelve examples solely for this unchanged example surface"
+  ],
+  "venue_requests": 0,
+  "owner_database_access": false,
+  "owner_app_restarted": false,
+  "owner_acceptance": "not inferred from local synthetic checks",
+  "next_slice": "13C simple truthful saved-status/coverage presentation; not started"
+}

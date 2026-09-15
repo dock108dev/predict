@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+case "${1:-start}" in
+ start-existing)
+  # Load the app against an already-running database without setup or migrations.
+  scripts/project-postgres status
+  exec .venv/bin/python -m app.dashboard
+  ;;
+ start)
+  scripts/project-postgres start
+  .venv/bin/python -m app.storage migrate
+  exec .venv/bin/python -m app.dashboard
+  ;;
+ stop)
+  .venv/bin/python - <<'PY'
+from pathlib import Path
+import os,signal,subprocess
+p=Path('.local/dashboard.pid')
+if not p.exists():raise SystemExit('Dashboard is not running.')
+pid=int(p.read_text())
+command=subprocess.run(['ps','-p',str(pid),'-o','command='],capture_output=True,text=True).stdout
+if '-m app.dashboard' not in command:raise SystemExit('PID does not identify this dashboard; no signal sent.')
+os.kill(pid,signal.SIGTERM)
+print('Dashboard shutdown requested. The project database remains available.')
+PY
+  ;;
+ *) echo 'Usage: scripts/dashboard start|start-existing|stop';exit 2 ;;
+esac

@@ -1,0 +1,44 @@
+[
+  {
+    "file": "overview.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/overview.md",
+    "retrieved_at": "2026-09-11T23:26:49.500205+00:00",
+    "sha256": "75fbcd19679904a728f8c14760f94763b1f53cbbd59b579c5eb0797c6b95295f"
+  },
+  {
+    "file": "sdk-tree.json",
+    "url": "https://api.github.com/repos/Polymarket/polymarket-us-python/git/trees/main?recursive=1",
+    "retrieved_at": "2026-09-11T23:26:49.718679+00:00",
+    "sha256": "f00f503c5690701d96ae82cbb10231e8f369b9b83b6bce8250b553bf096e8883"
+  },
+  {
+    "file": "markets.md",
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets.md",
+    "retrieved_at": "2026-09-11T23:26:48.469619+00:00",
+    "sha256": "fa2c5f97199dd2b4614916df7875d281322854f158ed6feb51c67505d6703986"
+  },
+  {
+    "file": "sdk-markets.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/main/polymarket_us/websocket/markets.py",
+    "retrieved_at": "2026-09-11T23:27:23.858916+00:00",
+    "sha256": "ed03ef390c7ed90eccc231785058d0989ef09dd3f82bdb1350f7042a8f5b2145"
+  },
+  {
+    "file": "sdk-types.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/main/polymarket_us/websocket/types.py",
+    "retrieved_at": "2026-09-11T23:27:24.302999+00:00",
+    "sha256": "cc446b2e9a6eb304e9b40698001c8a6c66363283d1c6de026794855a272aa080"
+  },
+  {
+    "file": "retail-sdk-readme.md",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/main/README.md",
+    "retrieved_at": "2026-09-11T23:26:48.057407+00:00",
+    "sha256": "55cd8509f3f5f055e8f06915d2f87165973518fc31acaac104bd6c4c8dc14dc0"
+  },
+  {
+    "file": "sdk-base.py.txt",
+    "url": "https://raw.githubusercontent.com/Polymarket/polymarket-us-python/main/polymarket_us/websocket/base.py",
+    "retrieved_at": "2026-09-11T23:27:24.082888+00:00",
+    "sha256": "42369a4d3fc757d8c4516881023212d7122235b2f3928075d0143c9e0099b757"
+  }
+]

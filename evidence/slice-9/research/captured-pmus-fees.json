@@ -1,0 +1,10 @@
+{
+  "source": "evidence/phase-0/pmus-tb-market.json",
+  "sha256": "db68d4d3391814154e10fae4a16d5ac1c49fe61fc27e347861d57576060f5712",
+  "fee_metadata": [
+    {
+      "path": "/market/feeCoefficient",
+      "value": "0.06"
+    }
+  ]
+}

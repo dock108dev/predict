@@ -1,0 +1,9 @@
+{
+  "status": "not_run",
+  "new_market_data_requests": 0,
+  "authenticated_connections": 0,
+  "reason": "User excluded accepting terms; retail App definition includes APIs and section 1 treats access/use as acceptance. Owner must personally resolve acceptance before the prepared public smoke.",
+  "terms_url": "https://polymarket.us/tos",
+  "reviewed_at": "2026-09-11T23:11:29.196966+00:00",
+  "prepared_request_cap": 5
+}

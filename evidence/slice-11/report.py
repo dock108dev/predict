@@ -1,0 +1,25 @@
+"""Build a compact report from the verified offline example; no recalculation."""
+from pathlib import Path
+import json,hashlib
+out=Path(__file__).resolve().parent
+x=json.loads((out/'depth-example.json').read_text())
+def select(r): return next(c for c in r['candidates'] if all(c['input']['ladders']))
+lines=['# Slice 11 offline depth results','','321 offline tests and all eleven examples passed. All prices and payout rules in the table below are invented; actual versioned Kalshi/PMUS fees are used. Fee and fill-partition conditions prevent these from becoming current production opportunities.','','| Synthetic case | Profit-max quantities | Worst modeled profit | ROI-max quantities | Deployment-max quantities | Search |','|---|---|---:|---|---|---|']
+for name,r in x['synthetic'].items():
+    if name=='top-screen':continue
+    c=select(r); s=c['solutions']; a=s['max_profit']['allocation']
+    lines.append('| '+ ' | '.join([name,' / '.join(a['quantities']),a['worst_case_profit'] or 'unknown',' / '.join(s['max_roi']['allocation']['quantities']),' / '.join(s['max_deployment']['allocation']['quantities']),s['max_profit']['optimality']])+' |')
+lines+=['','Zero shown for unresolved objectives is the no-trade fallback, not a proof that positive quantities lose. The separate minimum-known diagnostic remains available. Deployment is total required cash, and the first scenario requires at least 10% modeled ROI. All objectives use the same cash constraints within each scenario.','','## Equal-quantity depth curve: shrinking edge','','| Quantity per leg | Required cash | Worst modeled profit | ROI |','|---:|---:|---:|---:|']
+c=select(x['synthetic']['shrinking-edge-and-distinct-objectives'])
+for p in c['curve']:
+    roi=p['worst_case_roi']; shown='undefined' if roi is None else roi[:12]
+    lines.append(f"| {p['quantities'][0]} | {p['required_cash']} | {p['worst_case_profit']} | {shown} |")
+lines+=['','ROI display is shortened; complete Decimal values are in the JSON. These are evaluated points, not a monotonic interpolation. The top screen sees only three contracts at .20 on each leg. It agrees with the 3/3 depth result; additional depth eventually loses money.','','## Unequal quantity arithmetic','','The incompatible 2-contract / 3-contract grids select 4/3: $1.40 acquisition cost, $0.05 Kalshi fee and $0.03 PMUS fee. Normal terminal profits are $2.52 and $1.52; half-payout exceptional outcomes return $3.50, producing $2.02. The worst of all outcomes is $1.52. The complete common-grid equal baseline is evaluated independently.','','## Fill assumptions and unknowns','','Each leg is one new taker order, with one assumed fill per consumed price level in ascending price order. Actual fragmentation can change rounded fees, so no fragmentation-independent conservative bound or guaranteed profit is claimed. Fee audits retain grouping, order accumulators, credits, schedule versions and source snapshots. Refunds use exact entry cost; unknown settlement and fees remain null.','','The explicit fractional allocation consumes 1.25 contracts at .20 and .75 at .40 on its Kalshi leg, for exactly $0.55. The partial-depth cash scenario limits total cash to $1.70 and the left venue to $0.70. The unconstrained maximum deployment exceeds those inputs; the constrained result uses only supplied liquidity.','','The [grouping comparison](fee-grouping-comparison.json) independently records $0.04 PMUS fees for one order versus $0.05 for two separate orders, using the same .50 × 1 and .60 × 2 acquisitions. Both are explicit hypothetical partitions; the main sizing model uses one order.','','## Retained production evidence','']
+h=x['historical_production'];pairs=h['top_of_book']['matching']['pairs']
+priced=[c for c in h['top_of_book']['candidates'] if c['pricing_diagnostic']['ask_sum'] is not None]
+lines += [f"{len(pairs)} structural pairs remain settlement-UNKNOWN; {len(h['candidates'])} related candidate combinations, {h['summary']['current_production']} qualified current opportunities. There are {len(priced)} two-ask diagnostics, with sums: {', '.join(c['pricing_diagnostic']['ask_sum'] for c in priced)}. Missing books, verified units, reconstruction, fee contexts and sizing rules are not fabricated.",'','Related candidates share liquidity: never sum their capacities. Actual-fill reconciliation remains unverified. No new collection, account activity or settlement research occurred.','','## Handoff','','Next action: **Slice 12 — PostgreSQL historical capture**. Stop before Slice 12.']
+(out/'report.md').write_text('\n'.join(lines)+'\n')
+root=out.parents[1]
+paths=[root/'app/depth.py',root/'app/depth_example.py',root/'app/arbitrage_example.py',root/'app/fees/engine.py',root/'tests/test_depth.py',root/'docs/slice-11.md',root/'README.md',root.parent/'prediction_arb_next_steps.md',*out.iterdir()]
+manifest={str(p.relative_to(root)) if p.is_relative_to(root) else str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if p.is_file() and p.name!='manifest.json'}
+(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

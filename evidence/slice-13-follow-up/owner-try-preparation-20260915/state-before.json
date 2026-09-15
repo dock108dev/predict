@@ -1,0 +1,362 @@
+{
+  "state": "stopped",
+  "mode": "synthetic",
+  "sid": "486fa7d8-e96a-44e8-a25c-e07f28c78bd5",
+  "limits": {
+    "seconds": 60,
+    "markets": 2,
+    "receipts": 1000,
+    "storage_bytes": 134217728
+  },
+  "started_at": "2026-09-14T00:23:34.864006+00:00",
+  "error": null,
+  "venues": {
+    "kalshi": {
+      "state": "stopped",
+      "note": "Scan stopped; prices are saved observations",
+      "at": "2026-09-14T00:24:35.056683+00:00"
+    },
+    "polymarket_us": {
+      "state": "stopped",
+      "note": "Scan stopped; prices are saved observations",
+      "at": "2026-09-14T00:24:35.056698+00:00"
+    }
+  },
+  "messages": 0,
+  "queue": 0,
+  "depth_busy": false,
+  "view": {
+    "sequence": 30,
+    "at": "2026-09-14T00:24:33.002789+00:00",
+    "markets": [
+      {
+        "key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+        "venue_key": "kalshi",
+        "venue": "Kalshi",
+        "event_id": "ka",
+        "market_id": "contract",
+        "title": "Synthetic contract",
+        "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+        "quotes": [
+          {
+            "environment": "synthetic",
+            "evidence_class": "synthetic",
+            "sync": "synchronized",
+            "depth": "partial",
+            "source_time_progress": "advanced",
+            "source_time_semantics": "snapshot",
+            "source_time_problem": null,
+            "locks_clear": true,
+            "units_verified": true,
+            "minimum": "1",
+            "increment": "1",
+            "sizing_evidence": "invented sizing fixture",
+            "role": "taker",
+            "venue": "kalshi",
+            "event_id": "ka",
+            "market_id": "contract",
+            "side": "yes",
+            "state": "active",
+            "raw_kind": "synthetic",
+            "source": "synthetic:slice-10",
+            "source_sha256": "1e956424cf054b9f6891b865396c0b8928e841e3357e65c7d707d5c292d6d1a8",
+            "received_at": "2026-09-14T00:24:32.998167+00:00",
+            "exchange_at": "2026-09-14T00:24:32.998167+00:00",
+            "ask": "0.55",
+            "available": "3",
+            "unit": "contracts",
+            "side_label": "ATL wins",
+            "receipt_age_seconds": "139475.176183",
+            "source_age_seconds": "139475.176183",
+            "live_eligible": false,
+            "display_state": "Saved observation"
+          }
+        ],
+        "reasons": [],
+        "connection": "saved"
+      },
+      {
+        "key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+        "venue_key": "polymarket_us",
+        "venue": "Polymarket US",
+        "event_id": "pm",
+        "market_id": "market",
+        "title": "Synthetic market",
+        "event_title": "Atlanta vs Pittsburgh \u00b7 invented example",
+        "quotes": [
+          {
+            "environment": "synthetic",
+            "evidence_class": "synthetic",
+            "sync": "synchronized",
+            "depth": "partial",
+            "source_time_progress": "advanced",
+            "source_time_semantics": "snapshot",
+            "source_time_problem": null,
+            "locks_clear": true,
+            "units_verified": true,
+            "minimum": "1",
+            "increment": "1",
+            "sizing_evidence": "invented sizing fixture",
+            "role": "taker",
+            "venue": "polymarket_us",
+            "event_id": "pm",
+            "market_id": "market",
+            "side": "b",
+            "state": "active",
+            "raw_kind": "synthetic",
+            "source": "synthetic:slice-10",
+            "source_sha256": "2dba9aa26d7bb40bf8f9f276e5c9b872687e44b637dceb131a68276b7690bb1e",
+            "received_at": "2026-09-14T00:24:32.998167+00:00",
+            "exchange_at": "2026-09-14T00:24:32.998167+00:00",
+            "ask": "0.55",
+            "available": "3",
+            "unit": "contracts",
+            "side_label": "PIT wins",
+            "receipt_age_seconds": "139475.176183",
+            "source_age_seconds": "139475.176183",
+            "live_eligible": false,
+            "display_state": "Saved observation"
+          }
+        ],
+        "reasons": [],
+        "connection": "saved"
+      }
+    ],
+    "candidates": [
+      {
+        "id": "top-bf4723eb55b9d9d018c6c50f",
+        "pair_id": "market-pair-575d7b88cfb540683605197c",
+        "title": "Synthetic contract",
+        "classification": "Pricing diagnostic",
+        "reasons": [
+          "Fee assumption required",
+          "Missing price or book",
+          "Sizing not verified"
+        ],
+        "technical_reasons": [
+          "leg-0:fee-context-unavailable",
+          "leg-0:ask-observation-unavailable",
+          "leg-1:fee-context-unavailable",
+          "leg-1:ask-observation-unavailable",
+          "leg-0:size-or-economic-rules-unknown",
+          "leg-1:size-or-economic-rules-unknown"
+        ],
+        "legs": [
+          {
+            "venue": "Price unavailable",
+            "side": "no",
+            "side_label": "ATL does not win",
+            "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "title": "Synthetic contract",
+            "price": null,
+            "size": null,
+            "unit": null,
+            "received_at": null,
+            "source_at": null,
+            "source_time_meaning": null,
+            "state": null,
+            "sync": null,
+            "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+            "receipt_age_seconds": null,
+            "source_age_seconds": null
+          },
+          {
+            "venue": "Price unavailable",
+            "side": "a",
+            "side_label": "ATL wins",
+            "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "title": "Synthetic market",
+            "price": null,
+            "size": null,
+            "unit": null,
+            "received_at": null,
+            "source_at": null,
+            "source_time_meaning": null,
+            "state": null,
+            "sync": null,
+            "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+            "receipt_age_seconds": null,
+            "source_age_seconds": null
+          }
+        ],
+        "ask_sum": null,
+        "raw_gap": null,
+        "skew_seconds": null,
+        "profit": null,
+        "roi": null,
+        "minimum_known_profit": null,
+        "fees": [],
+        "outcomes": {},
+        "assumptions": [],
+        "quantity": null,
+        "quantity_mode": null,
+        "qualified": false,
+        "current_opportunity": false,
+        "scope": "unobserved"
+      },
+      {
+        "id": "top-d7a70f50006b31869f9b27d7",
+        "pair_id": "market-pair-575d7b88cfb540683605197c",
+        "title": "Synthetic contract",
+        "classification": "Conditional calculation",
+        "reasons": [
+          "Additional evidence required",
+          "Fee assumption required",
+          "Settlement rules unresolved"
+        ],
+        "technical_reasons": [
+          "leg-0:non-production-environment",
+          "leg-1:non-production-environment",
+          "leg-0:fee:schedule effective time unknown; explicitly pinned documentation scenario",
+          "leg-0:fee:production schedule applied hypothetically to synthetic",
+          "leg-0:fee:event override history incomplete",
+          "leg-0:fee:supplied account precision; FCM/additional account charges excluded and unverified",
+          "leg-1:fee:production schedule applied hypothetically to synthetic",
+          "leg-1:fee:assumed no independent settlement fee; not established by trading schedule"
+        ],
+        "legs": [
+          {
+            "venue": "Kalshi",
+            "side": "yes",
+            "side_label": "ATL wins",
+            "market_key": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\",\"contract\"]",
+            "title": "Synthetic contract",
+            "price": "0.55",
+            "size": "3",
+            "unit": "contracts",
+            "received_at": "2026-09-14T00:24:32.998167+00:00",
+            "source_at": "2026-09-14T00:24:32.998167+00:00",
+            "source_time_meaning": "snapshot",
+            "state": "active",
+            "sync": "synchronized",
+            "liquidity_family": "[\"synthetic\",\"synthetic\",\"kalshi\",\"ka\"]",
+            "receipt_age_seconds": "139475.176183",
+            "source_age_seconds": "139475.176183"
+          },
+          {
+            "venue": "Polymarket US",
+            "side": "b",
+            "side_label": "PIT wins",
+            "market_key": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\",\"market\"]",
+            "title": "Synthetic market",
+            "price": "0.55",
+            "size": "3",
+            "unit": "contracts",
+            "received_at": "2026-09-14T00:24:32.998167+00:00",
+            "source_at": "2026-09-14T00:24:32.998167+00:00",
+            "source_time_meaning": "snapshot",
+            "state": "active",
+            "sync": "synchronized",
+            "liquidity_family": "[\"synthetic\",\"synthetic\",\"polymarket_us\",\"pm\"]",
+            "receipt_age_seconds": "139475.176183",
+            "source_age_seconds": "139475.176183"
+          }
+        ],
+        "ask_sum": "1.10",
+        "raw_gap": "-0.10",
+        "skew_seconds": "0",
+        "profit": "-0.400000",
+        "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+        "minimum_known_profit": "-0.400000",
+        "fees": [
+          {
+            "engine": "fees-1",
+            "entry_fees": "0.060000",
+            "entry_cash_requirement": "1.710000",
+            "assumptions": [
+              "schedule effective time unknown; explicitly pinned documentation scenario",
+              "production schedule applied hypothetically to synthetic",
+              "event override history incomplete",
+              "supplied account precision; FCM/additional account charges excluded and unverified"
+            ],
+            "unsupported": [],
+            "qualification": "conditional"
+          },
+          {
+            "engine": "fees-1",
+            "entry_fees": "0.04",
+            "entry_cash_requirement": "1.69",
+            "assumptions": [
+              "production schedule applied hypothetically to synthetic",
+              "assumed no independent settlement fee; not established by trading schedule"
+            ],
+            "unsupported": [],
+            "qualification": "conditional"
+          }
+        ],
+        "outcomes": {
+          "abandoned": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "canceled": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "discretionary_review": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "postponed_outside_window": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "pregame_forfeit": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "shortened_game": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "tie": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3.0"
+          },
+          "winner:NFL:ATL": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3"
+          },
+          "winner:NFL:PIT": {
+            "profit": "-0.400000",
+            "roi": "-0.1176470588235294117647058823529411764705882352941176470588235294117647058823529411764705882352941176",
+            "settlement_fees": "0",
+            "net_payout": "3"
+          }
+        },
+        "assumptions": [
+          "Both new taker orders fill once at the stated asks; actual-fill reconciliation unverified."
+        ],
+        "quantity": "3",
+        "quantity_mode": "common-visible-top",
+        "qualified": false,
+        "current_opportunity": false,
+        "scope": "synthetic"
+      }
+    ],
+    "receipts": 60,
+    "raw_bytes": 19710,
+    "engine": "top-of-book-1",
+    "freshness_seconds": 10,
+    "mode": "synthetic",
+    "depth_available": true,
+    "active": false,
+    "current_opportunities": 0
+  }
+}

@@ -1,0 +1,14 @@
+usage: python -m app.novig_verify [-h] --environment {qa,production} [--live]
+                                  [--output OUTPUT] [--setup-keychain]
+
+Explicit opt-in private bounded NBX verification. No orders or account reads.
+
+options:
+  -h, --help            show this help message and exit
+  --environment {qa,production}
+  --live                explicitly opt into bounded authenticated read-only
+                        capture
+  --output OUTPUT       new private evidence directory, required for live
+                        capture
+  --setup-keychain      enter venue-issued credentials locally with hidden
+                        input

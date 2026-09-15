@@ -1,0 +1,10 @@
+{
+  "changed_existing_files": [
+    "README.md"
+  ],
+  "expected_changes": [
+    "README.md"
+  ],
+  "plan_and_historical_evidence_unchanged": true,
+  "shared_models_and_existing_adapters_unchanged": true
+}

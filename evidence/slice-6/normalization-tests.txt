@@ -1,0 +1,25 @@
+test_actual_capture_coverage_order_and_preservation (tests.test_normalization.ObservationTests.test_actual_capture_coverage_order_and_preservation) ... Executing <Task finished name='Task-1' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.216 seconds
+Executing <Task finished name='Task-2' coro=<ObservationTests.test_actual_capture_coverage_order_and_preservation() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:126> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.740 seconds
+ok
+test_example_labels_and_coverage_are_separate (tests.test_normalization.ObservationTests.test_example_labels_and_coverage_are_separate) ... Executing <Task finished name='Task-6' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.250 seconds
+Executing <Task finished name='Task-7' coro=<ObservationTests.test_example_labels_and_coverage_are_separate() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:175> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.975 seconds
+ok
+test_synthetic_mutation_native_name_and_league_conflicts (tests.test_normalization.ObservationTests.test_synthetic_mutation_native_name_and_league_conflicts) ... Executing <Task finished name='Task-11' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.237 seconds
+Executing <Task finished name='Task-12' coro=<ObservationTests.test_synthetic_mutation_native_name_and_league_conflicts() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:153> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.343 seconds
+ok
+test_synthetic_unknown_title_format_stays_unresolved (tests.test_normalization.ObservationTests.test_synthetic_unknown_title_format_stays_unresolved) ... Executing <Task finished name='Task-16' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.253 seconds
+ok
+test_complete_membership_and_explicit_aliases (tests.test_normalization.RegistryTests.test_complete_membership_and_explicit_aliases) ... ok
+test_cross_league_and_shared_city_ambiguity (tests.test_normalization.RegistryTests.test_cross_league_and_shared_city_ambiguity) ... ok
+test_missing_unknown_and_unsupported_context (tests.test_normalization.RegistryTests.test_missing_unknown_and_unsupported_context) ... ok
+test_native_scoping_conflict_and_provenance (tests.test_normalization.RegistryTests.test_native_scoping_conflict_and_provenance) ... ok
+test_persistence_and_fresh_process_determinism (tests.test_normalization.RegistryTests.test_persistence_and_fresh_process_determinism) ... ok
+test_synthetic_reused_id_has_independent_environment_identity (tests.test_normalization.RegistryTests.test_synthetic_reused_id_has_independent_environment_identity) ... ok
+test_synthetic_scoped_alias_does_not_merge_entities (tests.test_normalization.RegistryTests.test_synthetic_scoped_alias_does_not_merge_entities) ... ok
+test_validation_duplicate_conflicting_rows_and_targets (tests.test_normalization.RegistryTests.test_validation_duplicate_conflicting_rows_and_targets) ... ok
+test_validation_malformed_and_immutable_indexes (tests.test_normalization.RegistryTests.test_validation_malformed_and_immutable_indexes) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 7.232s
+
+OK

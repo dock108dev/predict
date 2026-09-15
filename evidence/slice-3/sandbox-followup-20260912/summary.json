@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-12T01:17:49.038147+00:00",
+  "existing_session": "Chrome remained signed in; API Integration shows existing key and key-management controls",
+  "credential_source": "existing project sandbox Keychain entry; no new credential needed",
+  "live_result": "live/sandbox-20260912T011548Z/result.json",
+  "http_attempts": 10,
+  "frame_counts": {
+    "pusher:connection_established": 2,
+    "pusher:signin_success": 2,
+    "pusher_internal:subscription_succeeded": 2,
+    "other": 2
+  },
+  "filtered_markets": 0,
+  "market_bytes": 390954,
+  "conclusion": "Authorized event scope matches request on both generations; no market_selections frames received. Two other frames not retained or classified further. Quiet bounded interval does not prove feed failure or absent liquidity. Live market reconstruction and sizing remain unqualified."
+}

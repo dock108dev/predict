@@ -1,0 +1,220 @@
+{
+  "schema": 1,
+  "schedules": [
+    {
+      "venue": "kalshi",
+      "product": "event_contract",
+      "version": "kalshi-july7-observed-sep12",
+      "coefficient": "0.07",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "kalshi-rounding.md",
+          "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+          "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+          "status": 200,
+          "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+        },
+        {
+          "file": "kalshi-events.md",
+          "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+          "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+          "status": 200,
+          "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+        },
+        {
+          "file": "kalshi-series.md",
+          "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+          "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+          "status": 200,
+          "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+        }
+      ],
+      "published_effective_date": "2026-07-07",
+      "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+      "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+      "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+      "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+    },
+    {
+      "venue": "polymarket_us",
+      "product": "event_contract",
+      "version": "pmus-2026-07-01",
+      "coefficient": "0.06",
+      "effective_from": "2026-07-01T04:00:00Z",
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "pmus-fees.md",
+          "url": "https://docs.polymarket.us/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+          "status": 200,
+          "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+        },
+        {
+          "file": "pmus-fractional-current.md",
+          "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+          "status": 200,
+          "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+          "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+        }
+      ],
+      "maker_coefficient": "0.0125"
+    },
+    {
+      "venue": "prophetx",
+      "product": "straight",
+      "version": "prophetx-2026-08-19-v1",
+      "coefficient": "0.02",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "prophetx-fees.html",
+          "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+          "retrieved_at": "2026-09-12T03:13:19.773372+00:00",
+          "status": 200,
+          "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c"
+        },
+        {
+          "file": "prophetx-rebates.pdf",
+          "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+          "retrieved_at": "2026-09-12T03:13:19.945020+00:00",
+          "status": 200,
+          "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18"
+        }
+      ],
+      "published_update_date": "2026-08-19",
+      "effective_note": "Update date is not an exact effective instant"
+    },
+    {
+      "venue": "novig",
+      "product": "pregame",
+      "version": "novig-pregame-observed-sep12",
+      "coefficient": "0",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "novig-fees.md",
+          "url": "https://docs.novig.com/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+          "status": 200,
+          "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+        },
+        {
+          "file": "novig-credits.md",
+          "url": "https://docs.novig.com/maker-credit-program.md",
+          "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+          "status": 200,
+          "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+        },
+        {
+          "file": "novig-help.html",
+          "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+          "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+          "status": 200,
+          "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+        }
+      ],
+      "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+    },
+    {
+      "venue": "novig",
+      "product": "live",
+      "version": "novig-live-observed-sep12",
+      "coefficient": "0.03",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "novig-fees.md",
+          "url": "https://docs.novig.com/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+          "status": 200,
+          "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+        },
+        {
+          "file": "novig-credits.md",
+          "url": "https://docs.novig.com/maker-credit-program.md",
+          "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+          "status": 200,
+          "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+        },
+        {
+          "file": "novig-help.html",
+          "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+          "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+          "status": 200,
+          "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+        }
+      ],
+      "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+    },
+    {
+      "venue": "novig",
+      "product": "futures",
+      "version": "novig-futures-observed-sep12",
+      "coefficient": "0.06",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "novig-fees.md",
+          "url": "https://docs.novig.com/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+          "status": 200,
+          "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+        },
+        {
+          "file": "novig-credits.md",
+          "url": "https://docs.novig.com/maker-credit-program.md",
+          "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+          "status": 200,
+          "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+        },
+        {
+          "file": "novig-help.html",
+          "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+          "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+          "status": 200,
+          "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+        }
+      ],
+      "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+    },
+    {
+      "venue": "novig",
+      "product": "parlay",
+      "version": "novig-parlay-observed-sep12",
+      "coefficient": "0.10",
+      "effective_from": null,
+      "effective_to": null,
+      "sources": [
+        {
+          "file": "novig-fees.md",
+          "url": "https://docs.novig.com/fees.md",
+          "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+          "status": 200,
+          "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+        },
+        {
+          "file": "novig-credits.md",
+          "url": "https://docs.novig.com/maker-credit-program.md",
+          "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+          "status": 200,
+          "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+        },
+        {
+          "file": "novig-help.html",
+          "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+          "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+          "status": 200,
+          "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+        }
+      ],
+      "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 310, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 293, in main
+    fixtures={str(n):dict(books=[serial(asdict(b)) for b in fixture(n)[-1]],rows=fixture(n)[3],
+                                                            ~~~~~~~^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 73, in fixture
+    outcomes=tuple(OutcomeBook(outcome_id=s['native_id'],bids=ladder if row['venue']=='kalshi' else None,
+             ^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/capture_benchmark.py", line 73, in <genexpr>
+    outcomes=tuple(OutcomeBook(outcome_id=s['native_id'],bids=ladder if row['venue']=='kalshi' else None,
+                   ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        asks=ladder if row['venue']!='kalshi' else None) for s in row['sides'])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 6, in __init__
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/models/core.py", line 368, in __post_init__
+    raise ValueError("bids must descend and asks ascend; adapter must normalize")
+ValueError: bids must descend and asks ascend; adapter must normalize
+waiting for server to shut down.... done
+server stopped

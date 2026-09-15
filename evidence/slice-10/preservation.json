@@ -1,0 +1,7 @@
+{
+  "checked_files": 511,
+  "changed": [],
+  "scope": "PLAN.md and all pre-existing app/tests/docs/evidence files; credentials deliberately not read",
+  "result": "unchanged",
+  "baseline": "baseline.json"
+}
