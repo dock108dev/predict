@@ -1,7 +1,9 @@
 # Current sources of truth
 
-Current source baseline: September 16, 2026, commit `00bc5ee` plus the uncommitted
-failure-handling and repository-cleanup changes. The [Desktop tracker](../../prediction_arb_next_steps.md)
+Current source baseline: September 16, 2026, commit `6ce2964`, incorporating the
+failure-handling, repository-cleanup and CI changes, plus uncommitted documentation
+and launcher diagnostic edits. This accuracy pass began at `00bc5ee` before that
+external commit appeared. The [Desktop tracker](../../prediction_arb_next_steps.md)
 and [roadmap](product-roadmap-review.md) still own product scope. Existing services
 were not restarted, and source validation is not owner acceptance.
 

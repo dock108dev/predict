@@ -6,7 +6,9 @@ personal beta supports a multi-game view; trading is not implemented.
 
 ## Run locally
 
-From the repository root, using Python 3.11 or newer:
+From the repository root, using Python 3.11 or newer. The owner-operated live
+workflow requires macOS Keychain; offline CI runs on Linux. No Node.js or
+PostgreSQL service is needed to serve the current beta:
 
 ```sh
 python3 -m venv .venv
@@ -40,6 +42,8 @@ and never enters live ranking or prospective scoring. See the
 
 ## Development and operations
 
+- [Architecture and data](docs/architecture.md): current flow, schemas and historical subsystems.
+- [Configuration and operation](docs/configuration.md): credentials, limits, paths and supported deployment.
 - [Development guide](docs/development.md): source layout and focused validation.
 - [Sources of truth and maintenance decisions](docs/ssot.md): authoritative modules
   and why shared historical paths remain.

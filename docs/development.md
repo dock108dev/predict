@@ -23,6 +23,8 @@ because saved evidence and assets are loaded from repository paths.
 | `evidence/` | Retained observations and verification artifacts; preserve original inputs |
 | `.local/` | Ignored local process state and logs |
 
+See [architecture](architecture.md) for data flow and persisted contracts, and
+[configuration](configuration.md) for runtime settings and service requirements.
 Use [SSOT](ssot.md) for module ownership and retained compatibility decisions.
 The lifecycle methods are expanded for readability but remain in `multi_game.py`;
 no new owner abstraction, route policy or persisted schema is introduced.
@@ -119,3 +121,24 @@ regression scripts, JavaScript syntax, Python compilation, CLI `--help`, 48 loca
 Markdown link targets and `git diff --check` passed. Existing aiohttp AppKey and
 asyncio timing warnings remained visible. No owner service was started/restarted,
 and no live collection, database check, commit or publishing was performed.
+
+
+## Documentation accuracy checkpoint — September 16
+
+This incremental pass uses `00bc5ee02d87936d12ddb5fe0bda485f89dbed6d` plus the
+preexisting uncommitted failure handling, cleanup and CI work. During this pass,
+HEAD advanced externally to `6ce2964`, incorporating that maintenance; this pass
+did not create a commit. The documentation and launcher edits remain uncommitted.
+It adds architecture
+and configuration guides, reconciles the Desktop tracker with its completed
+sections, and corrects the launcher's startup-failure log path for the selected
+instance. Earlier validation counts remain historical. The running owner process
+and prepared review evidence were not refreshed by this documentation pass.
+
+The launcher change was syntax-checked and its early child-exit branch exercised
+with mocked processes, sockets and temporary runtime directories for both instance
+names. No actual child process or listener was started. All 44 local Markdown file targets in the edited repository guides, launcher /
+dashboard / storage CLI `--help`, and `git diff --check` passed. The first mocked
+assertion was corrected to resolve macOS temporary-directory aliases; both instance
+checks then passed. No application suite, database, live collection,
+browser review or hosted CI run was needed or performed for this change.
