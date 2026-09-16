@@ -1,12 +1,15 @@
 # Current sources of truth
 
-September 16, 2026. Maintenance pass based on clean source revision
-`5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7`, the current README,
-[Desktop tracker](../../prediction_arb_next_steps.md), and
-[roadmap](product-roadmap-review.md). The tracker’s older September 15 revision
-is historical; the revision above is the actual local starting point.
-Changes in this pass are uncommitted source changes, not a replacement qualified
-build or owner acceptance. Existing services were not restarted.
+Current source baseline: September 16, 2026, commit `00bc5ee` plus the uncommitted
+failure-handling and repository-cleanup changes. The [Desktop tracker](../../prediction_arb_next_steps.md)
+and [roadmap](product-roadmap-review.md) still own product scope. Existing services
+were not restarted, and source validation is not owner acceptance.
+
+The domain and retention decisions below originate from the earlier SSOT pass at
+`5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7` and remain applicable. See
+[development](development.md) for current setup/checks and
+[failure handling](error-handling.md) for current finalization and diagnostics.
+The earlier verification record at the end is historical.
 
 ## Authoritative domains
 
@@ -138,7 +141,7 @@ Do not delete consumed-attempt markers or original evidence. Unify conditional
 board and versioned all-outcome audit contracts only after defining how their
 intentionally different qualification/provenance semantics should map.
 
-## Verification
+## Historical SSOT verification
 
 Passed 37 focused tests:
 
@@ -157,8 +160,9 @@ there were no failures.
 changed test modules, and `git diff --check`, also pass. After the successful
 37-test run, `.venv` disappeared from the workspace; the attempted virtualenv
 compile command therefore failed before running. System Python supplied the
-syntax check. Restoring the development environment is needed before rerunning
-the documented test command. An existing owner-try `app-start.log` gained two
+syntax check. At that checkpoint, restoring the development environment was needed before
+rerunning the command. The current cleanup pass has verified that `.venv` is
+available again; use the development guide for current commands. An existing owner-try `app-start.log` gained two
 lines during this pass; it was not edited or reverted by this work. No provider requests,
 credential lookup, database work, application restart, packaging, full CI matrix,
 commit or publishing was performed. Browser/live checks were not run; this pass

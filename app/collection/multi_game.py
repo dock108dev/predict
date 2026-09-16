@@ -1,6 +1,5 @@
 """One bounded multi-game run, using E6's journal, lifecycle and native streams."""
 import asyncio
-from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone, timedelta
 import json
@@ -11,7 +10,6 @@ from .prediction_discovery import NFLPolymarketAdapter, participant_mapping, val
 from .prediction_producer import MockREST, PredictionProducer
 from .transport_session import TransportSession
 from .venue_access import ENDPOINTS, REFERENCES
-from .real_capture import LIMITS
 
 
 def native_identity(k, p, km, pm):

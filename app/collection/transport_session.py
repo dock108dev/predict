@@ -1,4 +1,5 @@
 """Explicit E6 observation owner; prediction-first activation and exact durable replay."""
+from app.diagnostics import failure
 import asyncio
 import base64
 from copy import deepcopy
@@ -31,7 +32,12 @@ class ObservationJournal:
         # No buffered close may silently retry a failed write/flush.
         self.file=self.path.open('xb',buffering=0)
         import fcntl
-        fcntl.flock(self.file,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:
+            fcntl.flock(self.file,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BaseException:
+            try:self.file.close()
+            except OSError as exc:failure(__name__, 'journal_lock_cleanup', exc)
+            raise
     def save(self, row):
         if self.failed:raise self.failed
         payload=packed(row)
@@ -116,7 +122,7 @@ class TransportSession:
         self.sid=str(uuid4()); self.closing=False; self.persistence_error=None; self.last_reference=None
         self.intake_closed=False
         self.counts=dict(received=0,accepted=0,write_attempted=0,durably_acknowledged=0,rejected=0)
-        self.failure_report='not_attempted'; self.cleanup_complete=False
+        self.failure_report='not_attempted'; self.cleanup_complete=False; self.cleanup_errors=[]
 
     def accounting(self):
         return dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged'],
@@ -146,7 +152,17 @@ class TransportSession:
                 primary_journal_completion=('acknowledged' if self.journal and self.journal.terminal_acknowledged else 'not_acknowledged'),cleanup_complete=self.cleanup_complete,
                 provenance='supplemental runtime report; not primary journal or recovery evidence'))
             self.failure_report='saved'
-        except Exception:pass
+        except Exception as exc:
+            failure(__name__, 'storage_failure_report', exc)
+
+    async def close_resources(self):
+        resources=list(self.producers.items())
+        if self.reference:resources.append(('reference',self.reference))
+        results=await asyncio.gather(*(p.aclose() for _,p in resources),return_exceptions=True)
+        for (name,_),result in zip(resources,results):
+            if isinstance(result,BaseException):
+                self.cleanup_errors.append(name+':'+type(result).__name__)
+                failure(__name__, 'resource_close', result)
 
     def emit(self,source,record):
         self.counts['received']+=1
@@ -209,12 +225,11 @@ class TransportSession:
             self.emit('session',dict(type='session_started',spec=self.spec,provenance=('real venue observation; economics unqualified' if self.spec['mode']=='real' else 'local mock; fabricated protocol and identified retained metadata')))
         except OSError as exc:
             self.storage_failed(getattr(exc,'stage','open'))
-            await asyncio.gather(*(p.aclose() for p in self.producers.values()),return_exceptions=True)
-            if self.reference:await self.reference.aclose()
+            await self.close_resources()
             if self.journal:
                 try:self.journal.close()
                 except OSError:pass
-            self.cleanup_complete=True;self.state='failed';self.report_failure()
+            self.cleanup_complete=not self.cleanup_errors;self.state='failed';self.report_failure()
             raise
         self.state='running'; self.task=asyncio.create_task(self.run())
         return self.sid
@@ -280,6 +295,7 @@ class TransportSession:
             try:await coro
             except asyncio.CancelledError:raise
             except Exception as exc:
+                failure(__name__, 'producer', exc)
                 self.request_stop('producer_failure:'+type(exc).__name__)
             else:
                 if not self.stop_event.is_set():self.request_stop('producer_ended')
@@ -310,27 +326,27 @@ class TransportSession:
             self.request_stop('cancelled')
             raise
         except TimeoutError:self.request_stop('duration_or_kickoff_cutoff')
-        except Exception as exc:self.request_stop('discovery_failure:'+type(exc).__name__)
+        except Exception as exc:
+            failure(__name__, 'discovery', exc)
+            self.request_stop('discovery_failure:'+type(exc).__name__)
         finally:
             self.state='stopping'
             for task in tasks:task.cancel()
             await asyncio.gather(*tasks,return_exceptions=True)
-            closures=[p.aclose() for p in self.producers.values()]
-            if self.reference:closures.append(self.reference.aclose())
-            await asyncio.gather(*closures,return_exceptions=True)
+            await self.close_resources()
             self.closing=True; await consumer
             try:
                 if not self.persistence_error:self.journal.save(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
                     delivered=self.delivered,persisted=self.persisted,ingress_accounting=dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged']),health=self.health,accounting=self.reference.budget.snapshot() if self.reference else None,
-                    prediction_accounting={v:dict(requests=p.budget.requests,connections=p.budget.connections,
+                    cleanup_errors=list(self.cleanup_errors),prediction_accounting={v:dict(requests=p.budget.requests,connections=p.budget.connections,
                         dollars_reserved=str(p.budget.dollars),body_bytes_charged=p.budget.bytes) for v,p in self.producers.items()},economics=None))
-            except OSError as exc:self.storage_failed(getattr(exc,'stage','terminal'))
+            except (OSError,BudgetStop) as exc:self.storage_failed(getattr(exc,'stage','terminal'))
             finally:
                 self.intake_closed=True
                 try:self.journal.close()
                 except OSError as exc:self.storage_failed(getattr(exc,'stage','close'))
-                self.cleanup_complete=True
-                self.state='failed' if self.persistence_error else 'stopped'
+                self.cleanup_complete=not self.cleanup_errors
+                self.state='failed' if self.persistence_error or self.cleanup_errors else 'stopped'
                 if self.persistence_error:self.report_failure()
 
     async def stop(self):
