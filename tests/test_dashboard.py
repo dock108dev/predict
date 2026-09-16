@@ -129,6 +129,18 @@ class APITests(unittest.IsolatedAsyncioTestCase):
   with patch('app.dashboard.repository.saved_view',return_value={'markets':[],'candidates':[{'legs':[],'current_opportunity':True}]}):
    r=await self.client.get('/api/sessions/test-session',headers=self.headers);data=await r.json()
    self.assertFalse(data['active']);self.assertFalse(data['candidates'][0]['current_opportunity'])
+ async def test_exception_details_are_not_exposed(self):
+  private='Traceback: /private/database.py password=secret-token SELECT internal_table'
+  for error in (LookupError,KeyError,ValueError,RuntimeError,Exception):
+   with self.subTest(error=error.__name__):
+    with patch('app.dashboard.repository.saved_view',side_effect=error(private)):
+     r=await self.client.get('/api/sessions/test-session',headers=self.headers)
+    self.assertEqual(r.status,400 if issubclass(error,(LookupError,ValueError)) else 409 if error is RuntimeError else 503)
+    data=await r.json()
+    self.assertEqual(set(data),{'error'})
+    for detail in ('Traceback','/private','password','secret-token','internal_table'):
+     self.assertNotIn(detail,data['error'])
+    self.assertEqual(r.headers['Cache-Control'],'no-store')
  async def test_no_arbitrary_path_or_raw_endpoint(self):
   r=await self.client.get('/assets/not-allowed',headers=self.headers);self.assertEqual(r.status,404)
   r=await self.client.get('/api/raw',headers=self.headers);self.assertEqual(r.status,404)

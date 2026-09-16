@@ -29,7 +29,7 @@ def create_app(controller=None):
             if request.headers.get('Origin')!=ORIGIN or not secrets.compare_digest(request.headers.get('X-Scan-Token',''),token) or request.content_type!='application/json':
                 return response({'error':'Scan control request denied'},403)
         try:r=await handler(request)
-        except (LookupError,ValueError) as e:r=response({'error':str(e)[:150]},400)
+        except (LookupError,ValueError):r=response({'error':'Invalid request or unavailable saved data. Check your selection and scan settings.'},400)
         except RuntimeError:r=response({'error':'A scan or calculation is already active. Stop it before starting another.'},409)
         except web.HTTPException:raise
         except Exception:r=response({'error':'Local data is unavailable. Check the project database; scan controls remain safe.'},503)
