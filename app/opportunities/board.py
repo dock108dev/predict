@@ -135,7 +135,7 @@ def expected(leg, probability, quantity, identity=None):
                           break_even_pct=textnum(-y/(x-y)*100),status='Conditional scenario')
     return result
 
-def evaluate(point, rows, quantity='100', scenario='cent', probability='0.50', selected='polymarket_us:1315440', identity=None):
+def evaluate(point, rows, quantity='100', scenario='cent', probability=None, selected='polymarket_us:1315440', identity=None):
     sides=identity['sides'] if identity else SIDES
     teams=identity['teams'] if identity else TEAMS
     candidate_defs=identity['candidates'] if identity else CANDIDATES

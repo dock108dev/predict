@@ -52,8 +52,8 @@ class MultiPageTests(unittest.TestCase):
                     self.assertEqual(r['quantity'],str(quantity))
             r=estimate(c,a,g,'100','cent');v=oracle(ls,100,'kalshi')
             evidence.append(dict(game=g['title'],team=r['target_team'],odds=page['sides'],overround_exact=str(total-1),probability_exact=str(prob),probability=r['probability'],ask=r['leg']['ask'],available=r['leg']['visible_size'],purchase_cost=dec(v['cost']),fee=dec(v['fee']),cash=dec(v['cash']),net=r['expected_profit'],roi=r['return_pct'],target_received_at=r['target_received_at'],reference_retrieved_at=r['reference_retrieved_at'],match=True))
-        # This output belongs only to this new review; old baselines are never written.
-        Path('evidence/multi-page-research/reconciliation.json').write_text(json.dumps(evidence,indent=2))
+        # Compare against retained evidence; routine tests must never rewrite it.
+        self.assertEqual(evidence, json.loads(Path('evidence/multi-page-research/reconciliation.json').read_text()))
 
     def test_identity_orientation_and_each_assessment(self):
         values=list(self.entries.values())

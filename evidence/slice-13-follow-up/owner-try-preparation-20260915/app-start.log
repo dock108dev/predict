@@ -1,2 +1,4 @@
 pg_ctl: server is running (PID: 41741)
 /opt/homebrew/Cellar/postgresql@14/14.20/bin/postgres "-D" "/Users/michaelfuscoletti/Desktop/prediction-arb/.local/postgres" "-k" "/Users/michaelfuscoletti/Desktop/prediction-arb/.local/pgsocket" "-p" "55432" "-c" "listen_addresses=" "-c" "unix_socket_permissions=0700"
+======== Running on http://127.0.0.1:8765 ========
+(Press CTRL+C to quit)

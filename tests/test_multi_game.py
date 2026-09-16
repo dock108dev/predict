@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from aiohttp.test_utils import AioHTTPTestCase
-from app.dashboard.opportunity_board import load_sessions,catalog
+from app.dashboard.opportunity_board import load_sessions
 from app.dashboard.multi_game import configuration,MultiOwner,project_game,default_point,game_calculation,rank_filter
 from app.collection.multi_game import native_identity,common_events
 from app.collection.run_spec import preflight
@@ -68,6 +68,20 @@ class HTTPTests(AioHTTPTestCase):
         detail=await(await self.client.get('/api/calculate',params=q)).json();self.assertEqual(detail['game']['id'],row['game_id']);self.assertEqual(detail['quantity'],'100')
         ev=await(await self.client.get('/api/dashboard',params={'view':'ev'})).json();self.assertTrue(all(x['profit'] is None for x in ev['rows']))
         self.assertFalse((await(await self.client.get('/api/status')).json())['active'])
+    async def test_unsupported_and_duplicate_selections_fail(self):
+        for key,value in [('view','obsolete'),('sort','price'),('scenario','zero'),
+                          ('freshness','fresh'),('positive','yes')]:
+            response=await self.client.get('/api/dashboard',params={key:value})
+            self.assertEqual(response.status,422)
+            self.assertIn('Unknown', (await response.json())['error'])
+        response=await self.client.get('/api/dashboard?view=arb&view=ev')
+        self.assertEqual(response.status,422)
+        c=(await(await self.client.get('/api/sessions')).json())[0]
+        q=dict(session=c['id'],hash=c['hash'],cutoff='missing')
+        response=await self.client.get('/api/calculate',params=q)
+        self.assertEqual(response.status,422)
+        self.assertEqual((await response.json())['error'],'Unknown cutoff')
+
     async def test_guard_persists_without_dispatch(self):
         (Path(self.tmp.name)/'attempt.json').write_text('{}')
         with patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('no extra run')):

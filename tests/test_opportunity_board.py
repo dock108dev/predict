@@ -1,15 +1,18 @@
 import unittest
+import tempfile
+from pathlib import Path
 from copy import deepcopy
 from decimal import Decimal
 from aiohttp.test_utils import AioHTTPTestCase
-from app.dashboard.opportunity_board import load_sessions,catalog,create_app
+from app.dashboard.opportunity_board import load_sessions,create_app
 from app.opportunities.board import evaluate,contracts,ASSESSMENT_AT
 from app.dashboard.e6_real import exact_time
+from app.dashboard.multi_game import default_point
 
 class BoardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.sessions=load_sessions();c=catalog(cls.sessions)[0];p,cls.rows=cls.sessions[c['id']];cls.timeline=p['timeline'];cls.point=p['timeline'][c['default_cutoff']]
+        cls.sessions=load_sessions();p,cls.rows=next(iter(cls.sessions.values()));cls.timeline=p['timeline'];cls.point=default_point(cls.timeline)
     def calc(self,**kwargs):return evaluate(self.point,self.rows,**kwargs)
     def test_native_orientation_and_no_short_purchase(self):
         r=self.calc();legs={x['id']:x for x in r['contracts']}
@@ -45,7 +48,7 @@ class BoardTests(unittest.TestCase):
     def test_independent_positive_negative_unknown_ev(self):
         for p,profit in [('0.5','15.67'),('0.2','-14.33'),('0','-34.33'),('1','65.67')]:
             e=self.calc(probability=p)['ev'];self.assertEqual(Decimal(e['expected_profit']),Decimal(profit));self.assertEqual(Decimal(e['break_even_pct']),Decimal('34.33'))
-        r=self.calc(scenario='unknown');self.assertIsNone(r['ev']['expected_profit']);self.assertIsNone(r['ev']['break_even_pct'])
+        r=self.calc(scenario='unknown',probability='0.5');self.assertIsNone(r['ev']['expected_profit']);self.assertIsNone(r['ev']['break_even_pct'])
         self.assertIsNone(r['candidates'][0]['profit']);self.assertTrue(any(c['raw_gap'] is not None for c in r['candidates']))
         self.assertEqual(self.calc()['ev']['leg']['fee_audit']['context']['trade_time'],self.point['at'])
         self.assertEqual(self.calc()['assessment']['assessed_at'],ASSESSMENT_AT)
@@ -70,9 +73,14 @@ class BoardTests(unittest.TestCase):
         o=p['cards'][1]['book']['outcomes'][0]
         o['quote'].update(ask='.33',ask_size='99.5')
         o['depth']['asks']['levels']=[dict(price=dict(value='.33'),quantity=dict(value='99.5',unit='contracts')),dict(price=dict(value='.34'),quantity=dict(value='10',unit='contracts'))]
-        e=evaluate(p,self.rows)['ev']
+        e=evaluate(p,self.rows,probability='0.5')['ev']
         self.assertIsNone(e['expected_profit'])
         self.assertTrue(any('whole contracts' in x for x in e['leg']['reasons']))
+
+    def test_no_implicit_probability(self):
+        ev=self.calc()['ev']
+        self.assertIsNone(ev['probability']);self.assertIsNone(ev['expected_profit'])
+        self.assertEqual(ev['status'],'Assumption needed')
 
     def test_input_and_probability_separation(self):
         for kw in [dict(quantity='0'),dict(quantity='1.5'),dict(probability='NaN'),dict(probability='1.01'),dict(scenario='zero')]:
@@ -82,12 +90,16 @@ class BoardTests(unittest.TestCase):
         self.assertIn('excluded',a['ev']['conditional_on'])
 
 class HTTPTests(AioHTTPTestCase):
-    async def get_application(self):return create_app()
+    async def get_application(self):
+        tmp=tempfile.TemporaryDirectory();self.addCleanup(tmp.cleanup)
+        return create_app(output=Path(tmp.name))
     async def test_readonly_selection(self):
         c=(await (await self.client.get('/api/sessions')).json())[0]
         q=dict(session=c['id'],hash=c['hash'],cutoff=c['timeline'][c['default_cutoff']]['id'],quantity='100')
         response=await self.client.get('/api/calculate',params=q);self.assertEqual(response.status,200)
+        result=await response.json();self.assertIsNone(result['ev']['probability']);self.assertIsNone(result['ev']['expected_profit'])
+        self.assertEqual((await self.client.get('/api/dashboard')).status,200)
         q['hash']='bad';self.assertEqual((await self.client.get('/api/calculate',params=q)).status,422)
-        self.assertEqual((await self.client.post('/api/start')).status,404)
+        self.assertEqual((await self.client.post('/api/start')).status,403)
 
 if __name__=='__main__':unittest.main()

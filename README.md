@@ -4,24 +4,39 @@ Shared read-only models and synthetic, Polymarket US, ProphetX, Kalshi and Novig
 
 ## Expansion guidance and local reference repositories
 
-Follow the [current roadmap](docs/product-roadmap-review.md) and [Desktop tracker](../prediction_arb_next_steps.md) for the active POC → personal beta → later-hardening order. Next: a personal opportunity board using real prediction books and existing Arb/EV engines. E1–E6 retain their completed evidence; full E6 reliability is not a POC gate. The local source audit below is already recorded in E1. The owner-provided old repositories are checked out locally at [SDA](../archived/sda) and [Scroll Down](../archived/scroll-down-web), under `/Users/michaelfuscoletti/Desktop/archived`. See the roadmap's **Local source copies for E1** section for verified default branches, exact revisions and review guidance. Review these copies before implementing equivalent normalization, odds/history or interface components; their availability does not establish reuse suitability or complete the audit.
+Follow the [current roadmap](docs/product-roadmap-review.md) and [Desktop tracker](../prediction_arb_next_steps.md) for the active POC → personal beta → later-hardening order. The multi-game personal beta and six-game saved-page research view are implemented. E1–E6 retain their completed evidence; full E6 reliability is not a POC gate. The local source audit below is already recorded in E1. The owner-provided old repositories are checked out locally at [SDA](../archived/sda) and [Scroll Down](../archived/scroll-down-web), under `/Users/michaelfuscoletti/Desktop/archived`. See the roadmap's **Local source copies for E1** section for verified default branches, exact revisions and review guidance. Review these copies before implementing equivalent normalization, odds/history or interface components; their availability does not establish reuse suitability or complete the audit.
 
-## Local dashboard
+## Current personal-beta dashboard
 
-Open [Market watch](http://127.0.0.1:8765/). Launch with:
+Launch the file-backed multi-game board with `scripts/opportunity-board start`.
+The default address is [Predict](http://127.0.0.1:8783/); the launcher prints the
+actual address if that port is occupied. It starts idle. Explicit **Start scan**
+collects only within the chosen bounds: 1–6 games and 1–180 seconds, defaulting to
+six games / 175 seconds. **Stop** finishes saving; **Saved scans** reopens retained
+results. Launching does not authorize a new collection.
 
-```sh
-cd /Users/michaelfuscoletti/Desktop/prediction-arb
-scripts/dashboard start
-```
+Arb candidates, explicitly entered what-if EV, and Page-derived research are
+separate views. Missing probability stays unknown. Research uses six bound saved
+page comparisons, is retrospective/time-mismatched, and never enters live ranking
+or prospective scoring. Unknown fees and exceptional settlement remain unknown;
+negative, zero and unavailable results are valid. The beta does not use PostgreSQL.
 
-This starts/checks the dedicated project PostgreSQL database, applies migrations and serves the loopback dashboard. Choose Live → Start scan → inspect prices/details → Stop → Historical to revisit the session. Synthetic demo is separate. Default scans last at most 60 seconds with 2 markets per venue; unknown settlement, fees and sizing stay visible.
+Use `scripts/opportunity-board status` or `scripts/opportunity-board stop` to manage
+only this instance. Source edits do not reload an existing process automatically.
+See [current SSOTs and maintenance decisions](docs/ssot.md),
+[operation report](docs/personal-beta-operation-report.md), and
+[saved research report](docs/multi-page-research-report.md).
+See [local security boundaries and maintenance findings](docs/security.md) for
+request protections, validation results and remaining local-machine assumptions.
 
-Stop collection with **Stop**. Stop the app with Ctrl-C or `scripts/dashboard stop`; stop its database separately with `scripts/project-postgres stop` after the app exits. No scan automatically resumes. Stop collection before database maintenance/examples.
+The older PostgreSQL dashboard (`scripts/dashboard`) and E5/E6 previews remain
+separate historical/replay tools, not alternate personal-beta launch paths. Their
+original commands and boundaries are retained in the [Slice 13 handoff](docs/slice-13.md).
 
-To load repaired application code while preserving an existing database, first confirm `/api/state` is idle or stopped, with no queued or active work. Then use `scripts/dashboard stop`, wait for the app to exit, and run `scripts/dashboard start-existing`. This option only checks that PostgreSQL is running and starts the app; it does not initialize the database or run migrations. If the existing schema is incompatible, stop and report the error before using the regular setup command. Start collection only through an authorized user action.
+## Historical implementation records
 
-See [Slice 13 handoff](docs/slice-13.md) for limits, live evidence and verification. Owner acceptance and continuous reliability remain unclaimed.
+The numbered slice summaries below retain original evidence and test counts;
+they do not set the current next action. Use the Desktop tracker above.
 
 The original synthetic example remains available as `python3 -m app.example`.
 See the [Slice 1 historical record](docs/slice-1.md),
@@ -100,8 +115,7 @@ events; Novig remains synthetic-only and MLB capture coverage remains zero.
 ```
 
 151 offline tests and all six examples pass. See [Slice 6](docs/slice-6.md) for
-actual coverage, source checks and exact evidence. The next project action is
-**Slice 13 — simple live dashboard**. Novig credentials and live verification
+actual coverage, source checks and exact evidence. The historical next action was Slice 13, now complete. Novig credentials and live verification
 remain a parallel external dependency.
 
 ## Slice 7 — canonical event matching (complete)
@@ -146,8 +160,7 @@ independent opportunities. **213 offline tests and all eight examples pass.**
 See [Slice 8](docs/slice-8.md), [offline demonstration](evidence/slice-8/moneyline-example.json)
 and [verification](evidence/slice-8/verification.json). **Historical handoff: Slice 9 — fee engine (now completed below).**
 ProphetX sizing/clock/live-selection limits and Novig credentials/live verification
-remain separate dependencies. No fees, arbitrage calculator, simulator or dashboard
-were implemented.
+remain separate dependencies. At the Slice 8 boundary, fees, arbitrage calculation, simulation and dashboard work had not yet been implemented.
 
 
 ## Slice 9 — versioned, outcome-aware fee engine (complete)
@@ -221,7 +234,7 @@ See [API, coverage and limits](docs/slice-11.md),
 [readable results](evidence/slice-11/report.md),
 [full demonstration](evidence/slice-11/depth-example.json) and
 [verification](evidence/slice-11/verification.json).
-**Next: Slice 13 — simple live dashboard. Stop before Slice 13.**
+**Historical handoff: Slice 13 — simple live dashboard (now complete).**
 
 
 ## Slice 12 — PostgreSQL historical capture (complete)
@@ -250,4 +263,4 @@ and synthetic cases are retained separately. No live credentials were needed.
 See [Slice 12 commands, schema, limits and verification](docs/slice-12.md),
 [PostgreSQL integration tests](evidence/slice-12/integration-tests.txt), and
 [actual bundle/backup restore results](evidence/slice-12/restore-verification.json).
-**Next: Slice 13 — simple live dashboard. Stop before Slice 13.**
+**Historical handoff: Slice 13 — simple live dashboard (now complete).**

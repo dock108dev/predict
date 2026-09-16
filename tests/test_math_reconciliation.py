@@ -112,7 +112,7 @@ class ReconciliationTests(unittest.TestCase):
         for sort,field in [('roi','return_pct'),('dollars','profit')]:
             want=sorted(ranking,key=lambda r:(not r['usable'],r[field] is None,-F(r[field]) if r[field] is not None else F(0),r['id']))
             got=rank_filter(ranking,sort=sort);self.assertEqual([r['id'] for r in got],[r['id'] for r in want]);ranks[sort]=[r['id'] for r in got]
-        Path('evidence/math-reconciliation/baseline.json').write_text(json.dumps(dict(session=SID,quantity='100',scenario='cent',journal_sha256=self.saved['sha256'],candidates=evidence,ev_scenarios=evchecks,rankings=ranks),indent=2))
+        self.assertEqual(json.loads(json.dumps(dict(session=SID,quantity='100',scenario='cent',journal_sha256=self.saved['sha256'],candidates=evidence,ev_scenarios=evchecks,rankings=ranks))), json.loads(Path('evidence/math-reconciliation/baseline.json').read_text()))
 
 class BoundaryTests(unittest.TestCase):
     def test_depth_boundary_and_capping(self):
