@@ -1,0 +1,633 @@
+{
+  "games": [
+    {
+      "id": "KXNFLGAME-26SEP17DETBUF__101466",
+      "title": "DET Lions vs BUF Bills",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "teams": [
+        "Buffalo Bills",
+        "Detroit Lions"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Buffalo Bills",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Buffalo Bills",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315440": {
+          "native_id": "1315440",
+          "participant": "Detroit Lions",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315441": {
+          "native_id": "1315441",
+          "participant": "Buffalo Bills",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP17DETBUF",
+          "market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+          "participant_mapping": {
+            "DET Lions": "NFL:DET",
+            "BUF Bills": "NFL:BUF"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101466",
+          "market_id": "657964",
+          "participant_mapping": {
+            "Detroit Lions": "NFL:DET",
+            "Buffalo Bills": "NFL:BUF"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Buffalo Bills YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315440"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Buffalo Bills YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Buffalo Bills NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315441"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "KXNFLGAME-26SEP20CARATL__101470",
+      "title": "CAR Panthers vs ATL Falcons",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "teams": [
+        "Atlanta Falcons",
+        "Carolina Panthers"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Atlanta Falcons",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Atlanta Falcons",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315462": {
+          "native_id": "1315462",
+          "participant": "Carolina Panthers",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315463": {
+          "native_id": "1315463",
+          "participant": "Atlanta Falcons",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP20CARATL",
+          "market_id": "KXNFLGAME-26SEP20CARATL-ATL",
+          "participant_mapping": {
+            "CAR Panthers": "NFL:CAR",
+            "ATL Falcons": "NFL:ATL"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101470",
+          "market_id": "657975",
+          "participant_mapping": {
+            "Carolina Panthers": "NFL:CAR",
+            "Atlanta Falcons": "NFL:ATL"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Atlanta Falcons YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315462"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Atlanta Falcons YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Atlanta Falcons NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315463"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "KXNFLGAME-26SEP20NOBAL__101472",
+      "title": "NO Saints vs BAL Ravens",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "teams": [
+        "Baltimore Ravens",
+        "New Orleans Saints"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Baltimore Ravens",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Baltimore Ravens",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315472": {
+          "native_id": "1315472",
+          "participant": "New Orleans Saints",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315473": {
+          "native_id": "1315473",
+          "participant": "Baltimore Ravens",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP20NOBAL",
+          "market_id": "KXNFLGAME-26SEP20NOBAL-BAL",
+          "participant_mapping": {
+            "NO Saints": "NFL:NO",
+            "BAL Ravens": "NFL:BAL"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101472",
+          "market_id": "657980",
+          "participant_mapping": {
+            "New Orleans Saints": "NFL:NO",
+            "Baltimore Ravens": "NFL:BAL"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Baltimore Ravens YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315472"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Baltimore Ravens YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Baltimore Ravens NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315473"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "KXNFLGAME-26SEP20MINCHI__101469",
+      "title": "MIN Vikings vs CHI Bears",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "teams": [
+        "Chicago Bears",
+        "Minnesota Vikings"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Chicago Bears",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Chicago Bears",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315456": {
+          "native_id": "1315456",
+          "participant": "Minnesota Vikings",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315457": {
+          "native_id": "1315457",
+          "participant": "Chicago Bears",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP20MINCHI",
+          "market_id": "KXNFLGAME-26SEP20MINCHI-CHI",
+          "participant_mapping": {
+            "MIN Vikings": "NFL:MIN",
+            "CHI Bears": "NFL:CHI"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101469",
+          "market_id": "657972",
+          "participant_mapping": {
+            "Minnesota Vikings": "NFL:MIN",
+            "Chicago Bears": "NFL:CHI"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Chicago Bears YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315456"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Chicago Bears YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Chicago Bears NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315457"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "KXNFLGAME-26SEP20CINHOU__101473",
+      "title": "CIN Bengals vs HOU Texans",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "teams": [
+        "Cincinnati Bengals",
+        "Houston Texans"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Cincinnati Bengals",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Cincinnati Bengals",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315478": {
+          "native_id": "1315478",
+          "participant": "Cincinnati Bengals",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315479": {
+          "native_id": "1315479",
+          "participant": "Houston Texans",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP20CINHOU",
+          "market_id": "KXNFLGAME-26SEP20CINHOU-CIN",
+          "participant_mapping": {
+            "CIN Bengals": "NFL:CIN",
+            "HOU Texans": "NFL:HOU"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101473",
+          "market_id": "657983",
+          "participant_mapping": {
+            "Cincinnati Bengals": "NFL:CIN",
+            "Houston Texans": "NFL:HOU"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Cincinnati Bengals YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315479"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Cincinnati Bengals YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Cincinnati Bengals NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315478"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "KXNFLGAME-26SEP20CLETB__101474",
+      "title": "CLE Browns vs TB Buccaneers",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "teams": [
+        "Cleveland Browns",
+        "Tampa Bay Buccaneers"
+      ],
+      "sides": {
+        "kalshi:yes": {
+          "native_id": "yes",
+          "participant": "Cleveland Browns",
+          "predicate": "win"
+        },
+        "kalshi:no": {
+          "native_id": "no",
+          "participant": "Cleveland Browns",
+          "predicate": "not_win"
+        },
+        "polymarket_us:1315484": {
+          "native_id": "1315484",
+          "participant": "Cleveland Browns",
+          "predicate": "win",
+          "native_label": "Long"
+        },
+        "polymarket_us:1315485": {
+          "native_id": "1315485",
+          "participant": "Tampa Bay Buccaneers",
+          "predicate": "win",
+          "native_label": "Short"
+        }
+      },
+      "sources": {
+        "kalshi": {
+          "event_id": "KXNFLGAME-26SEP20CLETB",
+          "market_id": "KXNFLGAME-26SEP20CLETB-CLE",
+          "participant_mapping": {
+            "CLE Browns": "NFL:CLE",
+            "TB Buccaneers": "NFL:TB"
+          },
+          "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        },
+        "polymarket_us": {
+          "event_id": "101474",
+          "market_id": "657986",
+          "participant_mapping": {
+            "Cleveland Browns": "NFL:CLE",
+            "Tampa Bay Buccaneers": "NFL:TB"
+          },
+          "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+          "entitlement_reference": "docs/multi-game-dashboard-report.md"
+        }
+      },
+      "candidates": [
+        [
+          "cross-yes",
+          "Cleveland Browns YES + opposing US outcome",
+          [
+            "kalshi:yes",
+            "polymarket_us:1315485"
+          ]
+        ],
+        [
+          "kalshi-pair",
+          "Cleveland Browns YES + NO",
+          [
+            "kalshi:yes",
+            "kalshi:no"
+          ]
+        ],
+        [
+          "cross-no",
+          "Cleveland Browns NO + US win",
+          [
+            "kalshi:no",
+            "polymarket_us:1315484"
+          ]
+        ]
+      ]
+    }
+  ],
+  "coverage": {
+    "found": {
+      "kalshi": 32,
+      "polymarket_us": 32
+    },
+    "common": 32,
+    "selected": 6,
+    "excluded": [],
+    "truncated_by_limit": 26,
+    "catalog_truncated": false,
+    "beyond_limit": [
+      {
+        "event": "KXNFLGAME-26SEP20GBNYJ",
+        "title": "GB Packers vs NY Jets",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20PITNE",
+        "title": "PIT Steelers vs NE Patriots",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20PHITEN",
+        "title": "PHI Eagles vs TEN Titans",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20JACDEN",
+        "title": "JAC Jaguars vs DEN Broncos",
+        "scheduled_start": "2026-09-20T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20LVLAC",
+        "title": "LV Raiders vs LA Chargers",
+        "scheduled_start": "2026-09-20T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20SEAARI",
+        "title": "SEA Seahawks vs ARI Cardinals",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20WASDAL",
+        "title": "WAS Commanders vs DAL Cowboys",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20MIASF",
+        "title": "MIA Dolphins vs SF 49ers",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20INDKC",
+        "title": "IND Colts vs KC Chiefs",
+        "scheduled_start": "2026-09-21T00:20:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP21NYGLAR",
+        "title": "NY Giants vs LA Rams",
+        "scheduled_start": "2026-09-22T00:15:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP24ATLGB",
+        "title": "Atlanta vs Green Bay",
+        "scheduled_start": "2026-09-25T00:15:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LACBUF",
+        "title": "Los Angeles C vs Buffalo",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27CARCLE",
+        "title": "Carolina vs Cleveland",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27CINPIT",
+        "title": "Cincinnati vs Pittsburgh",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27NYJDET",
+        "title": "New York J vs Detroit",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27HOUIND",
+        "title": "Houston vs Indianapolis",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27NEJAC",
+        "title": "New England vs Jacksonville",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27KCMIA",
+        "title": "Kansas City vs Miami",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27TENNYG",
+        "title": "Tennessee vs New York G",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27SEAWAS",
+        "title": "Seattle vs Washington",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27ARISF",
+        "title": "Arizona vs San Francisco",
+        "scheduled_start": "2026-09-27T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27MINTB",
+        "title": "Minnesota vs Tampa Bay",
+        "scheduled_start": "2026-09-27T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27BALDAL",
+        "title": "Baltimore vs Dallas",
+        "scheduled_start": "2026-09-27T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LVNO",
+        "title": "Las Vegas vs New Orleans",
+        "scheduled_start": "2026-09-27T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LARDEN",
+        "title": "Los Angeles R vs Denver",
+        "scheduled_start": "2026-09-28T00:20:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP28PHICHI",
+        "title": "Philadelphia vs Chicago",
+        "scheduled_start": "2026-09-29T00:15:00+00:00"
+      }
+    ]
+  }
+}

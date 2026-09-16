@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/opportunities/verify_storage.py", line 197, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/opportunities/verify_storage.py", line 174, in main
+    st.import_bundle(ROOT/'evidence/e3/durable/capture-current.json')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py", line 408, in import_bundle
+    raise ValueError('restore requires empty disposable project database')
+ValueError: restore requires empty disposable project database

@@ -1,0 +1,16 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "slice_sha256": "fd27a1a2fda7f85d28e55da5ac92a107387be77bb1655ac088aa7d6c044f386f",
+  "digest_method": "SHA256 of compact sorted JSON path-to-SHA256 mapping",
+  "files": {
+    "app/dashboard/e6_real.py": "b28da76577414e984edba3239bcaa4bb62a4f85dff40be26e07c3c361df1a146",
+    "app/dashboard/e6_real_identity.json": "eda00d896b2c681dfe4a20b87febc7b4b8023729210018db628861ab00685fae",
+    "app/dashboard/e6_real_static/index.html": "68e31b4a6b3c028db8acc863d32a2989930b9cf443d744f7c56588c6064bfe98",
+    "app/dashboard/e6_real_static/state.js": "07c79dbd792e3131f76c067ff99beedeb886f7436702cc422ecf41c327381540",
+    "app/dashboard/e6_real_static/watch.css": "4152ba314d56920d52c8c17d703af25b8ff63294c4689d32190967b68ce73403",
+    "app/dashboard/e6_real_static/watch.js": "d742549bab0d4c13dbbd8ebabf8aff154d1ad40f0182857454cb72c7af676823",
+    "scripts/e6-real-view": "46fef87065fecfe6291826248d729c98c4096bb6dd8d0bffce1023257ff6a687",
+    "tests/test_e6_real_state.cjs": "38ffdc5e84f0f81691947e109b990106db62a929c403736f8c495f3d5bc791db",
+    "tests/test_e6_real_view.py": "8d8bd71e543ab3e8f836160a0e3144c58fd8380fd7af8d21540904ffc565ab9f"
+  }
+}

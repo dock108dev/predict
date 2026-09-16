@@ -1,0 +1,14 @@
+{
+  "elapsed": 65.10733854200225,
+  "session": "c4bb0c6f-72ff-41ff-a85d-c7b7805ad8bf",
+  "delivered": 91,
+  "persisted": 91,
+  "reference_requests": 7,
+  "total_mock_http_requests": 19,
+  "kalshi_connections": 2,
+  "pmus_connections": 2,
+  "exact_replay": true,
+  "hash": "eb66c2d235d61d6be9c27dd301085ecf156dede6275623b72025c48b4f863992",
+  "reason": "duration_or_kickoff_cutoff",
+  "economics": null
+}

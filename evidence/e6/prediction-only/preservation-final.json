@@ -1,0 +1,19 @@
+{
+  "entry_files": 1563,
+  "intended_changes": [
+    "app/collection/transport_session.py",
+    "app/collection/prediction_producer.py",
+    "app/collection/run_spec.py",
+    "app/collection/odds_http.py",
+    "tests/test_e6_transport.py",
+    "docs/e6-first-real-run.md",
+    "docs/e6-real-feed-handoff.md",
+    "docs/product-roadmap-review.md",
+    "docs/e6-first-real-run.json"
+  ],
+  "unexpected_changes": [],
+  "missing": [],
+  "preexisting_evidence_unchanged": true,
+  "e5_unchanged": true,
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258"
+}

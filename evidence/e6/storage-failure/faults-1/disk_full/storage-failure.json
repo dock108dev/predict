@@ -1,0 +1,26 @@
+{
+  "format": "e6-runtime-storage-failure-1",
+  "session": "1f9531ea-ad8f-488e-acbb-7b784245232b",
+  "error": "Storage failure at write; durability of unacknowledged work is unknown.",
+  "accounting": {
+    "received": 24,
+    "accepted": 23,
+    "write_attempted": 23,
+    "durably_acknowledged": 22,
+    "rejected": 1,
+    "unresolved": 1,
+    "queue_pending": 0,
+    "queue_drained": 22,
+    "journal_write_attempted": 23,
+    "journal_durably_acknowledged": 22,
+    "journal_unresolved": 1,
+    "confirmed_byte_offset": 37175,
+    "confirmed_chain": "40174a918aef6a93c4a46341e8bd83e7c159053fc13b5f83ec5a4014daee6040",
+    "total_upstream": null,
+    "lost": null
+  },
+  "primary_journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-1/disk_full/1f9531ea-ad8f-488e-acbb-7b784245232b.jsonl",
+  "primary_journal_completion": "not_asserted",
+  "cleanup_complete": true,
+  "provenance": "supplemental runtime report; not primary journal or recovery evidence"
+}

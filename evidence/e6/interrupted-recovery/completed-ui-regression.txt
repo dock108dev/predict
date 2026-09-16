@@ -1,0 +1,1 @@
+PASS: immediate stopping, immediate controlled-invalidation quote hiding, stable venue on saved transition; no provider requests

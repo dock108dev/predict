@@ -1,0 +1,83 @@
+{
+  "reference_enabled": false,
+  "mode": "mock",
+  "event": "mock-game",
+  "participants": [
+    "tb",
+    "cin"
+  ],
+  "scheduled_start": "2026-09-16T01:07:27.314648+00:00",
+  "start_after": "2026-09-16T00:07:26.314648+00:00",
+  "start_before": "2026-09-16T00:08:27.314648+00:00",
+  "duration": 8,
+  "reference_cadence": 0.05,
+  "discovery_cadence": 90,
+  "stale_seconds": 20,
+  "sources": {
+    "the_odds_api": {
+      "event_id": "mock-event",
+      "market_id": "h2h",
+      "participant_mapping": {
+        "Tampa Bay": "tb",
+        "Cincinnati": "cin"
+      },
+      "credential_reference": "unread-mock-reference",
+      "entitlement_reference": "fabricated mock entitlement"
+    },
+    "kalshi": {
+      "event_id": "E",
+      "market_id": "M",
+      "participant_mapping": {
+        "Tampa Bay": "tb",
+        "Cincinnati": "cin"
+      },
+      "credential_reference": "unread-mock-reference",
+      "entitlement_reference": "fabricated mock entitlement"
+    },
+    "polymarket_us": {
+      "event_id": "74905",
+      "market_id": "381958",
+      "participant_mapping": {
+        "Tampa Bay": "tb",
+        "Cincinnati": "cin"
+      },
+      "credential_reference": "unread-mock-reference",
+      "entitlement_reference": "fabricated mock entitlement"
+    }
+  },
+  "mapping_revision": "mock-mapping-v1",
+  "assessment_revisions": {
+    "pairing": null,
+    "lineage": null,
+    "fees": null,
+    "settlement": null
+  },
+  "http": {
+    "requests": 64,
+    "credits": 64,
+    "dollars": "1",
+    "dollars_per_credit": "0.01",
+    "reserve_per_request": 1,
+    "initial_used": 0,
+    "initial_remaining": 100,
+    "plan_evidence": "fabricated mock plan",
+    "response_bytes": 65536,
+    "session_bytes": 1048576,
+    "timeout": 1,
+    "retries": 2,
+    "backoff": 0.01
+  },
+  "prediction": {
+    "messages": 100,
+    "connections": 2,
+    "frame_bytes": 65536,
+    "session_bytes": 1048576,
+    "discovery_requests": 20,
+    "dollar_cap_per_source": "0",
+    "dollars_per_discovery_request": "0",
+    "dollars_per_connection": "0",
+    "plan_evidence": "fabricated zero-cost local servers"
+  },
+  "cleanup": "retain journal; close local servers",
+  "capture_authorization": "local mock test only"
+}

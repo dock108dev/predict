@@ -1,0 +1,31 @@
+test_decimal_context_and_bounds (tests.test_pricing.PricingTests.test_decimal_context_and_bounds) ... ok
+test_effective_and_knowledge_boundaries (tests.test_pricing.PricingTests.test_effective_and_knowledge_boundaries) ... ok
+test_exact_e2_scale_and_conditional_units (tests.test_pricing.PricingTests.test_exact_e2_scale_and_conditional_units) ... FAIL
+test_freshness_boundaries (tests.test_pricing.PricingTests.test_freshness_boundaries) ... ok
+test_independent_rational_values (tests.test_pricing.PricingTests.test_independent_rational_values) ... ok
+test_late_download_cannot_backdate (tests.test_pricing.PricingTests.test_late_download_cannot_backdate) ... ok
+test_later_alias_registry (tests.test_pricing.PricingTests.test_later_alias_registry) ... ok
+test_later_source_and_rule_assessments (tests.test_pricing.PricingTests.test_later_source_and_rule_assessments) ... ok
+test_latest_invalid_never_falls_back (tests.test_pricing.PricingTests.test_latest_invalid_never_falls_back) ... ok
+test_missing_invalid_and_unknown (tests.test_pricing.PricingTests.test_missing_invalid_and_unknown) ... ok
+test_order_and_exact_cutoff (tests.test_pricing.PricingTests.test_order_and_exact_cutoff) ... ok
+test_pregame_and_target_rules (tests.test_pricing.PricingTests.test_pregame_and_target_rules) ... ok
+test_restore_exclusions_and_tamper (tests.test_pricing.PricingTests.test_restore_exclusions_and_tamper) ... ok
+test_target_copy_and_duplicate_deliveries (tests.test_pricing.PricingTests.test_target_copy_and_duplicate_deliveries) ... ok
+
+======================================================================
+FAIL: test_exact_e2_scale_and_conditional_units (tests.test_pricing.PricingTests.test_exact_e2_scale_and_conditional_units)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_pricing.py", line 53, in test_exact_e2_scale_and_conditional_units
+    self.assertEqual(d['target_scenario_payouts']['canceled']['kind'], 'refund')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'fraction' != 'refund'
+- fraction
++ refund
+
+
+----------------------------------------------------------------------
+Ran 14 tests in 2.094s
+
+FAILED (failures=1)

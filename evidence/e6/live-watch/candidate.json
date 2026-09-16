@@ -1,0 +1,13 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "files": {
+    "app/collection/prediction_producer.py": "8eb079173c7013b976d5a818a1021a7fabd64b6a2a62b8e29cd67bceec2d0788",
+    "app/dashboard/e6_live.py": "a3bb3e06de3fe9287c2636ecd344216a7ca0860e6cd84b8639db4b9bf9eda410",
+    "app/dashboard/e6_live_static/index.html": "c13347f9e7d3557aac7556006598889df35a33eb1a08f246ec1c5f871f601ae2",
+    "app/dashboard/e6_live_static/watch.js": "d0b128edd9fbd2d1b721f4a18b8e5fd04056f8176506fd86dd9c514b19329295",
+    "scripts/e6-live-watch": "577c79fa3952fc0c688a9bec7b5d73ae426bd9225e990201205377ab418a26a7",
+    "tests/test_e6_live_state.cjs": "2ee140416f00650140b3f9b16773f2e24fec8fe0b0577137b62ef01af4d9f7f7",
+    "tests/test_e6_live_watch.py": "c9a9e4fcd638879b7c1e1b79a5748f5588dd552d520d13b7f469e239643d46b7"
+  },
+  "slice_sha256": "e1f547dc1e4438272821fbe483a005424a27bb95518d348894863c11128c4e8c"
+}

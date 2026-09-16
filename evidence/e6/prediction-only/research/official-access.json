@@ -1,0 +1,51 @@
+[
+  {
+    "url": "https://docs.kalshi.com/getting_started/rate_limits.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:07.368576+00:00",
+    "sha256": "68a23e99ef7ad01c552e66257b3c9146f1239f3f14f4d651ec08f56588319341",
+    "file": "kalshi-rates.txt"
+  },
+  {
+    "url": "https://docs.kalshi.com/getting_started/api_keys.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:07.488843+00:00",
+    "sha256": "96bb49b6c45f946489a0a207cc93e3987e1e6aa5ca2da5111db17982274fc5a4",
+    "file": "kalshi-keys.txt"
+  },
+  {
+    "url": "https://docs.kalshi.com/getting_started/quick_start_websockets.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:07.798447+00:00",
+    "sha256": "ee3dc7fe991f52acc8d8a86c35e1c469b8459722ed2982b4a345140c4fbd522a",
+    "file": "kalshi-websocket.txt"
+  },
+  {
+    "url": "https://docs.polymarket.us/api-reference/rate-limits.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:08.008695+00:00",
+    "sha256": "670610f351c22e395960b58b0538ee312e1d42017faf64c1e4b1517abae41f09",
+    "file": "pmus-rates.txt"
+  },
+  {
+    "url": "https://docs.polymarket.us/api-reference/authentication.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:08.131876+00:00",
+    "sha256": "e34367cf9dc27fd5a672bce6fc2ef8af10d7efbae9368086737de3ec9027d12c",
+    "file": "pmus-auth.txt"
+  },
+  {
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:08.244388+00:00",
+    "sha256": "fa2c5f97199dd2b4614916df7875d281322854f158ed6feb51c67505d6703986",
+    "file": "pmus-markets.txt"
+  },
+  {
+    "url": "https://docs.polymarket.us/api-reference/introduction.md",
+    "status": 200,
+    "received_at": "2026-09-15T20:21:08.435677+00:00",
+    "sha256": "9d8e749605c9df1a4803d6effb0499ab5ff52a59c0dba0dc80d95ab507fd4154",
+    "file": "pmus-introduction.txt"
+  }
+]

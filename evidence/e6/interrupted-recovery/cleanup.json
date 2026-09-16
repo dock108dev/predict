@@ -1,0 +1,107 @@
+{
+  "crash_workers": [
+    {
+      "pid": 82210,
+      "phase": "reconnect",
+      "journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/crashes/reconnect/5c52619a-3455-4c74-974d-a7ed0780433a.jsonl",
+      "session": "5c52619a-3455-4c74-974d-a7ed0780433a",
+      "endpoints": {
+        "reference": "http://127.0.0.1:63594",
+        "kalshi": {
+          "rest": "http://127.0.0.1:63594",
+          "ws": "ws://127.0.0.1:63595"
+        },
+        "polymarket_us": {
+          "rest": "http://127.0.0.1:63594",
+          "ws": "ws://127.0.0.1:63596"
+        }
+      },
+      "exit_code": -9,
+      "method": "parent SIGKILL after fixture checkpoint",
+      "no_graceful_shutdown": true
+    },
+    {
+      "pid": 82203,
+      "phase": "books",
+      "journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/crashes/books/a5bed671-fa55-4f48-9a91-4b6db4031a86.jsonl",
+      "session": "a5bed671-fa55-4f48-9a91-4b6db4031a86",
+      "endpoints": {
+        "reference": "http://127.0.0.1:63579",
+        "kalshi": {
+          "rest": "http://127.0.0.1:63579",
+          "ws": "ws://127.0.0.1:63580"
+        },
+        "polymarket_us": {
+          "rest": "http://127.0.0.1:63579",
+          "ws": "ws://127.0.0.1:63581"
+        }
+      },
+      "exit_code": -9,
+      "method": "parent SIGKILL after fixture checkpoint",
+      "no_graceful_shutdown": true
+    },
+    {
+      "pid": 82219,
+      "phase": "finalization",
+      "journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/crashes/finalization/eee030dc-1932-4559-a18e-0a8ed9440095.jsonl",
+      "session": "eee030dc-1932-4559-a18e-0a8ed9440095",
+      "endpoints": {
+        "reference": "http://127.0.0.1:63605",
+        "kalshi": {
+          "rest": "http://127.0.0.1:63605",
+          "ws": "ws://127.0.0.1:63606"
+        },
+        "polymarket_us": {
+          "rest": "http://127.0.0.1:63605",
+          "ws": "ws://127.0.0.1:63607"
+        }
+      },
+      "exit_code": -9,
+      "method": "parent SIGKILL after fixture checkpoint",
+      "no_graceful_shutdown": true
+    },
+    {
+      "pid": 82209,
+      "phase": "before_image",
+      "journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/crashes/before_image/32258feb-b734-4e7f-8c1e-0741809bd236.jsonl",
+      "session": "32258feb-b734-4e7f-8c1e-0741809bd236",
+      "endpoints": {
+        "reference": "http://127.0.0.1:63590",
+        "kalshi": {
+          "rest": "http://127.0.0.1:63590",
+          "ws": "ws://127.0.0.1:63591"
+        },
+        "polymarket_us": {
+          "rest": "http://127.0.0.1:63590",
+          "ws": "ws://127.0.0.1:63592"
+        }
+      },
+      "exit_code": -9,
+      "method": "parent SIGKILL after fixture checkpoint",
+      "no_graceful_shutdown": true
+    },
+    {
+      "pid": 82226,
+      "phase": "torn",
+      "journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/crashes/torn/affd42c4-204e-430e-840e-d55ce992130c.jsonl",
+      "session": "affd42c4-204e-430e-840e-d55ce992130c",
+      "endpoints": {
+        "reference": "http://127.0.0.1:63616",
+        "kalshi": {
+          "rest": "http://127.0.0.1:63616",
+          "ws": "ws://127.0.0.1:63617"
+        },
+        "polymarket_us": {
+          "rest": "http://127.0.0.1:63616",
+          "ws": "ws://127.0.0.1:63618"
+        }
+      },
+      "exit_code": -9,
+      "method": "parent SIGKILL after fixture checkpoint",
+      "no_graceful_shutdown": true
+    }
+  ],
+  "recovery_preview": "stopped using its identity-checked launcher",
+  "existing_live_watch": "not restarted or changed; real-run guard preserved",
+  "new_collection": false
+}

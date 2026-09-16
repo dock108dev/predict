@@ -1,0 +1,15 @@
+test_all_seven_saved_cases (tests.test_e5_preview.FilesOnlyTests.test_all_seven_saved_cases) ... ok
+test_exact_money_presentation (tests.test_e5_preview.FilesOnlyTests.test_exact_money_presentation) ... ok
+test_external_e3_dependency_mismatch_rejected (tests.test_e5_preview.FilesOnlyTests.test_external_e3_dependency_mismatch_rejected) ... ok
+test_missing_dependency_rejected_before_results (tests.test_e5_preview.FilesOnlyTests.test_missing_dependency_rejected_before_results) ... ok
+test_reference_binding_and_timestamps (tests.test_e5_preview.FilesOnlyTests.test_reference_binding_and_timestamps) ... ok
+test_tampered_audit_rejected (tests.test_e5_preview.FilesOnlyTests.test_tampered_audit_rejected) ... ok
+test_unknowns_and_ranking_preserved (tests.test_e5_preview.FilesOnlyTests.test_unknowns_and_ranking_preserved) ... ok
+test_no_collector_routes (tests.test_e5_preview.HttpTests.test_no_collector_routes) ... ok
+test_page_reuses_css_and_restricts_connections (tests.test_e5_preview.HttpTests.test_page_reuses_css_and_restricts_connections) ... ok
+test_validation_failure_is_closed (tests.test_e5_preview.HttpTests.test_validation_failure_is_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 7.225s
+
+OK

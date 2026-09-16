@@ -1,0 +1,139 @@
+{
+  "fresh_process": true,
+  "sources": [
+    {
+      "session": "32258feb-b734-4e7f-8c1e-0741809bd236",
+      "source_sha256": "114ff5e61e95f14a6db78f236f220b1265360f161ed2a044f3f3c1201e5fd351",
+      "prefix_chain": "87e414c681a68adcc648c9673b716a67b11bade4c429ce5295a34d1f53c834ab",
+      "recovery_identity": "77045d013c5130c1ea6a449b4785f13be1f24b931a1401a6949ff051b0fdabd3",
+      "offset": 17284,
+      "trailing": 0,
+      "replay": {
+        "exact_native_books": {
+          "kalshi": 0,
+          "polymarket_us": 0
+        },
+        "exact_packets": true,
+        "gaps": [],
+        "journal_sha256": "87e414c681a68adcc648c9673b716a67b11bade4c429ce5295a34d1f53c834ab",
+        "state": "interrupted",
+        "derived_health_books": 0,
+        "total_books": 0,
+        "total_packets": 0
+      },
+      "source_unchanged_since_index": true
+    },
+    {
+      "session": "affd42c4-204e-430e-840e-d55ce992130c",
+      "source_sha256": "dad8f6b80b177f3a11bb182e300f9354ee46e1a3f2d7ced0b24ea35f48046aae",
+      "prefix_chain": "95164b5d874d46c244c5bb09c4f4a114744196ff139a1cf91a7e0c501afde8f2",
+      "recovery_identity": "1e30316639e19ec4b9b4fceb044185464f74f99af44b1f5d1c384ef3f8216056",
+      "offset": 69093,
+      "trailing": 23,
+      "replay": {
+        "exact_native_books": {
+          "kalshi": 4,
+          "polymarket_us": 2
+        },
+        "exact_packets": true,
+        "gaps": [
+          {
+            "source": "kalshi",
+            "ingress_id": "58a36a3c-e946-4f8d-b0cc-cdb2af2f11b9",
+            "reason": "native_frame_rejected"
+          }
+        ],
+        "journal_sha256": "95164b5d874d46c244c5bb09c4f4a114744196ff139a1cf91a7e0c501afde8f2",
+        "state": "interrupted",
+        "derived_health_books": 2,
+        "total_books": 8,
+        "total_packets": 16
+      },
+      "source_unchanged_since_index": true
+    },
+    {
+      "session": "a5bed671-fa55-4f48-9a91-4b6db4031a86",
+      "source_sha256": "6a3cbc589e35466ecaa677f590308de8d8e9a478e36dd78ebe3fb9efa3967ba6",
+      "prefix_chain": "d0f5b166c496a1b2de59983e5cd1e87bf421f2f6c23640d8a9c3d8eee8819d7a",
+      "recovery_identity": "8b282ca99d5094e54f48a77a12fa9811b3b4e19230de00eb968bee47682b42b0",
+      "offset": 69085,
+      "trailing": 0,
+      "replay": {
+        "exact_native_books": {
+          "kalshi": 4,
+          "polymarket_us": 2
+        },
+        "exact_packets": true,
+        "gaps": [
+          {
+            "source": "kalshi",
+            "ingress_id": "ed9dacdf-605a-474d-ba14-bb0151d59aca",
+            "reason": "native_frame_rejected"
+          }
+        ],
+        "journal_sha256": "d0f5b166c496a1b2de59983e5cd1e87bf421f2f6c23640d8a9c3d8eee8819d7a",
+        "state": "interrupted",
+        "derived_health_books": 2,
+        "total_books": 8,
+        "total_packets": 16
+      },
+      "source_unchanged_since_index": true
+    },
+    {
+      "session": "eee030dc-1932-4559-a18e-0a8ed9440095",
+      "source_sha256": "3d1961b7619831b663c1b47417b0af6c8f39610635146769c00623d28848f425",
+      "prefix_chain": "2439268c88e2a93b93d95d18d32b640e1b5f169494b566ab7f2063430f6e668e",
+      "recovery_identity": "e387938315cb92de373057ac170fb71831125950814ad9c4433e686d1805c0d8",
+      "offset": 71838,
+      "trailing": 0,
+      "replay": {
+        "exact_native_books": {
+          "kalshi": 4,
+          "polymarket_us": 2
+        },
+        "exact_packets": true,
+        "gaps": [
+          {
+            "source": "kalshi",
+            "ingress_id": "0a126b58-09cf-4438-9ee7-76516c932385",
+            "reason": "native_frame_rejected"
+          }
+        ],
+        "journal_sha256": "2439268c88e2a93b93d95d18d32b640e1b5f169494b566ab7f2063430f6e668e",
+        "state": "complete",
+        "derived_health_books": 2,
+        "total_books": 8,
+        "total_packets": 16
+      },
+      "source_unchanged_since_index": true
+    },
+    {
+      "session": "5c52619a-3455-4c74-974d-a7ed0780433a",
+      "source_sha256": "a823b3e228afee8a2813ecad50f8205dde583cbafbb46c6a65378d5c77069ee3",
+      "prefix_chain": "b115160dfbb898b46deaf325bff9150f17cbc4796c3bf9ad1eb0c38f30d927fe",
+      "recovery_identity": "166f4cf310d369d3c36dd17cdb8a36a6dd8a37147a8ae814872d86edd7ad9aa9",
+      "offset": 74151,
+      "trailing": 0,
+      "replay": {
+        "exact_native_books": {
+          "kalshi": 4,
+          "polymarket_us": 2
+        },
+        "exact_packets": true,
+        "gaps": [
+          {
+            "source": "kalshi",
+            "ingress_id": "52477b6e-d0e4-4f5f-94e9-c3eef7fb9e5e",
+            "reason": "native_frame_rejected"
+          }
+        ],
+        "journal_sha256": "b115160dfbb898b46deaf325bff9150f17cbc4796c3bf9ad1eb0c38f30d927fe",
+        "state": "interrupted",
+        "derived_health_books": 3,
+        "total_books": 9,
+        "total_packets": 18
+      },
+      "source_unchanged_since_index": true
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "saved_selection": "older saved -> six-game original",
+  "dashboard_rows": 12,
+  "detail_rows": 2,
+  "return_preserved": [
+    "capture",
+    "quantity",
+    "sort=dollars"
+  ],
+  "narrow": {
+    "viewport": "390x844",
+    "dashboard_width": 390,
+    "detail_width": 390
+  },
+  "local_scan_games": [
+    2,
+    3
+  ],
+  "local_scan_rows": [
+    4,
+    6
+  ],
+  "ev": "explicit local input cleared on different outcome and restored on original",
+  "console_warnings_errors": [],
+  "final": "beta 8783 open idle saved real; temporary local 8785 stopped"
+}

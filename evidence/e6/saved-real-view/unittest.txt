@@ -1,0 +1,11 @@
+test_evidence_fails_closed (tests.test_e6_real_view.SavedRealView.test_evidence_fails_closed) ... ok
+test_exact_replay_and_all_cutoffs (tests.test_e6_real_view.SavedRealView.test_exact_replay_and_all_cutoffs) ... ok
+test_http_error_and_read_only (tests.test_e6_real_view.SavedRealView.test_http_error_and_read_only) ... ok
+test_identity_mapping_independent_of_array_order (tests.test_e6_real_view.SavedRealView.test_identity_mapping_independent_of_array_order) ... ok
+test_native_side_economics_remain_exact (tests.test_e6_real_view.SavedRealView.test_native_side_economics_remain_exact) ... ok
+test_startup_isolation (tests.test_e6_real_view.SavedRealView.test_startup_isolation) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.834s
+
+OK

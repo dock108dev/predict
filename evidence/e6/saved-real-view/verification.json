@@ -1,0 +1,38 @@
+{
+  "preexisting_files_checked": 1626,
+  "preexisting_files_changed": [],
+  "native_replay": {
+    "exact_native_books": {
+      "kalshi": 16,
+      "polymarket_us": 28
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "4a954b03a0e1146104a4ae6c319b3201e721a45eff356ec35fe506dbfb36c29a",
+    "state": "complete"
+  },
+  "counts": {
+    "frames": 45,
+    "books": 44,
+    "packets": 88,
+    "ingress": 139
+  },
+  "checkpoints": 52,
+  "startup_isolation": "Minimal environment; outbound connection, DNS, subprocess, credential-file and psycopg guards. Loader and loopback startup passed under guards. No provider, credential or database operation required.",
+  "browser": {
+    "desktop": "1280x900",
+    "narrow": "390x844",
+    "narrow_horizontal_overflow": false,
+    "checks": [
+      "previous/next",
+      "first cutoff no future books",
+      "both native depth views",
+      "coverage",
+      "reload retains selected cutoff and venue",
+      "bookmark reopening",
+      "invalid bookmark explicit error"
+    ],
+    "console_errors": []
+  },
+  "launcher": "Owned process stop then restart at 8778 verified"
+}

@@ -1,0 +1,20 @@
+{
+  "focused_tests": {
+    "count": 213,
+    "result": "passed",
+    "output": "evidence/e1/focused-tests.txt"
+  },
+  "sda_probe": "passed",
+  "scroll_down_probe": "passed",
+  "walkthrough_model_and_detector_replay": "passed",
+  "git_diff_check": "passed",
+  "original_guidance_byte_identical": {
+    "README.md": true,
+    "docs/product-roadmap-review.md": true
+  },
+  "audit_source_status": "both clean at prepared heads; audited file hashes unchanged",
+  "database_network_and_service_operations": "none",
+  "performance_gate": "250 ms gate remains deferred; not run",
+  "python": "Python 3.14.5",
+  "node": "v22.18.0"
+}

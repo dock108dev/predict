@@ -1,0 +1,90 @@
+{
+  "scope": "synthetic offline E2; newly created cluster only",
+  "root": "/private/tmp/e2pg-pf3g9bqh",
+  "identities": [
+    {
+      "database": "postgres",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-pf3g9bqh/data",
+      "sockets": "/private/tmp/e2pg-pf3g9bqh/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-pf3g9bqh/data",
+      "sockets": "/private/tmp/e2pg-pf3g9bqh/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_restore",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-pf3g9bqh/data",
+      "sockets": "/private/tmp/e2pg-pf3g9bqh/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_legacy_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-pf3g9bqh/data",
+      "sockets": "/private/tmp/e2pg-pf3g9bqh/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    }
+  ],
+  "checks": [
+    "migration apply + idempotent reapply",
+    "adapter ingress -> PostgreSQL -> enrichment -> observed gaps/recovery",
+    "identical/non-opportunity/error arrivals remain distinct",
+    "immutable SQL records and identity collisions rejected",
+    "later source/mapping knowledge and late downloads cannot rewrite earlier replay",
+    "historical snapshot kept separate from download receipt",
+    "fresh-store restore has byte-identical full export",
+    "six as-of reconstructions byte-identical after restore"
+  ],
+  "bundle_sha256": "30f3e50e73cc8e8002d561d5b6b020b40abba17778c1ca82803b0a973ac0ea17",
+  "counts": {
+    "Receipt": 8,
+    "QuoteRevision": 9,
+    "ReferenceGap": 5
+  },
+  "replays": [
+    {
+      "cutoff": "2026-09-13T16:01:40+00:00",
+      "sha256": "1135736b50f103bc2f65d444441181b511d4b4f32ef7734ce963b5b17541d34d",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:58:59+00:00",
+      "sha256": "2d9885cac9d9b5cf7822c987df08968d56f6e5c429e9f5287e1d3e665168de3e",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:01+00:00",
+      "sha256": "9629cfa639268c962c2585222e7837d29a8fe22838fc0703882d4496ec8a40d2",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:15+00:00",
+      "sha256": "f779aa3d6d03ff4f8446d2c6fae0484c4b5cb42c668bae14b67c6d9a5a62255e",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:25+00:00",
+      "sha256": "6b80adb0babbc45f63a1fe040c68ee67464df888162abb7d62ed16e90410a610",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:40+00:00",
+      "sha256": "f92fd7be25e9ec3b63b35e912d3c72130bd2bad7590edc6f3ccd189769f73417",
+      "byte_identical": true
+    }
+  ],
+  "success": false,
+  "failure": "KeyError: 'evaluation_time'",
+  "cluster_stopped": true,
+  "cluster_removed": true
+}

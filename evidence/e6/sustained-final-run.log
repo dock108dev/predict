@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/verify.py", line 38, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/verify.py", line 37, in main
+    asyncio.run(run(args.seconds,args.output))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/verify.py", line 29, in run
+    assert result['state']=='completed',result['reason']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: reference producer ended before session deadline
+{"id": "636c37cd-0020-41e0-8633-b049d4eb05c7", "state": "failed", "reason": "reference producer ended before session deadline", "synthetic": true, "event": "synthetic-atl-pit-e2", "health": {"kalshi": {"state": "connected", "reason": "fresh full snapshot", "detected_at": "2026-09-13T15:05:10.243737+00:00", "wall_at": "2026-09-15T15:06:58.878206-04:00", "last_success_at": "2026-09-13T15:05:10.243752+00:00", "receipt": "08f930f9-ad72-49e6-8f96-daf68b169cda"}, "polymarket_us": {"state": "connected", "reason": "fresh full snapshot", "detected_at": "2026-09-13T15:05:10.244038+00:00", "wall_at": "2026-09-15T15:06:58.878503-04:00", "last_success_at": "2026-09-13T15:05:10.244046+00:00", "receipt": "bcd47788-f9b3-4763-a445-658a1059de27"}, "reference": {"state": "disconnected", "reason": "rejected_or_incomplete_snapshot", "detected_at": "2026-09-13T15:05:14.205095+00:00", "wall_at": "2026-09-15T15:07:02.839562-04:00", "last_success_at": "2026-09-13T15:04:30.180657+00:00", "receipt": "eaadd75f-9fc4-400e-9a4e-78fb2d4c6e49"}, "discovery": {"state": "connected", "reason": "declared event confirmed", "detected_at": "2026-09-13T15:05:00.183427+00:00", "wall_at": "2026-09-15T15:06:48.817890-04:00", "last_success_at": "2026-09-13T15:05:00.183435+00:00", "receipt": null}}, "delivered": 165, "persisted": 165, "journal_only": 0, "calculations": 10, "queue": 0, "queue_high_items": 5, "queue_high_bytes": 163027, "reference_ledger_high": 29, "worker_tasks": 6, "ingress_bytes": 2079400, "journal_bytes": 2084310, "logical_storage_bytes": 57030544, "database_high_bytes": 15827747, "wall_seconds": 320.96611658402253, "producers_closed": true, "limits": {"seconds": 900, "receipts": 1024, "ingress_bytes": 16777216, "item_bytes": 67108864, "storage_bytes": 1073741824, "database_bytes": 2147483648, "queue_items": 48, "queue_bytes": 4194304, "reference_requests": 64, "retries": 3, "request_timeout": 3, "prediction_poll": 5, "reference_poll": 30, "discovery_poll": 30, "calculation_poll": 30, "calculations": 64, "reference_records": 256, "journal_bytes": 33554432}, "view": null, "exported": {"directory": "evidence/e6/sustained-15m-final/636c37cd-0020-41e0-8633-b049d4eb05c7", "counts": {"prediction": 126, "reference": 11, "reference_gaps": 6, "events": 179}, "calculations": 10, "bytes": 39307077}, "storage_error": null, "simulation_time": "2026-09-13T15:05:30.109372+00:00"}

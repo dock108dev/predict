@@ -1,0 +1,7 @@
+test_saved_health_blocks_outage_economics (tests.test_e6_collection.DurableTests.test_saved_health_blocks_outage_economics) ... Executing <Task pending name='Task-2' coro=<DurableTests.test_saved_health_blocks_outage_economics() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_collection.py:177> wait_for=<Future pending cb=[shield.<locals>._outer_done_callback() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:991, Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.122 seconds
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 4.145s
+
+OK

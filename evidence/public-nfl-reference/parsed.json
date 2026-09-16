@@ -1,0 +1,49 @@
+{
+  "format": "public-nfl-page-evidence-1",
+  "mode": "public_page_research",
+  "url": "https://www.vegasinsider.com/nfl/odds/las-vegas/",
+  "retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+  "raw_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+  "event_id": "32144330",
+  "league": "NFL",
+  "scheduled_start": "2026-09-18T00:15:00Z",
+  "market": "full_game_moneyline",
+  "bookmaker": "draftkings",
+  "source_family": "draftkings",
+  "sides": [
+    {
+      "team": "Detroit Lions",
+      "abbreviation": "DET",
+      "american_price": "+180",
+      "decimal_odds": "2.8"
+    },
+    {
+      "team": "Buffalo Bills",
+      "abbreviation": "BUF",
+      "american_price": "-218",
+      "decimal_odds": "1.4587155963302752293577981651376146788990825688073"
+    }
+  ],
+  "pairing": "same_displayed_column; upstream_synchronization_unknown",
+  "displayed_notice_text": [
+    "Last Updated Sep 15 2026, 2:41 PM"
+  ],
+  "bookmaker_updated_at": null,
+  "delay_notice": null,
+  "disclosed_delay_seconds": null,
+  "copied_from": null,
+  "provenance_assessment": null,
+  "normal_winner_rules": null,
+  "full_settlement_compatibility": null,
+  "label": "delayed-reference research estimate",
+  "probabilities": null,
+  "conditional_ev": null,
+  "unconditional_ev": null,
+  "current_executable": false,
+  "reasons": [
+    "update_and_delay_unknown",
+    "target_independent_provenance_unassessed",
+    "normal_winner_rules_unassessed",
+    "prospective_target_record_absent"
+  ]
+}

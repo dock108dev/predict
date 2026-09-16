@@ -1,0 +1,64 @@
+{
+  "verified_at": "2026-09-15T18:42:09.727647+00:00",
+  "unchanged_preexisting_file_count": 1158,
+  "preexisting_repository_changes": [],
+  "candidate_files_verified": 141,
+  "archives": {
+    "../archived/sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "status": ""
+    },
+    "../archived/scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "status": ""
+    }
+  },
+  "review_preview": {
+    "pid": 52697,
+    "command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e5_preview --port 8775",
+    "started": "Tue Sep 15 14:36:57 2026",
+    "url": "http://127.0.0.1:8775",
+    "port": 8775
+  },
+  "test_server_stopped": true,
+  "served_package_matches_final_replay": true,
+  "owner_feedback": "none collected",
+  "owner_acceptance": false,
+  "e6_started": false,
+  "deferred_250ms_gate": "deferred",
+  "tracker_sha256": "cc0ba17abf20a3de71de98945215a9a8eb157e2449f2510f0ef21d20002cfcc7",
+  "artifact_hashes": {
+    "evidence/e5/browser-console.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "evidence/e5/candidate-implementation.json": "a673d7cbfbc337795b593cdfbb91c86b5c76109f140afd1725652265a81cb539",
+    "evidence/e5/desktop-baseline.png": "d2aedbf83c61604772a1b95fc5a3129530b79b5819b4398a282bcb7397922d79",
+    "evidence/e5/desktop-cases.json": "740c6140332f2b2a2df781014504c25d23da51a46982896a135acd10aa822cf9",
+    "evidence/e5/desktop-positive-final.png": "9cefde4237bfb886fb1ad153de540f2bf910ab0fd6152a78bd53d88ab85217f1",
+    "evidence/e5/empty.png": "045a8e2fa306e81205207f230fc54af024057be3fb4bfa1c377ba266367e0c1d",
+    "evidence/e5/entry-recheck.json": "5d5d566c2417a28aeb3bf3dc6d78576143809f673df2183239674fbfc520f73f",
+    "evidence/e5/final-network.txt": "3cfa32879c5be236c816425b605ccb725eae231541142bbc20054f5712e2f226",
+    "evidence/e5/focused-tests.txt": "c0ee0027cf379a998cbd62bb74756850b30f67877f4d07697d4b7a7540f1b72f",
+    "evidence/e5/js-syntax.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/e5/launcher-initial-failure.json": "03520ca8d65f639c2ecaf344e02faf3b40d6601f974091bf148e9b2b5d92e276",
+    "evidence/e5/launcher-verification.json": "e5bf48f92f7d89fe973ef67ee0523e3e7dc8267c184f865b8eff92516b6c7579",
+    "evidence/e5/loading.png": "197810def5d65d29f5147a310f054770ff3244ec92ab3d191eddc6af9ccb8ba4",
+    "evidence/e5/narrow-baseline-390.png": "6f06ac018db349cb1f4be20ee966de8a6b33452b50e03db11ec7afece5cc1d32",
+    "evidence/e5/narrow-baseline.png": "be4f5d0e8884eb7df8c27254cf30ba061c0013d21565d160f52fd7f0da4aaff0",
+    "evidence/e5/narrow-cases.json": "4507da609a1eb61ec72ed7e826ce04aeb5c06267136e2aafeda7d7b4e8fdf2f2",
+    "evidence/e5/narrow-empty.png": "92f80ea37642d89263b67613f7a02c715f269203c69f5728c5c01d1c795a08ae",
+    "evidence/e5/narrow-invalid.png": "e06f0ee5a6e67d5df1b9a82a82717c13c440c2a74e5442fdb00f3965b1af71e2",
+    "evidence/e5/narrow-loading.png": "08b9382216c2d8bfe9ed296324a8f0487acafbeabe39ec920a5b301bc33dc3fa",
+    "evidence/e5/narrow-positive-final.png": "06d79ca74236f319878c9965e119417de501aa7bf42a992271995ae43fc42675",
+    "evidence/e5/narrow-positive.png": "576f4bdc84918d5b8447d7fcee295022677fd070ab26c2826aefa44a32ecc3dd",
+    "evidence/e5/narrow-reload.json": "2350d891c0bcc800b5fc6398b53bf263c1305b0f3ae903e98916b61b62fe9acc",
+    "evidence/e5/narrow-stale.png": "27c9332bccdcd859f3373c28a41245dd7f61a8d2ec6cd1d73f0bf7d6d6413f7d",
+    "evidence/e5/narrow-states.json": "40739090f90eea95f31ca3db2d45262d3e98148ee128f7ba44ebff9951c20022",
+    "evidence/e5/preservation-before.json": "21b39ecb206b781733c692383a13382c1d7bfd76b30f750f97284ae3a50f5d74",
+    "evidence/e5/reopened.json": "ad63cf4ed08a406eef17037d4815839e51e27fc0fbe064b4811b75764eff4332",
+    "evidence/e5/repeatability-final.json": "8a2b8065601407d762b5c62ef5be58b24d691a2a3ab36955d498bb81d9ad7ee4",
+    "evidence/e5/repeatability-isolation.json": "ccc0648f62255be5c5a95afa638f266ef0aea922d6e4dc102f020fc60235c092",
+    "evidence/e5/tracker-before.md": "d4c9c9cbd0c31e36ac4e4ca68fb488f2518cb64456a6c4c1c24d863c91ac720b",
+    "evidence/e5/ui-state-tests.txt": "eb062af8b5f97c93586460943f862acd125dab2175a99d551d7f200f8f672ee2",
+    "evidence/e5/validation-error.png": "60f9a9858a4aba17837cec0245358095bbfeef8d6787f24743eac71edcabba8f",
+    "docs/e5-report.md": "1882ef9732bb65a52196d5006801df0886b883bd3676f9730303b1ae5561f52c"
+  }
+}

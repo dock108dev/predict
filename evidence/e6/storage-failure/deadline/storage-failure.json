@@ -1,0 +1,26 @@
+{
+  "format": "e6-runtime-storage-failure-1",
+  "session": "2b6839c5-f456-4914-9743-1607a334c397",
+  "error": "Storage failure at write; durability of unacknowledged work is unknown.",
+  "accounting": {
+    "received": 5,
+    "accepted": 5,
+    "write_attempted": 5,
+    "durably_acknowledged": 5,
+    "rejected": 0,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 5,
+    "journal_write_attempted": 6,
+    "journal_durably_acknowledged": 5,
+    "journal_unresolved": 1,
+    "confirmed_byte_offset": 18084,
+    "confirmed_chain": "19f6247bafaaccb63d57ca9223080aaf873ff7b898989dde51b892366fb24264",
+    "total_upstream": null,
+    "lost": null
+  },
+  "primary_journal": "evidence/e6/storage-failure/deadline/2b6839c5-f456-4914-9743-1607a334c397.jsonl",
+  "primary_journal_completion": "not_acknowledged",
+  "cleanup_complete": true,
+  "provenance": "supplemental runtime report; not primary journal or recovery evidence"
+}

@@ -1,0 +1,23 @@
+{
+  "process": {
+    "pid": 57335,
+    "command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.collection.server --environment /private/tmp/e6pg-r7p122nx --output /Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/preview-20260915-145944 --port 8786",
+    "started": "Tue Sep 15 15:06:57 2026",
+    "url": "http://127.0.0.1:8786",
+    "port": 8786,
+    "root": "/private/tmp/e6pg-r7p122nx",
+    "output": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/preview-20260915-145944"
+  },
+  "verified_command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.collection.server --environment /private/tmp/e6pg-r7p122nx --output /Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/preview-20260915-145944 --port 8786",
+  "before": [
+    {
+      "id": "ec7210c0-baaa-4229-a6c9-62a06a631215",
+      "state": "complete"
+    },
+    {
+      "id": "c0e08bf9-094f-4a5c-b0b0-a29cf0d0fdfd",
+      "state": "running"
+    }
+  ],
+  "injection": "SIGKILL of exact isolated E6 preview PID; actual crash is test-known only"
+}

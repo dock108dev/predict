@@ -1,0 +1,26 @@
+{
+  "format": "e6-runtime-storage-failure-1",
+  "session": "dcc61df2-1832-4ac3-a4ad-d0daa21d1f7e",
+  "error": "Storage failure at manifest; durability of unacknowledged work is unknown.",
+  "accounting": {
+    "received": 46,
+    "accepted": 46,
+    "write_attempted": 46,
+    "durably_acknowledged": 46,
+    "rejected": 0,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 46,
+    "journal_write_attempted": 47,
+    "journal_durably_acknowledged": 47,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 71882,
+    "confirmed_chain": "897c9abb1d206f0821fb7fe28eae85f9951dd5aa0e4046235c9ca7e9972cd3d1",
+    "total_upstream": null,
+    "lost": null
+  },
+  "primary_journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/manifest/observations.jsonl",
+  "primary_journal_completion": "not_asserted",
+  "cleanup_complete": true,
+  "provenance": "supplemental runtime report; not primary journal or recovery evidence"
+}

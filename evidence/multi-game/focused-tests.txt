@@ -1,0 +1,195 @@
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:37: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard]);app['owner']=owner
+Executing <Task pending name='Task-1' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.264 seconds
+/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/client.py:506: ResourceWarning: Unclosed client session <aiohttp.client.ClientSession object at 0x10871a270>
+  _warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10871a270>
+source_traceback: Object created at (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 104, in __init__
+    self.runTests()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/runner.py", line 257, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 725, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 147, in run
+    return super().run(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 665, in run
+    self._callSetUp()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 99, in _callSetUp
+    self._callAsync(self.asyncSetUp)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 120, in _callAsync
+    return self._asyncioRunner.run(
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 2049, in _run_once
+    handle._run()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 578, in asyncSetUp
+    return await self.setUpAsync()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 583, in setUpAsync
+    self.client = await self.get_client(self.server)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 599, in get_client
+    return TestClient(server, loop=self.loop)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 305, in __init__
+    self._session = ClientSession(loop=loop, cookie_jar=cookie_jar, **kwargs)
+/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/connector.py:365: ResourceWarning: Unclosed connector <aiohttp.connector.TCPConnector object at 0x10871aa50>
+  _warnings.warn(f"Unclosed connector {self!r}", ResourceWarning, **kwargs)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x1096b1c70>, 364944.009906416)])']
+connector: <aiohttp.connector.TCPConnector object at 0x10871aa50>
+source_traceback: Object created at (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 104, in __init__
+    self.runTests()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/runner.py", line 257, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 725, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 147, in run
+    return super().run(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 665, in run
+    self._callSetUp()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 99, in _callSetUp
+    self._callAsync(self.asyncSetUp)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 120, in _callAsync
+    return self._asyncioRunner.run(
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 2049, in _run_once
+    handle._run()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 578, in asyncSetUp
+    return await self.setUpAsync()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 583, in setUpAsync
+    self.client = await self.get_client(self.server)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 599, in get_client
+    return TestClient(server, loop=self.loop)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 305, in __init__
+    self._session = ClientSession(loop=loop, cookie_jar=cookie_jar, **kwargs)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/client.py", line 409, in __init__
+    connector = TCPConnector(
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/connector.py", line 988, in __init__
+    super().__init__(
+Executing <Task pending name='Task-12' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.241 seconds
+/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/client.py:506: ResourceWarning: Unclosed client session <aiohttp.client.ClientSession object at 0x108719a90>
+  _warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x108719a90>
+source_traceback: Object created at (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 104, in __init__
+    self.runTests()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/runner.py", line 257, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 725, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 147, in run
+    return super().run(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 665, in run
+    self._callSetUp()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 99, in _callSetUp
+    self._callAsync(self.asyncSetUp)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 120, in _callAsync
+    return self._asyncioRunner.run(
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 2049, in _run_once
+    handle._run()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 578, in asyncSetUp
+    return await self.setUpAsync()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 583, in setUpAsync
+    self.client = await self.get_client(self.server)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 599, in get_client
+    return TestClient(server, loop=self.loop)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py", line 305, in __init__
+    self._session = ClientSession(loop=loop, cookie_jar=cookie_jar, **kwargs)
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: ResourceWarning: unclosed <socket.socket fd=9, family=2, type=1, proto=0, laddr=('127.0.0.1', 52745)>
+  obj, end = self.scan_once(s, idx)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/selector_events.py:873: ResourceWarning: unclosed transport <_SelectorSocketTransport fd=8>
+  _warn(f"unclosed transport {self!r}", ResourceWarning, source=self)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/e6_real.py:53: ResourceWarning: unclosed <socket.socket fd=6, family=2, type=1, proto=0, laddr=('127.0.0.1', 52743)>
+  return {(o['outcome_id'],side,Decimal(l['price']['value'])):Decimal(l['quantity']['value'])
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/selector_events.py:873: ResourceWarning: unclosed transport <_SelectorSocketTransport fd=7>
+  _warn(f"unclosed transport {self!r}", ResourceWarning, source=self)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+Executing <Task pending name='Task-17' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.278 seconds
+----------------------------------------------------------------------
+Ran 55 tests in 13.570s
+
+OK

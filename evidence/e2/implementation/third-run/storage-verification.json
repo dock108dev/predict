@@ -1,0 +1,116 @@
+{
+  "scope": "synthetic offline E2; newly created cluster only",
+  "root": "/private/tmp/e2pg-g7x8ikhy",
+  "identities": [
+    {
+      "database": "postgres",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_restore",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_legacy_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_legacy_restore",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "postgres",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "prediction_arb_test_66e223387134",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-g7x8ikhy/data",
+      "sockets": "/private/tmp/e2pg-g7x8ikhy/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    }
+  ],
+  "checks": [
+    "migration apply + idempotent reapply",
+    "adapter ingress -> PostgreSQL -> enrichment -> observed gaps/recovery",
+    "identical/non-opportunity/error arrivals remain distinct",
+    "immutable SQL records and identity collisions rejected",
+    "later source/mapping knowledge and late downloads cannot rewrite earlier replay",
+    "historical snapshot kept separate from download receipt",
+    "fresh-store restore has byte-identical full export",
+    "six as-of reconstructions byte-identical after restore",
+    "pre-E2 capture-bundle-1 restored on additive schema with detector audit replay"
+  ],
+  "bundle_sha256": "f6c9a43a7114892d926efda3664c6603d452f636405dd01faf06d99246cca5f0",
+  "counts": {
+    "Receipt": 9,
+    "QuoteRevision": 11,
+    "ReferenceGap": 5
+  },
+  "replays": [
+    {
+      "cutoff": "2026-09-13T16:01:40+00:00",
+      "sha256": "1135736b50f103bc2f65d444441181b511d4b4f32ef7734ce963b5b17541d34d",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:58:59+00:00",
+      "sha256": "2d9885cac9d9b5cf7822c987df08968d56f6e5c429e9f5287e1d3e665168de3e",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:01+00:00",
+      "sha256": "402d932208adeef74b14e6c5c29ff71aa5eb15faea55aedd75db8abdfedc4296",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:15+00:00",
+      "sha256": "73baf9990a3b8392987a0b193921bbf47dc458e8cb2975df8cd966a4f4931bf3",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:25+00:00",
+      "sha256": "489c0ac917a0a46156151dc885193e1f103f1276e19e048305f737e23bf9d943",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:40+00:00",
+      "sha256": "220edceea865ea9473ce6a5df3e0db295f43dc3d1c18e603e35e308cf15ec247",
+      "byte_identical": true
+    }
+  ],
+  "legacy_replay": 1,
+  "foundation_storage_tests": 26,
+  "success": true,
+  "cluster_stopped": true,
+  "cluster_removed": true
+}

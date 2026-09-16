@@ -1,0 +1,50 @@
+{
+  "root": "/Users/michaelfuscoletti/Desktop/prediction-arb",
+  "origin": "https://github.com/dock108dev/predict.git",
+  "branch": "main",
+  "base_head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "candidate_kind": "uncommitted working tree; no new commit",
+  "implementation_digest": "5427e0d253a837ec87ff29005325764bbe81b8dba63904ebfb54b602eb1b1899",
+  "implementation_sha256": {
+    "app/arbitrage.py": "1168fabcbb19dcedeb243cd5e121c227a42f6ab3e13592eba24d26fb96cf5a83",
+    "app/edge_contracts.py": "355edbb7a12088edb433fec9f901698825ce4ea127c6b9acacb8a28402820f17",
+    "app/e1_example.py": "67fa9466288189d819c85f2b0f881873abc93caaafcc283cd5c9ba9d10eaff3f",
+    "tests/test_edge_contracts.py": "0be280ace72bace4815cb3601145e3d0d2cf6ff2fd829e844261db6891a44ad9",
+    "examples/e1/paired_reference.py": "7b252597a5d4c8fcb5e106c8d8481ce931458d32ea0b0f6fc8d6478da93d3257",
+    "examples/e1/status_banner.mjs": "cf0f9744807f9d4f1260226b1d70ba14778526479dd40ce5c84ef783e819da4c"
+  },
+  "delivered_sha256": {
+    "app/arbitrage.py": "1168fabcbb19dcedeb243cd5e121c227a42f6ab3e13592eba24d26fb96cf5a83",
+    "app/e1_example.py": "67fa9466288189d819c85f2b0f881873abc93caaafcc283cd5c9ba9d10eaff3f",
+    "app/edge_contracts.py": "355edbb7a12088edb433fec9f901698825ce4ea127c6b9acacb8a28402820f17",
+    "docs/e1-contracts.md": "b1c5e38ff9c419e44c648e1f9cd34d451ee6fad622c8389177f7782b7c2a7ac5",
+    "docs/e1-report.md": "faa31ef2a34846f96539cc678de3395904cae3c183270eb6f3ec3b48db79f915",
+    "docs/e1-reuse-audit.md": "74070c0b975596d0d63b59dfc76f7d723f388f1e9fa051593036392c07f3610a",
+    "docs/e2-handoff.md": "52b361cb96d545bdc2359a329d5d5177e5af6a20d0ba46287e94d666205b18ec",
+    "evidence/e1/audit-sources.json": "903277be32087482f2bbd29dc9881f9f56f1778a9e551780a2407709141cde93",
+    "evidence/e1/baseline.json": "9684a18d4f4bb8071fc74f61228a0394e30a718d5bcc174d2e1278ded44641db",
+    "evidence/e1/contracts-tests-initial.txt": "a0eabf93176fb9e64463708d5661f32e2ef79711d6873a046696a5b7169d379f",
+    "evidence/e1/focused-tests.txt": "76879394862cc052e8c5199009a5b5fbe04ab2c9e81f2eb55a2c7a38bcf883b2",
+    "evidence/e1/scroll-down-extraction.txt": "c39646c94252b2d963c37c728cc366dee841bbd02dfea8c3504a72bb45be5524",
+    "evidence/e1/sda-extraction.txt": "4a25dde0068f4cb2ff1fa12b65e1c40e45571e4c3b15ba8b7be3f42450fb9ad9",
+    "evidence/e1/verification.json": "db06d9582af5e146c13e10d1025f5d46f0b7c9d948e8ba68f686a103da33cfbc",
+    "evidence/e1/walkthrough.json": "1b21c6fa1f51e8fb8fea629ee07f804fae88ae6b803fd8b70b0c4ca350518ae3",
+    "examples/e1/paired_reference.py": "7b252597a5d4c8fcb5e106c8d8481ce931458d32ea0b0f6fc8d6478da93d3257",
+    "examples/e1/status_banner.mjs": "cf0f9744807f9d4f1260226b1d70ba14778526479dd40ce5c84ef783e819da4c",
+    "tests/test_edge_contracts.py": "0be280ace72bace4815cb3601145e3d0d2cf6ff2fd829e844261db6891a44ad9"
+  },
+  "desktop_tracker": {
+    "path": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md",
+    "sha256": "59efda7bc334dac89219ed8ec70508da4109ead2c583956b9c7a47bd91eb61ba"
+  },
+  "preserved_guidance_sha256": {
+    "README.md": "235f4741759dd4a34d3e056c48789162587388ea89b0a6e40393b68de24e8d1d",
+    "docs/product-roadmap-review.md": "a435a358bea047dbae7804c08bf9f39ffc2e8fce05656e60f024f5e3b1b1825b"
+  },
+  "source_revisions": {
+    "sda": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+    "scroll-down-web": "087411753d6f4a2665820f84bf6270b08d05ea91"
+  },
+  "status": " M README.md\n M app/arbitrage.py\n M docs/product-roadmap-review.md\n?? app/e1_example.py\n?? app/edge_contracts.py\n?? docs/e1-contracts.md\n?? docs/e1-report.md\n?? docs/e1-reuse-audit.md\n?? docs/e2-handoff.md\n?? evidence/e1/\n?? examples/\n?? tests/test_edge_contracts.py\n",
+  "manifest_scope": "All delivered artifacts except this self-referential manifest; implementation digest separately identifies exact code/check/probe files."
+}

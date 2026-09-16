@@ -1,0 +1,166 @@
+[
+  {
+    "phase": "books",
+    "session": "a5bed671-fa55-4f48-9a91-4b6db4031a86",
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/a5bed671-fa55-4f48-9a91-4b6db4031a86/recovery.json",
+    "identity": "8b282ca99d5094e54f48a77a12fa9811b3b4e19230de00eb968bee47682b42b0",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 42
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "ed9dacdf-605a-474d-ba14-bb0151d59aca",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "d0f5b166c496a1b2de59983e5cd1e87bf421f2f6c23640d8a9c3d8eee8819d7a",
+      "state": "interrupted",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    },
+    "status": "interrupted",
+    "offset": 69085,
+    "trailing": 0
+  },
+  {
+    "phase": "before_image",
+    "session": "32258feb-b734-4e7f-8c1e-0741809bd236",
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/32258feb-b734-4e7f-8c1e-0741809bd236/recovery.json",
+    "identity": "77045d013c5130c1ea6a449b4785f13be1f24b931a1401a6949ff051b0fdabd3",
+    "counts": {
+      "frames": 0,
+      "books": 0,
+      "packets": 0,
+      "ingress": 4
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "87e414c681a68adcc648c9673b716a67b11bade4c429ce5295a34d1f53c834ab",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 0,
+      "total_packets": 0
+    },
+    "status": "interrupted",
+    "offset": 17284,
+    "trailing": 0
+  },
+  {
+    "phase": "reconnect",
+    "session": "5c52619a-3455-4c74-974d-a7ed0780433a",
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/5c52619a-3455-4c74-974d-a7ed0780433a/recovery.json",
+    "identity": "166f4cf310d369d3c36dd17cdb8a36a6dd8a37147a8ae814872d86edd7ad9aa9",
+    "counts": {
+      "frames": 9,
+      "books": 9,
+      "packets": 18,
+      "ingress": 45
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "52477b6e-d0e4-4f5f-94e9-c3eef7fb9e5e",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "b115160dfbb898b46deaf325bff9150f17cbc4796c3bf9ad1eb0c38f30d927fe",
+      "state": "interrupted",
+      "derived_health_books": 3,
+      "total_books": 9,
+      "total_packets": 18
+    },
+    "status": "interrupted",
+    "offset": 74151,
+    "trailing": 0
+  },
+  {
+    "phase": "finalization",
+    "session": "eee030dc-1932-4559-a18e-0a8ed9440095",
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/eee030dc-1932-4559-a18e-0a8ed9440095/recovery.json",
+    "identity": "e387938315cb92de373057ac170fb71831125950814ad9c4433e686d1805c0d8",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 46
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "0a126b58-09cf-4438-9ee7-76516c932385",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "2439268c88e2a93b93d95d18d32b640e1b5f169494b566ab7f2063430f6e668e",
+      "state": "complete",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    },
+    "status": "interrupted_finalization",
+    "offset": 71838,
+    "trailing": 0
+  },
+  {
+    "phase": "torn",
+    "session": "affd42c4-204e-430e-840e-d55ce992130c",
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/affd42c4-204e-430e-840e-d55ce992130c/recovery.json",
+    "identity": "1e30316639e19ec4b9b4fceb044185464f74f99af44b1f5d1c384ef3f8216056",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 42
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "58a36a3c-e946-4f8d-b0cc-cdb2af2f11b9",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "95164b5d874d46c244c5bb09c4f4a114744196ff139a1cf91a7e0c501afde8f2",
+      "state": "interrupted",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    },
+    "status": "interrupted",
+    "offset": 69093,
+    "trailing": 23
+  }
+]

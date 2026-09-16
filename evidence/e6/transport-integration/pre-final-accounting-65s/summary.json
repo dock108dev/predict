@@ -1,0 +1,28 @@
+{
+  "elapsed": 65.10733125003753,
+  "session": "70f3208d-4da8-4a98-bfcc-553d15034741",
+  "delivered": 90,
+  "persisted": 90,
+  "reference_requests": 7,
+  "total_mock_http_requests": 19,
+  "kalshi_connections": 2,
+  "pmus_connections": 2,
+  "exact_replay": true,
+  "sha256": "58d2d8f466da45dce14f1d5b7d432fdc853dbadf9ba9dd826fb0fccda8cdb573",
+  "reason": "duration_or_kickoff_cutoff",
+  "economics": null,
+  "prediction_accounting": {
+    "kalshi": {
+      "requests": 9,
+      "connections": 2,
+      "dollars_reserved": "0",
+      "body_bytes_charged": 2231
+    },
+    "polymarket_us": {
+      "requests": 3,
+      "connections": 2,
+      "dollars_reserved": "0",
+      "body_bytes_charged": 81692
+    }
+  }
+}

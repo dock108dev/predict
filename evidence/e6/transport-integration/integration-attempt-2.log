@@ -1,0 +1,31 @@
+test_429_retries_charge_each_dispatch (tests.test_e6_transport.HTTPTests.test_429_retries_charge_each_dispatch) ... ok
+test_cancel_during_connection_and_no_refund (tests.test_e6_transport.HTTPTests.test_cancel_during_connection_and_no_refund) ... ok
+test_concurrency_and_total_bytes (tests.test_e6_transport.HTTPTests.test_concurrency_and_total_bytes) ... ok
+test_disabled_and_cost_reservation (tests.test_e6_transport.HTTPTests.test_disabled_and_cost_reservation) ... ok
+test_request_exact_redaction_and_pre_dispatch_budget (tests.test_e6_transport.HTTPTests.test_request_exact_redaction_and_pre_dispatch_budget) ... ok
+test_stream_limit_before_retention (tests.test_e6_transport.HTTPTests.test_stream_limit_before_retention) ... ok
+test_timeout_truncation_and_cancel_stream (tests.test_e6_transport.HTTPTests.test_timeout_truncation_and_cancel_stream) ... Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 67, in handler
+    if mode=='truncate':request.transport.close();return response
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'close'
+ok
+test_unknown_contradiction_exhaustion_redirect_echo (tests.test_e6_transport.HTTPTests.test_unknown_contradiction_exhaustion_redirect_echo) ... ok
+test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds) ... ok
+test_changed_schedule_stops_discovery (tests.test_e6_transport.IntegrationTests.test_changed_schedule_stops_discovery) ... ok
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... ok
+test_idle_preflight_and_real_start_blocked (tests.test_e6_transport.PreflightTests.test_idle_preflight_and_real_start_blocked) ... ok
+test_missing_conflicts_and_null_economics (tests.test_e6_transport.PreflightTests.test_missing_conflicts_and_null_economics) ... ok
+test_reference_identity_schedule_mapping_cutoff (tests.test_e6_transport.PreflightTests.test_reference_identity_schedule_mapping_cutoff) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 3.387s
+
+OK

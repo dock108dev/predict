@@ -1,0 +1,62 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "candidate_digest": "c93dae7a91a2a31b785c62d806c68044dcca9d16be59ad6b7e21c141be79ffc6",
+  "all_manifest_files_match": true,
+  "six_estimates_exact_replay": true,
+  "identities": [
+    {
+      "estimate_id": "be7f62fa60c15dab5f35674becbfa3d381d63793a18a49ac929487af2972e13b",
+      "as_of": "2026-09-13T16:58:59+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "a38656cabde5f7988c986345053c8cd2853abc0ea239d36b9434e954e9dc19a3",
+      "reference_replay_sha256": "2d9885cac9d9b5cf7822c987df08968d56f6e5c429e9f5287e1d3e665168de3e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "761b2e7554935845f46d1e95930f68f1a3fbd622f9f6ef4de9f442709ebca508",
+      "as_of": "2026-09-13T16:59:01+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "7bdc84b6d39e500741cd94f4f30225f152d948fcd3558ee146265193085b6a56",
+      "reference_replay_sha256": "2f1c4ff9e0a73a8a3d37c825cc83c2606761e6ab30f46f9ce974f34198a565ba",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "a8c35080ace94ffdc0e0b29506f7cbb74fd7b7c984c1296bb614262edbed41c4",
+      "as_of": "2026-09-13T16:59:15+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "8bdc74cbaf9675a14dc7f416aa0995001de35acbeabc12866dcd93412d4123b0",
+      "reference_replay_sha256": "44c38e7423781247e32381b693e73107649cee9a7535961a6732b42ec720ec6e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "46e6cd5841ac7358805b5365c70d494e12a7777745519734091fbd0ffe3e6134",
+      "as_of": "2026-09-13T16:59:25+00:00",
+      "status": "degraded",
+      "probability": "0.525000000000000000",
+      "estimate_file_sha256": "0d002b5727c74f41cf1644eb85cbeef31947437669d362e1e93de9652e11de68",
+      "reference_replay_sha256": "3323dba10fde066c539bff6cbce1763665437bbf4b560d1e4b2d0b3611cd49ab",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "as_of": "2026-09-13T16:59:40+00:00",
+      "status": "degraded",
+      "probability": "0.525000000000000000",
+      "estimate_file_sha256": "085505afbe1270832b86ff4524e9a7e29fa8960e0ba59580f751bbf25fb29e3e",
+      "reference_replay_sha256": "460dcb50c96c0a05ac5d616e207f265bec01e628f3db0739c4a521d63009ff6e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "9576d94235469cbce2caa6084cffece1c89ec49b741099f242a04f141764f87f",
+      "as_of": "2026-09-13T16:59:50+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "4b055480954ad00d632c3c9569527e9d2b970bdd8e790ded298bca8a5be18949",
+      "reference_replay_sha256": "c84d2eed063a800d979524bb90468c9ab872bd8cfa5663e6ffb7aeb9d3c40845",
+      "byte_exact": true
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "preexisting_evidence_files": 1644,
+  "changed_evidence_files": [],
+  "baseline_before_after_identical": true,
+  "focused_tests": 29,
+  "arb_rows": 18,
+  "ev_test_scenarios": 96,
+  "browser": {
+    "url": "http://127.0.0.1:60397",
+    "isolated": true,
+    "post_routes_blocked": true,
+    "credentials_blocked": true,
+    "checks": [
+      "18 displayed rows match cents and ROI",
+      "ROI and dollar sort order match rational ranking",
+      "Historical and conditional labels retained",
+      "Start disabled; feeds idle"
+    ],
+    "console_errors": [],
+    "console_warnings": [],
+    "stopped": true
+  },
+  "fix": {
+    "file": "app/dashboard/multi_game.py",
+    "before": "-Decimal(n)",
+    "after": "Decimal(n).copy_negate()",
+    "regression_before": [
+      "a-lower",
+      "z-higher"
+    ],
+    "regression_after": [
+      "z-higher",
+      "a-lower"
+    ]
+  }
+}

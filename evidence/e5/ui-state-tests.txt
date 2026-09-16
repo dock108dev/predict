@@ -1,0 +1,1 @@
+PASS: stable book identity, unavailable selection, degradation recovery, exact saved reopening and mismatch rejection

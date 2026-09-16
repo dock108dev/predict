@@ -1,0 +1,185 @@
+test_429_retries_charge_each_dispatch (tests.test_e6_transport.HTTPTests.test_429_retries_charge_each_dispatch) ... ok
+test_cancel_during_connection_and_no_refund (tests.test_e6_transport.HTTPTests.test_cancel_during_connection_and_no_refund) ... ok
+test_concurrency_and_total_bytes (tests.test_e6_transport.HTTPTests.test_concurrency_and_total_bytes) ... ok
+test_disabled_and_cost_reservation (tests.test_e6_transport.HTTPTests.test_disabled_and_cost_reservation) ... ok
+test_request_exact_redaction_and_pre_dispatch_budget (tests.test_e6_transport.HTTPTests.test_request_exact_redaction_and_pre_dispatch_budget) ... ok
+test_stream_limit_before_retention (tests.test_e6_transport.HTTPTests.test_stream_limit_before_retention) ... ok
+test_timeout_truncation_and_cancel_stream (tests.test_e6_transport.HTTPTests.test_timeout_truncation_and_cancel_stream) ... Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 65, in handler
+    await response.prepare(request);await response.write(b'abc');await asyncio.sleep(.15)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_response.py", line 464, in prepare
+    return await self._start(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_response.py", line 472, in _start
+    await self._write_headers()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_response.py", line 552, in _write_headers
+    writer.send_headers()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/http_writer.py", line 231, in send_headers
+    self._write(headers_buf)
+    ~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/http_writer.py", line 102, in _write
+    raise ClientConnectionResetError("Cannot write to closing transport")
+aiohttp.client_exceptions.ClientConnectionResetError: Cannot write to closing transport
+ok
+test_unknown_contradiction_exhaustion_redirect_echo (tests.test_e6_transport.HTTPTests.test_unknown_contradiction_exhaustion_redirect_echo) ... ok
+test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds) ... FAIL
+test_changed_schedule_stops_discovery (tests.test_e6_transport.IntegrationTests.test_changed_schedule_stops_discovery) ... ok
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... FAIL
+test_idle_preflight_and_real_start_blocked (tests.test_e6_transport.PreflightTests.test_idle_preflight_and_real_start_blocked) ... ok
+test_missing_conflicts_and_null_economics (tests.test_e6_transport.PreflightTests.test_missing_conflicts_and_null_economics) ... ok
+test_reference_identity_schedule_mapping_cutoff (tests.test_e6_transport.PreflightTests.test_reference_identity_schedule_mapping_cutoff) ... ok
+
+======================================================================
+FAIL: test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 239, in test_cancel_backoff_and_start_over_60_seconds
+    self.assertEqual(o.reference.budget.requests,1)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 219, in test_native_producers_recovery_mixed_persistence_and_exact_reopen
+    self.assertEqual({r['source'] for r in books},{'kalshi','polymarket_us'})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Items in the second set but not the first:
+'polymarket_us'
+'kalshi'
+
+----------------------------------------------------------------------
+Ran 14 tests in 2.204s
+
+FAILED (failures=2)
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10a146270>
+source_traceback: Object created at (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 104, in __init__
+    self.runTests()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/runner.py", line 257, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 725, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 147, in run
+    return super().run(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 669, in run
+    self._callTestMethod(testMethod)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 102, in _callTestMethod
+    result = self._callMaybeAsync(method)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 128, in _callMaybeAsync
+    return self._asyncioRunner.run(
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 2049, in _run_once
+    handle._run()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py", line 70, in discover
+    events=await self.adapter.discover_events()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py", line 217, in discover_events
+    response = await self._get('/series/' + quote(series, safe=''))
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py", line 178, in _get
+    r = await self.client.get(REST_URL + path, params=params)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py", line 31, in get
+    self.client=aiohttp.ClientSession(auto_decompress=False,trust_env=False,
+Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x10a2b8190>, 346428.298606041)])']
+connector: <aiohttp.connector.TCPConnector object at 0x10a0b2ad0>
+source_traceback: Object created at (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 104, in __init__
+    self.runTests()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/runner.py", line 257, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/suite.py", line 122, in run
+    test(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 725, in __call__
+    return self.run(*args, **kwds)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 147, in run
+    return super().run(result)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 669, in run
+    self._callTestMethod(testMethod)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 102, in _callTestMethod
+    result = self._callMaybeAsync(method)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/async_case.py", line 128, in _callMaybeAsync
+    return self._asyncioRunner.run(
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 2049, in _run_once
+    handle._run()
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py", line 70, in discover
+    events=await self.adapter.discover_events()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py", line 217, in discover_events
+    response = await self._get('/series/' + quote(series, safe=''))
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py", line 178, in _get
+    r = await self.client.get(REST_URL + path, params=params)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py", line 32, in get
+    timeout=aiohttp.ClientTimeout(total=self.timeout),connector=aiohttp.TCPConnector(limit=1),read_bufsize=4096)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/connector.py", line 988, in __init__
+    super().__init__(

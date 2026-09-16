@@ -1,0 +1,21 @@
+{
+  "type": "session_finished",
+  "status": "failed",
+  "started_at": "2026-09-15T20:21:53.731352+00:00",
+  "finished_at": "2026-09-15T20:22:01.539441+00:00",
+  "elapsed_seconds": 7.8080645419540815,
+  "usage": {
+    "kalshi": {
+      "requests": 4,
+      "connections": 0,
+      "bytes": 340239,
+      "dollars": "0"
+    },
+    "polymarket_us": {
+      "requests": 1,
+      "connections": 0,
+      "bytes": 1048576,
+      "dollars": "0"
+    }
+  }
+}

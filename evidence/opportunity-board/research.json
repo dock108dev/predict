@@ -1,0 +1,20 @@
+{
+  "assessed_at": "2026-09-16T00:27:31+00:00",
+  "method": "Retained event-specific listing text and fee registry first; two official documentation pages checked without market capture.",
+  "sources": [
+    {
+      "url": "https://docs.polymarket.us/fees",
+      "finding": "Public notice: standard taker coefficient changes from 0.06 to 0.0695 at 11:59 PM ET September 16, 2026. Both September 15 captures retain 0.06. Separate settlement levy not established by this schedule."
+    },
+    {
+      "url": "https://docs.kalshi.com/getting_started/fee_rounding",
+      "finding": "Account precision and per-order fill rounding matter. The captured event lacks an effective override history and account precision; these are explicitly assumed in what-if scenarios."
+    }
+  ],
+  "retained_evidence": [
+    "evidence/slice-9/research/pmus-fees.md",
+    "evidence/slice-9/research/kalshi-rounding.md",
+    "evidence/phase-0/kalshi-series.json"
+  ],
+  "settlement": "Both retained Detroit-Buffalo listings specify a half-dollar tie payout. Postponement triggers differ: commenced play within 48 hours versus rescheduled date within two days; exceptional fair values are venue-specific and unresolved. Exact retained text and its hash are embedded in each new analysis; original assessments are unchanged."
+}

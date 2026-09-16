@@ -1,0 +1,39 @@
+{
+  "http_status": 200,
+  "response": {
+    "state": "failed",
+    "active": false,
+    "error": "Storage failure at fsync; durability of unacknowledged work is unknown.",
+    "saved": [],
+    "saved_status": {},
+    "start_available": false,
+    "interrupted": false,
+    "view": null,
+    "session": "77b8d903-ebf8-444c-802d-7564d8def3ec",
+    "delivered": 0,
+    "persisted": 0,
+    "storage_accounting": {
+      "received": 4,
+      "accepted": 3,
+      "write_attempted": 3,
+      "durably_acknowledged": 2,
+      "rejected": 1,
+      "unresolved": 1,
+      "queue_pending": 0,
+      "queue_drained": 0,
+      "journal_write_attempted": 0,
+      "journal_durably_acknowledged": 0,
+      "journal_unresolved": 0,
+      "confirmed_byte_offset": 0,
+      "confirmed_chain": null,
+      "total_upstream": null,
+      "lost": null
+    },
+    "cleanup_complete": true,
+    "failure_report": "not_attempted",
+    "usable": false,
+    "terminal_acknowledged": false
+  },
+  "server_closed_after_check": true,
+  "scope": "local API state fixture, no producers"
+}

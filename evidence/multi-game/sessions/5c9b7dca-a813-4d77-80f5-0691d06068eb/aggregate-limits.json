@@ -1,0 +1,13 @@
+{
+  "max_games": 6,
+  "minimum_seconds_before_kickoff": 300,
+  "aggregate_requests": 128,
+  "aggregate_connections": 4,
+  "concurrent_sockets": 2,
+  "aggregate_messages": 1200,
+  "aggregate_body_bytes": 33554432,
+  "ingress_records": 2048,
+  "ingress_bytes": 16777216,
+  "journal_records": 4096,
+  "journal_bytes": 33554432
+}

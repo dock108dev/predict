@@ -1,0 +1,66 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "e3_implementation_digest": "c93dae7a91a2a31b785c62d806c68044dcca9d16be59ad6b7e21c141be79ffc6",
+  "full_implementation_digest": "18e8d627f8fecaad38a1681db23aed503f5def1dd5ed411804364fc58fd91c76",
+  "focused_tests": 258,
+  "focused_seconds": "32.401",
+  "pricing_tests": 16,
+  "postgres_foundation_tests": 26,
+  "durable_success": true,
+  "cluster_removed_verified": true,
+  "owner_database_and_services_accessed": false,
+  "provider_requests": false,
+  "git_commit_push_publish": false,
+  "diff_check": true,
+  "entry_file_count": 188,
+  "preserved_entry_files": 184,
+  "intentional_modified_entry_files": [
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md",
+    "app/reference/verify_storage.py",
+    "app/storage/store.py",
+    "integration_tests/test_storage.py"
+  ],
+  "archived_sources": {
+    "sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "clean": true
+    },
+    "scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "clean": true
+    }
+  },
+  "artifact_hashes": {
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "e63a633c61e6e441f25c3679b99dbd9b26506efd7db5e1de20fccc899d29ccd3",
+    "docs/e3-contracts.md": "7458d4f94b30c8ceff8eaf95d8f19616ab11f2c7b76b18bd4a3da85812bb0da2",
+    "docs/e3-report.md": "c5896b7ef7229745b0d692495df57cf65a1141ef2dc5330baa0c04604eaccf98",
+    "docs/e4-handoff.md": "5f9f3b0291646ea4d59db9534150ead56021f5b8ef9f74bc5caf83793d3ee03b",
+    "evidence/e3/candidate-implementation.json": "91e986dc4df5c1d3e698ee56da48946b36356171b8465730b5cc5d0c5379c3bd",
+    "evidence/e3/durable/capture-current.json": "c98fbd2e8150367c4d545b42b06fd9fcd596d6aa28e740cfb80ff8ac7971e6d2",
+    "evidence/e3/durable/capture-e2-prefix.json": "1eb406da9a96952ef53ee0529cf1684227016db8e87f49dae24c465aecdc9849",
+    "evidence/e3/durable/e2-reference-restored.json": "d2db196f7d3801468866ab5e8f4bf3d375e31367b2bf66ebfd2466158df4abe6",
+    "evidence/e3/durable/estimate-0-restored.json": "a38656cabde5f7988c986345053c8cd2853abc0ea239d36b9434e954e9dc19a3",
+    "evidence/e3/durable/estimate-0.json": "a38656cabde5f7988c986345053c8cd2853abc0ea239d36b9434e954e9dc19a3",
+    "evidence/e3/durable/estimate-1-restored.json": "7bdc84b6d39e500741cd94f4f30225f152d948fcd3558ee146265193085b6a56",
+    "evidence/e3/durable/estimate-1.json": "7bdc84b6d39e500741cd94f4f30225f152d948fcd3558ee146265193085b6a56",
+    "evidence/e3/durable/estimate-2-restored.json": "8bdc74cbaf9675a14dc7f416aa0995001de35acbeabc12866dcd93412d4123b0",
+    "evidence/e3/durable/estimate-2.json": "8bdc74cbaf9675a14dc7f416aa0995001de35acbeabc12866dcd93412d4123b0",
+    "evidence/e3/durable/estimate-3-restored.json": "0d002b5727c74f41cf1644eb85cbeef31947437669d362e1e93de9652e11de68",
+    "evidence/e3/durable/estimate-3.json": "0d002b5727c74f41cf1644eb85cbeef31947437669d362e1e93de9652e11de68",
+    "evidence/e3/durable/estimate-4-restored.json": "085505afbe1270832b86ff4524e9a7e29fa8960e0ba59580f751bbf25fb29e3e",
+    "evidence/e3/durable/estimate-4.json": "085505afbe1270832b86ff4524e9a7e29fa8960e0ba59580f751bbf25fb29e3e",
+    "evidence/e3/durable/estimate-5-restored.json": "4b055480954ad00d632c3c9569527e9d2b970bdd8e790ded298bca8a5be18949",
+    "evidence/e3/durable/estimate-5.json": "4b055480954ad00d632c3c9569527e9d2b970bdd8e790ded298bca8a5be18949",
+    "evidence/e3/durable/foundation-storage-tests.txt": "2e8aa662b67687df33295c20bab918adaa4be8b07a80a2603e02583f82922cb5",
+    "evidence/e3/durable/postgres-commands.txt": "65b6b99a6f0817116f76e99bf5e9617230045118b260d9164e1feb3f69644f69",
+    "evidence/e3/durable/reference-bundle-restored.json": "a8cc7b54745fc0902ed492adaae799038a43a1f5492de854916fde890490a83e",
+    "evidence/e3/durable/reference-bundle.json": "a8cc7b54745fc0902ed492adaae799038a43a1f5492de854916fde890490a83e",
+    "evidence/e3/durable/storage-verification.json": "f653cc8d879b64e65e644921017c8326d360195b22d6118ec106ac07d4e754b9",
+    "evidence/e3/durable-run.txt": "f653cc8d879b64e65e644921017c8326d360195b22d6118ec106ac07d4e754b9",
+    "evidence/e3/entry-manifest.json": "0803e32d36f186bd0c9d0814f470ebefd27c4427831d6a89024b0de1e84fd28b",
+    "evidence/e3/focused-tests.txt": "21f1b41341bc88de9be899c3523557f6a5862e45bcd756e1d16b96c5b975c6f8",
+    "evidence/e3/pricing-tests-initial.txt": "71284722013b25a4084e9caa9a1066264094c9870d0567e473266afa84df1971",
+    "evidence/e3/pricing-tests.txt": "3cb4c72b101a056592f29649256cfa29005475251f4c7cc39856e709abfe0b24"
+  },
+  "stop": "E3 offline complete; E4 prepared only; no live qualification, calibration or owner acceptance"
+}

@@ -1,0 +1,41 @@
+test_all_saved_e3_estimates_replay_unchanged (tests.test_opportunities.OpportunitiesTest.test_all_saved_e3_estimates_replay_unchanged) ... ok
+test_arb_independent_of_probability_model (tests.test_opportunities.OpportunitiesTest.test_arb_independent_of_probability_model) ... ok
+test_decimal_context_independence (tests.test_opportunities.OpportunitiesTest.test_decimal_context_independence) ... ok
+test_fee_grouping_existing_pmus_cumulative_rules (tests.test_opportunities.OpportunitiesTest.test_fee_grouping_existing_pmus_cumulative_rules) ... ok
+test_freshness_equality_and_source_clock (tests.test_opportunities.OpportunitiesTest.test_freshness_equality_and_source_clock) ... ok
+test_independent_positive_negative_and_units (tests.test_opportunities.OpportunitiesTest.test_independent_positive_negative_and_units) ... ok
+test_late_receipt_estimate_and_knowledge_rejected (tests.test_opportunities.OpportunitiesTest.test_late_receipt_estimate_and_knowledge_rejected) ... ok
+test_mutations_missing_dependency_and_versions (tests.test_opportunities.OpportunitiesTest.test_mutations_missing_dependency_and_versions) ... ok
+test_probability_unknown_invalid_and_target_binding (tests.test_opportunities.OpportunitiesTest.test_probability_unknown_invalid_and_target_binding) ... ok
+test_quantity_unknown_constraints_and_consumed_depth (tests.test_opportunities.OpportunitiesTest.test_quantity_unknown_constraints_and_consumed_depth) ... FAIL
+test_ranking_separate_classes_unknowns_and_overlap (tests.test_opportunities.OpportunitiesTest.test_ranking_separate_classes_unknowns_and_overlap) ... ok
+test_saved_e3_unknown_and_exact_replay (tests.test_opportunities.OpportunitiesTest.test_saved_e3_unknown_and_exact_replay) ... ok
+test_stale_books_diagnostics_retained_but_unranked (tests.test_opportunities.OpportunitiesTest.test_stale_books_diagnostics_retained_but_unranked) ... ok
+test_unknown_and_refund_exceptional_cashflows (tests.test_opportunities.OpportunitiesTest.test_unknown_and_refund_exceptional_cashflows) ... FAIL
+test_unknown_fees_not_imputed (tests.test_opportunities.OpportunitiesTest.test_unknown_fees_not_imputed) ... ok
+
+======================================================================
+FAIL: test_quantity_unknown_constraints_and_consumed_depth (tests.test_opportunities.OpportunitiesTest.test_quantity_unknown_constraints_and_consumed_depth)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_opportunities.py", line 95, in test_quantity_unknown_constraints_and_consumed_depth
+    self.assertEqual(Decimal(s['net_total_usd']),Decimal('1.08'))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Decimal('1.090000') != Decimal('1.08')
+
+======================================================================
+FAIL: test_unknown_and_refund_exceptional_cashflows (tests.test_opportunities.OpportunitiesTest.test_unknown_and_refund_exceptional_cashflows)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_opportunities.py", line 115, in test_unknown_and_refund_exceptional_cashflows
+    self.assertEqual(case['payout']['kind'],'refund')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'fraction' != 'refund'
+- fraction
++ refund
+
+
+----------------------------------------------------------------------
+Ran 15 tests in 29.343s
+
+FAILED (failures=2)

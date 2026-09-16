@@ -1,0 +1,135 @@
+{
+  "status": "bounded E6 synthetic package complete; real-feed qualification remains separate",
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "implementation_digest": "9a098e61b662c8dccb2bb2bdf633c7b568e34c75fda5e1ae05185bb4e4cc4573",
+  "preexisting_files_preserved": 1196,
+  "source_files_match_candidate": true,
+  "remaining_disposable_clusters": [],
+  "artifacts": {
+    "docs/e6-package-report.md": "57181d86ba873a71e5396f201019e5601bf79ecd2e4e5f8663ae3fc515e48242",
+    "docs/e6-real-feed-handoff.md": "c84d2cb961b50f025e6caf0ddbaf6299d7b01af6a93364dd9f11fbce7b0fb654",
+    "evidence/e6/candidate-implementation.json": "9114ecf8de5d3648bc0c207b5294b981bac7d880657c8361e451bbc2e904a5f2",
+    "evidence/e6/sustained-summary.json": "3e0834097c4733eb484c6f6c135c62dd5428b1551d22e76f2920f555f38eccdb",
+    "evidence/e6/browser-verification.json": "f04d6b8e1243a74db83be04395ec89abd5c8cc4cb498f5cb80c659a7ce2c5d47",
+    "evidence/e6/final-focused-tests.log": "6bea88dfe30e1ce7e2c8070942c967a58aa79b587085b15dc34ea05f3d9db629",
+    "evidence/e6/server-tests.log": "63f0f982125c6bbcaddf1556472f3b357e65512d227b3f63df589b4e43f872a3",
+    "evidence/e6/regressions.log": "81596c8ede613b2c6097624a23273ad7389e82100ac6063adc13025f2ae34fef",
+    "evidence/e6/final-candidate-15m/replay-verification.json": "2fb53990e07fef92dba14b2e2c1a237a0d5332cb8adcef94df0ef53cdcc23a92",
+    "evidence/e6/final-candidate-15m/cleanup/cleanup.json": "a572258af678c2ff07ae2b4e44b566385936c0bcfd090f8e9281b948179aca15",
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "7d00ce0f533d7e0b5a3c356cb4b3abdf2c9631b40f5305d4452126c33b03ee86"
+  },
+  "audit_net_values": [
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "-0.400000",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ],
+    [
+      "1.7300",
+      null
+    ]
+  ],
+  "provider_requests": 0,
+  "owner_database_access": false,
+  "commit": false,
+  "push": false
+}

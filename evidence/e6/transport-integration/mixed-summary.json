@@ -1,0 +1,13 @@
+{
+  "session": "9072ac74-b259-462a-9d31-90f7e5a40963",
+  "delivered": 175,
+  "persisted": 175,
+  "http_requests": 37,
+  "reference_requests": 33,
+  "kalshi_connections": 2,
+  "pmus_connections": 2,
+  "sha256": "9e2f6c21e1f9d9ba5306da04eea3b31ed8e2beb7091547d6e2e25d0c63415b8d",
+  "reason": "duration_or_kickoff_cutoff",
+  "exact_replay": true,
+  "provenance": "local mock HTTP/WS; fabricated frames; adapted retained PMUS metadata"
+}

@@ -1,0 +1,436 @@
+[
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/912257f4-d813-4e2b-a51a-fb3a28ec566b/recovery.json",
+    "session": "912257f4-d813-4e2b-a51a-fb3a28ec566b",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/disk_full/912257f4-d813-4e2b-a51a-fb3a28ec566b.jsonl",
+      "device": 16777234,
+      "inode": 361160134,
+      "size": 37175,
+      "mtime_ns": 1789517244119144570,
+      "ctime_ns": 1789517244119144570,
+      "sha256": "a7923376a413df107a29887e7adcca83fac1fcb00b07356c8e52614327a20bed"
+    },
+    "verified_offset": 37175,
+    "verified_chain": "a03cefc68cfe1662a398ed1dcb2782ad78e9a98ece2a7a9c272a2f0728759454",
+    "counts": {
+      "frames": 5,
+      "books": 2,
+      "packets": 4,
+      "ingress": 22
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "aba72c11-3f7d-4fef-a053-e0c29d4f71a1",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "a03cefc68cfe1662a398ed1dcb2782ad78e9a98ece2a7a9c272a2f0728759454",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 2,
+      "total_packets": 4
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/6bedefe2-c858-42a1-9b73-f296782e0064/recovery.json",
+    "session": "6bedefe2-c858-42a1-9b73-f296782e0064",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/partial/6bedefe2-c858-42a1-9b73-f296782e0064.jsonl",
+      "device": 16777234,
+      "inode": 361160157,
+      "size": 37198,
+      "mtime_ns": 1789517245531397091,
+      "ctime_ns": 1789517245531397091,
+      "sha256": "1d9f5738b3dd2154f4b4743ee059c052a02dcd2ed3ca199ac9cc10023ebf65ff"
+    },
+    "verified_offset": 37175,
+    "verified_chain": "7bd126e13ec4624adf4d5510a1ca265e31c7018de57e726c886bd27c19ae5ac4",
+    "counts": {
+      "frames": 5,
+      "books": 2,
+      "packets": 4,
+      "ingress": 22
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "12bfc41b-63c0-48a3-8a00-086560a65db7",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "7bd126e13ec4624adf4d5510a1ca265e31c7018de57e726c886bd27c19ae5ac4",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 2,
+      "total_packets": 4
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/0e33888d-403c-468f-8aca-0108e7d80640/recovery.json",
+    "session": "0e33888d-403c-468f-8aca-0108e7d80640",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/fsync/0e33888d-403c-468f-8aca-0108e7d80640.jsonl",
+      "device": 16777234,
+      "inode": 361160182,
+      "size": 40939,
+      "mtime_ns": 1789517246961622215,
+      "ctime_ns": 1789517246961622215,
+      "sha256": "f81eec0764e307ef50ac7b7e41cb5e76b896e39e4462ecfa5bc25a6db05be0dd"
+    },
+    "verified_offset": 40939,
+    "verified_chain": "c1fa61bb6eba82ab23b121aa320d99b1fefbb15d8ef448affda2a38bf5f8fddb",
+    "counts": {
+      "frames": 5,
+      "books": 3,
+      "packets": 6,
+      "ingress": 23
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 1
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "5466d2e8-efe6-42fb-9b55-6ddbdc004f30",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "c1fa61bb6eba82ab23b121aa320d99b1fefbb15d8ef448affda2a38bf5f8fddb",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 3,
+      "total_packets": 6
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/0721127c-ee2d-43ee-bc0c-6d8ebc59d712/recovery.json",
+    "session": "0721127c-ee2d-43ee-bc0c-6d8ebc59d712",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/terminal/0721127c-ee2d-43ee-bc0c-6d8ebc59d712.jsonl",
+      "device": 16777234,
+      "inode": 361160193,
+      "size": 71233,
+      "mtime_ns": 1789517248661897526,
+      "ctime_ns": 1789517248661897526,
+      "sha256": "3e8949f9e12aa00d916e3d17c34be43e12d6a96895e77e04eee347d075a55a3a"
+    },
+    "verified_offset": 71233,
+    "verified_chain": "1c6a97135fafe5dfba6a98173a71fe407ea90a21d4fe5862a35b3e7168cd5f49",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 46
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "b2d67484-7de6-4e81-8c10-8c7e447f5312",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "1c6a97135fafe5dfba6a98173a71fe407ea90a21d4fe5862a35b3e7168cd5f49",
+      "state": "interrupted",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/6747ca01-822e-4001-8080-cb962ffd4020/recovery.json",
+    "session": "6747ca01-822e-4001-8080-cb962ffd4020",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/race/6747ca01-822e-4001-8080-cb962ffd4020.jsonl",
+      "device": 16777234,
+      "inode": 361160249,
+      "size": 37175,
+      "mtime_ns": 1789517253483443031,
+      "ctime_ns": 1789517253483443031,
+      "sha256": "2c8fd476fa2f6e666f3f26eb34f1158a9f3f52360522b4ce026e915248ee0353"
+    },
+    "verified_offset": 37175,
+    "verified_chain": "e60cf774818ca5fd66082f87fb2f4e6c9a8ae8498377ea4d52d444fd4a3209ad",
+    "counts": {
+      "frames": 5,
+      "books": 2,
+      "packets": 4,
+      "ingress": 22
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "9f7eef2a-2362-4b9d-944b-2b239fc22400",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "e60cf774818ca5fd66082f87fb2f4e6c9a8ae8498377ea4d52d444fd4a3209ad",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 2,
+      "total_packets": 4
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/cd266cee-5fa3-4419-b465-a5534462fa59/recovery.json",
+    "session": "cd266cee-5fa3-4419-b465-a5534462fa59",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/short/cd266cee-5fa3-4419-b465-a5534462fa59.jsonl",
+      "device": 16777234,
+      "inode": 361160146,
+      "size": 37198,
+      "mtime_ns": 1789517244841421241,
+      "ctime_ns": 1789517244841421241,
+      "sha256": "bfa4bb65e6904ce99ccb295fb495e8d8dfbaf9e86ff62fb1ba1a87979b5a4ae8"
+    },
+    "verified_offset": 37175,
+    "verified_chain": "a1f04ae218c76c19e9b7ea9cc73aafc82bd0cbf0a535f0a8cb24630b3eb02b0c",
+    "counts": {
+      "frames": 5,
+      "books": 2,
+      "packets": 4,
+      "ingress": 22
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "d97818be-122e-4bae-9ea6-2b3844ad2025",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "a1f04ae218c76c19e9b7ea9cc73aafc82bd0cbf0a535f0a8cb24630b3eb02b0c",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 2,
+      "total_packets": 4
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/dcc61df2-1832-4ac3-a4ad-d0daa21d1f7e/recovery.json",
+    "session": "dcc61df2-1832-4ac3-a4ad-d0daa21d1f7e",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/manifest/observations.jsonl",
+      "device": 16777234,
+      "inode": 361160223,
+      "size": 71882,
+      "mtime_ns": 1789517252169304809,
+      "ctime_ns": 1789517252170134062,
+      "sha256": "70eb8c927f9622257352bd8a1ed0a888ad4d92e6403fb93b1c7ffacfa3a5f80a"
+    },
+    "verified_offset": 71882,
+    "verified_chain": "897c9abb1d206f0821fb7fe28eae85f9951dd5aa0e4046235c9ca7e9972cd3d1",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 46
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "32d6ba91-3cd4-4c50-97f3-7d3f19c11e11",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "897c9abb1d206f0821fb7fe28eae85f9951dd5aa0e4046235c9ca7e9972cd3d1",
+      "state": "complete",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/e41571d9-cf25-47a6-bcad-3836ed998940/recovery.json",
+    "session": "e41571d9-cf25-47a6-bcad-3836ed998940",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/export/observations.jsonl",
+      "device": 16777234,
+      "inode": 361160206,
+      "size": 71882,
+      "mtime_ns": 1789517250473274138,
+      "ctime_ns": 1789517250474589101,
+      "sha256": "8fd7b998cf8097f9e08bc7b2b64ba81e208f1643d5b9d493a3b2840ce5138a5d"
+    },
+    "verified_offset": 71882,
+    "verified_chain": "1ff2505c55bc545baee2a4bc31313b3bab6777b0897015de64717ab94360167b",
+    "counts": {
+      "frames": 9,
+      "books": 8,
+      "packets": 16,
+      "ingress": 46
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "84407eca-77fa-4ce5-909d-08d9e9cb6b3d",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "1ff2505c55bc545baee2a4bc31313b3bab6777b0897015de64717ab94360167b",
+      "state": "complete",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/e7d97198-fe4f-4752-8d79-aa2c88f7dbd3/recovery.json",
+    "session": "e7d97198-fe4f-4752-8d79-aa2c88f7dbd3",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/report/e7d97198-fe4f-4752-8d79-aa2c88f7dbd3.jsonl",
+      "device": 16777234,
+      "inode": 361160238,
+      "size": 37198,
+      "mtime_ns": 1789517252761741988,
+      "ctime_ns": 1789517252761741988,
+      "sha256": "dbf2a7084ad280f1d644655fe4ac26a3cccb22018b254e9268d9162e754888fc"
+    },
+    "verified_offset": 37175,
+    "verified_chain": "5b3dc3eb15eb665b0f0306c067ae4c765c7d376f813802fc69b29f393368e30c",
+    "counts": {
+      "frames": 5,
+      "books": 2,
+      "packets": 4,
+      "ingress": 22
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "f34202b2-4c62-4b19-b45b-a953236ba223",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "5b3dc3eb15eb665b0f0306c067ae4c765c7d376f813802fc69b29f393368e30c",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 2,
+      "total_packets": 4
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/faults-final/catalog/67b26e16-948c-4c45-ba8e-3f35679f9a73/recovery.json",
+    "session": "67b26e16-948c-4c45-ba8e-3f35679f9a73",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/flush/67b26e16-948c-4c45-ba8e-3f35679f9a73.jsonl",
+      "device": 16777234,
+      "inode": 361160170,
+      "size": 40939,
+      "mtime_ns": 1789517246214285083,
+      "ctime_ns": 1789517246214285083,
+      "sha256": "16545dfe37c326fc319e8de6fbbf5c5b565d102f25da9fdcf15cb74f6c5f2521"
+    },
+    "verified_offset": 40939,
+    "verified_chain": "7b034090d0b68b83492de968bddd8d6610d2fb27bfc497d5ed317c3b9941dcff",
+    "counts": {
+      "frames": 5,
+      "books": 3,
+      "packets": 6,
+      "ingress": 23
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 2,
+        "polymarket_us": 1
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "4832e255-158d-4518-8329-b0e31d557097",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "7b034090d0b68b83492de968bddd8d6610d2fb27bfc497d5ed317c3b9941dcff",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 3,
+      "total_packets": 6
+    }
+  },
+  {
+    "index": "evidence/e6/storage-failure/deadline-catalog/2b6839c5-f456-4914-9743-1607a334c397/recovery.json",
+    "session": "2b6839c5-f456-4914-9743-1607a334c397",
+    "source": {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/deadline/2b6839c5-f456-4914-9743-1607a334c397.jsonl",
+      "device": 16777234,
+      "inode": 361160467,
+      "size": 18084,
+      "mtime_ns": 1789517307964467155,
+      "ctime_ns": 1789517307964467155,
+      "sha256": "82051df8a0bf8187fd8091cd3d9b1a89aaacb3ea81044d5d192dc9bc42a88a13"
+    },
+    "verified_offset": 18084,
+    "verified_chain": "19f6247bafaaccb63d57ca9223080aaf873ff7b898989dde51b892366fb24264",
+    "counts": {
+      "frames": 0,
+      "books": 0,
+      "packets": 0,
+      "ingress": 5
+    },
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "19f6247bafaaccb63d57ca9223080aaf873ff7b898989dde51b892366fb24264",
+      "state": "interrupted",
+      "derived_health_books": 0,
+      "total_books": 0,
+      "total_packets": 0
+    }
+  }
+]

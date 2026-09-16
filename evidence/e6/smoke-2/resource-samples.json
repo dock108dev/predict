@@ -1,0 +1,162 @@
+[
+  {
+    "id": "56131fe4-dcdb-4815-9d04-4826a16c06d8",
+    "state": "running",
+    "reason": null,
+    "synthetic": true,
+    "event": "synthetic-atl-pit-e2",
+    "health": {
+      "kalshi": {
+        "state": "connected",
+        "reason": "fresh full snapshot",
+        "detected_at": "2026-09-13T15:00:09.183544+00:00",
+        "wall_at": "2026-09-15T14:55:59.522831-04:00",
+        "last_success_at": "2026-09-13T15:00:09.183557+00:00",
+        "receipt": "60b8fe26-fb7d-4633-b9dd-894c2a3d6360"
+      },
+      "polymarket_us": {
+        "state": "connected",
+        "reason": "fresh full snapshot",
+        "detected_at": "2026-09-13T15:00:09.210108+00:00",
+        "wall_at": "2026-09-15T14:55:59.549421-04:00",
+        "last_success_at": "2026-09-13T15:00:09.210158+00:00",
+        "receipt": "33d77f4c-7352-4158-919b-5ae0a763d06a"
+      },
+      "reference": {
+        "state": "disconnected",
+        "reason": "cancelled",
+        "detected_at": "2026-09-13T15:00:10.040369+00:00",
+        "wall_at": "2026-09-15T14:56:00.379659-04:00",
+        "last_success_at": "2026-09-13T15:00:08.140058+00:00",
+        "receipt": null
+      },
+      "discovery": {
+        "state": "connected",
+        "reason": "declared event confirmed",
+        "detected_at": "2026-09-13T15:00:08.140731+00:00",
+        "wall_at": "2026-09-15T14:55:58.480018-04:00",
+        "last_success_at": "2026-09-13T15:00:08.140742+00:00",
+        "receipt": null
+      }
+    },
+    "delivered": 0,
+    "persisted": 0,
+    "journal_only": 0,
+    "calculations": 0,
+    "queue": 0,
+    "queue_high_items": 0,
+    "queue_high_bytes": 0,
+    "reference_ledger_high": 0,
+    "worker_tasks": 0,
+    "ingress_bytes": 0,
+    "journal_bytes": 0,
+    "logical_storage_bytes": 0,
+    "database_high_bytes": 0,
+    "wall_seconds": 1.8250022549182177e-05,
+    "producers_closed": false,
+    "limits": {
+      "seconds": 10,
+      "receipts": 1024,
+      "ingress_bytes": 16777216,
+      "item_bytes": 8388608,
+      "storage_bytes": 536870912,
+      "database_bytes": 1073741824,
+      "queue_items": 48,
+      "queue_bytes": 4194304,
+      "reference_requests": 64,
+      "retries": 3,
+      "request_timeout": 3,
+      "prediction_poll": 1,
+      "reference_poll": 2,
+      "discovery_poll": 2,
+      "calculation_poll": 2,
+      "calculations": 64,
+      "reference_records": 256,
+      "journal_bytes": 33554432
+    },
+    "exported": null,
+    "storage_error": null,
+    "simulation_time": "2026-09-13T15:00:00.036471+00:00",
+    "rss_bytes": 50020352
+  },
+  {
+    "id": "56131fe4-dcdb-4815-9d04-4826a16c06d8",
+    "state": "running",
+    "reason": null,
+    "synthetic": true,
+    "event": "synthetic-atl-pit-e2",
+    "health": {
+      "kalshi": {
+        "state": "connected",
+        "reason": "fresh full snapshot",
+        "detected_at": "2026-09-13T15:00:09.183544+00:00",
+        "wall_at": "2026-09-15T14:55:59.522831-04:00",
+        "last_success_at": "2026-09-13T15:00:09.183557+00:00",
+        "receipt": "60b8fe26-fb7d-4633-b9dd-894c2a3d6360"
+      },
+      "polymarket_us": {
+        "state": "connected",
+        "reason": "fresh full snapshot",
+        "detected_at": "2026-09-13T15:00:09.210108+00:00",
+        "wall_at": "2026-09-15T14:55:59.549421-04:00",
+        "last_success_at": "2026-09-13T15:00:09.210158+00:00",
+        "receipt": "33d77f4c-7352-4158-919b-5ae0a763d06a"
+      },
+      "reference": {
+        "state": "disconnected",
+        "reason": "cancelled",
+        "detected_at": "2026-09-13T15:00:10.040369+00:00",
+        "wall_at": "2026-09-15T14:56:00.379659-04:00",
+        "last_success_at": "2026-09-13T15:00:08.140058+00:00",
+        "receipt": null
+      },
+      "discovery": {
+        "state": "connected",
+        "reason": "declared event confirmed",
+        "detected_at": "2026-09-13T15:00:08.140731+00:00",
+        "wall_at": "2026-09-15T14:55:58.480018-04:00",
+        "last_success_at": "2026-09-13T15:00:08.140742+00:00",
+        "receipt": null
+      }
+    },
+    "delivered": 35,
+    "persisted": 35,
+    "journal_only": 0,
+    "calculations": 4,
+    "queue": 0,
+    "queue_high_items": 5,
+    "queue_high_bytes": 163027,
+    "reference_ledger_high": 11,
+    "worker_tasks": 6,
+    "ingress_bytes": 892865,
+    "journal_bytes": 893880,
+    "logical_storage_bytes": 12551413,
+    "database_high_bytes": 11535139,
+    "wall_seconds": 10.002198749978561,
+    "producers_closed": false,
+    "limits": {
+      "seconds": 10,
+      "receipts": 1024,
+      "ingress_bytes": 16777216,
+      "item_bytes": 8388608,
+      "storage_bytes": 536870912,
+      "database_bytes": 1073741824,
+      "queue_items": 48,
+      "queue_bytes": 4194304,
+      "reference_requests": 64,
+      "retries": 3,
+      "request_timeout": 3,
+      "prediction_poll": 1,
+      "reference_poll": 2,
+      "discovery_poll": 2,
+      "calculation_poll": 2,
+      "calculations": 64,
+      "reference_records": 256,
+      "journal_bytes": 33554432
+    },
+    "exported": null,
+    "storage_error": null,
+    "simulation_time": "2026-09-13T15:00:10.038654+00:00",
+    "rss_bytes": 102662144
+  }
+]

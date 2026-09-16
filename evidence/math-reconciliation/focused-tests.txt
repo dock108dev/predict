@@ -1,0 +1,42 @@
+test_depth_boundary_and_capping (tests.test_math_reconciliation.BoundaryTests.test_depth_boundary_and_capping) ... ok
+test_grouped_fees_and_rounding_refund (tests.test_math_reconciliation.BoundaryTests.test_grouped_fees_and_rounding_refund) ... ok
+test_rank_preserves_digits_beyond_ambient_decimal_precision (tests.test_math_reconciliation.ExactRankingTests.test_rank_preserves_digits_beyond_ambient_decimal_precision) ... ok
+test_all_saved_candidates_and_ev (tests.test_math_reconciliation.ReconciliationTests.test_all_saved_candidates_and_ev) ... ok
+test_asof_and_future_rows (tests.test_opportunity_board.BoardTests.test_asof_and_future_rows) ... ok
+test_direct_rounding_and_fractional_fill_limit (tests.test_opportunity_board.BoardTests.test_direct_rounding_and_fractional_fill_limit) ... ok
+test_independent_positive_negative_unknown_ev (tests.test_opportunity_board.BoardTests.test_independent_positive_negative_unknown_ev) ... ok
+test_independent_real_arithmetic (tests.test_opportunity_board.BoardTests.test_independent_real_arithmetic) ... ok
+test_input_and_probability_separation (tests.test_opportunity_board.BoardTests.test_input_and_probability_separation) ... ok
+test_native_orientation_and_no_short_purchase (tests.test_opportunity_board.BoardTests.test_native_orientation_and_no_short_purchase) ... ok
+test_stale_disconnect_and_skew (tests.test_opportunity_board.BoardTests.test_stale_disconnect_and_skew) ... ok
+test_synthetic_positive_and_depth (tests.test_opportunity_board.BoardTests.test_synthetic_positive_and_depth) ... ok
+test_readonly_selection (tests.test_opportunity_board.HTTPTests.test_readonly_selection) ... Executing <Task pending name='Task-1' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.227 seconds
+ok
+test_dashboard_drilldown_and_no_default_ev (tests.test_multi_game.HTTPTests.test_dashboard_drilldown_and_no_default_ev) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:37: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard]);app['owner']=owner
+Executing <Task pending name='Task-14' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.270 seconds
+ok
+test_guard_persists_without_dispatch (tests.test_multi_game.HTTPTests.test_guard_persists_without_dispatch) ... Executing <Task pending name='Task-27' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.233 seconds
+ok
+test_cross_event_isolation_and_unknown_probability (tests.test_multi_game.MultiTests.test_cross_event_isolation_and_unknown_probability) ... ok
+test_depth_capped_and_supported_purchase (tests.test_multi_game.MultiTests.test_depth_capped_and_supported_purchase) ... ok
+test_freshness_and_saved (tests.test_multi_game.MultiTests.test_freshness_and_saved) ... ok
+test_preflight_bounds (tests.test_multi_game.MultiTests.test_preflight_bounds) ... ok
+test_real_near_miss_and_ev_separation (tests.test_multi_game.MultiTests.test_real_near_miss_and_ev_separation) ... ok
+test_sort_filter_unknown_negative_positive_stale (tests.test_multi_game.MultiTests.test_sort_filter_unknown_negative_positive_stale) ... ok
+test_catalog_identity_duplicates_schedule_and_native_sides (tests.test_multi_game.SavedDiscoveryTests.test_catalog_identity_duplicates_schedule_and_native_sides) ... Executing <Task pending name='Task-33' coro=<SavedDiscoveryTests.test_catalog_identity_duplicates_schedule_and_native_sides() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_multi_game.py:100> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.501 seconds
+Executing <Task finished name='Task-33' coro=<SavedDiscoveryTests.test_catalog_identity_duplicates_schedule_and_native_sides() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_multi_game.py:82> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.793 seconds
+ok
+test_round_half_even (tests.test_fees.FeeTests.test_round_half_even) ... ok
+test_pmus_cumulative_can_only_reduce (tests.test_fees.FeeTests.test_pmus_cumulative_can_only_reduce) ... ok
+test_kalshi_official_fractional_example (tests.test_fees.FeeTests.test_kalshi_official_fractional_example) ... ok
+test_kalshi_precision (tests.test_fees.FeeTests.test_kalshi_precision) ... ok
+test_unknown_settlement_not_zero (tests.test_fees.FeeTests.test_unknown_settlement_not_zero) ... ok
+test_schedule_boundaries_and_overlap (tests.test_fees.FeeTests.test_schedule_boundaries_and_overlap) ... ok
+test_grouped_multilevel_pm_fees (tests.test_depth.DepthTests.test_grouped_multilevel_pm_fees) ... ok
+
+----------------------------------------------------------------------
+Ran 29 tests in 4.657s
+
+OK

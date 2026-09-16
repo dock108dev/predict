@@ -1,0 +1,13 @@
+test_controlled_recovery_and_manual_stop (tests.test_e6_live_watch.LiveLoop.test_controlled_recovery_and_manual_stop) ... ok
+test_current_health_and_quiet_freshness (tests.test_e6_live_watch.Projection.test_current_health_and_quiet_freshness) ... ok
+test_idle_no_credentials_or_network (tests.test_e6_live_watch.Projection.test_idle_no_credentials_or_network) ... ok
+test_browser_disconnect_and_idle_startup (tests.test_e6_live_watch.HttpOwnership.test_browser_disconnect_and_idle_startup) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/e6_live.py:169: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=2048);app['owner']=owner
+ok
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_prediction_only.PredictionOnly.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 6.004s
+
+OK

@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-15T16:15:24.673063+00:00",
+  "entry_manifest_verified": true,
+  "implementation_digest": "5427e0d253a837ec87ff29005325764bbe81b8dba63904ebfb54b602eb1b1899",
+  "tests": {
+    "count": 213,
+    "result": "passed",
+    "seconds": "28.621",
+    "output": "recheck-focused-tests.txt"
+  },
+  "walkthrough": "byte-identical to walkthrough.json; model and detector replay passed",
+  "adaptation_probes": "both passed",
+  "source_heads_and_clean_trees": "verified against audit-sources.json",
+  "guidance": "README.md and docs/product-roadmap-review.md byte-identical to baseline",
+  "scope": "Reverified preexisting E1 implementation; no implementation edits, service operations, database access or E2 work."
+}

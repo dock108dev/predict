@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/reference/verify_storage.py", line 155, in <module>
+    if __name__=='__main__': main()
+                             ~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/reference/verify_storage.py", line 128, in main
+    audit=detector_audit(parents,matcher,obs,contexts,as_of=NOW)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/replay.py", line 39, in detector_audit
+    opts['evaluation_time']=opts['evaluation_time'].isoformat()
+                            ~~~~^^^^^^^^^^^^^^^^^^^
+KeyError: 'evaluation_time'

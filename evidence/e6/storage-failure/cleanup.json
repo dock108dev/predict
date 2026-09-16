@@ -1,0 +1,13 @@
+{
+  "test_workers_running": [],
+  "subprocesses_reaped": true,
+  "test_api_closed": true,
+  "mock_servers_closed": true,
+  "retained_evidence": true,
+  "existing_services": [
+    "52697 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e5_preview --port 8775",
+    "70874 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e6_real --port 8778",
+    "81243 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e6_live --port 8779"
+  ],
+  "owner_services_restarted": false
+}

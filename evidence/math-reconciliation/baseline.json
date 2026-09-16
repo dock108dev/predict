@@ -1,0 +1,2188 @@
+{
+  "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+  "quantity": "100",
+  "scenario": "cent",
+  "journal_sha256": "a991ed3799e0b934baa9ca42174e12c158692a44f196fb88213dbd72ba7b292d",
+  "candidates": [
+    {
+      "game": "DET Lions vs BUF Bills",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:35.685652+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+          "received_at": "2026-09-16 01:07:35.681097+00:00",
+          "listing": "5af79e46-6cd1-4bbf-a44e-6efbded25414",
+          "listing_at": "2026-09-16T01:07:02.611796+00:00",
+          "terms": "The following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "68391daf-157d-4d50-86b9-6b1db9ca6127",
+          "received_at": "2026-09-16 01:07:31.839775+00:00",
+          "listing": "3cd91b89-4c76-4f87-8331-1af80d5b9454",
+          "listing_at": "2026-09-16T01:07:02.612367+00:00",
+          "terms": "This market will settle to the winner of the Detroit Lions vs Buffalo Bills professional football game scheduled for Sep 17, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.6800",
+          "top_size": "11574336.49",
+          "visible_size": "27741763.45",
+          "fills": [
+            {
+              "price": "0.6800",
+              "quantity": "100",
+              "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+              "available": "11574336.49"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315440",
+          "ask": "0.3300",
+          "top_size": "2294930.0800",
+          "visible_size": "3859354.3300",
+          "fills": [
+            {
+              "price": "0.3300",
+              "quantity": "100",
+              "provenance": "68391daf-157d-4d50-86b9-6b1db9ca6127",
+              "available": "2294930.0800"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-3.86",
+        "return_pct": "-3.72",
+        "cash": "103.86",
+        "notional": "101.00",
+        "fees": "2.86",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "2.860000",
+        "cash": "103.860000",
+        "profit": "-3.860000",
+        "return_pct": "-3.716541498170614288465241671480839591758135952243404583092624687078759869054496437512035432312728673"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "2.86",
+        "cash": "103.86",
+        "profit": "-3.86",
+        "return_pct": "-3.716541498170614288465241671480839591758135952243404583092624687078759869054496437512035432312728673"
+      },
+      "profit_per_contract": "-0.0386",
+      "usable": true,
+      "skew_seconds": "3.841322",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:35.685652+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+          "received_at": "2026-09-16 01:07:35.681097+00:00",
+          "listing": "5af79e46-6cd1-4bbf-a44e-6efbded25414",
+          "listing_at": "2026-09-16T01:07:02.611796+00:00",
+          "terms": "The following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "68391daf-157d-4d50-86b9-6b1db9ca6127",
+          "received_at": "2026-09-16 01:07:31.839775+00:00",
+          "listing": "3cd91b89-4c76-4f87-8331-1af80d5b9454",
+          "listing_at": "2026-09-16T01:07:02.612367+00:00",
+          "terms": "This market will settle to the winner of the Detroit Lions vs Buffalo Bills professional football game scheduled for Sep 17, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.6800",
+          "top_size": "11574336.49",
+          "visible_size": "27741763.45",
+          "fills": [
+            {
+              "price": "0.6800",
+              "quantity": "100",
+              "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+              "available": "11574336.49"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.3300",
+          "top_size": "332814.82",
+          "visible_size": "10978803.18",
+          "fills": [
+            {
+              "price": "0.3300",
+              "quantity": "100",
+              "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+              "available": "332814.82"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.08",
+        "return_pct": "-3.92",
+        "cash": "104.08",
+        "notional": "101.00",
+        "fees": "3.08",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "3.080000",
+        "cash": "104.080000",
+        "profit": "-4.080000",
+        "return_pct": "-3.920061491160645657186779400461183704842428900845503458877786318216756341275941583397386625672559570"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "3.08",
+        "cash": "104.08",
+        "profit": "-4.08",
+        "return_pct": "-3.920061491160645657186779400461183704842428900845503458877786318216756341275941583397386625672559570"
+      },
+      "profit_per_contract": "-0.0408",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:35.685652+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+          "received_at": "2026-09-16 01:07:35.681097+00:00",
+          "listing": "5af79e46-6cd1-4bbf-a44e-6efbded25414",
+          "listing_at": "2026-09-16T01:07:02.611796+00:00",
+          "terms": "The following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "68391daf-157d-4d50-86b9-6b1db9ca6127",
+          "received_at": "2026-09-16 01:07:31.839775+00:00",
+          "listing": "3cd91b89-4c76-4f87-8331-1af80d5b9454",
+          "listing_at": "2026-09-16T01:07:02.612367+00:00",
+          "terms": "This market will settle to the winner of the Detroit Lions vs Buffalo Bills professional football game scheduled for Sep 17, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.3300",
+          "top_size": "332814.82",
+          "visible_size": "10978803.18",
+          "fills": [
+            {
+              "price": "0.3300",
+              "quantity": "100",
+              "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+              "available": "332814.82"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315441",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "3.841322",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:30.666376+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+          "received_at": "2026-09-16 01:07:30.552644+00:00",
+          "listing": "dd744650-c243-4ff0-890a-7811848c334d",
+          "listing_at": "2026-09-16T01:07:03.782844+00:00",
+          "terms": "The following market refers to the team who wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "6acbdaba-94c8-47df-9d51-f525407ae330",
+          "received_at": "2026-09-16 01:07:30.665698+00:00",
+          "listing": "e799d147-204d-45f8-8d04-b35b2a209d32",
+          "listing_at": "2026-09-16T01:07:03.783465+00:00",
+          "terms": "This market will settle to the winner of the Carolina Panthers vs Atlanta Falcons professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.4400",
+          "top_size": "94291.81",
+          "visible_size": "3871156.56",
+          "fills": [
+            {
+              "price": "0.4400",
+              "quantity": "100",
+              "provenance": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+              "available": "94291.81"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315462",
+          "ask": "0.5650",
+          "top_size": "92121.6600",
+          "visible_size": "1220104.6200",
+          "fills": [
+            {
+              "price": "0.5650",
+              "quantity": "100",
+              "provenance": "6acbdaba-94c8-47df-9d51-f525407ae330",
+              "available": "92121.6600"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-3.70",
+        "return_pct": "-3.57",
+        "cash": "103.70",
+        "notional": "100.50",
+        "fees": "3.20",
+        "raw_gap": "-0.0050",
+        "raw_combined_price": "1.0050"
+      },
+      "actual": {
+        "notional": "100.5000",
+        "fees": "3.200000",
+        "cash": "103.700000",
+        "profit": "-3.700000",
+        "return_pct": "-3.567984570877531340405014464802314368370298939247830279652844744455159112825458052073288331726133076"
+      },
+      "independent": {
+        "notional": "100.5",
+        "fees": "3.2",
+        "cash": "103.7",
+        "profit": "-3.7",
+        "return_pct": "-3.567984570877531340405014464802314368370298939247830279652844744455159112825458052073288331726133076"
+      },
+      "profit_per_contract": "-0.037",
+      "usable": true,
+      "skew_seconds": "0.113054",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:30.666376+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+          "received_at": "2026-09-16 01:07:30.552644+00:00",
+          "listing": "dd744650-c243-4ff0-890a-7811848c334d",
+          "listing_at": "2026-09-16T01:07:03.782844+00:00",
+          "terms": "The following market refers to the team who wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "6acbdaba-94c8-47df-9d51-f525407ae330",
+          "received_at": "2026-09-16 01:07:30.665698+00:00",
+          "listing": "e799d147-204d-45f8-8d04-b35b2a209d32",
+          "listing_at": "2026-09-16T01:07:03.783465+00:00",
+          "terms": "This market will settle to the winner of the Carolina Panthers vs Atlanta Falcons professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.4400",
+          "top_size": "94291.81",
+          "visible_size": "3871156.56",
+          "fills": [
+            {
+              "price": "0.4400",
+              "quantity": "100",
+              "provenance": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+              "available": "94291.81"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.5700",
+          "top_size": "2597.03",
+          "visible_size": "3436372.89",
+          "fills": [
+            {
+              "price": "0.5700",
+              "quantity": "100",
+              "provenance": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+              "available": "2597.03"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.45",
+        "return_pct": "-4.26",
+        "cash": "104.45",
+        "notional": "101.00",
+        "fees": "3.45",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "3.450000",
+        "cash": "104.450000",
+        "profit": "-4.450000",
+        "return_pct": "-4.260411680229775011967448539971278123504068932503590234561991383437051220679751077070368597415031115"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "3.45",
+        "cash": "104.45",
+        "profit": "-4.45",
+        "return_pct": "-4.260411680229775011967448539971278123504068932503590234561991383437051220679751077070368597415031115"
+      },
+      "profit_per_contract": "-0.0445",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:30.666376+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+          "received_at": "2026-09-16 01:07:30.552644+00:00",
+          "listing": "dd744650-c243-4ff0-890a-7811848c334d",
+          "listing_at": "2026-09-16T01:07:03.782844+00:00",
+          "terms": "The following market refers to the team who wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "6acbdaba-94c8-47df-9d51-f525407ae330",
+          "received_at": "2026-09-16 01:07:30.665698+00:00",
+          "listing": "e799d147-204d-45f8-8d04-b35b2a209d32",
+          "listing_at": "2026-09-16T01:07:03.783465+00:00",
+          "terms": "This market will settle to the winner of the Carolina Panthers vs Atlanta Falcons professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.5700",
+          "top_size": "2597.03",
+          "visible_size": "3436372.89",
+          "fills": [
+            {
+              "price": "0.5700",
+              "quantity": "100",
+              "provenance": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+              "available": "2597.03"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315463",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "0.113054",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:31.292057+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+          "received_at": "2026-09-16 01:07:24.993015+00:00",
+          "listing": "8e635689-25b2-4f04-a83c-e573f8a91cfe",
+          "listing_at": "2026-09-16T01:07:04.954714+00:00",
+          "terms": "The following market refers to the team who wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "580505b9-5c43-46a9-95b4-3dc9d6e2eb64",
+          "received_at": "2026-09-16 01:07:31.289890+00:00",
+          "listing": "bc427cd3-b8c6-45bb-bdc6-fe7fa9316aa8",
+          "listing_at": "2026-09-16T01:07:04.955484+00:00",
+          "terms": "This market will settle to the winner of the New Orleans Saints vs Baltimore Ravens professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.7900",
+          "top_size": "267514.99",
+          "visible_size": "3039993.74",
+          "fills": [
+            {
+              "price": "0.7900",
+              "quantity": "100",
+              "provenance": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+              "available": "267514.99"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315472",
+          "ask": "0.2150",
+          "top_size": "690603.2700",
+          "visible_size": "2161789.6600",
+          "fills": [
+            {
+              "price": "0.2150",
+              "quantity": "100",
+              "provenance": "580505b9-5c43-46a9-95b4-3dc9d6e2eb64",
+              "available": "690603.2700"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-2.68",
+        "return_pct": "-2.61",
+        "cash": "102.68",
+        "notional": "100.50",
+        "fees": "2.18",
+        "raw_gap": "-0.0050",
+        "raw_combined_price": "1.0050"
+      },
+      "actual": {
+        "notional": "100.5000",
+        "fees": "2.180000",
+        "cash": "102.680000",
+        "profit": "-2.680000",
+        "return_pct": "-2.610050642773665757693805999220880405142189326061550447993767043241137514608492403583950136345929100"
+      },
+      "independent": {
+        "notional": "100.5",
+        "fees": "2.18",
+        "cash": "102.68",
+        "profit": "-2.68",
+        "return_pct": "-2.610050642773665757693805999220880405142189326061550447993767043241137514608492403583950136345929100"
+      },
+      "profit_per_contract": "-0.0268",
+      "usable": false,
+      "skew_seconds": "6.296875",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:31.292057+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+          "received_at": "2026-09-16 01:07:24.993015+00:00",
+          "listing": "8e635689-25b2-4f04-a83c-e573f8a91cfe",
+          "listing_at": "2026-09-16T01:07:04.954714+00:00",
+          "terms": "The following market refers to the team who wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "580505b9-5c43-46a9-95b4-3dc9d6e2eb64",
+          "received_at": "2026-09-16 01:07:31.289890+00:00",
+          "listing": "bc427cd3-b8c6-45bb-bdc6-fe7fa9316aa8",
+          "listing_at": "2026-09-16T01:07:04.955484+00:00",
+          "terms": "This market will settle to the winner of the New Orleans Saints vs Baltimore Ravens professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.7900",
+          "top_size": "267514.99",
+          "visible_size": "3039993.74",
+          "fills": [
+            {
+              "price": "0.7900",
+              "quantity": "100",
+              "provenance": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+              "available": "267514.99"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.2200",
+          "top_size": "25625.74",
+          "visible_size": "3539817.98",
+          "fills": [
+            {
+              "price": "0.2200",
+              "quantity": "100",
+              "provenance": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+              "available": "25625.74"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-3.38",
+        "return_pct": "-3.27",
+        "cash": "103.38",
+        "notional": "101.00",
+        "fees": "2.38",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "2.380000",
+        "cash": "103.380000",
+        "profit": "-3.380000",
+        "return_pct": "-3.269491197523698974656606693751209131360030953762816792416328109885857999613077964790094795898626427"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "2.38",
+        "cash": "103.38",
+        "profit": "-3.38",
+        "return_pct": "-3.269491197523698974656606693751209131360030953762816792416328109885857999613077964790094795898626427"
+      },
+      "profit_per_contract": "-0.0338",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:31.292057+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+          "received_at": "2026-09-16 01:07:24.993015+00:00",
+          "listing": "8e635689-25b2-4f04-a83c-e573f8a91cfe",
+          "listing_at": "2026-09-16T01:07:04.954714+00:00",
+          "terms": "The following market refers to the team who wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "580505b9-5c43-46a9-95b4-3dc9d6e2eb64",
+          "received_at": "2026-09-16 01:07:31.289890+00:00",
+          "listing": "bc427cd3-b8c6-45bb-bdc6-fe7fa9316aa8",
+          "listing_at": "2026-09-16T01:07:04.955484+00:00",
+          "terms": "This market will settle to the winner of the New Orleans Saints vs Baltimore Ravens professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.2200",
+          "top_size": "25625.74",
+          "visible_size": "3539817.98",
+          "fills": [
+            {
+              "price": "0.2200",
+              "quantity": "100",
+              "provenance": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+              "available": "25625.74"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315473",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "6.296875",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:33.358614+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "917654e5-4e87-48e5-bc03-77392e920cb1",
+          "received_at": "2026-09-16 01:07:30.494635+00:00",
+          "listing": "c782febb-3f29-4b53-93bf-1c8c7aa3f0bc",
+          "listing_at": "2026-09-16T01:07:06.141875+00:00",
+          "terms": "The following market refers to the team who wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "c7393501-f3bb-43f4-8691-5c4ffc96b704",
+          "received_at": "2026-09-16 01:07:33.357126+00:00",
+          "listing": "f67994ad-f560-49b1-9fef-5b9cb49fceab",
+          "listing_at": "2026-09-16T01:07:06.142543+00:00",
+          "terms": "This market will settle to the winner of the Minnesota Vikings vs Chicago Bears professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.6800",
+          "top_size": "50452.14",
+          "visible_size": "3075582.53",
+          "fills": [
+            {
+              "price": "0.6800",
+              "quantity": "100",
+              "provenance": "917654e5-4e87-48e5-bc03-77392e920cb1",
+              "available": "50452.14"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315456",
+          "ask": "0.3200",
+          "top_size": "218061.1200",
+          "visible_size": "1552001.0900",
+          "fills": [
+            {
+              "price": "0.3200",
+              "quantity": "100",
+              "provenance": "c7393501-f3bb-43f4-8691-5c4ffc96b704",
+              "available": "218061.1200"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-2.84",
+        "return_pct": "-2.76",
+        "cash": "102.84",
+        "notional": "100.00",
+        "fees": "2.84",
+        "raw_gap": "0.0000",
+        "raw_combined_price": "1.0000"
+      },
+      "actual": {
+        "notional": "100.0000",
+        "fees": "2.840000",
+        "cash": "102.840000",
+        "profit": "-2.840000",
+        "return_pct": "-2.761571373006612213146635550369506028782574873590042784908595877090626215480357837417347335667055620"
+      },
+      "independent": {
+        "notional": "100",
+        "fees": "2.84",
+        "cash": "102.84",
+        "profit": "-2.84",
+        "return_pct": "-2.761571373006612213146635550369506028782574873590042784908595877090626215480357837417347335667055620"
+      },
+      "profit_per_contract": "-0.0284",
+      "usable": true,
+      "skew_seconds": "2.862491",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:33.358614+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "917654e5-4e87-48e5-bc03-77392e920cb1",
+          "received_at": "2026-09-16 01:07:30.494635+00:00",
+          "listing": "c782febb-3f29-4b53-93bf-1c8c7aa3f0bc",
+          "listing_at": "2026-09-16T01:07:06.141875+00:00",
+          "terms": "The following market refers to the team who wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "c7393501-f3bb-43f4-8691-5c4ffc96b704",
+          "received_at": "2026-09-16 01:07:33.357126+00:00",
+          "listing": "f67994ad-f560-49b1-9fef-5b9cb49fceab",
+          "listing_at": "2026-09-16T01:07:06.142543+00:00",
+          "terms": "This market will settle to the winner of the Minnesota Vikings vs Chicago Bears professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.6800",
+          "top_size": "50452.14",
+          "visible_size": "3075582.53",
+          "fills": [
+            {
+              "price": "0.6800",
+              "quantity": "100",
+              "provenance": "917654e5-4e87-48e5-bc03-77392e920cb1",
+              "available": "50452.14"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.3300",
+          "top_size": "14619.23",
+          "visible_size": "3444779.76",
+          "fills": [
+            {
+              "price": "0.3300",
+              "quantity": "100",
+              "provenance": "917654e5-4e87-48e5-bc03-77392e920cb1",
+              "available": "14619.23"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.08",
+        "return_pct": "-3.92",
+        "cash": "104.08",
+        "notional": "101.00",
+        "fees": "3.08",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "3.080000",
+        "cash": "104.080000",
+        "profit": "-4.080000",
+        "return_pct": "-3.920061491160645657186779400461183704842428900845503458877786318216756341275941583397386625672559570"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "3.08",
+        "cash": "104.08",
+        "profit": "-4.08",
+        "return_pct": "-3.920061491160645657186779400461183704842428900845503458877786318216756341275941583397386625672559570"
+      },
+      "profit_per_contract": "-0.0408",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:33.358614+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "917654e5-4e87-48e5-bc03-77392e920cb1",
+          "received_at": "2026-09-16 01:07:30.494635+00:00",
+          "listing": "c782febb-3f29-4b53-93bf-1c8c7aa3f0bc",
+          "listing_at": "2026-09-16T01:07:06.141875+00:00",
+          "terms": "The following market refers to the team who wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "c7393501-f3bb-43f4-8691-5c4ffc96b704",
+          "received_at": "2026-09-16 01:07:33.357126+00:00",
+          "listing": "f67994ad-f560-49b1-9fef-5b9cb49fceab",
+          "listing_at": "2026-09-16T01:07:06.142543+00:00",
+          "terms": "This market will settle to the winner of the Minnesota Vikings vs Chicago Bears professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.3300",
+          "top_size": "14619.23",
+          "visible_size": "3444779.76",
+          "fills": [
+            {
+              "price": "0.3300",
+              "quantity": "100",
+              "provenance": "917654e5-4e87-48e5-bc03-77392e920cb1",
+              "available": "14619.23"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315457",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "2.862491",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:42.998007+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "45811da2-e61a-44a9-9a3c-99621366dfac",
+          "received_at": "2026-09-16 01:07:25.676308+00:00",
+          "listing": "7224e34e-4577-4d50-bcbc-cee94b016f71",
+          "listing_at": "2026-09-16T01:07:07.330648+00:00",
+          "terms": "The following market refers to the team who wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "bbafba69-62f0-41b9-b522-9ba167e23bd6",
+          "received_at": "2026-09-16 01:07:42.997251+00:00",
+          "listing": "957b33ec-15e7-45d0-8cbd-d57c22815550",
+          "listing_at": "2026-09-16T01:07:07.331503+00:00",
+          "terms": "This market will settle to the winner of the Cincinnati Bengals vs Houston Texans professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.5900",
+          "top_size": "168024.37",
+          "visible_size": "2754104.88",
+          "fills": [
+            {
+              "price": "0.5900",
+              "quantity": "100",
+              "provenance": "45811da2-e61a-44a9-9a3c-99621366dfac",
+              "available": "168024.37"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315478",
+          "ask": "0.4200",
+          "top_size": "130193.4600",
+          "visible_size": "1355071.6500",
+          "fills": [
+            {
+              "price": "0.4200",
+              "quantity": "100",
+              "provenance": "bbafba69-62f0-41b9-b522-9ba167e23bd6",
+              "available": "130193.4600"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.16",
+        "return_pct": "-3.99",
+        "cash": "104.16",
+        "notional": "101.00",
+        "fees": "3.16",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "3.160000",
+        "cash": "104.160000",
+        "profit": "-4.160000",
+        "return_pct": "-3.993855606758832565284178187403993855606758832565284178187403993855606758832565284178187403993855607"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "3.16",
+        "cash": "104.16",
+        "profit": "-4.16",
+        "return_pct": "-3.993855606758832565284178187403993855606758832565284178187403993855606758832565284178187403993855607"
+      },
+      "profit_per_contract": "-0.0416",
+      "usable": false,
+      "skew_seconds": "17.320943",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:42.998007+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "45811da2-e61a-44a9-9a3c-99621366dfac",
+          "received_at": "2026-09-16 01:07:25.676308+00:00",
+          "listing": "7224e34e-4577-4d50-bcbc-cee94b016f71",
+          "listing_at": "2026-09-16T01:07:07.330648+00:00",
+          "terms": "The following market refers to the team who wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "bbafba69-62f0-41b9-b522-9ba167e23bd6",
+          "received_at": "2026-09-16 01:07:42.997251+00:00",
+          "listing": "957b33ec-15e7-45d0-8cbd-d57c22815550",
+          "listing_at": "2026-09-16T01:07:07.331503+00:00",
+          "terms": "This market will settle to the winner of the Cincinnati Bengals vs Houston Texans professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.4200",
+          "top_size": "100900.28",
+          "visible_size": "3432656.10",
+          "fills": [
+            {
+              "price": "0.4200",
+              "quantity": "100",
+              "provenance": "45811da2-e61a-44a9-9a3c-99621366dfac",
+              "available": "100900.28"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.5900",
+          "top_size": "168024.37",
+          "visible_size": "2754104.88",
+          "fills": [
+            {
+              "price": "0.5900",
+              "quantity": "100",
+              "provenance": "45811da2-e61a-44a9-9a3c-99621366dfac",
+              "available": "168024.37"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.41",
+        "return_pct": "-4.22",
+        "cash": "104.41",
+        "notional": "101.00",
+        "fees": "3.41",
+        "raw_gap": "-0.0100",
+        "raw_combined_price": "1.0100"
+      },
+      "actual": {
+        "notional": "101.0000",
+        "fees": "3.410000",
+        "cash": "104.410000",
+        "profit": "-4.410000",
+        "return_pct": "-4.223733358873671104300354372186572167416914088688822909682980557417871851355234172971937553874149986"
+      },
+      "independent": {
+        "notional": "101",
+        "fees": "3.41",
+        "cash": "104.41",
+        "profit": "-4.41",
+        "return_pct": "-4.223733358873671104300354372186572167416914088688822909682980557417871851355234172971937553874149986"
+      },
+      "profit_per_contract": "-0.0441",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:42.998007+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "45811da2-e61a-44a9-9a3c-99621366dfac",
+          "received_at": "2026-09-16 01:07:25.676308+00:00",
+          "listing": "7224e34e-4577-4d50-bcbc-cee94b016f71",
+          "listing_at": "2026-09-16T01:07:07.330648+00:00",
+          "terms": "The following market refers to the team who wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "bbafba69-62f0-41b9-b522-9ba167e23bd6",
+          "received_at": "2026-09-16 01:07:42.997251+00:00",
+          "listing": "957b33ec-15e7-45d0-8cbd-d57c22815550",
+          "listing_at": "2026-09-16T01:07:07.331503+00:00",
+          "terms": "This market will settle to the winner of the Cincinnati Bengals vs Houston Texans professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.4200",
+          "top_size": "100900.28",
+          "visible_size": "3432656.10",
+          "fills": [
+            {
+              "price": "0.4200",
+              "quantity": "100",
+              "provenance": "45811da2-e61a-44a9-9a3c-99621366dfac",
+              "available": "100900.28"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315479",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "17.320943",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "candidate": "cross-no",
+      "cutoff": "2026-09-16T01:07:33.865575+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "87fcee78-d31d-41c1-ac56-d78036fad237",
+          "received_at": "2026-09-16 01:07:24.640561+00:00",
+          "listing": "5d7fa37f-1845-4132-8a32-0af4e125b709",
+          "listing_at": "2026-09-16T01:07:08.500032+00:00",
+          "terms": "The following market refers to the team who wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "afb7fddf-a677-4fb2-919b-8873098daaeb",
+          "received_at": "2026-09-16 01:07:33.863806+00:00",
+          "listing": "6faaa16b-16a0-46cf-9883-5a9d68370471",
+          "listing_at": "2026-09-16T01:07:08.500527+00:00",
+          "terms": "This market will settle to the winner of the Cleveland Browns vs Tampa Bay Buccaneers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:no",
+          "ask": "0.8000",
+          "top_size": "46829.80",
+          "visible_size": "2624029.70",
+          "fills": [
+            {
+              "price": "0.8000",
+              "quantity": "100",
+              "provenance": "87fcee78-d31d-41c1-ac56-d78036fad237",
+              "available": "46829.80"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315484",
+          "ask": "0.2050",
+          "top_size": "48.0000",
+          "visible_size": "1231626.7900",
+          "fills": [
+            {
+              "price": "0.2050",
+              "quantity": "48.0000",
+              "provenance": "afb7fddf-a677-4fb2-919b-8873098daaeb",
+              "available": "48.0000"
+            },
+            {
+              "price": "0.2100",
+              "quantity": "52.0000",
+              "provenance": "afb7fddf-a677-4fb2-919b-8873098daaeb",
+              "available": "49918.1700"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-2.87",
+        "return_pct": "-2.79",
+        "cash": "102.87",
+        "notional": "100.76",
+        "fees": "2.11",
+        "raw_gap": "-0.0050",
+        "raw_combined_price": "1.0050"
+      },
+      "actual": {
+        "notional": "100.76000000",
+        "fees": "2.11000000",
+        "cash": "102.87000000",
+        "profit": "-2.87000000",
+        "return_pct": "-2.789929036648196753183629824049771556333236123262369981530086516963157383104889666569456595703314863"
+      },
+      "independent": {
+        "notional": "100.76",
+        "fees": "2.11",
+        "cash": "102.87",
+        "profit": "-2.87",
+        "return_pct": "-2.789929036648196753183629824049771556333236123262369981530086516963157383104889666569456595703314863"
+      },
+      "profit_per_contract": "-0.0287",
+      "usable": false,
+      "skew_seconds": "9.223245",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "candidate": "kalshi-pair",
+      "cutoff": "2026-09-16T01:07:33.865575+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "87fcee78-d31d-41c1-ac56-d78036fad237",
+          "received_at": "2026-09-16 01:07:24.640561+00:00",
+          "listing": "5d7fa37f-1845-4132-8a32-0af4e125b709",
+          "listing_at": "2026-09-16T01:07:08.500032+00:00",
+          "terms": "The following market refers to the team who wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "afb7fddf-a677-4fb2-919b-8873098daaeb",
+          "received_at": "2026-09-16 01:07:33.863806+00:00",
+          "listing": "6faaa16b-16a0-46cf-9883-5a9d68370471",
+          "listing_at": "2026-09-16T01:07:08.500527+00:00",
+          "terms": "This market will settle to the winner of the Cleveland Browns vs Tampa Bay Buccaneers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.2200",
+          "top_size": "212417.12",
+          "visible_size": "3667992.66",
+          "fills": [
+            {
+              "price": "0.2200",
+              "quantity": "100",
+              "provenance": "87fcee78-d31d-41c1-ac56-d78036fad237",
+              "available": "212417.12"
+            }
+          ]
+        },
+        {
+          "id": "kalshi:no",
+          "ask": "0.8000",
+          "top_size": "46829.80",
+          "visible_size": "2624029.70",
+          "fills": [
+            {
+              "price": "0.8000",
+              "quantity": "100",
+              "provenance": "87fcee78-d31d-41c1-ac56-d78036fad237",
+              "available": "46829.80"
+            }
+          ]
+        }
+      ],
+      "displayed": {
+        "profit": "-4.33",
+        "return_pct": "-4.15",
+        "cash": "104.33",
+        "notional": "102.00",
+        "fees": "2.33",
+        "raw_gap": "-0.0200",
+        "raw_combined_price": "1.0200"
+      },
+      "actual": {
+        "notional": "102.0000",
+        "fees": "2.330000",
+        "cash": "104.330000",
+        "profit": "-4.330000",
+        "return_pct": "-4.150292341608358094507811751174158918815297613342279306048116553244512604236557078500910572222754721"
+      },
+      "independent": {
+        "notional": "102",
+        "fees": "2.33",
+        "cash": "104.33",
+        "profit": "-4.33",
+        "return_pct": "-4.150292341608358094507811751174158918815297613342279306048116553244512604236557078500910572222754721"
+      },
+      "profit_per_contract": "-0.0433",
+      "usable": true,
+      "skew_seconds": "0.0",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "candidate": "cross-yes",
+      "cutoff": "2026-09-16T01:07:33.865575+00:00",
+      "proof": {
+        "kalshi": {
+          "book": "87fcee78-d31d-41c1-ac56-d78036fad237",
+          "received_at": "2026-09-16 01:07:24.640561+00:00",
+          "listing": "5d7fa37f-1845-4132-8a32-0af4e125b709",
+          "listing_at": "2026-09-16T01:07:08.500032+00:00",
+          "terms": "The following market refers to the team who wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "polymarket_us": {
+          "book": "afb7fddf-a677-4fb2-919b-8873098daaeb",
+          "received_at": "2026-09-16 01:07:33.863806+00:00",
+          "listing": "6faaa16b-16a0-46cf-9883-5a9d68370471",
+          "listing_at": "2026-09-16T01:07:08.500527+00:00",
+          "terms": "This market will settle to the winner of the Cleveland Browns vs Tampa Bay Buccaneers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+        }
+      },
+      "legs": [
+        {
+          "id": "kalshi:yes",
+          "ask": "0.2200",
+          "top_size": "212417.12",
+          "visible_size": "3667992.66",
+          "fills": [
+            {
+              "price": "0.2200",
+              "quantity": "100",
+              "provenance": "87fcee78-d31d-41c1-ac56-d78036fad237",
+              "available": "212417.12"
+            }
+          ]
+        },
+        {
+          "id": "polymarket_us:1315485",
+          "ask": null,
+          "top_size": null,
+          "visible_size": null,
+          "fills": null
+        }
+      ],
+      "displayed": {
+        "profit": "Unavailable",
+        "return_pct": "Unavailable",
+        "cash": "Unavailable",
+        "notional": "Unavailable",
+        "fees": "Unavailable",
+        "raw_gap": "Unavailable",
+        "raw_combined_price": "Unavailable"
+      },
+      "actual": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "independent": {
+        "notional": null,
+        "fees": null,
+        "cash": null,
+        "profit": null,
+        "return_pct": null
+      },
+      "profit_per_contract": null,
+      "usable": false,
+      "skew_seconds": "9.223245",
+      "match": true
+    }
+  ],
+  "ev_scenarios": [
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-69.530000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-49.5300000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "-29.5300000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "30.470000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:yes",
+      "p": "0.6953",
+      "profit": "0.0000000000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-34.550000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-14.5500000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "5.4500000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "65.450000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "kalshi:no",
+      "p": "0.3455",
+      "profit": "0.0000000000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315440",
+      "p": "0",
+      "profit": "-34.3300",
+      "break_even_pct": "34.3300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315440",
+      "p": "0.2",
+      "profit": "-14.33000",
+      "break_even_pct": "34.3300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315440",
+      "p": "0.4",
+      "profit": "5.67000",
+      "break_even_pct": "34.3300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315440",
+      "p": "1",
+      "profit": "65.6700",
+      "break_even_pct": "34.3300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315440",
+      "p": "0.3433",
+      "profit": "0.00000000",
+      "break_even_pct": "34.3300",
+      "match": true
+    },
+    {
+      "game": "DET Lions vs BUF Bills",
+      "contract": "polymarket_us:1315441",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-45.730000",
+      "break_even_pct": "45.7300",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-25.7300000",
+      "break_even_pct": "45.7300",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "-5.7300000",
+      "break_even_pct": "45.7300",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "54.270000",
+      "break_even_pct": "45.7300",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:yes",
+      "p": "0.4573",
+      "profit": "0.0000000000",
+      "break_even_pct": "45.7300",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-58.720000",
+      "break_even_pct": "58.7200",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-38.7200000",
+      "break_even_pct": "58.7200",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "-18.7200000",
+      "break_even_pct": "58.7200",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "41.280000",
+      "break_even_pct": "58.7200",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "kalshi:no",
+      "p": "0.5872",
+      "profit": "0.0000000000",
+      "break_even_pct": "58.7200",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315462",
+      "p": "0",
+      "profit": "-57.9700",
+      "break_even_pct": "57.9700",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315462",
+      "p": "0.2",
+      "profit": "-37.97000",
+      "break_even_pct": "57.9700",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315462",
+      "p": "0.4",
+      "profit": "-17.97000",
+      "break_even_pct": "57.9700",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315462",
+      "p": "1",
+      "profit": "42.0300",
+      "break_even_pct": "57.9700",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315462",
+      "p": "0.5797",
+      "profit": "0.00000000",
+      "break_even_pct": "57.9700",
+      "match": true
+    },
+    {
+      "game": "CAR Panthers vs ATL Falcons",
+      "contract": "polymarket_us:1315463",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-80.170000",
+      "break_even_pct": "80.1700",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-60.1700000",
+      "break_even_pct": "80.1700",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "-40.1700000",
+      "break_even_pct": "80.1700",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "19.830000",
+      "break_even_pct": "80.1700",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:yes",
+      "p": "0.8017",
+      "profit": "0.0000000000",
+      "break_even_pct": "80.1700",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-23.210000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-3.2100000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "16.7900000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "76.790000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "kalshi:no",
+      "p": "0.2321",
+      "profit": "0.0000000000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315472",
+      "p": "0",
+      "profit": "-22.5100",
+      "break_even_pct": "22.5100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315472",
+      "p": "0.2",
+      "profit": "-2.51000",
+      "break_even_pct": "22.5100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315472",
+      "p": "0.4",
+      "profit": "17.49000",
+      "break_even_pct": "22.5100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315472",
+      "p": "1",
+      "profit": "77.4900",
+      "break_even_pct": "22.5100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315472",
+      "p": "0.2251",
+      "profit": "0.00000000",
+      "break_even_pct": "22.5100",
+      "match": true
+    },
+    {
+      "game": "NO Saints vs BAL Ravens",
+      "contract": "polymarket_us:1315473",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-69.530000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-49.5300000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "-29.5300000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "30.470000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:yes",
+      "p": "0.6953",
+      "profit": "0.0000000000",
+      "break_even_pct": "69.5300",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-34.550000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-14.5500000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "5.4500000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "65.450000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "kalshi:no",
+      "p": "0.3455",
+      "profit": "0.0000000000",
+      "break_even_pct": "34.5500",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315456",
+      "p": "0",
+      "profit": "-33.3100",
+      "break_even_pct": "33.3100",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315456",
+      "p": "0.2",
+      "profit": "-13.31000",
+      "break_even_pct": "33.3100",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315456",
+      "p": "0.4",
+      "profit": "6.69000",
+      "break_even_pct": "33.3100",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315456",
+      "p": "1",
+      "profit": "66.6900",
+      "break_even_pct": "33.3100",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315456",
+      "p": "0.3331",
+      "profit": "0.00000000",
+      "break_even_pct": "33.3100",
+      "match": true
+    },
+    {
+      "game": "MIN Vikings vs CHI Bears",
+      "contract": "polymarket_us:1315457",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-43.710000",
+      "break_even_pct": "43.7100",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-23.7100000",
+      "break_even_pct": "43.7100",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "-3.7100000",
+      "break_even_pct": "43.7100",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "56.290000",
+      "break_even_pct": "43.7100",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:yes",
+      "p": "0.4371",
+      "profit": "0.0000000000",
+      "break_even_pct": "43.7100",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-60.700000",
+      "break_even_pct": "60.700",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-40.7000000",
+      "break_even_pct": "60.700",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "-20.7000000",
+      "break_even_pct": "60.700",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "39.300000",
+      "break_even_pct": "60.700",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "kalshi:no",
+      "p": "0.607",
+      "profit": "0.000000000",
+      "break_even_pct": "60.700",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315478",
+      "p": "0",
+      "profit": "-43.4600",
+      "break_even_pct": "43.4600",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315478",
+      "p": "0.2",
+      "profit": "-23.46000",
+      "break_even_pct": "43.4600",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315478",
+      "p": "0.4",
+      "profit": "-3.46000",
+      "break_even_pct": "43.4600",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315478",
+      "p": "1",
+      "profit": "56.5400",
+      "break_even_pct": "43.4600",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315478",
+      "p": "0.4346",
+      "profit": "0.00000000",
+      "break_even_pct": "43.4600",
+      "match": true
+    },
+    {
+      "game": "CIN Bengals vs HOU Texans",
+      "contract": "polymarket_us:1315479",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:yes",
+      "p": "0",
+      "profit": "-23.210000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:yes",
+      "p": "0.2",
+      "profit": "-3.2100000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:yes",
+      "p": "0.4",
+      "profit": "16.7900000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:yes",
+      "p": "1",
+      "profit": "76.790000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:yes",
+      "p": "0.2321",
+      "profit": "0.0000000000",
+      "break_even_pct": "23.2100",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:no",
+      "p": "0",
+      "profit": "-81.120000",
+      "break_even_pct": "81.1200",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:no",
+      "p": "0.2",
+      "profit": "-61.1200000",
+      "break_even_pct": "81.1200",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:no",
+      "p": "0.4",
+      "profit": "-41.1200000",
+      "break_even_pct": "81.1200",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:no",
+      "p": "1",
+      "profit": "18.880000",
+      "break_even_pct": "81.1200",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "kalshi:no",
+      "p": "0.8112",
+      "profit": "0.0000000000",
+      "break_even_pct": "81.1200",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315484",
+      "p": "0",
+      "profit": "-21.75000000",
+      "break_even_pct": "21.7500",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315484",
+      "p": "0.2",
+      "profit": "-1.750000000",
+      "break_even_pct": "21.7500",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315484",
+      "p": "0.4",
+      "profit": "18.250000000",
+      "break_even_pct": "21.7500",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315484",
+      "p": "1",
+      "profit": "78.25000000",
+      "break_even_pct": "21.7500",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315484",
+      "p": "0.2175",
+      "profit": "0.000000000000",
+      "break_even_pct": "21.7500",
+      "match": true
+    },
+    {
+      "game": "CLE Browns vs TB Buccaneers",
+      "contract": "polymarket_us:1315485",
+      "p": "0.4",
+      "profit": null,
+      "break_even_pct": null,
+      "match": true
+    }
+  ],
+  "rankings": {
+    "roi": [
+      "KXNFLGAME-26SEP20MINCHI__101469~cross-yes",
+      "KXNFLGAME-26SEP20NOBAL__101472~kalshi-pair",
+      "KXNFLGAME-26SEP20CARATL__101470~cross-yes",
+      "KXNFLGAME-26SEP17DETBUF__101466~cross-yes",
+      "KXNFLGAME-26SEP17DETBUF__101466~kalshi-pair",
+      "KXNFLGAME-26SEP20MINCHI__101469~kalshi-pair",
+      "KXNFLGAME-26SEP20CLETB__101474~kalshi-pair",
+      "KXNFLGAME-26SEP20CINHOU__101473~kalshi-pair",
+      "KXNFLGAME-26SEP20CARATL__101470~kalshi-pair",
+      "KXNFLGAME-26SEP20NOBAL__101472~cross-yes",
+      "KXNFLGAME-26SEP20CLETB__101474~cross-no",
+      "KXNFLGAME-26SEP20CINHOU__101473~cross-no",
+      "KXNFLGAME-26SEP17DETBUF__101466~cross-no",
+      "KXNFLGAME-26SEP20CARATL__101470~cross-no",
+      "KXNFLGAME-26SEP20CINHOU__101473~cross-yes",
+      "KXNFLGAME-26SEP20CLETB__101474~cross-yes",
+      "KXNFLGAME-26SEP20MINCHI__101469~cross-no",
+      "KXNFLGAME-26SEP20NOBAL__101472~cross-no"
+    ],
+    "dollars": [
+      "KXNFLGAME-26SEP20MINCHI__101469~cross-yes",
+      "KXNFLGAME-26SEP20NOBAL__101472~kalshi-pair",
+      "KXNFLGAME-26SEP20CARATL__101470~cross-yes",
+      "KXNFLGAME-26SEP17DETBUF__101466~cross-yes",
+      "KXNFLGAME-26SEP17DETBUF__101466~kalshi-pair",
+      "KXNFLGAME-26SEP20MINCHI__101469~kalshi-pair",
+      "KXNFLGAME-26SEP20CLETB__101474~kalshi-pair",
+      "KXNFLGAME-26SEP20CINHOU__101473~kalshi-pair",
+      "KXNFLGAME-26SEP20CARATL__101470~kalshi-pair",
+      "KXNFLGAME-26SEP20NOBAL__101472~cross-yes",
+      "KXNFLGAME-26SEP20CLETB__101474~cross-no",
+      "KXNFLGAME-26SEP20CINHOU__101473~cross-no",
+      "KXNFLGAME-26SEP17DETBUF__101466~cross-no",
+      "KXNFLGAME-26SEP20CARATL__101470~cross-no",
+      "KXNFLGAME-26SEP20CINHOU__101473~cross-yes",
+      "KXNFLGAME-26SEP20CLETB__101474~cross-yes",
+      "KXNFLGAME-26SEP20MINCHI__101469~cross-no",
+      "KXNFLGAME-26SEP20NOBAL__101472~cross-no"
+    ]
+  }
+}

@@ -12,7 +12,7 @@ from math import lcm
 
 from app.fees import calculate
 from app.fees.engine import number, digest
-from app.models.core import Quote, QuoteSide, Venue, aware
+from app.models.core import Quote, QuoteSide, OrderBook, Venue, aware, typed
 from app.adapters.kalshi import quotes as kalshi_quotes
 
 VERSION = 'top-of-book-1'
@@ -51,6 +51,9 @@ class Observation:
     sizing_evidence: str | None = None
     role: str = 'taker'
 
+    def __post_init__(self):
+        typed(self.quote, Quote, 'executable quote')
+
 
 def book_observations(book, **context):
     """Use adapter Kalshi asks; other venues expose only supplied native asks.
@@ -58,6 +61,7 @@ def book_observations(book, **context):
     PMUS short acquisition is deliberately unavailable when its adapter supplied
     no ask. This function does not invent long/short conversions from bids.
     """
+    typed(book, OrderBook, 'prediction-market book')
     with localcontext(Context(prec=100)):
         if book.raw.ref.venue == Venue.KALSHI:
             quotes = kalshi_quotes(book)

@@ -1,0 +1,9 @@
+2026-09-15 14:59:44.697 EDT [55510] LOG:  starting PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin25.1.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit
+2026-09-15 14:59:44.697 EDT [55510] LOG:  listening on Unix socket "/private/tmp/e6pg-r7p122nx/socket/.s.PGSQL.55486"
+2026-09-15 14:59:44.699 EDT [55511] LOG:  database system was shut down at 2026-09-15 14:59:44 EDT
+2026-09-15 14:59:44.702 EDT [55510] LOG:  database system is ready to accept connections
+2026-09-15 15:27:46.374 EDT [55510] LOG:  received fast shutdown request
+2026-09-15 15:27:46.374 EDT [55510] LOG:  aborting any active transactions
+2026-09-15 15:27:46.375 EDT [55510] LOG:  background worker "logical replication launcher" (PID 55517) exited with exit code 1
+2026-09-15 15:27:46.375 EDT [55512] LOG:  shutting down
+2026-09-15 15:27:46.395 EDT [55510] LOG:  database system is shut down

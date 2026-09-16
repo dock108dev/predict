@@ -1,0 +1,23 @@
+# Repeatable owner-started personal beta
+
+Completed September 15, 2026 EDT (September 16 UTC). [Open the beta](http://127.0.0.1:8783/). It is idle on the original six-game real capture, with Start enabled. **No new real collection, credential lookup or provider request occurred during implementation.**
+
+Personal-beta mode now creates a distinct session directory and run record for each explicit Start. The historical consumed one-attempt markers are unchanged. Startup, reload and restart remain idle; a second Start is rejected while collection or saving is active. Status polling ends when the scan finishes. No scheduler, automatic retry or automatic restart was added.
+
+Choose **Maximum games (1–6)** and **Duration (1–180 seconds)**, then **Start scan**. Defaults remain six games and 175 seconds, earliest unambiguous overlapping NFL pregame games, prediction-only Kalshi/Polymarket US, and the existing finite request, socket, message, byte and journal limits. Start alone accesses the existing feeds and credential references. **Stop** requests joined feed shutdown and saving; Start becomes available after finalization. No paid access, sportsbook request, subscription, account or database change is introduced.
+
+The last saved table stays visible during discovery and is explicitly marked previous, not current. Once selection arrives, the new session has only its own books; missing observations remain unavailable. Saved scans show capture time, game count and completion status. The last completed capture opens by default, and the selector can reopen earlier captures. Filters, sort, requested size and fee scenario remain in the dashboard URL across scans and drilldown return; explicit EV inputs retain their existing native-event/outcome keys in browser storage. No probability is invented or copied to a different game.
+
+## Verification and preservation
+
+- **23 focused tests passed**, including a local-only two-scan lifecycle test, bounds, overlapping Start rejection, Stop, unique run records, saved/current separation, saved switching, idle restart, prior-marker preservation and existing mapping/math checks. JavaScript syntax checks passed.
+- The independent rational oracle still matches **18 Arb rows and 96 explicitly entered EV test scenarios**. The baseline JSON is byte-identical. The exact Decimal sorting correction is loaded in the delivered beta. No economics, native purchase mappings, fee versions, fee assumptions, depth or cashflows were changed.
+- Actual browser: saved real dashboard → two-game/120-second local-producer Start → Stop → three-game/120-second local-producer Start → Stop → switch to first saved scan (six rows) → game drilldown → return with saved selection and dollar sort retained. Dashboard and drilldown both fit 390×844 with 390px document width. No browser console warnings/errors were recorded.
+- Local producers replay retained native observations and are labeled local tests; their journals live only in `evidence/personal-beta/local-sessions`, outside the real beta catalog. This tests operation and presentation, not new live transport reliability. The temporary test process is stopped.
+- All **1,649 preexisting evidence files remain byte-identical**, including historical run allowances and captures. Existing unrelated uncommitted work is preserved. Only the verified opportunity-board beta process was restarted, after confirming idle collection; other previews and services were not restarted.
+
+[Verification and implementation hashes](../evidence/personal-beta/verification.json) · [focused test output](../evidence/personal-beta/final-tests.txt) · [independent math report](math-reconciliation-report.md).
+
+Historical calculations continue to use their retained observation cutoff, listing assessment and existing pinned fee schedules, never current venue metadata. An unsupported newly observed coefficient remains unavailable rather than rewriting old results. Account fee applicability, exceptional settlement, unsupported US Short asks, fractional US fill limitations, fill guarantees and independent fair-value estimation remain unresolved as described in the math report. Negative, zero and unavailable values remain valid.
+
+This slice establishes repeatable owner-started operation with local verification. It does not establish unattended or continuous reliability, profitability, live owner acceptance or trading readiness. **Next action: the owner may choose limits and press Start for a bounded scan, then Stop or let its deadline finish.** No further engineering, automated scanning, trading, commit, push or publishing is part of this slice.

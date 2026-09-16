@@ -1,0 +1,230 @@
+{
+  "scope": "Official public documentation only; no market API requests. Short excerpts and retrieval hashes, not full archived source pages.",
+  "retrieval_date": "2026-09-15",
+  "sources": [
+    {
+      "id": "P1",
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/README.md",
+      "retrieved_at": "2026-09-15T16:26:39.285595+00:00",
+      "locator": "Overview; Rules; Rate Limiting",
+      "supporting_passage": "Access to Pinnacle API suite has been closed for the general public since July 23rd, 2025.",
+      "http_status": 200,
+      "final_url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/README.md",
+      "sha256": "ad742f1f7ca5f6971f1ee6ba132005580f34a1bac1c557900710613c5bfca09c",
+      "bytes": 6117,
+      "passage_verified": true
+    },
+    {
+      "id": "P2",
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/openapi-specification/linesapi-oas.yaml",
+      "retrieved_at": "2026-09-15T16:26:39.285862+00:00",
+      "locator": "GET /v2/odds; Fixture; OddsPeriod; OddsMoneyline",
+      "supporting_passage": "Date time of the last moneyline update.",
+      "http_status": 200,
+      "final_url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/openapi-specification/linesapi-oas.yaml",
+      "sha256": "81cf006414ae3da0ac39fc91a9e2000997d399385eb086c30f3162b566587bfa",
+      "bytes": 113489,
+      "passage_verified": true
+    },
+    {
+      "id": "P3",
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FAQ.md",
+      "retrieved_at": "2026-09-15T16:26:39.286017+00:00",
+      "locator": "How to get odds changes?; caching; deleted events",
+      "supporting_passage": "Delta response has only changed periods, with all the markets that are currently offered.",
+      "http_status": 200,
+      "final_url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FAQ.md",
+      "sha256": "0a6ad2143a1e2814dd8d898fdad3d52bf1060f2a8d9e32880e5a931235c77508",
+      "bytes": 16641,
+      "passage_verified": true
+    },
+    {
+      "id": "P4",
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FairUsePolicy.md",
+      "retrieved_at": "2026-09-15T16:26:39.286074+00:00",
+      "locator": "Fair usage",
+      "supporting_passage": "The API is provided to clients on a case-by-case basis.",
+      "http_status": 200,
+      "final_url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FairUsePolicy.md",
+      "sha256": "58abc8d8b4c0574d0e0a7a53c383a21f1a8d38fac792af7bd66ca0c82bbb366b",
+      "bytes": 1521,
+      "passage_verified": true
+    },
+    {
+      "id": "P5",
+      "url": "https://www.pinnacle.com/en/future/betting-rules",
+      "retrieved_at": "2026-09-15T16:26:39.286121+00:00",
+      "locator": "General Rules; American Football",
+      "supporting_passage": "Bets on the Game and 2nd Half-periods include points scored in overtime.",
+      "http_status": 200,
+      "final_url": "https://www.pinnacle.com/en/future/betting-rules",
+      "sha256": "caa8dae433151ea1d7107d80f299d16c705f90fd5efcca073efef74ac1430363",
+      "bytes": 119283,
+      "passage_verified": true
+    },
+    {
+      "id": "P6",
+      "url": "https://support.pinnacle.com/hc/en-us/articles/50392420556305-Registration-issues-and-restricted-territories",
+      "retrieved_at": "2026-09-15T16:26:39.286163+00:00",
+      "locator": "Restricted territories",
+      "supporting_passage": "certain countries and territories are restricted from using our services.",
+      "retrieval_error": "HTTP Error 403: Forbidden",
+      "note": "Official support article available in web search text; direct GET failed. Not relied on for decision; P7 supersedes."
+    },
+    {
+      "id": "O1",
+      "url": "https://the-odds-api.com/",
+      "retrieved_at": "2026-09-15T16:26:39.372919+00:00",
+      "locator": "Get Access",
+      "supporting_passage": "20,000 credits",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/",
+      "sha256": "d5272089d6704d2ebdaa1b2d653ef448627feb0e370d703b9505ea17d2a222e2",
+      "bytes": 34402,
+      "passage_verified": true
+    },
+    {
+      "id": "O2",
+      "url": "https://the-odds-api.com/terms-and-conditions.html",
+      "retrieved_at": "2026-09-15T16:26:39.374830+00:00",
+      "locator": "Restrictions; updated 31 August 2026",
+      "supporting_passage": "Storing our data and retaining it indefinitely",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/terms-and-conditions.html",
+      "sha256": "11132a145cdee51b804877a42f2d5a5538595f338bc671b0a8af90aefa9f2b46",
+      "bytes": 19347,
+      "passage_verified": true
+    },
+    {
+      "id": "O3",
+      "url": "https://the-odds-api.com/liveapi/guides/v4/",
+      "retrieved_at": "2026-09-15T16:26:39.385092+00:00",
+      "locator": "GET odds; GET event odds; GET historical odds; More info",
+      "supporting_passage": "markets can update on their own schedule.",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/liveapi/guides/v4/",
+      "sha256": "d2d3ef8f575909544d22b1c1770c5b6a8daee82dceb38020c724915395205b74",
+      "bytes": 319543,
+      "passage_verified": true
+    },
+    {
+      "id": "O4",
+      "url": "https://api.swaggerhub.com/apis/the-odds-api/odds-api/4",
+      "retrieved_at": "2026-09-15T16:26:39.405226+00:00",
+      "locator": "GET event odds response / bookmakers / markets / last_update; Outcome schema",
+      "supporting_passage": "A timestamp of when the markets's odds were last read.",
+      "http_status": 200,
+      "final_url": "https://api.swaggerhub.com/apis/the-odds-api/odds-api/4",
+      "sha256": "c5752927931781e63a0b78437ea92efcb7260a94f981b33b129792a420ec1f42",
+      "bytes": 56833,
+      "passage_verified": true
+    },
+    {
+      "id": "O5",
+      "url": "https://the-odds-api.com/sports-odds-data/bookmaker-apis.html",
+      "retrieved_at": "2026-09-15T16:26:39.445062+00:00",
+      "locator": "EU table, pinnacle; US exchange keys; rebrands",
+      "supporting_passage": "Odds are from public website which may incur a delay",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/sports-odds-data/bookmaker-apis.html",
+      "sha256": "f5599abd1ddb4b50bfe5c0f84d17711c1e228b8ac04e14cae3b9caf782bf1bee",
+      "bytes": 128688,
+      "passage_verified": true
+    },
+    {
+      "id": "O6",
+      "url": "https://the-odds-api.com/sports-odds-data/update-intervals.html",
+      "retrieved_at": "2026-09-15T16:26:39.492847+00:00",
+      "locator": "Featured Markets; six-hour ramp",
+      "supporting_passage": "60 seconds",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/sports-odds-data/update-intervals.html",
+      "sha256": "f9e217284933d75fd2dfd958c21575a290271c39303c6ac79a2bd049f9bd6c36",
+      "bytes": 14754,
+      "passage_verified": true
+    },
+    {
+      "id": "O7",
+      "url": "https://the-odds-api.com/historical-odds-data/",
+      "retrieved_at": "2026-09-15T16:26:39.533177+00:00",
+      "locator": "Featured history; snapshot wrapper; quota",
+      "supporting_passage": "From September 2022, historical odds snapshots are available at 5 minute intervals.",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/historical-odds-data/",
+      "sha256": "79e9bdada7de9444db3102c9bc7fc6fb7f39aa2e1eb0c782cedc46f9c939f356",
+      "bytes": 85312,
+      "passage_verified": true
+    },
+    {
+      "id": "O8",
+      "url": "https://the-odds-api.com/liveapi/guides/v4/api-error-codes.html",
+      "retrieved_at": "2026-09-15T16:26:39.546220+00:00",
+      "locator": "EXCEEDED_FREQ_LIMIT; OUT_OF_USAGE_CREDITS; includeSids",
+      "supporting_passage": "The rate limit is currently 30 API calls per second.",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/liveapi/guides/v4/api-error-codes.html",
+      "sha256": "021ff9e13e1770798b05b0fc9ad6f403ce4b8de0693e67c14827eda8394e4007",
+      "bytes": 29838,
+      "passage_verified": true
+    },
+    {
+      "id": "O9",
+      "url": "https://the-odds-api.com/manage/faqs.html",
+      "retrieved_at": "2026-09-15T16:26:39.577121+00:00",
+      "locator": "When are usage credits reset?",
+      "supporting_passage": "Usage credits are automatically reset on the first of every month.",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/manage/faqs.html",
+      "sha256": "dbe801ada273a3f44cf48e5f952aa4663c82f9cc98201062a35b659819d9cda3",
+      "bytes": 17033,
+      "passage_verified": true
+    },
+    {
+      "id": "O10",
+      "url": "https://the-odds-api.com/sports/nfl-odds.html",
+      "retrieved_at": "2026-09-15T16:26:39.595480+00:00",
+      "locator": "NFL example and coverage",
+      "supporting_passage": "NFL",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/sports/nfl-odds.html",
+      "sha256": "1c76f5c13783b51dda32ba7b8b615d66f859cef1713253453aaa55a65dee06a2",
+      "bytes": 41916,
+      "passage_verified": true
+    },
+    {
+      "id": "O11",
+      "url": "https://the-odds-api.com/sports-odds-data/betting-markets.html",
+      "retrieved_at": "2026-09-15T16:26:39.595659+00:00",
+      "locator": "h2h; h2h_3_way",
+      "supporting_passage": "Moneyline",
+      "http_status": 200,
+      "final_url": "https://the-odds-api.com/sports-odds-data/betting-markets.html",
+      "sha256": "66027c818d692b3f6bc12426b0a34673e57def88b3584bcfd7eb6fefc4a99607",
+      "bytes": 66990,
+      "passage_verified": true
+    },
+    {
+      "id": "P7",
+      "url": "https://www.pinnacle.com/en/future/termsandconditions",
+      "retrieved_at": "2026-09-15T16:31:16.932546+00:00",
+      "locator": "Your Obligations; Intellectual Property",
+      "supporting_passage": "the United States of America and its territories",
+      "http_status": 200,
+      "final_url": "https://www.pinnacle.com/en/future/termsandconditions",
+      "sha256": "302c144e246b8fdb01ee8b2b668d16fd4183aa3e3f49e216c99ecba7bb9596e9",
+      "bytes": 102805,
+      "passage_verified": true,
+      "method": "Unauthenticated documentation GET; web fetch returned 403"
+    }
+  ],
+  "failed_alternate_urls": [
+    {
+      "url": "https://www.pinnacle.com/en/termsandconditions/curacao/?aup=True",
+      "result": "HTTP 502 on direct GET; current rules-page terms link used instead."
+    },
+    {
+      "url": "https://the-odds-api.com/liveapi/guides/v4/data-update-intervals.html",
+      "result": "Web fetch failed; home-page link resolved to /sports-odds-data/update-intervals.html."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+test_asof_and_future_rows (tests.test_opportunity_board.BoardTests.test_asof_and_future_rows) ... ok
+test_direct_rounding_and_fractional_fill_limit (tests.test_opportunity_board.BoardTests.test_direct_rounding_and_fractional_fill_limit) ... ok
+test_independent_positive_negative_unknown_ev (tests.test_opportunity_board.BoardTests.test_independent_positive_negative_unknown_ev) ... ok
+test_independent_real_arithmetic (tests.test_opportunity_board.BoardTests.test_independent_real_arithmetic) ... ok
+test_input_and_probability_separation (tests.test_opportunity_board.BoardTests.test_input_and_probability_separation) ... ok
+test_native_orientation_and_no_short_purchase (tests.test_opportunity_board.BoardTests.test_native_orientation_and_no_short_purchase) ... ok
+test_stale_disconnect_and_skew (tests.test_opportunity_board.BoardTests.test_stale_disconnect_and_skew) ... ok
+test_synthetic_positive_and_depth (tests.test_opportunity_board.BoardTests.test_synthetic_positive_and_depth) ... ok
+test_readonly_selection (tests.test_opportunity_board.HTTPTests.test_readonly_selection) ... Executing <Task pending name='Task-1' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.265 seconds
+ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.723s
+
+OK

@@ -1,0 +1,16 @@
+{
+  "checked": 801,
+  "changed": [
+    "app/collection/prediction_producer.py",
+    "app/collection/native_replay.py",
+    "app/opportunities/board.py",
+    "app/dashboard/e6_live.py",
+    "app/dashboard/e6_real.py",
+    "app/dashboard/opportunity_board.py",
+    "app/dashboard/opportunity_static/index.html",
+    "app/dashboard/opportunity_static/board.js",
+    "scripts/opportunity-board"
+  ],
+  "missing": [],
+  "prior_captures_unchanged": true
+}

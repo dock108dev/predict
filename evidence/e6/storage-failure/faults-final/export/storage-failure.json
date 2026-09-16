@@ -1,0 +1,26 @@
+{
+  "format": "e6-runtime-storage-failure-1",
+  "session": "e41571d9-cf25-47a6-bcad-3836ed998940",
+  "error": "Storage failure at export; durability of unacknowledged work is unknown.",
+  "accounting": {
+    "received": 46,
+    "accepted": 46,
+    "write_attempted": 46,
+    "durably_acknowledged": 46,
+    "rejected": 0,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 46,
+    "journal_write_attempted": 47,
+    "journal_durably_acknowledged": 47,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 71882,
+    "confirmed_chain": "1ff2505c55bc545baee2a4bc31313b3bab6777b0897015de64717ab94360167b",
+    "total_upstream": null,
+    "lost": null
+  },
+  "primary_journal": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/export/observations.jsonl",
+  "primary_journal_completion": "not_asserted",
+  "cleanup_complete": true,
+  "provenance": "supplemental runtime report; not primary journal or recovery evidence"
+}

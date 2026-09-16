@@ -1,0 +1,115 @@
+{
+  "session": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+  "chain": "3d533e2df07e42cc9bd8e354e44bad346d59a9236544ee2afba14604ab588abf",
+  "start": "2026-09-15T23:28:43.852103+00:00",
+  "end": "2026-09-15T23:29:29.014434+00:00",
+  "elapsed_seconds": "0:00:45.162331",
+  "counts": {
+    "frames": 37,
+    "books": 36,
+    "packets": 72,
+    "ingress": 103
+  },
+  "replay": {
+    "exact_native_books": {
+      "kalshi": 19,
+      "polymarket_us": 16
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "3d533e2df07e42cc9bd8e354e44bad346d59a9236544ee2afba14604ab588abf",
+    "state": "complete",
+    "derived_health_books": 1,
+    "total_books": 36,
+    "total_packets": 72
+  },
+  "final": {
+    "accounting": null,
+    "delivered": 103,
+    "economics": null,
+    "health": {
+      "kalshi": "disconnected",
+      "polymarket_us": "disconnected"
+    },
+    "observed_at": "2026-09-15T23:29:29.014434+00:00",
+    "persisted": 103,
+    "prediction_accounting": {
+      "kalshi": {
+        "body_bytes_charged": 1404616,
+        "connections": 2,
+        "dollars_reserved": "0",
+        "requests": 3
+      },
+      "polymarket_us": {
+        "body_bytes_charged": 411027,
+        "connections": 1,
+        "dollars_reserved": "0",
+        "requests": 7
+      }
+    },
+    "reason": "manual_stop",
+    "session_id": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+    "type": "session_finished"
+  },
+  "controlled_recovery": {
+    "interruption": "2026-09-15T23:29:02.540781+00:00",
+    "invalidation": "2026-09-15T23:29:02.541336+00:00",
+    "recovered": "2026-09-15T23:29:03.761308+00:00",
+    "elapsed_seconds": 1.220527,
+    "immediate_projection_hides_kalshi": true,
+    "pmus_remained_available": true
+  },
+  "native_finish": [
+    {
+      "closed": true,
+      "diagnostics": [
+        {
+          "event": "subscribed_request",
+          "generation": 1
+        },
+        {
+          "attempt": 1,
+          "event": "connection_or_protocol_failure"
+        },
+        {
+          "event": "subscribed_request",
+          "generation": 2
+        }
+      ],
+      "economics": null,
+      "health": {
+        "kalshi": "disconnected",
+        "polymarket_us": "disconnected"
+      },
+      "ingress_id": "806c38b1-69af-486f-861a-edbd535d0981",
+      "observed_at": "2026-09-15T23:29:28.908784+00:00",
+      "session_id": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+      "source": "kalshi",
+      "type": "native_stream_finished"
+    },
+    {
+      "closed": true,
+      "diagnostics": [
+        "awaiting_initial_image",
+        "cancelled",
+        "stopped",
+        "closed"
+      ],
+      "economics": null,
+      "health": {
+        "kalshi": "disconnected",
+        "polymarket_us": "disconnected"
+      },
+      "ingress_id": "f0fe1471-4fcc-4bae-9399-3533707aed15",
+      "observed_at": "2026-09-15T23:29:28.913213+00:00",
+      "session_id": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+      "source": "polymarket_us",
+      "type": "native_stream_finished"
+    }
+  ],
+  "metadata_validations": {
+    "kalshi": 1,
+    "polymarket_us": 1
+  },
+  "incomplete_http": 0
+}

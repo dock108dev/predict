@@ -1,0 +1,13 @@
+{
+  "changed": [
+    "app/collection/transport_session.py",
+    "app/collection/prediction_producer.py",
+    "app/collection/run_spec.py",
+    "app/collection/odds_http.py",
+    "tests/test_e6_transport.py",
+    "docs/e6-first-real-run.md",
+    "docs/e6-real-feed-handoff.md",
+    "docs/e6-first-real-run.json"
+  ],
+  "missing": []
+}

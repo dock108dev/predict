@@ -1,0 +1,137 @@
+{
+  "checked_at": "2026-09-15T16:32:31.597220+00:00",
+  "scope": "Documentation-only E2 qualification; no E1 tests rerun.",
+  "base_head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "e1_implementation_digest": "5427e0d253a837ec87ff29005325764bbe81b8dba63904ebfb54b602eb1b1899",
+  "preexisting_repository_files_checked": 1010,
+  "preexisting_repository_changes": [],
+  "preservation_exclusion": ".local runtime files excluded from source-preservation comparison; initial broad hash comparison encountered changing pg_stat_tmp statistics. No database connections, commands or service operations were performed.",
+  "archived_sources": {
+    "sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "status": ""
+    },
+    "scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "status": ""
+    }
+  },
+  "external_documentation_links": [
+    {
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/README.md",
+      "verified": true
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/openapi-specification/linesapi-oas.yaml",
+      "verified": true
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FAQ.md",
+      "verified": true
+    },
+    {
+      "url": "https://raw.githubusercontent.com/pinnacleapi/pinnacleapi-documentation/master/FairUsePolicy.md",
+      "verified": true
+    },
+    {
+      "url": "https://www.pinnacle.com/en/future/betting-rules",
+      "verified": true
+    },
+    {
+      "url": "https://www.pinnacle.com/en/future/termsandconditions",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/terms-and-conditions.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/liveapi/guides/v4/",
+      "verified": true
+    },
+    {
+      "url": "https://api.swaggerhub.com/apis/the-odds-api/odds-api/4",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/sports-odds-data/bookmaker-apis.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/sports-odds-data/update-intervals.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/historical-odds-data/",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/liveapi/guides/v4/api-error-codes.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/manage/faqs.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/sports/nfl-odds.html",
+      "verified": true
+    },
+    {
+      "url": "https://the-odds-api.com/sports-odds-data/betting-markets.html",
+      "verified": true
+    }
+  ],
+  "local_documentation_links": [
+    {
+      "target": "../evidence/e1/walkthrough.json",
+      "exists": true
+    },
+    {
+      "target": "e1-contracts.md",
+      "exists": true
+    },
+    {
+      "target": "e2-handoff.md",
+      "exists": true
+    },
+    {
+      "target": "../app/edge_contracts.py",
+      "exists": true
+    },
+    {
+      "target": "e2-handoff.md",
+      "exists": true
+    },
+    {
+      "target": "../evidence/e2/qualification/verification.json",
+      "exists": true
+    },
+    {
+      "target": "../evidence/e2/qualification/source-evidence.json",
+      "exists": true
+    }
+  ],
+  "git_diff_check": "passed",
+  "tracker_before_sha256": "28d52cc93d5c34ef5f0a58414e5535c3d33af3d90ba9326bcbcddbc89ca148f0",
+  "tracker_after_sha256": "dc732f3aeb6c7965e98a587a3836b1dfe1cba47e43bf92ceb497dd6ba5fbc636",
+  "outputs": {
+    "docs/e2-source-qualification.md": "994c7e665bd4e83e6c17ced340d0df4f31a1e3008340e76d4617bb3a61abdd37",
+    "evidence/e2/qualification/source-evidence.json": "786b25c437d760f03984d7ed50077a204950c67d4e4891286e5b68c8b34f1d44"
+  },
+  "limitations": [
+    "Official documentation research does not verify account entitlement or live delivery.",
+    "No provider selected as fully qualified for live fair-price inputs.",
+    "Source ledger preserves short excerpts and hashes, not full retrieved pages."
+  ],
+  "tests_run": [],
+  "tracker_new_e2_links": {
+    "count": 3,
+    "all_exist": true
+  },
+  "new_document_whitespace": "passed"
+}

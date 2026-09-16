@@ -1,0 +1,11 @@
+test_before_image_reconnect_and_finalization (tests.test_e6_recovery.Recovery.test_before_image_reconnect_and_finalization) ... ok
+test_chain_identity_and_dependency_fail_closed (tests.test_e6_recovery.Recovery.test_chain_identity_and_dependency_fail_closed) ... ok
+test_completed_behavior_and_live_guard_unchanged (tests.test_e6_recovery.Recovery.test_completed_behavior_and_live_guard_unchanged) ... ok
+test_intact_prefix_exact_replay_and_accounting (tests.test_e6_recovery.Recovery.test_intact_prefix_exact_replay_and_accounting) ... ok
+test_invalid_complete_interior_and_terminal_lines (tests.test_e6_recovery.Recovery.test_invalid_complete_interior_and_terminal_lines) ... ok
+test_torn_last_record_and_changed_source (tests.test_e6_recovery.Recovery.test_torn_last_record_and_changed_source) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 19.699s
+
+OK

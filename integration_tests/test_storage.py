@@ -46,7 +46,7 @@ class PostgreSQLTests(unittest.TestCase):
 
     def test_migrations_idempotent(self):
         self.s.migrate(); self.s.migrate()
-        self.assertEqual(self.db.execute('select count(*) n from schema_migration').fetchone()['n'],3)
+        self.assertEqual(self.db.execute('select count(*) n from schema_migration').fetchone()['n'],6)
 
     def test_raw_decimal_timestamp_precision(self):
         self.p['raw']=b'{ "decimal":0.123456789012345678901234567890, "x": 1 }\n'

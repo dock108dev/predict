@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+globalThis.E5State=require('../app/dashboard/e5_static/state.js');
+const s=require('../app/dashboard/e6_real_static/state.js');
+const {execFileSync}=require('node:child_process');
+const data=JSON.parse(execFileSync('.venv/bin/python',['-c','import json;from app.dashboard.e6_real import load_package;print(json.dumps(load_package()))'],{encoding:'utf8',maxBuffer:10e6}));
+let selected=s.restore(data,'');
+assert.equal(selected.at,data.timeline.at(-1).id);
+selected.venue='polymarket_us';selected=s.move(data,selected,-1);
+assert.equal(selected.venue,'polymarket_us');
+assert.deepEqual(s.restore(data,s.url(data,selected).slice(1)),selected);
+for(const q of ['?session=wrong',s.url(data,{...selected,at:''}).slice(1),s.url(data,{...selected,venue:''}).slice(1),s.url(data,selected).slice(1)+'&venue=both',s.url(data,{...selected,at:'unknown'}).slice(1),s.url({...data,hash:'wrong'},selected).slice(1)])assert.throws(()=>s.restore(data,q));
+for(let i=0;i<52;i++)assert.equal(s.move(data,{at:data.timeline[i].id,venue:'kalshi'},-1).at,data.timeline[Math.max(0,i-1)].id);
+console.log('PASS: 52 exact cutoff identities, stable venue, reload/bookmark, missing/altered/duplicate rejection');

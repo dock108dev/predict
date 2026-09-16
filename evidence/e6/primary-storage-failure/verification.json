@@ -1,0 +1,36 @@
+{
+  "state": "failed",
+  "delivered": 13,
+  "persisted": 7,
+  "fallback_records": 6,
+  "recovered": [
+    {
+      "id": "3e93d906-e77c-41c9-8960-8602c78f3d9b",
+      "state": "interrupted",
+      "detected_at": "2026-09-15T19:15:39.699427+00:00",
+      "crash_at": null,
+      "delivered_journal_records": 13,
+      "persisted_ingress": 7,
+      "journal_only": 6,
+      "journal_tail_incomplete": false,
+      "reason": "unfinished prior process; exact crash and unseen interval unknown",
+      "counts": {
+        "prediction": 4,
+        "reference": 1,
+        "reference_gaps": 0,
+        "events": 8
+      },
+      "exported": {
+        "directory": "evidence/e6/primary-storage-failure/3e93d906-e77c-41c9-8960-8602c78f3d9b",
+        "counts": {
+          "prediction": 4,
+          "reference": 1,
+          "reference_gaps": 0,
+          "events": 10
+        },
+        "calculations": 0,
+        "bytes": 354473
+      }
+    }
+  ]
+}

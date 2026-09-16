@@ -1,0 +1,12 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "files": {
+    "app/collection/prediction_producer.py": "8eb079173c7013b976d5a818a1021a7fabd64b6a2a62b8e29cd67bceec2d0788",
+    "app/dashboard/e6_live.py": "21c09d049eb537bc371d08716f1a83df20f7b531e5b19bc0048c41786c5dcb75",
+    "app/dashboard/e6_live_static/index.html": "c13347f9e7d3557aac7556006598889df35a33eb1a08f246ec1c5f871f601ae2",
+    "app/dashboard/e6_live_static/watch.js": "d091b8150c534c1d3d88f3464da328aea58cb1982b88618225403f712b3150a4",
+    "scripts/e6-live-watch": "577c79fa3952fc0c688a9bec7b5d73ae426bd9225e990201205377ab418a26a7",
+    "tests/test_e6_live_watch.py": "c9a9e4fcd638879b7c1e1b79a5748f5588dd552d520d13b7f469e239643d46b7"
+  },
+  "slice_sha256": "225d50347098092c1b14ee25099244c60589904e916be09c1464bca99bb4dbe8"
+}

@@ -1,0 +1,43 @@
+{
+  "sda": {
+    "root": "/Users/michaelfuscoletti/Desktop/archived/sda",
+    "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+    "branch": "main",
+    "origin": "https://github.com/dock108dev/sda.git",
+    "status_porcelain": "",
+    "license_named_files": [],
+    "inspected_files_sha256": {
+      "scraper/sports_scraper/odds/parser.py": "68bb7c652a08e289e3ce442a8051d23d30c3070d28336b533c6469f1ef1ff26a",
+      "scraper/sports_scraper/normalization/__init__.py": "66e7bb66bdc4e615da385ca5c501f7de4ecf40f1f2a66215dd11413d54ba7249",
+      "scraper/sports_scraper/persistence/team_name_normalization.py": "f2efe419ab078db18a9128ca4586c6664e10bd04d43c9f3d0f62e16f21aa5a81",
+      "scraper/sports_scraper/persistence/odds_matching.py": "37e2191ebde4a5313f6cf11069cb13243c75f87b6725c8736aa37fa4cf802fc0",
+      "scraper/sports_scraper/persistence/odds.py": "2d17f33060d8f618cf16d85810ef9a0f33f745e2a72ed7ee6f1cd9b2ec13a3eb",
+      "scraper/sports_scraper/live_odds/redis_store.py": "c8085123bbbc88b59e07243eca7c9ec463a1b04fe8844b356e52efb8b93709c7",
+      "scraper/sports_scraper/live_odds/closing_lines.py": "64e2181d2a0b7bf591f3f58ba3e063c7a0d00571a5696de26d9e9694d8e904ca",
+      "api/app/db/odds.py": "53e7ffe154cc2cd4dea125abc0754fb75bcc4e7faa11945e4e45d5c591082f02",
+      "api/app/tasks/outcome_tasks.py": "be7f4de05dda1ba422d39ff0e822f157013243f8483f18d647275add8f0ff4bb",
+      "scraper/pyproject.toml": "4d289ed2b499dee12075377ab5a8dc51defda482b494c3ee31436538bf920c5f",
+      "api/pyproject.toml": "4b6381a600c84d47b5f14f07828c0c15b8626a083bc2b52aa2f496b163a76ec5"
+    }
+  },
+  "scroll-down-web": {
+    "root": "/Users/michaelfuscoletti/Desktop/archived/scroll-down-web",
+    "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+    "branch": "main",
+    "origin": "https://github.com/dock108dev/scroll-down-web.git",
+    "status_porcelain": "",
+    "license_named_files": [],
+    "inspected_files_sha256": {
+      "web/src/components/layout/DegradedBanner.tsx": "abeb97f7b894a20e6cca5289fbcb57edd504e8299fc873e5be709fb9fc5adf89",
+      "web/src/components/layout/OfflineBanner.tsx": "1b7c8ecc351c79a788b97df7ab9fb4668bc1bc959764058add84908bfa2fda52",
+      "web/src/components/shared/LoadingSkeleton.tsx": "7d8433c59a2498c2f5dd03c9f23f74aff786ba0ececb968ec2b30ddf7e5f5537",
+      "web/tests/layout-banners.spec.ts": "43537a8b7f8715f1e792715b7783cd492d8d1f68ed5967c087c67f2c16035c94",
+      "web/src/app/layout.tsx": "e4701cd8b2e288ae73f58fca3c1dfdf85076ac5ffaf41b81c37b453559336fe5",
+      "web/src/app/globals.css": "33a2a346756909d77683d831a038505e8e2b92dd2a36316f9414d0612a76c9ea",
+      "web/src/components/layout/ThemeProvider.tsx": "82afefc85b56cc6bad183a9353fafdab702be47c3f094f25453c074c91de3c31",
+      "web/src/lib/api-server.ts": "db700a805dabc16c5f6fb7f033f98e491c5cc7acb72da9c2f5ed7e4fd122439a",
+      "web/src/app/api/health/route.ts": "02800db845583ca4106a526f68431fffa65b6e9aed5ee3a1b420ac4a4f71f548",
+      "web/package.json": "72faa92b1041d4dd44378c93168c0b1ae760cb31a82cfae70507905045d117d4"
+    }
+  }
+}

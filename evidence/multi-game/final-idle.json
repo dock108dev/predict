@@ -1,0 +1,23 @@
+{
+  "status": {
+    "state": "idle",
+    "active": false,
+    "start_available": false,
+    "error": null,
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null
+  },
+  "games": 6,
+  "rows": 18,
+  "historical": true,
+  "best_usable": {
+    "game_title": "MIN Vikings vs CHI Bears",
+    "profit": "-2.840000",
+    "return_pct": "-2.761571373006612213146635550369506028782574873590042784908595877090626215480357837417347335667055620",
+    "modeled_quantity": "100"
+  }
+}

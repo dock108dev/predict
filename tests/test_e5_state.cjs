@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const state=require('../app/dashboard/e5_static/state.js');
+const book={key:'kalshi:contract:yes'};
+assert.equal(state.select([book],book.key,'key'),book);
+assert.equal(state.select([],book.key,'key'),null);
+let b=state.banner({},true);b.dismissed=true;
+assert.equal(state.banner(b,true).dismissed,true);
+b=state.banner(b,false);assert.equal(b.dismissed,false);
+assert.equal(state.banner(b,true).dismissed,false);
+const row={key:'invented-positive',id:'exact-id',export_sha256:'exact-bytes'};
+const saved=state.saved(row,book.key,'mispricing');
+assert.equal(state.verifySaved(JSON.parse(JSON.stringify(saved)),[row]),row);
+assert.throws(()=>state.verifySaved(saved,[{...row,id:'changed'}]),/identity/);
+assert.throws(()=>state.verifySaved(saved,[]),/unavailable/);
+console.log('PASS: stable book identity, unavailable selection, degradation recovery, exact saved reopening and mismatch rejection');

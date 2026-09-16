@@ -1,0 +1,28 @@
+{
+  "capture_process_exited": true,
+  "transports": {
+    "kalshi": {
+      "adapter": true,
+      "stream": true
+    },
+    "polymarket_us": {
+      "adapter": true,
+      "stream": true
+    }
+  },
+  "archives": {
+    "sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "clean": true
+    },
+    "scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "clean": true
+    }
+  },
+  "owner_database_accessed": false,
+  "owner_services_changed": false,
+  "e5_preview_changed": false,
+  "new_servers_started": false,
+  "exports_retained": true
+}

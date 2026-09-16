@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-09-16T03:14:15.887686+00:00",
+  "python_tests": 23,
+  "presentation_checks": "passed",
+  "syntax_checks": "passed",
+  "implementation_matches_recorded_hashes": true,
+  "baseline_byte_identical": true,
+  "baseline_sha256": "a5a08cae151dbd3f9b5ad5ffcdb239dd25a479378bb66afd590c132ba351e63e",
+  "browser": {
+    "saved_switch": "older one-game then six-game baseline",
+    "dashboard_pairs": 12,
+    "detail_pairs": 2,
+    "viewport_width": 390,
+    "dashboard_document_width": 390,
+    "detail_document_width": 390,
+    "return_state": "saved baseline and size retained",
+    "console_warnings_errors": []
+  },
+  "local_producers": "two Start/Stop cycles passed in focused lifecycle test",
+  "status": {
+    "state": "idle",
+    "active": false,
+    "operating_mode": "personal-beta",
+    "start_available": true,
+    "error": null,
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null
+  }
+}

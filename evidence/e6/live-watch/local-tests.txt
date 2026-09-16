@@ -1,0 +1,32 @@
+test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds) ... ok
+test_changed_schedule_stops_discovery (tests.test_e6_transport.IntegrationTests.test_changed_schedule_stops_discovery) ... ok
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... ok
+test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_live_watch.LiveLoop.test_cancel_backoff_and_start_over_60_seconds) ... ok
+test_changed_schedule_stops_discovery (tests.test_e6_live_watch.LiveLoop.test_changed_schedule_stops_discovery) ... ok
+test_controlled_recovery_and_manual_stop (tests.test_e6_live_watch.LiveLoop.test_controlled_recovery_and_manual_stop) ... FAIL
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_live_watch.LiveLoop.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... ok
+test_current_health_and_quiet_freshness (tests.test_e6_live_watch.Projection.test_current_health_and_quiet_freshness) ... ok
+test_idle_no_credentials_or_network (tests.test_e6_live_watch.Projection.test_idle_no_credentials_or_network) ... ok
+
+======================================================================
+FAIL: test_controlled_recovery_and_manual_stop (tests.test_e6_live_watch.LiveLoop.test_controlled_recovery_and_manual_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_live_watch.py", line 24, in test_controlled_recovery_and_manual_stop
+    self.assertEqual(o.session.health['kalshi'],'disconnected')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ineligible' != 'disconnected'
+- ineligible
++ disconnected
+
+
+----------------------------------------------------------------------
+Ran 9 tests in 7.514s
+
+FAILED (failures=1)

@@ -1,0 +1,22 @@
+test_latest_invalid_and_stale (tests.test_e6_collection.BoundsTests.test_latest_invalid_and_stale) ... ok
+test_reject_nonfinite_and_expansion (tests.test_e6_collection.BoundsTests.test_reject_nonfinite_and_expansion) ... ok
+test_capacity_pressure_preserves_delivery (tests.test_e6_collection.DurableTests.test_capacity_pressure_preserves_delivery) ... ok
+test_disappearance (tests.test_e6_collection.DurableTests.test_disappearance) ... ok
+test_entitlement (tests.test_e6_collection.DurableTests.test_entitlement) ... ok
+test_identity (tests.test_e6_collection.DurableTests.test_identity) ... ok
+test_kickoff (tests.test_e6_collection.DurableTests.test_kickoff) ... ok
+test_manual_stop_and_exact_reopening (tests.test_e6_collection.DurableTests.test_manual_stop_and_exact_reopening) ... ok
+test_prediction_recovery (tests.test_e6_collection.DurableTests.test_prediction_recovery) ... ok
+test_primary_failure_fallback (tests.test_e6_collection.DurableTests.test_primary_failure_fallback) ... ok
+test_quota (tests.test_e6_collection.DurableTests.test_quota) ... ok
+test_restart_marks_unfinished_without_crash_time (tests.test_e6_collection.DurableTests.test_restart_marks_unfinished_without_crash_time) ... ok
+test_schedule (tests.test_e6_collection.DurableTests.test_schedule) ... ok
+test_slow_persistence_bounds_and_keeps_loop_responsive (tests.test_e6_collection.DurableTests.test_slow_persistence_bounds_and_keeps_loop_responsive) ... ok
+test_stopping_waits_for_export (tests.test_e6_collection.DurableTests.test_stopping_waits_for_export) ... ok
+test_storage_capacity_stops_before_write (tests.test_e6_collection.DurableTests.test_storage_capacity_stops_before_write) ... ok
+test_transient_retry_exhaustion (tests.test_e6_collection.DurableTests.test_transient_retry_exhaustion) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 25.878s
+
+OK

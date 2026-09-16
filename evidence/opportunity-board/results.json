@@ -1,0 +1,28 @@
+[
+  {
+    "session": "75ec21c1-5962-48e1-96e2-5f6b5ef07150",
+    "cutoffs": 52,
+    "default_cutoff": "2026-09-15T20:31:08.309452+00:00",
+    "cross_venue_normal_profits": [
+      "-3.860000"
+    ],
+    "raw_combined_prices": [
+      "1.0100"
+    ],
+    "positive_normal_scenarios": 0,
+    "qualified_all_outcome_results": 0
+  },
+  {
+    "session": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+    "cutoffs": 47,
+    "default_cutoff": "2026-09-15T23:29:28.668362+00:00",
+    "cross_venue_normal_profits": [
+      "-3.860000"
+    ],
+    "raw_combined_prices": [
+      "1.0100"
+    ],
+    "positive_normal_scenarios": 0,
+    "qualified_all_outcome_results": 0
+  }
+]

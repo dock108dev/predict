@@ -1,0 +1,26 @@
+test_cancel_request_and_backoff (tests.test_reference.AdapterTests.test_cancel_request_and_backoff) ... ok
+test_close_and_scope (tests.test_reference.AdapterTests.test_close_and_scope) ... ok
+test_finite_retries_and_guidance (tests.test_reference.AdapterTests.test_finite_retries_and_guidance) ... ok
+test_incomplete_recovery_uses_new_pair (tests.test_reference.AdapterTests.test_incomplete_recovery_uses_new_pair) ... ok
+test_quota_and_entitlement_stop (tests.test_reference.AdapterTests.test_quota_and_entitlement_stop) ... ok
+test_raw_rejected_headers_and_work_bound (tests.test_reference.AdapterTests.test_raw_rejected_headers_and_work_bound) ... ok
+test_repeats_nonopportunities_recovery (tests.test_reference.AdapterTests.test_repeats_nonopportunities_recovery) ... ok
+test_schedule_phase_stop_and_kickoff (tests.test_reference.AdapterTests.test_schedule_phase_stop_and_kickoff) ... ok
+test_storage_and_queue_failure_journal (tests.test_reference.AdapterTests.test_storage_and_queue_failure_journal) ... ok
+test_complete_exact_and_reversed (tests.test_reference.ReferenceTests.test_complete_exact_and_reversed) ... ok
+test_duplicate_third_draw (tests.test_reference.ReferenceTests.test_duplicate_third_draw) ... ok
+test_exact_roundtrip_and_tamper (tests.test_reference.ReferenceTests.test_exact_roundtrip_and_tamper) ... ok
+test_historical_snapshot_is_not_receipt (tests.test_reference.ReferenceTests.test_historical_snapshot_is_not_receipt) ... ok
+test_identity_schedule_phase_and_terms (tests.test_reference.ReferenceTests.test_identity_schedule_phase_and_terms) ... ok
+test_later_knowledge_and_late_receipts (tests.test_reference.ReferenceTests.test_later_knowledge_and_late_receipts) ... ok
+test_malformed_missing_id_and_bad_prices (tests.test_reference.ReferenceTests.test_malformed_missing_id_and_bad_prices) ... ok
+test_missing_side_never_borrows (tests.test_reference.ReferenceTests.test_missing_side_never_borrows) ... ok
+test_optional_ids_times_limits_unknown (tests.test_reference.ReferenceTests.test_optional_ids_times_limits_unknown) ... ok
+test_request_secret_rejected (tests.test_reference.ReferenceTests.test_request_secret_rejected) ... ok
+test_synthetic_positive_is_explicit (tests.test_reference.ReferenceTests.test_synthetic_positive_is_explicit) ... ok
+test_unknown_pair_lineage_rules_ineligible (tests.test_reference.ReferenceTests.test_unknown_pair_lineage_rules_ineligible) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.322s
+
+OK

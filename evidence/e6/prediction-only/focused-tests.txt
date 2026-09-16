@@ -1,0 +1,13 @@
+======================================================================
+FAIL: test_idle_preflight_and_real_start_blocked (tests.test_e6_transport.PreflightTests.test_idle_preflight_and_real_start_blocked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 140, in test_idle_preflight_and_real_start_blocked
+    self.assertTrue(preflight(s)['valid'])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 76 tests in 14.579s
+
+FAILED (failures=1)

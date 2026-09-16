@@ -1,0 +1,34 @@
+{
+  "preexisting_evidence_files": 1670,
+  "changed_preexisting_evidence": [],
+  "baseline_candidates": 18,
+  "baseline_ev_scenarios": 96,
+  "dashboard_api_comparison": "Identical excluding existing per-request fee audit calculation_time and derived context_hash",
+  "visible_cross_venue": 12,
+  "internal_same_venue": 6,
+  "python_tests": 23,
+  "presentation_tests": "passed",
+  "idle_status": {
+    "state": "idle",
+    "active": false,
+    "operating_mode": "personal-beta",
+    "start_available": true,
+    "error": null,
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null
+  },
+  "implementation_sha256": {
+    "app/dashboard/opportunity_static/index.html": "6421600ca760e8c0d5be85e1117b99a5863eda7b5c41c7a4515407015cc72b0c",
+    "app/dashboard/opportunity_static/board.js": "9d8081294a452ea1b013a8deb63e724e78912f0748ff71ff69084fb1d546e635",
+    "app/dashboard/opportunity_static/dashboard.css": "c1a5818eaf54c58deea7c12e781c96c1c09fbf4d846616e0aefdd2be23e21048",
+    "app/dashboard/opportunity_static/dashboard.html": "31c4fac60c73df152a14bc23f928f0117b25debc108befb28bdbfeecfeb66cb8",
+    "app/dashboard/opportunity_static/dashboard.js": "f11b3c1af79251a21706caee831796be5160165e0fd5ab0f2ae727da08e14b75",
+    "app/dashboard/opportunity_static/presentation.js": "110c083ed68209afc39ac921e6b5acba2e995898fb658bfb4c4d1eccf2cc7ddc",
+    "app/dashboard/opportunity_static/board.css": "8838cc6730a230af1f30b8d0e8deffeb8dda4d105aced54b8a53ac07c1516597",
+    "tests/test_concise_dashboard.cjs": "3815bbf27aaf7cd87275e7596fde817e1a0f1b75bafd9376595ccfbb921be935"
+  }
+}

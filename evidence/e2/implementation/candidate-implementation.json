@@ -1,0 +1,18 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "implementation_sha256": "b498cede9eb5f8762fbe4ecae5b2594ef3fca6d7cc2828b9af3317343a3fd94c",
+  "files": {
+    "app/edge_contracts.py": "a5199f5356f3f1d7a4bd5c80a457d5dd29cad5edd6fc2a96c574b876238080c2",
+    "app/reference/__init__.py": "d89fd10fbc921c0794052d27d5982104b81f55bd97a86baff8ec8c25a76e61b5",
+    "app/reference/adapter.py": "69a63b8edc35116bd21667d82b1e97951bf6a1fd087a0a9145291d5efff18582",
+    "app/reference/enrichment.py": "26fd08839e37a3a7b178b33fb7f305abe91949af3e838059ab68473cc6ab8558",
+    "app/reference/fixtures.py": "0d85cd3f50e74d5000daa4aaf4687143cd6287f0c51619b8e1fa1d89623d3f61",
+    "app/reference/records.py": "806ed93b5d6890e9db1fce16a34a68411dfd7a404a74facb6ca2fe79a7d605a9",
+    "app/reference/storage.py": "a645b59c7b6f4414c8252dfba565678bcae7acc54edbcc5b7255c88d1f571520",
+    "app/reference/verify_storage.py": "acd76fc6e2c98c1ff6a1165a266206c08fdda5d2d8b02005ff80737dd5a16333",
+    "app/storage/migrations/004_reference_history.sql": "994ef96f2244d5b64b60b65cf8b60c47ac4b65619c28ca2960909ffe4f02de2f",
+    "app/storage/store.py": "c273eef9fcda0af1411d4aa16b6562921ca621374c0f17043c9bcc75a381f186",
+    "integration_tests/test_storage.py": "099bc22e455c8585ff5c1b00f8108237dbf08a506837ccbe2cf13def7fe85413",
+    "tests/test_reference.py": "46317a8eb93d124f09c3ca9b317e719ae76e8c7c1375e309d4a8db0c1a132ab2"
+  }
+}

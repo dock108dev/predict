@@ -1,0 +1,3 @@
+{"database": "postgres", "username": "e6_disposable", "data_directory": "/private/tmp/e6pg-wu9mim_u/data", "sockets": "/private/tmp/e6pg-wu9mim_u/socket", "listen_addresses": "", "port": "55486"}
+{"database": "e6_synthetic", "username": "e6_disposable", "data_directory": "/private/tmp/e6pg-wu9mim_u/data", "sockets": "/private/tmp/e6pg-wu9mim_u/socket", "listen_addresses": "", "port": "55486"}
+{"database": "e6_synthetic", "username": "e6_disposable", "data_directory": "/private/tmp/e6pg-wu9mim_u/data", "sockets": "/private/tmp/e6pg-wu9mim_u/socket", "listen_addresses": "", "port": "55486"}

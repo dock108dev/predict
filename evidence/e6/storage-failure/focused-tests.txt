@@ -1,0 +1,8 @@
+../Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/e6_live.py:199: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=2048);app['owner']=owner
+............
+----------------------------------------------------------------------
+Ran 14 tests in 10.624s
+
+OK

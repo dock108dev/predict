@@ -1,10 +1,39 @@
 # Prediction Market Edge — product direction and implementation outline
 
+## Current implementation clarification — public-page POC
+
+September 16: the VegasInsider same-column DraftKings parser is implemented; see [report](public-nfl-reference-report.md) and the current Desktop tracker. The next slice uses the saved page, not a mandatory Odds API/Pinnacle feed. Missing bookmaker timing, disclosed delay or independence assessment does not prevent implied-probability and de-vig arithmetic. Label the result “page-derived estimate; bookmaker update time and delay unknown”; retain stronger live/qualified eligibility separately. Do not infer a 15-minute delay or independent true fair value.
+
+Reuse the calculation and prospective-record/evaluation design below. The old source-specific eligibility and final implementation prompt are superseded where they would suppress this labeled arithmetic. Preserve identity/odds checks, exact math, conditional-vs-unconditional EV, actual save/receipt times and no future-data leakage. Earlier target captures can support only explicitly retrospective time-mismatched comparisons. The next package is file-only, using saved real source data and synthetic outcomes for workflow checks; no provider requests or new target capture.
+
+
 Updated September 15, 2026. Proposed working name; the project directory remains prediction-arb. This document replaces the earlier P1–P8 roadmap with the owner’s expanded scope. Planning only: no implementation, provider subscription, live collection or trading is performed by this review.
+
+## Non-negotiable POC requirement — correct unmodified math
+
+The owner explicitly clarified: finding positive Arb or EV is not the goal or a pass criterion. Correct calculation from the original inputs is the essential requirement throughout the POC. Negative, zero and unavailable results are valid outcomes. Never change prices, fee assumptions, quantities, probabilities, rounding or exclusions to manufacture a positive result.
+
+Preserve original observations; document necessary native-side/unit conversions. Verify outcome orientation, actual purchase sides, depth consumption, applicable fee versions/grouping/rounding, payout cashflows and ROI denominators using independent arithmetic expectations. Carry unknown inputs through honestly. A correct calculation under an assumed fee/probability model must remain labeled conditional; it does not verify that assumption against the real account or event.
+
+Keep what-if EV inputs separate from the unmodified observed-data baseline. No default illustrative probability or hand-picked positive scenario may be presented as a discovered edge. Any math correction must fix an evidenced defect, preserve the original input and explain the before/after result; do not freeze incorrect code under the word “unmodified.”
+
+Future calculation changes require focused regression checks for the affected math. Use saved data for an independent baseline reconciliation; do not turn this into another infrastructure qualification exercise or claim absolute correctness solely from passing tests. UI polish and production hardening remain secondary.
+
+## Current owner direction — POC before hardening
+
+September 15 correction: this is a personal app. Prioritize seeing potential arbitrage and positive expected-value opportunities, not production-grade reliability. The [Desktop tracker](/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md) now orders work as **POC opportunity board → personal beta → later hardening**. This takes precedence over historical E-package ordering below.
+
+The next slice reuses real saved prediction books, existing matching/fee/depth/Arb engines and the accepted interface. Show candidate opportunities, supported net calculations, sizes and concise assumptions. Add explicit positive-EV what-if scenarios and break-even values where supported. Preserve the distinction between diagnostics, assumption-dependent potential and qualified net results. No fabricated fair probabilities, fees or profits.
+
+Further storage-failure presentation, repeated crash/fault matrices, continuous-operation certification and production packaging are deferred until after POC/beta. Retain completed work. Keep focused calculation/mapping checks, visible freshness/unknowns, secret protection, explicit Stop and no trading. No exhaustive owner-review checklist or full E6 completion gate.
+
+## Personal-beta priority — multi-game quick-look dashboard
+
+The owner found the completed single-game POC useful and requested an at-a-glance sorted dashboard across games. The six-game dashboard is now delivered; prioritize correct original-input math over finding positive results. Reuse the opportunity board as drilldown from a compact candidate list across a bounded set of overlapping prediction-market events. Show game, legs/venues, prices, consistent size basis, net dollars/ROI, freshness and assumption status; sort comparable results within each strategy and keep conditional/raw/unknown results distinct. Include near misses, basic filters and last-scan time. EV ranking requires explicit probability assumptions. Do not relabel multiple captures of one game as multi-game coverage. Extend the existing app and collector; further hardening remains deferred.
 
 ## 1. Product definition
 
-A personal prediction-market pricing and opportunity platform that combines external reference data and prediction-market books to estimate our price, detect several kinds of opportunity, and compare their economics after fees and execution assumptions.
+A personal prediction-market data and opportunity platform centered on venue feeds, books, durable history and supported arbitrage. External sportsbook data is optional enrichment for estimates and other research. Prefer verified no-additional-cost venue data access; no paid feed is a prerequisite.
 
 The core product has four outputs:
 
@@ -15,7 +44,7 @@ The core product has four outputs:
 | Lead/lag | Has reference information moved while a target market has not yet adjusted? | Observed movement/lag signal; net expected trade value only when a validated prediction and execution scenario support it. |
 | Maker value | Would a proposed resting order be attractive if filled? | Net expected value conditional on fill; fill probability and adverse-selection estimates separately when supported. |
 
-Arbitrage remains a first-class strategy. Reference pricing is also core from the first expanded vertical slice. The system will learn which strategies are useful rather than assume mispricing, staleness or market making is more profitable.
+Prediction-market collection and arbitrage come first. Reference pricing is optional and may remain unavailable in the first live delivery. The system will learn which strategies are useful rather than assume mispricing, staleness or market making is more profitable.
 
 **Reference universe:** sportsbook lines, external exchange prices, sports schedules/results and other useful evidence. These sources are for calculations only. No sportsbook betting, funding, bet slips or order routes.
 
@@ -23,19 +52,28 @@ Arbitrage remains a first-class strategy. Reference pricing is also core from th
 
 **Working name:** Prediction Market Edge. “Our price” is the user-facing term for the versioned fair-value estimate. The name describes the broader product without claiming that every signal is arbitrage. No repository rename is part of this plan.
 
-## 2. First useful expanded product
+## 2. First useful product — opportunity POC
 
-Open one NFL moneyline event and see:
+One screen should show actual prediction-market prices, candidate complementary-contract arbs, supported net profit/return and available size. Keep raw gaps and unresolved terms/fees visible when a net calculation is unavailable. A lack of fully qualified opportunities must not hide all candidates.
 
-- Our estimated probability for each target venue, sources used, disagreement, freshness and recent movement.
-- Each supported prediction venue’s bid, ask and usable quantity.
-- Separate Arb, Mispriced, Moving markets and Maker scenarios views, with unsupported views explicitly pending.
-- Net results and the assumptions behind them; raw price gaps are available in details.
-- Saved observations and calculations that can reproduce the screen later.
+For positive-EV exploration, show break-even probability and calculations under explicit owner-entered or evidenced model outcome assumptions. Label conditional/what-if results; E3's conditional winner probabilities cannot silently become unconditional contract value. Use scenarios/ranges for unresolved assumptions where meaningful. Never manufacture a profitable result.
 
-The first delivery needs one usable external reference source and the existing prediction venues. It does not need every provider, learned weights, an automated market maker or a new frontend framework.
+Start from saved real Kalshi/Polymarket US observations, labeled Historical. Fresh observation integration follows under explicit bounded collection scope. Sportsbooks and The Odds API remain optional ancillary inputs; no subscription is a POC prerequisite.
+
+POC completion is a usable board, focused arithmetic/identity checks and one practical walkthrough. Personal beta adds convenient repeated use, useful event breadth, sorting and saved results. Further hardening follows demonstrated needs after that.
 
 ## 3. Starting point and reuse
+
+### Local source copies for E1
+
+The owner requested these default-branch checkouts on September 15, 2026. Start the targeted reuse audit from these local copies in `/Users/michaelfuscoletti/Desktop/archived` (`../archived` from Predict); source discovery is resolved.
+
+| Source | Repository | Local checkout | Default branch | Checked-out revision |
+|---|---|---|---|---|
+| SDA | [dock108dev/sda](https://github.com/dock108dev/sda) | [/Users/michaelfuscoletti/Desktop/archived/sda](/Users/michaelfuscoletti/Desktop/archived/sda) | `main` | `b63ad4d985ab9e8d007767e2b97c78b4783d7c65` |
+| Scroll Down | [dock108dev/scroll-down-web](https://github.com/dock108dev/scroll-down-web) | [/Users/michaelfuscoletti/Desktop/archived/scroll-down-web](/Users/michaelfuscoletti/Desktop/archived/scroll-down-web) | `main` | `087411753d6f4a2665820f84bf6270b08d05ea91` |
+
+Both checkouts were verified clean and matched the remote default-branch heads at preparation. Recheck their identity and working-tree state before auditing; cite exact revisions and source paths in reuse decisions. These are review inputs, not Predict dependencies or evidence that the old applications run. No dependencies were installed and no old application was started. Preserve the copies during the audit; create any extraction examples in Predict. Cloning does not complete E1 or authorize E2 integration.
 
 The current [tracker](/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md) records adapters, normalization, event/market matching, settlement assessment, fees, top-of-book detection, depth sizing, PostgreSQL history and the local dashboard as implemented within their documented limits. The September 15 preparation record says the repaired candidate is loaded and ready for an owner-started try. This review did not inspect the running application or perform that try.
 
@@ -129,15 +167,15 @@ E1–E10 are expansion work packages. Existing completed slices retain their his
 
 **Completion check:** one usable event-level walkthrough, including stale inputs, unknown net value and saved reopening. Avoid one combined ranking that treats expected profit and worst-case profit as equivalent.
 
-### E6 — sustained collection for both data universes
+### E6 — delivered collection foundation; remaining hardening deferred
 
-**Depends on:** existing prototype stability; reference integration uses E2. Work can overlap E3–E5.
+**Depends on:** existing collector and prediction adapters. Reference integration uses E2 only when separately enabled; its absence is not a collection or Arb gate.
 
 **Tasks:** finish the prepared owner Start/Stop/reopen try; expand to explicitly chosen session durations; refresh discovery/subscriptions; recover and resynchronize after disconnects; keep per-source health and capture-gap records. Bound queues, memory and disk; segment sessions and define retention. Collection can outlive a browser tab. Process failure must leave an interrupted record. Specify startup/autoresume policy before enabling unattended operation.
 
-**Result:** prediction and reference timelines suitable for a useful sports-session view and research.
+**Result:** durable prediction-market timelines, with ancillary reference timelines only when enabled. Next slice: prediction-only Kalshi/Polymarket US capture under E6 ownership, explicit Start/Stop, maximum five minutes and verified no-additional-cost access.
 
-**Completion check:** an agreed session and recovery path, truthful saved accounting, manual Stop and a practical interface check. No blanket 250 ms gate. Subsecond research requires timestamp/cadence evidence appropriate to that particular claim.
+**Current boundary:** bounded real capture/live viewing, manual Stop, saved replay, interrupted recovery and storage-failure accounting are already implemented within reported limits. Full continuous reliability remains unclaimed and is not a POC/beta gate. Further failure-count UI and broader qualification are deferred until after POC/beta. No blanket 250 ms gate.
 
 ### E7 — lead/lag signals
 
@@ -179,12 +217,10 @@ E1–E10 are expansion work packages. Existing completed slices retain their his
 
 ## 6. Delivery order and success
 
-**Begin E1 and E2 now as the next proposed engineering scope.** Reference ingestion and our-price modeling must not wait for completion of an arbitrage-only analytics project. The prepared owner try continues as a separate practical check on the existing collector.
+**Now: connect the existing pieces into a personal opportunity POC.** Real books and the viewing loop exist; the next user benefit is candidate Arb and positive-EV potential on screen. Begin with saved real observations and clearly labeled assumptions, then improve useful real scanning under explicit scope.
 
-First expanded delivery: E1 → E2 → E3 → E4 → E5, with E6 advancing alongside it. One external reference, existing prediction venues, one market type, visible our price, net arb/mispricing results and replayable history.
+**Next: personal beta.** Repeated owner-started use, a small useful set of events, ranking/filtering and saved results; fix concrete feedback. Reuse completed engineering without making full E6 reliability a prerequisite.
 
-Next research delivery: E7/E8, followed by E9 maker/execution feasibility. Expand only where evidence supports E10.
+**Later:** stronger model calibration, ancillary data, lead/lag, maker research, broader venues and production hardening as justified. Keep their recorded unknowns, but do not turn them into blanket blocks on the POC.
 
-Product success means the owner can inspect an estimate, see why a prediction-market price may be attractive after costs, distinguish strategy and uncertainty, and revisit the supporting evidence. The research then determines which opportunities survive model error and execution friction. No strategy’s profitability is assumed in advance.
-
-Only this roadmap was revised. The original PLAN.md, completion tracker, application, provider accounts, stored evidence and running services were not changed.
+Success means the owner can quickly inspect potential opportunities and understand their price, size, fees and assumptions. It does not require a positive candidate, proven profitability or production-grade operation. This planning update changes no app, credential, database, provider or running service state.

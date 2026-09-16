@@ -1,0 +1,10 @@
+{
+  "exact_native_books": {
+    "kalshi": 78,
+    "polymarket_us": 153
+  },
+  "exact_packets": true,
+  "gaps": [],
+  "journal_sha256": "2c81c42bb69fbada0db490d5235209d330e8028093bb6f2a59d4bac355ed3f12",
+  "state": "complete"
+}

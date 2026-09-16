@@ -1,0 +1,44 @@
+- banner:
+  - heading "Predict · Market watch" [level=1]
+  - paragraph: Synthetic collection · Atlanta / Pittsburgh · NFL pregame moneyline
+- main:
+  - heading "Collection session" [level=2]
+  - paragraph: Injected synthetic feeds. Event time is simulated; session duration uses real elapsed time.
+  - text: Duration
+  - combobox "Duration":
+    - option "15 minutes"
+    - option "30 seconds" [selected]
+  - button "Start synthetic session"
+  - button "Stop and save" [disabled]
+  - status: "Viewing saved synthetic history. Actual session: completed · declared duration reached"
+  - paragraph: "Delivered records: 16 · Persisted: 16 · Awaiting primary persistence: 0 · Calculations: 1"
+  - alert
+  - heading "Source health" [level=2]
+  - generic: Saved synthetic history. Source health is historical; no current eligibility is claimed.
+  - heading "Prediction books" [level=2]
+  - text: Selected venue
+  - combobox "Selected venue":
+    - option "Kalshi"
+    - option "Polymarket US" [selected]
+  - paragraph: kalshi · ask $0.2 · simulated receipt 2026-09-13T15:16:53.457099+00:00
+  - paragraph: polymarket_us · ask $0.2 · simulated receipt 2026-09-13T15:16:53.457570+00:00
+  - heading "Reference observations" [level=2]
+  - paragraph: Synthetic Pinnacle-shaped reference · 2026-09-13T15:16:53.457954+00:00 · decimal odds 1.90000000000000000001 / 2.2000 · included in conditional estimate · provider read 2026-09-13T15:16:53.457924+00:00 · bookmaker change time unknown
+  - heading "Our price and economics" [level=2]
+  - paragraph: Conditional on a normal team-winner result. Exceptional probability mass and expected profit remain unknown.
+  - text: "Our price: 0.536585365853658537 conditional probability · degraded"
+  - paragraph: "Arbitrage · worst-case net: $1.7300 · conditional · 3 contracts per leg"
+  - paragraph: "Mispricing · expected net: Unavailable · unavailable · 3 contracts"
+  - generic "Calculation and assumptions"
+  - heading "Saved synthetic history" [level=2]
+  - combobox:
+    - option "Choose a saved session"
+    - option "c41e4a35-dd1e-458c-a7ef-8c0cfd91a9c9" [selected]
+    - option "c0e08bf9-094f-4a5c-b0b0-a29cf0d0fdfd"
+    - option "ec7210c0-baaa-4229-a6c9-62a06a631215"
+  - button "Reopen saved history" [active]
+  - button "Show current session"
+  - paragraph: Synthetic · complete · 12 prediction receipts · 1 reference receipts · 1 reference gap/stop records. Saved delivered snapshots; gaps are unobserved intervals, never filled
+  - text: Saved cutoff
+  - combobox "Saved cutoff":
+    - option "2026-09-13T15:16:54.459267+00:00" [selected]

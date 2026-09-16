@@ -1,0 +1,89 @@
+{
+  "health": {
+    "kalshi": [
+      {
+        "state": "awaiting_snapshot",
+        "observed_at": "2026-09-15T20:29:16.453740+00:00"
+      },
+      {
+        "state": "connected",
+        "observed_at": "2026-09-15T20:29:16.501830+00:00"
+      },
+      {
+        "state": "disconnected",
+        "observed_at": "2026-09-15T20:31:08.646185+00:00"
+      }
+    ],
+    "polymarket_us": [
+      {
+        "state": "awaiting_snapshot",
+        "observed_at": "2026-09-15T20:29:16.466766+00:00"
+      },
+      {
+        "state": "connected",
+        "observed_at": "2026-09-15T20:29:16.505310+00:00"
+      },
+      {
+        "state": "disconnected",
+        "observed_at": "2026-09-15T20:31:08.648119+00:00"
+      }
+    ]
+  },
+  "incomplete_discovery": [],
+  "streams": [
+    {
+      "closed": true,
+      "diagnostics": [
+        "awaiting_initial_image",
+        "cancelled",
+        "stopped",
+        "closed"
+      ],
+      "economics": null,
+      "health": {
+        "kalshi": "disconnected",
+        "polymarket_us": "disconnected"
+      },
+      "ingress_id": "4904df3e-b58c-4dd7-9b62-d1119c9aa55e",
+      "observed_at": "2026-09-15T20:31:08.681021+00:00",
+      "session_id": "75ec21c1-5962-48e1-96e2-5f6b5ef07150",
+      "source": "polymarket_us",
+      "type": "native_stream_finished"
+    },
+    {
+      "closed": true,
+      "diagnostics": [
+        {
+          "event": "subscribed_request",
+          "generation": 1
+        }
+      ],
+      "economics": null,
+      "health": {
+        "kalshi": "disconnected",
+        "polymarket_us": "disconnected"
+      },
+      "ingress_id": "0fdaa81e-8a0d-479d-931c-2ce9cae642f4",
+      "observed_at": "2026-09-15T20:31:08.682017+00:00",
+      "session_id": "75ec21c1-5962-48e1-96e2-5f6b5ef07150",
+      "source": "kalshi",
+      "type": "native_stream_finished"
+    }
+  ],
+  "frame_measurements": {
+    "kalshi": {
+      "first_frame": "2026-09-15T20:29:16.482878+00:00",
+      "last_frame": "2026-09-15T20:31:08.306094+00:00",
+      "raw_frame_bytes": 6286,
+      "maximum_receipt_interval_seconds": 17.833833
+    },
+    "polymarket_us": {
+      "first_frame": "2026-09-15T20:29:16.502554+00:00",
+      "last_frame": "2026-09-15T20:31:08.200038+00:00",
+      "raw_frame_bytes": 145459,
+      "maximum_receipt_interval_seconds": 17.171916
+    }
+  },
+  "discovery_active_seconds": 47.159026791050564,
+  "discovery_plus_session_seconds": 167.30066583299777
+}

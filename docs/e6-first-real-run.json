@@ -1,0 +1,48 @@
+{
+  "mode": "real",
+  "event": null,
+  "participants": [],
+  "scheduled_start": null,
+  "start_after": null,
+  "start_before": null,
+  "duration": 300,
+  "discovery_cadence": 60,
+  "stale_seconds": 30,
+  "sources": {
+    "kalshi": {
+      "event_id": null,
+      "market_id": null,
+      "participant_mapping": {},
+      "credential_reference": null,
+      "entitlement_reference": null
+    },
+    "polymarket_us": {
+      "event_id": null,
+      "market_id": null,
+      "participant_mapping": {},
+      "credential_reference": null,
+      "entitlement_reference": null
+    }
+  },
+  "mapping_revision": null,
+  "assessment_revisions": {
+    "pairing": null,
+    "lineage": null,
+    "fees": null,
+    "settlement": null
+  },
+  "prediction": {
+    "messages": 1000,
+    "connections": 2,
+    "frame_bytes": 1048576,
+    "session_bytes": 16777216,
+    "discovery_requests": 64,
+    "dollar_cap_per_source": "0",
+    "dollars_per_discovery_request": "0",
+    "dollars_per_connection": "0",
+    "plan_evidence": null
+  },
+  "cleanup": null,
+  "capture_authorization": null,
+  "reference_enabled": false
+}

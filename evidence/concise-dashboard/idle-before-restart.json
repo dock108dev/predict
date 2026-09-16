@@ -1,0 +1,13 @@
+{
+  "state": "idle",
+  "active": false,
+  "operating_mode": "personal-beta",
+  "start_available": true,
+  "error": null,
+  "saved": [
+    "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+  ],
+  "session": null,
+  "cleanup_complete": true,
+  "coverage": null
+}

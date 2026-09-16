@@ -1,0 +1,10 @@
+test_controlled_recovery_and_manual_stop (tests.test_e6_live_watch.LiveLoop.test_controlled_recovery_and_manual_stop) ... ok
+test_current_health_and_quiet_freshness (tests.test_e6_live_watch.Projection.test_current_health_and_quiet_freshness) ... ok
+test_idle_no_credentials_or_network (tests.test_e6_live_watch.Projection.test_idle_no_credentials_or_network) ... ok
+test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_prediction_only.PredictionOnly.test_native_producers_recovery_mixed_persistence_and_exact_reopen) ... ok
+test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_prediction_only.PredictionOnly.test_cancel_backoff_and_start_over_60_seconds) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 6.263s
+
+OK

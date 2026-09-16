@@ -1,0 +1,18 @@
+{
+  "session": "3da91867-b3c4-4fd5-bc52-cf14f594a8a0",
+  "at": "2026-09-16T02:45:24.594012+00:00",
+  "mode": "personal-beta",
+  "limits": {
+    "max_games": 2,
+    "minimum_seconds_before_kickoff": 300,
+    "aggregate_requests": 128,
+    "aggregate_connections": 4,
+    "concurrent_sockets": 2,
+    "aggregate_messages": 1200,
+    "aggregate_body_bytes": 33554432,
+    "ingress_records": 2048,
+    "ingress_bytes": 16777216,
+    "journal_records": 4096,
+    "journal_bytes": 33554432
+  }
+}

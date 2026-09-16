@@ -1,0 +1,126 @@
+{
+  "scope": "synthetic offline E2; newly created cluster only",
+  "root": "/private/tmp/e2pg-odv4g4tl",
+  "identities": [
+    {
+      "database": "postgres",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_restore",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_legacy_source",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "e2_legacy_restore",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "postgres",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    },
+    {
+      "database": "prediction_arb_test_1d0e2f984527",
+      "username": "e2_disposable",
+      "data_directory": "/private/tmp/e2pg-odv4g4tl/data",
+      "sockets": "/private/tmp/e2pg-odv4g4tl/socket",
+      "listen_addresses": "",
+      "port": "55479"
+    }
+  ],
+  "checks": [
+    "real closed PostgreSQL connection preserves raw receipt in failure journal",
+    "cancelled request persists interruption gap in PostgreSQL",
+    "migration apply + idempotent reapply",
+    "adapter ingress -> PostgreSQL -> enrichment -> observed gaps/recovery",
+    "identical/non-opportunity/error arrivals remain distinct",
+    "immutable SQL records and identity collisions rejected",
+    "later source/mapping knowledge and late downloads cannot rewrite earlier replay",
+    "historical snapshot kept separate from download receipt",
+    "fresh-store restore has byte-identical full export",
+    "six as-of reconstructions byte-identical after restore",
+    "pre-E2 capture-bundle-1 restored on additive schema with detector audit replay"
+  ],
+  "bundle_sha256": "d2db196f7d3801468866ab5e8f4bf3d375e31367b2bf66ebfd2466158df4abe6",
+  "counts": {
+    "Receipt": 9,
+    "QuoteRevision": 11,
+    "ReferenceGap": 6
+  },
+  "replays": [
+    {
+      "cutoff": "2026-09-13T16:01:40+00:00",
+      "sha256": "1135736b50f103bc2f65d444441181b511d4b4f32ef7734ce963b5b17541d34d",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:58:59+00:00",
+      "sha256": "2d9885cac9d9b5cf7822c987df08968d56f6e5c429e9f5287e1d3e665168de3e",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:01+00:00",
+      "sha256": "2f1c4ff9e0a73a8a3d37c825cc83c2606761e6ab30f46f9ce974f34198a565ba",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:15+00:00",
+      "sha256": "44c38e7423781247e32381b693e73107649cee9a7535961a6732b42ec720ec6e",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:25+00:00",
+      "sha256": "3323dba10fde066c539bff6cbce1763665437bbf4b560d1e4b2d0b3611cd49ab",
+      "byte_identical": true
+    },
+    {
+      "cutoff": "2026-09-13T16:59:40+00:00",
+      "sha256": "460dcb50c96c0a05ac5d616e207f265bec01e628f3db0739c4a521d63009ff6e",
+      "byte_identical": true
+    }
+  ],
+  "legacy_replay": 1,
+  "foundation_storage_tests": 26,
+  "success": true,
+  "cluster_stopped": true,
+  "cluster_removed": true
+}

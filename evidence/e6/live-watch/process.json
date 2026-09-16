@@ -1,0 +1,7 @@
+{
+  "pid": 81243,
+  "command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e6_live --port 8779",
+  "started": "Tue Sep 15 19:32:14 2026",
+  "url": "http://127.0.0.1:8779",
+  "port": 8779
+}

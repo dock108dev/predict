@@ -2,6 +2,10 @@
 
 Shared read-only models and synthetic, Polymarket US, ProphetX, Kalshi and Novig adapters. Slice 1 is complete; Slice 2 is complete for bounded retail ingestion and advertised-window recovery. Canonical event and full-game NFL moneyline matching are implemented through Slice 8. Versioned hypothetical fee calculations are implemented through Slice 9. Top-of-book arbitrage diagnostics and conditional calculations are implemented through Slice 10. Full-depth arbitrage calculation and sizing are implemented through Slice 11. PostgreSQL historical capture and replay are implemented through Slice 12. The local live dashboard is implemented through Slice 13. Trading remains unimplemented.
 
+## Expansion guidance and local reference repositories
+
+Follow the [current roadmap](docs/product-roadmap-review.md) and [Desktop tracker](../prediction_arb_next_steps.md) for the active POC → personal beta → later-hardening order. Next: a personal opportunity board using real prediction books and existing Arb/EV engines. E1–E6 retain their completed evidence; full E6 reliability is not a POC gate. The local source audit below is already recorded in E1. The owner-provided old repositories are checked out locally at [SDA](../archived/sda) and [Scroll Down](../archived/scroll-down-web), under `/Users/michaelfuscoletti/Desktop/archived`. See the roadmap's **Local source copies for E1** section for verified default branches, exact revisions and review guidance. Review these copies before implementing equivalent normalization, odds/history or interface components; their availability does not establish reuse suitability or complete the audit.
+
 ## Local dashboard
 
 Open [Market watch](http://127.0.0.1:8765/). Launch with:

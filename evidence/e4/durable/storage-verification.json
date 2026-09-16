@@ -1,0 +1,336 @@
+{
+  "scope": "E4 synthetic offline; fresh socket-only disposable cluster",
+  "root": "/private/tmp/e4pg-3p_7djh3",
+  "identities": [
+    {
+      "database": "postgres",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_source",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_source",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_restore",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_missing",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_legacy",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_prefix",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_e3_prefix",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "e4_e4_prefix",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "postgres",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    },
+    {
+      "database": "prediction_arb_test_d4d9ee4e6483",
+      "username": "e4_disposable",
+      "data_directory": "/private/tmp/e4pg-3p_7djh3/data",
+      "sockets": "/private/tmp/e4pg-3p_7djh3/socket",
+      "listen_addresses": "",
+      "port": "55482",
+      "fsync": "on"
+    }
+  ],
+  "checks": [
+    "six migrations and idempotent reapply",
+    "all original six E3 estimates restored byte-exact with durable reference dependencies",
+    "persisted E3 replay plus identified prediction books produce separate Arb and Mispricing",
+    "seven complete immutable service audits and every input link saved; idempotent retries",
+    "positive 1.265 USD and negative -0.535 USD independent expected-value checks",
+    "SQL update/delete rejection on all three E4 tables; dangling dependency FK rejected",
+    "mutated result and late knowledge rejected before persistence",
+    "all seven service audits and dependency links survive server restart with fsync on",
+    "read rejects missing links and changed dependencies in rolled-back corruption probes; intact audit reverified",
+    "fresh-store reference, six E3 estimates, seven E4 exports, recomputation and rankings byte-exact",
+    "fresh store rejects opportunity restore before durable E3/reference dependencies",
+    "pre-E2 capture-bundle-1 restored with exact detector replay",
+    "E2, E3 and E4 exact migration-prefix capture exports remain readable"
+  ],
+  "counts": {
+    "fair_price": 6,
+    "fair_price_input": 35,
+    "opportunity_audit": 7,
+    "opportunity_dependency": 13,
+    "opportunity_input": 56
+  },
+  "replays": [
+    {
+      "name": "e3-unavailable-ev",
+      "audit_id": "434a49f6f7532c616e607fb61561441ec50cce656ffb3c279c5e3329c83a4dbc",
+      "export_sha256": "7f48a4c18536f237c6ec6934d4e2d4e5e44e41ac5dc2d507d3bc0d8e070fbd27",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "0b376e081f84cdbb856b4db7d71bff4ba6cb1a28f007d51a3bdde7e3b440b2bc",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "conditional",
+          "net_total_usd": "1.7300",
+          "reasons": []
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "E3_conditional_normal_winner_probabilities_only",
+            "exceptional_probability_mass_unknown",
+            "unconditional_target_value_unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invented-positive",
+      "audit_id": "406c1e2323e13f7663b724e5bccd93db0dfcc2207f32845dddd18d8259ef29c9",
+      "export_sha256": "f702ed259aa713388d25d16ecf4d16a00f188f22e246b8d2c78225a762a0d8f0",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "0b376e081f84cdbb856b4db7d71bff4ba6cb1a28f007d51a3bdde7e3b440b2bc",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "conditional",
+          "net_total_usd": "1.7300",
+          "reasons": []
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "conditional",
+          "net_total_usd": "1.265000",
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "name": "invented-negative",
+      "audit_id": "34bc56b5cb6e670b7f852fdb739abc8e911afc205e981dbb2fc327b8c9c1ef51",
+      "export_sha256": "117add4577fef4376c238cc8295ebb5f628f1413e4068bc0af8c76b0cbad0ecd",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "2eb9fceef1bdf88cee04c98639d7c08acd66e98fede07a04ab17f5ac9d14cb30",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "conditional",
+          "net_total_usd": "-0.0700",
+          "reasons": []
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "conditional",
+          "net_total_usd": "-0.535000",
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "name": "invented-missing-mass",
+      "audit_id": "79091d0ac74bba025f28c0c5fa864013fb716249e632d52afe74a81dee23d75a",
+      "export_sha256": "0b54c4045ee2e32cbc3da5e1a1afa198bf4f8410a688500c63a34416ab81daf7",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "0b376e081f84cdbb856b4db7d71bff4ba6cb1a28f007d51a3bdde7e3b440b2bc",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "conditional",
+          "net_total_usd": "1.7300",
+          "reasons": []
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "unconditional_probability_mass_incomplete"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-quantity",
+      "audit_id": "62f4eccc74ebd0d5071c3475be8458d39474443e215d94ced176039122532476",
+      "export_sha256": "7e36fa2e7edc8b59bc8772e82cb899f4d35eb51ef05b3e3ffb9f534c32cae0f1",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "0b376e081f84cdbb856b4db7d71bff4ba6cb1a28f007d51a3bdde7e3b440b2bc",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "quantity_unknown",
+            "material_outcome_or_cost_unknown"
+          ]
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "quantity_unknown",
+            "material_state_cashflow_or_fee_unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-fees",
+      "audit_id": "c42efc2a301f1cfe02063364560bcdf6643d576623c46e69bde494e1eac237eb",
+      "export_sha256": "be44d2f05182f57a8607bc8b18f8aaf1a9a38c7fe64a77aa7f9c1ef180f2eb21",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "0b376e081f84cdbb856b4db7d71bff4ba6cb1a28f007d51a3bdde7e3b440b2bc",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "material_outcome_or_cost_unknown"
+          ]
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "material_state_cashflow_or_fee_unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stale-book",
+      "audit_id": "d5f538849b6c1d49df8ba844a73a31d00cb9228acc3fd5e6ae10f67fe2a6fb5c",
+      "export_sha256": "ec65aadbaf9a620c24fdba4e0bce7e331b82ecd013a041a537fd0bd9a05a7134",
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "book_ids": [
+        "9172a883392260a05470bac3fee29b4f2459c5218a8a302e1b5d70602760c80d",
+        "c78559e2bf09e15d1633f85cc8d252757b0dc8266d07ca81f4b9b9966f1df6ac"
+      ],
+      "byte_exact": true,
+      "signals": [
+        {
+          "signal_class": "arb",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "book_receipt_stale_exact",
+            "book_snapshot_stale_exact",
+            "book_receipt_skew_exceeded",
+            "book-0:stale-receipt",
+            "book-0:stale-source-snapshot"
+          ]
+        },
+        {
+          "signal_class": "mispricing",
+          "status": "unavailable",
+          "net_total_usd": null,
+          "reasons": [
+            "book_receipt_stale_exact",
+            "book_snapshot_stale_exact",
+            "book_receipt_skew_exceeded",
+            "book-0:stale-receipt",
+            "book-0:stale-source-snapshot"
+          ]
+        }
+      ]
+    }
+  ],
+  "foundation_storage_tests": 26,
+  "success": true,
+  "cluster_stopped": true,
+  "cluster_removed": true
+}

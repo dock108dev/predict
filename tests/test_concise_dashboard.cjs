@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const view=require('../app/dashboard/opportunity_static/presentation.js');
+const data=JSON.parse(fs.readFileSync('evidence/concise-dashboard/api-before.json'));
+assert.equal(data.rows.length,18);
+const visible=data.rows.filter(view.crossVenue);
+assert.equal(visible.length,12);
+assert.equal(visible.filter(x=>x.profit===null).length,6);
+assert.equal(visible.filter(x=>x.profit!==null).length,6);
+assert(visible.filter(x=>x.profit!==null).every(x=>Number(x.profit)<0));
+assert.equal(view.status({status:'Conditional scenario'},'0'),'Conditional');
+assert.equal(view.status({status:'Conditional scenario'},'-2'),'Conditional');
+assert.equal(view.status({status:'Unavailable'},null),'Unavailable');
+assert(view.reasons(visible.find(x=>x.reasons.includes('Books more than 5 seconds apart at cutoff'))).includes('Books >5s apart'));
+// Exercise the real persistence functions with distinct event and outcome keys.
+const source=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');
+const fields={probability:{value:'0',validity:{valid:true}},basis:{value:'explicit local test'},contract:{value:'kalshi:yes'}};
+let game='event-a',stored='{}';
+const ctx={$:id=>fields[id],session:()=>({game:{id:game}}),localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v}};
+vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function loadAssumption'),source.indexOf("$('back').onclick")),ctx);
+ctx.saveAssumption();game='event-b';ctx.loadAssumption();assert.equal(fields.probability.value,'');
+game='event-a';fields.contract.value='kalshi:no';ctx.loadAssumption();assert.equal(fields.probability.value,'');
+fields.contract.value='kalshi:yes';ctx.loadAssumption();assert.equal(fields.probability.value,'0');assert.equal(fields.basis.value,'explicit local test');
+console.log('PASS: 12 cross-venue / 6 internal, unavailable and negative/zero labels, event/outcome assumption isolation');

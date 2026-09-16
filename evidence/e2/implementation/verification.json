@@ -1,0 +1,94 @@
+{
+  "verified_at": "2026-09-15T16:58:06.515241+00:00",
+  "candidate": {
+    "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+    "implementation_sha256": "b498cede9eb5f8762fbe4ecae5b2594ef3fca6d7cc2828b9af3317343a3fd94c",
+    "files": {
+      "app/edge_contracts.py": "a5199f5356f3f1d7a4bd5c80a457d5dd29cad5edd6fc2a96c574b876238080c2",
+      "app/reference/__init__.py": "d89fd10fbc921c0794052d27d5982104b81f55bd97a86baff8ec8c25a76e61b5",
+      "app/reference/adapter.py": "69a63b8edc35116bd21667d82b1e97951bf6a1fd087a0a9145291d5efff18582",
+      "app/reference/enrichment.py": "26fd08839e37a3a7b178b33fb7f305abe91949af3e838059ab68473cc6ab8558",
+      "app/reference/fixtures.py": "0d85cd3f50e74d5000daa4aaf4687143cd6287f0c51619b8e1fa1d89623d3f61",
+      "app/reference/records.py": "806ed93b5d6890e9db1fce16a34a68411dfd7a404a74facb6ca2fe79a7d605a9",
+      "app/reference/storage.py": "a645b59c7b6f4414c8252dfba565678bcae7acc54edbcc5b7255c88d1f571520",
+      "app/reference/verify_storage.py": "acd76fc6e2c98c1ff6a1165a266206c08fdda5d2d8b02005ff80737dd5a16333",
+      "app/storage/migrations/004_reference_history.sql": "994ef96f2244d5b64b60b65cf8b60c47ac4b65619c28ca2960909ffe4f02de2f",
+      "app/storage/store.py": "c273eef9fcda0af1411d4aa16b6562921ca621374c0f17043c9bcc75a381f186",
+      "integration_tests/test_storage.py": "099bc22e455c8585ff5c1b00f8108237dbf08a506837ccbe2cf13def7fe85413",
+      "tests/test_reference.py": "46317a8eb93d124f09c3ca9b317e719ae76e8c7c1375e309d4a8db0c1a132ab2"
+    }
+  },
+  "entry_preserved_files": 995,
+  "entry_changed_files": [
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/edge_contracts.py",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py",
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md"
+  ],
+  "missing_entry_files": [],
+  "additional_tracked_change": "integration_tests/test_storage.py: expected migration count 3 -> 4",
+  "archived_sources": {
+    "sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "clean": true
+    },
+    "scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "clean": true
+    }
+  },
+  "cleanup_checks": [
+    {
+      "path": "evidence/e2/implementation/storage-verification.json",
+      "cluster_removed_verified": true
+    },
+    {
+      "path": "evidence/e2/implementation/storage-verification-initial.json",
+      "cluster_removed_verified": true
+    },
+    {
+      "path": "evidence/e2/implementation/third-run/storage-verification.json",
+      "cluster_removed_verified": true
+    },
+    {
+      "path": "evidence/e2/implementation/second-run/storage-verification.json",
+      "cluster_removed_verified": true
+    }
+  ],
+  "focused_tests_passed": 242,
+  "foundation_postgres_tests_passed": 26,
+  "diff_check": "passed",
+  "new_document_links": "passed",
+  "artifacts": {
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/e2-implementation-report.md": "c7d6a7c45a3ac8590b86aed5141792797eae2f5b0ab0e988c3b7ee2add6c169c",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/e3-handoff.md": "cffcd38383b5988824b5f863ea84d935d0a61212f3da2fd2335fafdd0749a09e",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/candidate-implementation.json": "af890f3973df4930c3178e4eab136c81c15143091eb021aceedfadb51660a3bb",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/disconnected-db-journal.jsonl": "9d54b762596d22fe0e93030ab53c5d54f4c99466d379684f405c79765c427b04",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/entry-manifest.json": "ca5e86b1af2aa3436892e6bfb5ae16dd384e186274842717cf84812ea3d1f29d",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/final-contract-tests.txt": "d54980c841997241e1ae7b8bb3ef8b916169cb95ae368ac51cf8d901710cd781",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/focused-tests-complete.txt": "f4787c00690b6f9e3d6b13dd72de264b251bdfaf87953cc1ab451cd46abd6c03",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/focused-tests.txt": "0af183d6e01d04bb7a9ec3b1c50bd7162bcea1339c8fc02a99c319fbe072c285",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/foundation-storage-tests.txt": "9b6cceb343816834ee9c9a8039ac3a29ff513a09fddb7ee4e9bb4f40300b4ba7",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/legacy-capture-bundle.json": "bef64d9ac49b81e2834a39a4e5ae6d7530f87ed495dc68bfd505e50eebdb7ed7",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/postgres-commands.txt": "92973216e77555ac78a9f3bf2033b4e7c4232f253d8b93637d4e8ca14b759892",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/reference-bundle-restored.json": "d2db196f7d3801468866ab5e8f4bf3d375e31367b2bf66ebfd2466158df4abe6",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/reference-bundle.json": "d2db196f7d3801468866ab5e8f4bf3d375e31367b2bf66ebfd2466158df4abe6",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/second-run/legacy-capture-bundle.json": "47332217078b57159ef0a8fe36d69207510c88f51d31d117d43c74be01f9de9c",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/second-run/reference-bundle-restored.json": "eea61805e650af24599aa3a1b57bfd7828e5deee7de9d80cf24b357423191871",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/second-run/reference-bundle.json": "eea61805e650af24599aa3a1b57bfd7828e5deee7de9d80cf24b357423191871",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/second-run/storage-verification.json": "5ea3feaa56648481ba00d2fbcb6f0e51eec551ed48dfce9cb2481955b2c8a72d",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-run-complete.txt": "735891134feb37d2d9348d5655c9f004356d867f79fd2559b7190a386ce8ab79",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-run-final.txt": "ab260606d25d57d0970bd042ed6e052649aecaa5ea02b2e44941be31fccdd885",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-run-initial.txt": "121331a0f1ce9f3ed655d7e7a368e397707036018085265c98efb91ad8df887e",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-run-second.txt": "5ea3feaa56648481ba00d2fbcb6f0e51eec551ed48dfce9cb2481955b2c8a72d",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-verification-initial.json": "07693df6925fb228f25c6eb7d050fa967b7e5e65226cb2959c72be34758cc742",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/storage-verification.json": "735891134feb37d2d9348d5655c9f004356d867f79fd2559b7190a386ce8ab79",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/tests-initial.txt": "72fd419fbd0e0b48759127c32742630aa41dcfb352335669ee3a98396adf5e53",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/tests-replay.txt": "5fde97c01e2b8c397bd1de29aca5a1f3e307ac782e552dfcc135f4bc6f95921f",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/third-run/foundation-storage-tests.txt": "51caa4357d8b7f1d84d9c6f3ada36514318b92ffd4d2f625244a323e57ff7b95",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/third-run/legacy-capture-bundle.json": "c9a7bb8723efd395da0b64a255522580a44a56e3b70d4ba06344b3e00cad49e2",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/third-run/reference-bundle-restored.json": "f6c9a43a7114892d926efda3664c6603d452f636405dd01faf06d99246cca5f0",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/third-run/reference-bundle.json": "f6c9a43a7114892d926efda3664c6603d452f636405dd01faf06d99246cca5f0",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e2/implementation/third-run/storage-verification.json": "ab260606d25d57d0970bd042ed6e052649aecaa5ea02b2e44941be31fccdd885",
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "7c55adb2d9ddb02444c16ff2d875076791db5cd9a163364ce12dbcebd2e9a268"
+  }
+}

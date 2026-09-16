@@ -1,0 +1,19 @@
+{
+  "exact_native_books": {
+    "kalshi": 4,
+    "polymarket_us": 2
+  },
+  "exact_packets": true,
+  "gaps": [
+    {
+      "source": "kalshi",
+      "ingress_id": "32d6ba91-3cd4-4c50-97f3-7d3f19c11e11",
+      "reason": "native_frame_rejected"
+    }
+  ],
+  "journal_sha256": "897c9abb1d206f0821fb7fe28eae85f9951dd5aa0e4046235c9ca7e9972cd3d1",
+  "state": "complete",
+  "derived_health_books": 2,
+  "total_books": 8,
+  "total_packets": 16
+}

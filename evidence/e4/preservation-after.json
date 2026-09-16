@@ -1,0 +1,28 @@
+{
+  "changed_existing_files": {
+    "app/storage/store.py": {
+      "before": "55522324bb3a91f086a224861c200b2773526666f7c83eb9305012252cc71ce9",
+      "after": "87bc3d5f6e71e855b5fab672cbbcc87ee391700637f1d02e1821db50bfdda699"
+    },
+    "app/pricing/verify_storage.py": {
+      "before": "9c758bb3fa78c57cdbdf2beb287825f697e79d01ffc6b5c93c53849dd16655d3",
+      "after": "d4e5bad10fb8f7f4430f3583f86221f5e77568fd13b48f7d4e2e84cda6bde36f"
+    },
+    "integration_tests/test_storage.py": {
+      "before": "8533edb83956babb202ec4dabea9ca46cb74fa9a21143fafcc3558031686e884",
+      "after": "1da8c9734ac543f1c6e7850d085ba7dc3cdac237d717422c6805443513d7d7ea"
+    }
+  },
+  "all_other_entry_files_byte_preserved": true,
+  "archived_sources": {
+    "sda": {
+      "head": "b63ad4d985ab9e8d007767e2b97c78b4783d7c65",
+      "status": ""
+    },
+    "scroll-down-web": {
+      "head": "087411753d6f4a2665820f84bf6270b08d05ea91",
+      "status": ""
+    }
+  },
+  "initial_and_final_clusters_absent": true
+}

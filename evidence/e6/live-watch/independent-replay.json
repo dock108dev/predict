@@ -1,0 +1,24 @@
+{
+  "fresh_process": true,
+  "session": "2a1fa76c-46a3-4fb8-9d55-403b3b5313b7",
+  "replay": {
+    "exact_native_books": {
+      "kalshi": 19,
+      "polymarket_us": 16
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "3d533e2df07e42cc9bd8e354e44bad346d59a9236544ee2afba14604ab588abf",
+    "state": "complete",
+    "derived_health_books": 1,
+    "total_books": 36,
+    "total_packets": 72
+  },
+  "counts": {
+    "frames": 37,
+    "books": 36,
+    "packets": 72,
+    "ingress": 103
+  },
+  "hash": "3d533e2df07e42cc9bd8e354e44bad346d59a9236544ee2afba14604ab588abf"
+}

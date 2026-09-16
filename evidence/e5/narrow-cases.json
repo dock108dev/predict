@@ -1,0 +1,51 @@
+[
+  {
+    "key": "e3-unavailable-ev",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Saved E3 basis · unconditional target value and expected profit remain unavailable.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\nUnavailable\nPer target contract\nUnavailable\nReturn on stated capital\nUnavailable\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: 0.64 USD (single target entry cash requirement).\n\nE3 unconditional target value: Unavailable / contract.\n\nE3 conditional normal winner probabilities only\nexceptional probability mass unknown\nunconditional target value unknown\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nunavailable · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "invented-positive",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\n+1.265 USD\nPer target contract\n+0.421667 USD\nReturn on stated capital\n197.6562%\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: 0.64 USD (single target entry cash requirement).\n\nInvented scenario target value: 0.635 USD / contract.\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nconditional · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "invented-negative",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\n-0.535 USD\nPer target contract\n-0.178333 USD\nReturn on stated capital\n-21.9262%\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: 2.44 USD (single target entry cash requirement).\n\nInvented scenario target value: 0.635 USD / contract.\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nconditional · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "invented-missing-mass",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\nUnavailable\nPer target contract\nUnavailable\nReturn on stated capital\nUnavailable\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: 0.64 USD (single target entry cash requirement).\n\nInvented scenario target value: Unavailable / contract.\n\nunconditional probability mass incomplete\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nunavailable · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "unknown-quantity",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\nUnavailable\nPer target contract\nUnavailable\nReturn on stated capital\nUnavailable\n\nDeclared size: Unknown contracts on the target leg. Capital / return denominator: Unavailable (single target entry cash requirement).\n\nInvented scenario target value: 0.635 USD / contract.\n\nquantity unknown\nmaterial state cashflow or fee unknown\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nunavailable · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "unknown-fees",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\nUnavailable\nPer target contract\nUnavailable\nReturn on stated capital\nUnavailable\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: Unavailable (single target entry cash requirement).\n\nInvented scenario target value: 0.635 USD / contract.\n\nmaterial state cashflow or fee unknown\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nunavailable · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  },
+  {
+    "key": "stale-book",
+    "width": 390,
+    "pageWidth": 390,
+    "label": "Invented scenario · probabilities, target value and returns are synthetic assumptions and arithmetic. They do not replace E3’s conditional estimate.",
+    "signal": "Modeled expected net\n\nProbability-weighted target-leg cashflows, conditional on the stated model and fill.\n\nTotal net\nUnavailable\nPer target contract\nUnavailable\nReturn on stated capital\nUnavailable\n\nDeclared size: 3 contracts on the target leg. Capital / return denominator: 0.64 USD (single target entry cash requirement).\n\nInvented scenario target value: 0.635 USD / contract.\n\nbook receipt stale exact\nbook snapshot stale exact\nbook receipt skew exceeded\nbook-0:stale-receipt\nbook-0:stale-source-snapshot\n\nPer-contract amounts rounded to 6 decimal places; returns to 4 percentage decimals. Exact values are retained in details.\n\nunavailable · synthetic only · no current production opportunity. Shared liquidity is never added into an aggregate profit."
+  }
+]

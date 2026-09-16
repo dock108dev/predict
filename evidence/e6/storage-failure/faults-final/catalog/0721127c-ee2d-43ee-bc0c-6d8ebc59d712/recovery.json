@@ -1,0 +1,53 @@
+{
+  "format": "e6-recovery-1",
+  "session": "0721127c-ee2d-43ee-bc0c-6d8ebc59d712",
+  "source": {
+    "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/storage-failure/faults-final/terminal/0721127c-ee2d-43ee-bc0c-6d8ebc59d712.jsonl",
+    "device": 16777234,
+    "inode": 361160193,
+    "size": 71233,
+    "mtime_ns": 1789517248661897526,
+    "ctime_ns": 1789517248661897526,
+    "sha256": "3e8949f9e12aa00d916e3d17c34be43e12d6a96895e77e04eee347d075a55a3a"
+  },
+  "spec_sha256": "0378787ea70cf2d96d469bfb40bd4463d4e7b31693231353ecb018b1d9489727",
+  "status": "interrupted",
+  "verified_offset": 71233,
+  "verified_chain": "1c6a97135fafe5dfba6a98173a71fe407ea90a21d4fe5862a35b3e7168cd5f49",
+  "excluded_trailing_bytes": 0,
+  "last_verified_at": "2026-09-16T00:07:28.661860+00:00",
+  "terminal_record_present": false,
+  "counts": {
+    "frames": 9,
+    "books": 8,
+    "packets": 16,
+    "ingress": 46
+  },
+  "accounting": {
+    "delivered": null,
+    "persisted": null,
+    "lost": null,
+    "pending": null,
+    "crash_time": null
+  },
+  "replay": {
+    "exact_native_books": {
+      "kalshi": 4,
+      "polymarket_us": 2
+    },
+    "exact_packets": true,
+    "gaps": [
+      {
+        "source": "kalshi",
+        "ingress_id": "b2d67484-7de6-4e81-8c10-8c7e447f5312",
+        "reason": "native_frame_rejected"
+      }
+    ],
+    "journal_sha256": "1c6a97135fafe5dfba6a98173a71fe407ea90a21d4fe5862a35b3e7168cd5f49",
+    "state": "interrupted",
+    "derived_health_books": 2,
+    "total_books": 8,
+    "total_packets": 16
+  },
+  "recovery_identity": "52bac022d2bfa049dfafe658332bfeaa1ddf90af23d43b1fb71b6dfeb13c83ac"
+}

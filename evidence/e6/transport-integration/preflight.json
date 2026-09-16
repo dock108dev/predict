@@ -1,0 +1,18 @@
+{
+  "valid": false,
+  "activation_enabled": false,
+  "errors": [
+    "event: missing",
+    "scheduled_start: missing",
+    "start_after: missing",
+    "start_before: missing",
+    "duration: missing",
+    "reference_cadence: missing",
+    "discovery_cadence: missing",
+    "stale_seconds: missing",
+    "mapping_revision: missing",
+    "cleanup: missing",
+    "capture_authorization: missing"
+  ],
+  "economics": "unavailable"
+}

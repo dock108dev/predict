@@ -1,0 +1,23 @@
+{
+  "idempotent_start": true,
+  "stop_result": "Stopped only the verified E5 preview process.",
+  "restarted": true,
+  "final": {
+    "pid": 52697,
+    "command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m app.dashboard.e5_preview --port 8775",
+    "started": "Tue Sep 15 14:36:57 2026",
+    "url": "http://127.0.0.1:8775",
+    "port": 8775
+  },
+  "served_package_sha256": "5acbd7d67a4012291ff7a1cab32dff1aca905c4dc809de3f16db9d3d66b21239",
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Length": "627929",
+    "Date": "Tue, 15 Sep 2026 18:37:05 GMT",
+    "Server": "Python/3.14 aiohttp/3.14.3",
+    "Connection": "close"
+  }
+}

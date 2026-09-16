@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "empty",
+    "snapshot": "- banner:\n  - link \"P↗ Predict\":\n    - /url: /\n  - generic: Saved evidence · read only\n- main:\n  - paragraph: NFL · PREGAME MONEYLINE · INVENTED FIXTURE\n  - heading \"Atlanta / Pittsburgh\" [level=1]\n  - paragraph: Our price, the books, and the limits behind the numbers.\n  - generic: Synthetic only\n  - navigation \"Data mode\":\n    - button \"Synthetic\"\n    - button \"Historical · unavailable here\" [disabled]\n    - button \"Live · unavailable here\" [disabled]\n  - paragraph: \"Saved fixture: September 13, 2026 · invented kickoff 17:00 UTC. These are not current live prices.\"\n  - status: No saved audits available. Nothing has been substituted.\n  - button \"Retry saved evidence\"\n  - generic: Synthetic research only · no collection or trading · owner review pending"
+  },
+  {
+    "mode": "invalid",
+    "snapshot": "- banner:\n  - link \"P↗ Predict\":\n    - /url: /\n  - generic: Saved evidence · read only\n- main:\n  - paragraph: NFL · PREGAME MONEYLINE · INVENTED FIXTURE\n  - heading \"Atlanta / Pittsburgh\" [level=1]\n  - paragraph: Our price, the books, and the limits behind the numbers.\n  - generic: Synthetic only\n  - navigation \"Data mode\":\n    - button \"Synthetic\"\n    - button \"Historical · unavailable here\" [disabled]\n    - button \"Live · unavailable here\" [disabled]\n  - paragraph: \"Saved fixture: September 13, 2026 · invented kickoff 17:00 UTC. These are not current live prices.\"\n  - alert: \"Saved evidence validation failed: TEST ONLY: changed dependency identity\"\n  - button \"Retry saved evidence\"\n  - generic: Synthetic research only · no collection or trading · owner review pending"
+  },
+  {
+    "mode": "loading",
+    "snapshot": "- banner:\n  - link \"P↗ Predict\":\n    - /url: /\n  - generic: Saved evidence · read only\n- main:\n  - paragraph: NFL · PREGAME MONEYLINE · INVENTED FIXTURE\n  - heading \"Atlanta / Pittsburgh\" [level=1]\n  - paragraph: Our price, the books, and the limits behind the numbers.\n  - generic: Synthetic only\n  - navigation \"Data mode\":\n    - button \"Synthetic\"\n    - button \"Historical · unavailable here\" [disabled]\n    - button \"Live · unavailable here\" [disabled]\n  - paragraph: \"Saved fixture: September 13, 2026 · invented kickoff 17:00 UTC. These are not current live prices.\"\n  - status: Loading and validating saved E3/E4 evidence…\n  - generic: Synthetic research only · no collection or trading · owner review pending"
+  }
+]

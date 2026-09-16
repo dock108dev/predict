@@ -1,0 +1,13 @@
+{
+  "bookmark": "http://127.0.0.1:8780/?session=a5bed671-fa55-4f48-9a91-4b6db4031a86&hash=8b282ca99d5094e54f48a77a12fa9811b3b4e19230de00eb968bee47682b42b0&at=51d2d322-0438-4863-8cef-40eb96598b84&venue=both",
+  "checks": [
+    "Interrupted local-mock provenance",
+    "available historical books",
+    "before-image missing data",
+    "23 excluded trailing bytes",
+    "cutoff and venue retained after reload",
+    "wrong recovery identity fails without fallback"
+  ],
+  "viewport": "1280x900",
+  "consoleErrors": []
+}

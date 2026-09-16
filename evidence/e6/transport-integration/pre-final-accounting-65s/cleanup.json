@@ -1,0 +1,9 @@
+{
+  "http_stopped": true,
+  "kalshi_ws_stopped": true,
+  "pmus_ws_stopped": true,
+  "temporary_directory_removed": true,
+  "database_created": false,
+  "provider_requests": 0,
+  "credential_reads": 0
+}

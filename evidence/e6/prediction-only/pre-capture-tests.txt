@@ -1,0 +1,119 @@
+======================================================================
+FAIL: test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 243, in test_cancel_backoff_and_start_over_60_seconds
+    self.assertEqual(o.reference.budget.requests,1)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 223, in test_native_producers_recovery_mixed_persistence_and_exact_reopen
+    self.assertEqual({r['source'] for r in books},{'kalshi','polymarket_us'})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Items in the second set but not the first:
+'kalshi'
+'polymarket_us'
+
+======================================================================
+FAIL: test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_prediction_only.PredictionOnly.test_cancel_backoff_and_start_over_60_seconds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_prediction_only.py", line 33, in test_cancel_backoff_and_start_over_60_seconds
+    self.assertEqual(o.reason,'manual_stop');self.assertEqual(o.state,'stopped')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'discovery_failure:ValueError' != 'manual_stop'
+- discovery_failure:ValueError
++ manual_stop
+
+
+======================================================================
+FAIL: test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_prediction_only.PredictionOnly.test_native_producers_recovery_mixed_persistence_and_exact_reopen)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_prediction_only.py", line 26, in test_native_producers_recovery_mixed_persistence_and_exact_reopen
+    self.assertTrue(all(result['exact_native_books'].values()))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_reference_failure_does_not_stop_predictions (tests.test_e6_prediction_only.PredictionOnly.test_reference_failure_does_not_stop_predictions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_prediction_only.py", line 43, in test_reference_failure_does_not_stop_predictions
+    self.assertEqual(o.reason,'duration_or_kickoff_cutoff')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'discovery_failure:ValueError' != 'duration_or_kickoff_cutoff'
+- discovery_failure:ValueError
++ duration_or_kickoff_cutoff
+
+
+======================================================================
+FAIL: test_cancel_backoff_and_start_over_60_seconds (tests.test_e6_transport.IntegrationTests.test_cancel_backoff_and_start_over_60_seconds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 243, in test_cancel_backoff_and_start_over_60_seconds
+    self.assertEqual(o.reference.budget.requests,1)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_native_producers_recovery_mixed_persistence_and_exact_reopen (tests.test_e6_transport.IntegrationTests.test_native_producers_recovery_mixed_persistence_and_exact_reopen)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_e6_transport.py", line 223, in test_native_producers_recovery_mixed_persistence_and_exact_reopen
+    self.assertEqual({r['source'] for r in books},{'kalshi','polymarket_us'})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Items in the second set but not the first:
+'kalshi'
+'polymarket_us'
+
+----------------------------------------------------------------------
+Ran 80 tests in 7.382s
+
+FAILED (failures=7)

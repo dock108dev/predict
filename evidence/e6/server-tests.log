@@ -1,0 +1,128 @@
+test_idle_and_no_auto_start (tests.test_e6_server.ServerTests.test_idle_and_no_auto_start) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+ok
+test_saved_path_validation (tests.test_e6_server.ServerTests.test_saved_path_validation) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+ok
+test_session_cap_survives_missing_result_files (tests.test_e6_server.ServerTests.test_session_cap_survives_missing_result_files) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+ok
+test_single_owner_lock (tests.test_e6_server.ServerTests.test_single_owner_lock) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/traceback.py:271: ResourceWarning: unclosed file <_io.TextIOWrapper name='/private/tmp/e6pg-qduqvd35/owner.lock' mode='a' encoding='UTF-8'>
+  tb.tb_frame.clear()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_wrong_origin_and_invalid_bounds (tests.test_e6_server.ServerTests.test_wrong_origin_and_invalid_bounds) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 4.246s
+
+OK

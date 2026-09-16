@@ -1,0 +1,41 @@
+{
+  "preexisting_files": 1649,
+  "changed_preexisting_evidence": [],
+  "implementation": {
+    "app/dashboard/multi_game.py": "863dc8d7ad93c5ca5f648cd0f6cd660409d3710eb9a38c9368301069ce73c8e5",
+    "app/dashboard/multi_game_server.py": "ac555c832f1e10b1eaa5cde1ec2ec59b9e3efb1372ffcf4b82594e5d6b0e2e92",
+    "app/collection/multi_game.py": "624718ce9894f91d03c86cfc36f31bb46dac62f3e2fdc432ecf882e626887e19",
+    "app/dashboard/opportunity_static/dashboard.js": "e25cf80a49271faaee9ffdd2be21792ffb4f405deb3832f661b6a6ad3441d0dd",
+    "app/dashboard/opportunity_static/dashboard.html": "e9313db9f802265406346bea34001df0e754a0dc5cc92020eaab3f9ca42706cd",
+    "app/dashboard/opportunity_static/index.html": "0a9aada0dc3c2d1aefa377b7849bc8bafa4fa5f3ffbd9e6e4e3ad02aa6971b89",
+    "app/dashboard/opportunity_static/board.js": "212d1e0bad6029fd6f7c7a21bf2d7258070a0bdbc6996a09a1ec75127e187454",
+    "tests/personal_beta_mock.py": "b9affec2414777b82e13d95938771e4bb2328ba96e6cd07d7ee63555c0b2f8a0",
+    "tests/test_personal_beta.py": "d0f0e129e2addc217780ba22a609c4db0d6806fc60537e9859e97fa9dfa9ac97"
+  },
+  "baseline": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+  "real_collection_performed": false,
+  "browser": {
+    "local_url": "http://127.0.0.1:8784",
+    "scan_sessions": [
+      "3da91867-b3c4-4fd5-bc52-cf14f594a8a0",
+      "0f7a00a5-b31b-4585-8619-a91400bcf4ea"
+    ],
+    "steps": [
+      "saved dashboard",
+      "2 games / 120 seconds / Start",
+      "Stop",
+      "3 games / 120 seconds / Start",
+      "Stop",
+      "switch to first saved scan: 6 rows",
+      "drilldown and return preserving dollar sort and selected scan"
+    ],
+    "narrow": {
+      "viewport": 390,
+      "dashboard_width": 390,
+      "drilldown_width": 390
+    },
+    "console_warnings_errors": []
+  },
+  "delivered_url": "http://127.0.0.1:8783",
+  "delivered_state": "idle; 18 saved real rows; Start enabled"
+}

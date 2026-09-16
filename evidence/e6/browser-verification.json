@@ -1,0 +1,83 @@
+{
+  "scope": "actual isolated browser; synthetic only",
+  "initial_idle": true,
+  "tab_close_reopen_running": true,
+  "selection": "Polymarket US remained selected through updates, tab reopening and reload",
+  "manual_stop": "observed stopping with cleared economics, then completed with 16/16 records and one calculation on final manual check",
+  "saved_reopening": "validated cutoff-bound book/reference values, conditional Arb and unavailable EV",
+  "process_restart": "unfinished session became interrupted; preview idle, no automatic collection",
+  "sessions": [
+    {
+      "id": "c0e44095-0bf9-4f59-942e-651630d3576e",
+      "state": "complete",
+      "counts": {
+        "events": 21,
+        "prediction": 12,
+        "reference": 1,
+        "reference_gaps": 1
+      },
+      "calculations": 1
+    },
+    {
+      "id": "5bf5c396-cf8c-416b-ab20-a885a003837f",
+      "state": "complete",
+      "counts": {
+        "events": 21,
+        "prediction": 12,
+        "reference": 1,
+        "reference_gaps": 1
+      },
+      "calculations": 1
+    },
+    {
+      "id": "c9631b6e-7c7b-4bb7-9de2-3c8b7471b31c",
+      "state": "complete",
+      "counts": {
+        "events": 27,
+        "prediction": 14,
+        "reference": 2,
+        "reference_gaps": 1
+      },
+      "calculations": 2
+    },
+    {
+      "id": "c41e4a35-dd1e-458c-a7ef-8c0cfd91a9c9",
+      "state": "complete",
+      "counts": {
+        "events": 21,
+        "prediction": 12,
+        "reference": 1,
+        "reference_gaps": 1
+      },
+      "calculations": 1
+    },
+    {
+      "id": "c0e08bf9-094f-4a5c-b0b0-a29cf0d0fdfd",
+      "state": "interrupted",
+      "counts": {
+        "events": 17,
+        "prediction": 10,
+        "reference": 1,
+        "reference_gaps": 0
+      },
+      "calculations": 1
+    },
+    {
+      "id": "ec7210c0-baaa-4229-a6c9-62a06a631215",
+      "state": "complete",
+      "counts": {
+        "events": 53,
+        "prediction": 36,
+        "reference": 3,
+        "reference_gaps": 1
+      },
+      "calculations": 3
+    }
+  ],
+  "console": "no warnings/errors in retained browser-console.json",
+  "cleanup": {
+    "root": "/private/tmp/e6pg-r7p122nx",
+    "removed": true,
+    "stopped": true
+  }
+}

@@ -1,0 +1,160 @@
+{
+  "scope": "E3 synthetic offline; fresh socket-only disposable cluster",
+  "root": "/private/tmp/e3pg-l2jd41ty",
+  "identities": [
+    {
+      "database": "postgres",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "e3_source",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "e3_source",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "e3_restore",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "e3_legacy",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "e3_e2_capture",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "postgres",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    },
+    {
+      "database": "prediction_arb_test_0ef3475f14ba",
+      "username": "e3_disposable",
+      "data_directory": "/private/tmp/e3pg-l2jd41ty/data",
+      "sockets": "/private/tmp/e3pg-l2jd41ty/socket",
+      "listen_addresses": "",
+      "port": "55481",
+      "fsync": "on"
+    }
+  ],
+  "checks": [
+    "five migrations plus idempotent reapply",
+    "exact original E2 reference-bundle-1 restore",
+    "E2 replay -> eligibility -> de-vig -> immutable fair_price and all candidate links",
+    "later receipt/source/rule correction leaves prior persisted estimate unchanged",
+    "SQL update/delete blocked for estimates and links",
+    "idempotent retry",
+    "tampered output, late dependencies and omitted newest receipt rejected before persistence",
+    "all six estimates and input links survive PostgreSQL server restart with fsync on",
+    "fresh-store reference export, six estimate exports, exclusions and exact recomputation are byte-identical",
+    "original pre-E2 capture-bundle-1 restores on five migrations and detector replay passes",
+    "E2 migration-prefix capture-bundle-1 is readable on E3"
+  ],
+  "reference_sha256": "a8cc7b54745fc0902ed492adaae799038a43a1f5492de854916fde890490a83e",
+  "counts": {
+    "reference_receipt": 10,
+    "reference_quote_revision": 13,
+    "reference_source_revision": 3,
+    "fair_price": 6,
+    "fair_price_input": 35
+  },
+  "replays": [
+    {
+      "estimate_id": "be7f62fa60c15dab5f35674becbfa3d381d63793a18a49ac929487af2972e13b",
+      "as_of": "2026-09-13T16:58:59+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "a38656cabde5f7988c986345053c8cd2853abc0ea239d36b9434e954e9dc19a3",
+      "reference_replay_sha256": "2d9885cac9d9b5cf7822c987df08968d56f6e5c429e9f5287e1d3e665168de3e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "761b2e7554935845f46d1e95930f68f1a3fbd622f9f6ef4de9f442709ebca508",
+      "as_of": "2026-09-13T16:59:01+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "7bdc84b6d39e500741cd94f4f30225f152d948fcd3558ee146265193085b6a56",
+      "reference_replay_sha256": "2f1c4ff9e0a73a8a3d37c825cc83c2606761e6ab30f46f9ce974f34198a565ba",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "a8c35080ace94ffdc0e0b29506f7cbb74fd7b7c984c1296bb614262edbed41c4",
+      "as_of": "2026-09-13T16:59:15+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "8bdc74cbaf9675a14dc7f416aa0995001de35acbeabc12866dcd93412d4123b0",
+      "reference_replay_sha256": "44c38e7423781247e32381b693e73107649cee9a7535961a6732b42ec720ec6e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "46e6cd5841ac7358805b5365c70d494e12a7777745519734091fbd0ffe3e6134",
+      "as_of": "2026-09-13T16:59:25+00:00",
+      "status": "degraded",
+      "probability": "0.525000000000000000",
+      "estimate_file_sha256": "0d002b5727c74f41cf1644eb85cbeef31947437669d362e1e93de9652e11de68",
+      "reference_replay_sha256": "3323dba10fde066c539bff6cbce1763665437bbf4b560d1e4b2d0b3611cd49ab",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "762476841c10983a4e3c6f7902fb7e06d902acc6575a63d42c3c973998cc53f8",
+      "as_of": "2026-09-13T16:59:40+00:00",
+      "status": "degraded",
+      "probability": "0.525000000000000000",
+      "estimate_file_sha256": "085505afbe1270832b86ff4524e9a7e29fa8960e0ba59580f751bbf25fb29e3e",
+      "reference_replay_sha256": "460dcb50c96c0a05ac5d616e207f265bec01e628f3db0739c4a521d63009ff6e",
+      "byte_exact": true
+    },
+    {
+      "estimate_id": "9576d94235469cbce2caa6084cffece1c89ec49b741099f242a04f141764f87f",
+      "as_of": "2026-09-13T16:59:50+00:00",
+      "status": "unavailable",
+      "probability": null,
+      "estimate_file_sha256": "4b055480954ad00d632c3c9569527e9d2b970bdd8e790ded298bca8a5be18949",
+      "reference_replay_sha256": "c84d2eed063a800d979524bb90468c9ab872bd8cfa5663e6ffb7aeb9d3c40845",
+      "byte_exact": true
+    }
+  ],
+  "legacy_replay": 1,
+  "foundation_storage_tests": 26,
+  "success": true,
+  "cluster_stopped": true,
+  "cluster_removed": true
+}

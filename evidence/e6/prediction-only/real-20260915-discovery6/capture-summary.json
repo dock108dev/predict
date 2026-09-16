@@ -1,0 +1,71 @@
+{
+  "session_id": "75ec21c1-5962-48e1-96e2-5f6b5ef07150",
+  "journal": "evidence/e6/prediction-only/real-20260915-discovery6/session/75ec21c1-5962-48e1-96e2-5f6b5ef07150.jsonl",
+  "started_at": "2026-09-15T20:29:08.643372+00:00",
+  "finished_at": "2026-09-15T20:31:08.905916+00:00",
+  "elapsed_seconds": 120.1416390419472,
+  "reason": "duration_or_kickoff_cutoff",
+  "delivered": 139,
+  "persisted": 139,
+  "counts": {
+    "session:session_started": 1,
+    "polymarket_us:prediction_discovery_http": 20,
+    "kalshi:prediction_discovery_http": 9,
+    "kalshi:discovery_validated": 3,
+    "kalshi:market_selected": 3,
+    "polymarket_us:discovery_validated": 2,
+    "polymarket_us:market_selected": 2,
+    "kalshi:source_health": 3,
+    "kalshi:prediction_command": 1,
+    "polymarket_us:source_health": 3,
+    "polymarket_us:prediction_command": 1,
+    "kalshi:prediction_frame": 17,
+    "kalshi:prediction_book": 16,
+    "polymarket_us:prediction_frame": 28,
+    "polymarket_us:prediction_book": 28,
+    "polymarket_us:native_stream_finished": 1,
+    "kalshi:native_stream_finished": 1,
+    "session:session_finished": 1
+  },
+  "usage": {
+    "kalshi": {
+      "requests": 30,
+      "connections": 1,
+      "bytes": 2746874,
+      "dollars": "0"
+    },
+    "polymarket_us": {
+      "requests": 36,
+      "connections": 1,
+      "bytes": 7225508,
+      "dollars": "0"
+    }
+  },
+  "exact_reopen": true,
+  "replay": {
+    "exact_native_books": {
+      "kalshi": 16,
+      "polymarket_us": 28
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "4a954b03a0e1146104a4ae6c319b3201e721a45eff356ec35fe506dbfb36c29a",
+    "state": "complete"
+  },
+  "closed": {
+    "kalshi": {
+      "adapter": true,
+      "stream": true
+    },
+    "polymarket_us": {
+      "adapter": true,
+      "stream": true
+    }
+  },
+  "economics": {
+    "arb": "unavailable: current outcome/settlement compatibility and effective fee/account rounding unqualified",
+    "mispricing": "unavailable: optional reference disabled; no probability model"
+  },
+  "reference_requests": 0,
+  "additional_spend": "0"
+}

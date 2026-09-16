@@ -1,0 +1,17 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "files": {
+    "app/collection/synthetic.py": "e61d897b0d321190eae6413266c341dfd043622c88decadf276252867622ca51",
+    "app/collection/server.py": "4fd3047f906484dcc758ec7271f462fa0c8b027f8fa866719c53779126c5842a",
+    "app/collection/reopen.py": "1d7392814a464d17dce8b49e45d1dd3f99bef6fdbeba2a08dc17f5b5dffc51ca",
+    "app/collection/session.py": "eee7cb8d7ae8e0888e73849e7b3e704e6a0d43c480e8f4728bbfbaf923ec40ee",
+    "app/collection/__init__.py": "df672acff1f0050ccd44185ecae562b3b19b7ad5f4ea752d071a8c5456fd0f5f",
+    "app/collection/context.py": "d26f8b29828976c2639f2dc51347197ea48ec2d9dbc9ef9014ebc37500dd5f8b",
+    "app/collection/storage.py": "e6bdf8ca5651a04aa3e76ca4ab3c8eb9f6dd03f86fb0115c40c22027500cf77f",
+    "app/collection/environment.py": "0e8d48f3fe58f65dc5b6481fc42d337a1fe8a0fc26297c8caaf7b5b35ceb4144",
+    "app/collection/verify.py": "b5261516b57bd9cef2602659e5e4cde208b37598725513691fd208495eed9ebd",
+    "app/collection/static/index.html": "6287dfe1b4c25c18fd80d697924ed3a74c84b808be5a28181f8146e09835ae81",
+    "app/collection/static/watch.css": "91713e2899b7e091b7c1a2f9f22d1dcd9889a92469ca45b4a94597d6cf23157e",
+    "app/collection/static/watch.js": "7a006c2be62fa53c99543d668baa46de2c8acf625ef726c9aba5ade4f5486eef"
+  }
+}

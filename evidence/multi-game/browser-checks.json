@@ -1,0 +1,18 @@
+{
+  "scan_start": true,
+  "manual_stop": true,
+  "six_real_games": true,
+  "sort_filter": true,
+  "drilldown": true,
+  "ev_assumption": "Minnesota Long 0.40, browser walkthrough only",
+  "saved_return": true,
+  "narrow_dashboard": {
+    "viewport": 390,
+    "document": 390
+  },
+  "narrow_drilldown": {
+    "viewport": 390,
+    "document": 390
+  },
+  "owner_acceptance": false
+}

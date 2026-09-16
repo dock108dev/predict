@@ -390,7 +390,14 @@ class Store:
     def import_bundle(self,path):
         envelope=json.loads(Path(path).read_bytes()); payload=envelope['payload']
         if hashed(payload)!=envelope['sha256'] or payload['format']!='capture-bundle-1': raise ValueError('bundle mismatch')
-        if payload['migrations']!=self.db.execute('SELECT * FROM schema_migration ORDER BY version').fetchall(): raise ValueError('migration mismatch')
+        installed = self.db.execute('SELECT * FROM schema_migration ORDER BY version').fetchall()
+        # Additive reference history does not reinterpret capture-bundle-1 tables.
+        # Require an exact supported migration prefix: pre-E2, E2, E3, or current E4.
+        # Additive reference/pricing tables do not reinterpret capture tables.
+        supplied = payload['migrations']
+        allowed_lengths = {3, 4, 5, len(installed)}
+        if len(supplied) not in allowed_lengths or supplied != installed[:len(supplied)]:
+            raise ValueError('migration mismatch')
         def unwire(v):
             if 'bytes' in v:return base64.b64decode(v['bytes'],validate=True)
             if 'datetime' in v:return stamp(v['datetime'])

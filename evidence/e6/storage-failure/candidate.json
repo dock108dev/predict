@@ -1,0 +1,14 @@
+{
+  "head": "0ab12b1e7b57f4ea89b6886c3d69b2459afaa258",
+  "files": {
+    "app/collection/transport_session.py": "24a0303c152032697daed03fb7d57d4f59ed1cd7c90dc6096f55576bf9ba8c09",
+    "app/collection/prediction_producer.py": "b6b7eed772c03352d439d123d86c1091398baf9f50096df937ffec842f307781",
+    "app/dashboard/e6_live.py": "4b1d427e12a33c66d21848e79922ac2cc31120f200b96e8223370842d77f060a",
+    "tests/e6_storage_faults.py": "083ef37f4d461a3739e89d49d0343f9b890c0422ec3d650bd51c486c7a308057",
+    "tests/e6_storage_fault_worker.py": "112e0a027892da9dc4a0b19537b18cc2230b2296c22d0366a24a728203c90221",
+    "tests/run_e6_storage_faults.py": "2c33ac20a2d557b709580e3c87c38eac263ee99b2d58e7aad450c8f12015d508",
+    "tests/test_e6_storage_failure.py": "36306701a750d6c2c6a458832cd8f069200ad2740ecb871d75455a1bdc10f336"
+  },
+  "sha256": "466f3646d7db7dfee2adc3faaa0b988f7167da00c3d5c408d77ff0667cb446ef",
+  "full_implementation_sha256": "31e5d50e4cb9ddd7edc975f578c7f83014e53c313aba3ba8548d11ee57ec6d0a"
+}

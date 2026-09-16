@@ -1,0 +1,16 @@
+{
+  "app/collection/__init__.py": "df672acff1f0050ccd44185ecae562b3b19b7ad5f4ea752d071a8c5456fd0f5f",
+  "app/collection/context.py": "d26f8b29828976c2639f2dc51347197ea48ec2d9dbc9ef9014ebc37500dd5f8b",
+  "app/collection/environment.py": "0e8d48f3fe58f65dc5b6481fc42d337a1fe8a0fc26297c8caaf7b5b35ceb4144",
+  "app/collection/odds_http.py": "a1de5505efca68538b777ddcac7af2194812c3d2b1bd7eabd8827050dee9d5bd",
+  "app/collection/prediction_producer.py": "bb4904d1f88906a117715caeb8f79da3a5f1a9890137054e47b25f1ce5bba318",
+  "app/collection/reopen.py": "1d7392814a464d17dce8b49e45d1dd3f99bef6fdbeba2a08dc17f5b5dffc51ca",
+  "app/collection/run_spec.py": "1ba00c01bbcdaaf3e68e05cd8267a308b125b686cd2daa972123bd61c79eabf3",
+  "app/collection/server.py": "31c151ef82429b82bd869294083de39fbfbf61ea1b88c0d63787f0db1d263f3d",
+  "app/collection/session.py": "eee7cb8d7ae8e0888e73849e7b3e704e6a0d43c480e8f4728bbfbaf923ec40ee",
+  "app/collection/storage.py": "e6bdf8ca5651a04aa3e76ca4ab3c8eb9f6dd03f86fb0115c40c22027500cf77f",
+  "app/collection/synthetic.py": "e61d897b0d321190eae6413266c341dfd043622c88decadf276252867622ca51",
+  "app/collection/transport_session.py": "93022dd2843bd5e21025f570521a0d808c31b4bcdbe0bb6c767c1be3b03059ad",
+  "app/collection/verify.py": "b5261516b57bd9cef2602659e5e4cde208b37598725513691fd208495eed9ebd",
+  "tests/test_e6_transport.py": "e6183a5eb580240d3ccb2607331f4c6636f177d2fc10760af87504581944e8a6"
+}
