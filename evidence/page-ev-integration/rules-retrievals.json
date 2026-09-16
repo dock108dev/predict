@@ -1,0 +1,23 @@
+[
+  {
+    "file": "draftkings-general.html",
+    "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules",
+    "retrieved_at": "2026-09-16T04:06:04.400429+00:00",
+    "sha256": "56f776d1d2fb612a7adbd7f996a8edda01fb6e8d1b6716eb115d005d7900841e",
+    "status": 200
+  },
+  {
+    "file": "draftkings-football.html",
+    "url": "https://sportsbook.draftkings.com/help/sport-rules/football",
+    "retrieved_at": "2026-09-16T04:06:04.730133+00:00",
+    "sha256": "0cca1aeeccd5d2bd52eac813566ceb7c33d049d54be197266b2eeaf3db6994d9",
+    "status": 200
+  },
+  {
+    "file": "kalshi-NFLGAME.pdf",
+    "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+    "retrieved_at": "2026-09-16T04:06:04.925540+00:00",
+    "sha256": "8a4f348cc62132472040f139f9c3446a020996c8c586134171bba0991e4c7c98",
+    "status": 200
+  }
+]

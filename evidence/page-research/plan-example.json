@@ -1,0 +1,37 @@
+{
+  "unconditional_ev": null,
+  "assumption": "Synthetic plan rational example; fixed total fee, not a venue schedule",
+  "expected_profit": "-0.21538461538461538000",
+  "reasons": [],
+  "probability_source": "explicit synthetic example",
+  "fills": [
+    {
+      "price": ".54",
+      "quantity": "6",
+      "available": "6"
+    },
+    {
+      "price": ".55",
+      "quantity": "4",
+      "available": "4"
+    }
+  ],
+  "cost": "5.44",
+  "probability": "0.538461538461538462",
+  "conditional_on": "Normal winner settlement only; tie, void, refund and discretionary outcomes excluded",
+  "expected_payout": "5.384615384615384620",
+  "return_pct": "-3.846153846153846071428571428571428571428571428571428571428571428571428571428571428571428571428571429",
+  "break_even_pct": "56.00",
+  "status": "Conditional scenario",
+  "cash": "5.60",
+  "cashflows": {
+    "winner:A": {
+      "gross_payout": "10",
+      "net_cashflow": "4.40"
+    },
+    "winner:B": {
+      "gross_payout": "0",
+      "net_cashflow": "-5.60"
+    }
+  }
+}

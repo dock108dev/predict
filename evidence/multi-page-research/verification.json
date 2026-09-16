@@ -1,0 +1,43 @@
+{
+  "coverage": 6,
+  "missing": 0,
+  "ambiguous": 0,
+  "focused_tests": 42,
+  "independent_rows": 6,
+  "baseline_candidates": 18,
+  "baseline_ev_scenarios": 96,
+  "baseline_unchanged": true,
+  "preexisting_files": 1730,
+  "byte_identical": 1729,
+  "operational_log_changes": [
+    "evidence/page-ev-integration/beta.log"
+  ],
+  "operational_log_explanation": "Stopping the identified prior beta flushed its buffered 74-byte startup banner. Original observations, assessments and calculation evidence are unchanged; the log is preserved without truncation.",
+  "browser": {
+    "flow": "research list \u2192 dollars sort \u2192 Cleveland game detail \u2192 return",
+    "selection_retained": true,
+    "quantity": "100",
+    "scenario": "cent",
+    "sort": "dollars",
+    "manual_probability_blank": true,
+    "narrow_width": 390,
+    "narrow_list_scroll_width": 390,
+    "narrow_detail_scroll_width": 390,
+    "viewport_reset": true,
+    "console_warnings_errors": [],
+    "feeds_started": false
+  },
+  "final_status": {
+    "state": "idle",
+    "active": false,
+    "operating_mode": "personal-beta",
+    "start_available": true,
+    "error": null,
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null
+  }
+}

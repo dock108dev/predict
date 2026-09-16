@@ -2,6 +2,8 @@
 
 ## Current implementation clarification — public-page POC
 
+**Implemented September 16:** [calculation/workflow report and commands](page-research-report.md). The saved page now supplies labeled probabilities; append-only save/reopen, separate outcome/settlement annotations and Brier evaluation are available. Real target EV remains unavailable for the documented rule-comparability limitation. The detailed source plan below is historical where superseded.
+
 September 16: the VegasInsider same-column DraftKings parser is implemented; see [report](public-nfl-reference-report.md) and the current Desktop tracker. The next slice uses the saved page, not a mandatory Odds API/Pinnacle feed. Missing bookmaker timing, disclosed delay or independence assessment does not prevent implied-probability and de-vig arithmetic. Label the result “page-derived estimate; bookmaker update time and delay unknown”; retain stronger live/qualified eligibility separately. Do not infer a 15-minute delay or independent true fair value.
 
 Reuse the calculation and prospective-record/evaluation design below. The old source-specific eligibility and final implementation prompt are superseded where they would suppress this labeled arithmetic. Preserve identity/odds checks, exact math, conditional-vs-unconditional EV, actual save/receipt times and no future-data leakage. Earlier target captures can support only explicitly retrospective time-mismatched comparisons. The next package is file-only, using saved real source data and synthetic outcomes for workflow checks; no provider requests or new target capture.

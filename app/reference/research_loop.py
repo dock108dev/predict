@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 
-from app.reference.public_page import parse, timestamp, DelayedPolicy
+from app.reference.public_page import parse, timestamp
 from app.pricing.baseline import devig
 from app.depth import consume
 from app.opportunities.board import expected
@@ -43,6 +43,11 @@ def calculation(deps):
         raise ValueError('unexpected_event_teams')
     if timestamp(page['scheduled_start']) != timestamp('2026-09-18T00:15:00Z'):
         raise ValueError('unexpected_event_start')
+    return page_arithmetic(page)
+
+
+def page_arithmetic(page):
+    """Shared arithmetic for a validated full-game, same-book pair."""
     arithmetic = devig([Decimal(s['decimal_odds']) for s in page['sides']])
     for i, side in enumerate(page['sides']):
         a = int(side['american_price'])
@@ -107,6 +112,12 @@ def records(folder):
 def append(folder, payload):
     folder = Path(folder); folder.mkdir(parents=True, exist_ok=True)
     record = dict(payload, format=FORMAT, saved_at=now())
+    if record['kind'] == 'prediction' and record['synthetic_clock'] is None:
+        start = timestamp(record['result']['page']['scheduled_start'])
+        if timestamp(record['saved_at']) >= start-timedelta(seconds=60):
+            record['evaluation_designation'] = 'retrospective'
+        elif record['evaluation_designation'] == 'prospective_primary' and timestamp(record['saved_at']) > start-timedelta(minutes=20):
+            record['evaluation_designation'] = 'exploratory'
     record['id'] = digest(record)
     with (folder/(record['id']+'.json')).open('x') as f:
         json.dump(record, f, indent=2, allow_nan=False); f.write('\n'); f.flush(); os.fsync(f.fileno())
@@ -139,13 +150,18 @@ def save(folder, deps, *, primary=False, cutoff=None, supersedes_id=None, reason
     if simulated:
         timestamp(synthetic_clock)
     in_window = start-timedelta(minutes=30) <= timestamp(evaluation_clock) <= start-timedelta(minutes=20)
+    if simulated and not in_window:
+        raise ValueError('synthetic pregame clock must be in declared capture window')
     designation = 'synthetic_demonstration' if simulated else ('prospective_primary' if primary and in_window else 'exploratory')
+    if not simulated and primary and in_window and not start-timedelta(minutes=30) <= receipt <= start-timedelta(minutes=20):
+        designation = 'retrospective'
     if not simulated and timestamp(estimated) >= start-timedelta(seconds=60):
         designation = 'retrospective'
     payload = dict(kind='prediction', dependencies=deps, result=result, estimated_at=estimated, cutoff=cutoff,
                    event_id=page['event_id'], outcome='Detroit Lions', primary=primary,
                    baseline_probability='0.5', selection_rule='first primary in 30-to-20-minute pregame window; one per game',
                    evaluation_designation=designation, synthetic_clock=synthetic_clock,
+                   synthetic_timeline=None if not simulated else dict(reference_receipt=synthetic_clock, estimated_at=synthetic_clock, saved_at=synthetic_clock, note='Invented workflow clocks only; actual source receipt and persistence times remain above.'),
                    supersedes_id=supersedes_id, correction_reason=reason,
                    ev=dict(conditional_ev=None, unconditional_ev=None,
                            reasons=['No contemporaneous target supplied; normal-winner rule comparability unassessed.']))
@@ -174,9 +190,13 @@ def annotate(folder, prediction_id, kind, data, *, supersedes_id=None, reason=No
         raise ValueError('publication after observation')
     if not data['synthetic'] and (observed > timestamp(now()) or observed < timestamp(prediction['saved_at'])):
         raise ValueError('outcome must be observed later than prediction and not in future')
+    if data['synthetic'] and observed <= timestamp(prediction['synthetic_clock'] or prediction['saved_at']):
+        raise ValueError('synthetic outcome must follow synthetic prediction clock')
     if data['synthetic'] != (prediction['evaluation_designation'] == 'synthetic_demonstration'):
         raise ValueError('synthetic outcomes must stay in synthetic demonstration')
     if kind == 'sporting':
+        if data['final'] and published < timestamp(prediction['result']['page']['scheduled_start']):
+            raise ValueError('final sporting result before scheduled start')
         if data.get('result') not in (*TEAMS, 'tie', 'cancelled', 'unresolved') or 'score' not in data:
             raise ValueError('sporting result and score required')
     else:
@@ -228,9 +248,51 @@ def evaluate(folder):
                 note='Synthetic scores excluded from prospective aggregates. Sporting score is not contract settlement or realized profit.')
 
 
+
+def compare_saved_target(deps, session_folder):
+    """Read the retained target, never put this reference into its earlier cutoff.
+
+    Fee diagnostics reuse the pinned historical scenario, not current account fees.
+    Full raw listing/book dependencies are retained in this separate comparison.
+    """
+    from app.dashboard.multi_game import saved_rows, project_game, default_point
+    from app.opportunities.board import contracts, assess, leg_value
+    source = calculation(deps)
+    saved = saved_rows(Path(session_folder))
+    games = next(r['games'] for r in saved['rows'] if r['type'] == 'multi_game_selection')
+    matches = [g for g in games if set(g['teams']) == set(TEAMS)
+               and timestamp(g['scheduled_start']) == timestamp(source['page']['scheduled_start'])]
+    if len(matches) != 1:
+        raise ValueError('missing or ambiguous saved target game')
+    game = matches[0]
+    timeline, rows = project_game(saved['rows'], game)
+    point = default_point(timeline)
+    contract = contracts(point, game)['kalshi:yes']
+    if game['sides']['kalshi:yes']['predicate'] != 'win' or contract['team'] not in TEAMS:
+        raise ValueError('target orientation unsupported')
+    assessment = assess(rows, point['at'], game)
+    with localcontext(Context(prec=100)):
+        leg = leg_value(contract, assessment, point['at'], Decimal(10), 'cent', game)
+    return dict(format='page-target-comparison-1',
+                label='retrospective, time-mismatched research comparison',
+                prospective_evaluation_eligible=False, source_dependencies=deps,
+                source_result=source, reference_retrieved_at=source['page']['retrieved_at'],
+                target_received_at=contract['received_at'], target_cutoff=point['at'],
+                compared_at=now(), target_identity=game, target_contract=contract,
+                target_dependencies=rows, target_journal_sha256=saved['sha256'],
+                target_probability=next(s['probability'] for s in source['page']['sides'] if s['team']==contract['team']),
+                historical_fee_assumption='Pinned Kalshi cent scenario, multiplier 1, no event override, one hypothetical new taker order; account applicability unverified.',
+                target_fee_assessment=assessment, target_diagnostics=leg,
+                conditional_ev=None, unconditional_ev=None,
+                reasons=['DraftKings ordinary-winner rules unassessed; page and contract normal-winner comparability unknown',
+                         'Reference receipt is later than target cutoff; no prospective comparison',
+                         'Exceptional probability mass and material exceptional cashflows unknown'])
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     sub = cli.add_subparsers(dest='command', required=True)
+    p = sub.add_parser('compare'); p.add_argument('capture'); p.add_argument('session')
     p = sub.add_parser('calculate'); p.add_argument('capture')
     p = sub.add_parser('save'); p.add_argument('capture'); p.add_argument('journal'); p.add_argument('--primary', action='store_true'); p.add_argument('--cutoff'); p.add_argument('--supersedes-id'); p.add_argument('--reason')
     p = sub.add_parser('reopen'); p.add_argument('journal'); p.add_argument('id')
@@ -238,11 +300,12 @@ def main():
     p = sub.add_parser('evaluate'); p.add_argument('journal')
     p = sub.add_parser('demo'); p.add_argument('capture'); p.add_argument('journal')
     a = cli.parse_args()
-    if a.command == 'calculate': result = calculation(dependencies(a.capture))
+    if a.command == 'compare': result = compare_saved_target(dependencies(a.capture), a.session)
+    elif a.command == 'calculate': result = calculation(dependencies(a.capture))
     elif a.command == 'save': result = save(a.journal, dependencies(a.capture), primary=a.primary, cutoff=a.cutoff, supersedes_id=a.supersedes_id, reason=a.reason)
     elif a.command == 'reopen': result = reopen(a.journal, a.id)
     elif a.command == 'annotate': result = annotate(a.journal, a.id, a.kind, json.loads(Path(a.annotation).read_text()), supersedes_id=a.supersedes_id, reason=a.reason)
-    elif a.command == 'evaluate': result = evaluate(a.journal)
+    elif a.command == 'evaluate': result = append(a.journal, dict(kind='evaluation', result=evaluate(a.journal)))
     else:
         r = save(a.journal, dependencies(a.capture), primary=True, synthetic_clock='2026-09-17T23:50:00Z')
         reopen(a.journal, r['id'])

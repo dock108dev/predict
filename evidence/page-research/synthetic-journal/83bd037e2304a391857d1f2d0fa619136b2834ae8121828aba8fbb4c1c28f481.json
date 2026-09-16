@@ -1,0 +1,20 @@
+{
+  "kind": "settlement",
+  "prediction_id": "ccced8bf88a8602579d95333bd7136b61ea81bf11bca23ea8b1f23985d54bfbe",
+  "event_id": "32144330",
+  "data": {
+    "source": "synthetic:invented outcome, not an actual game result",
+    "published_at": "2026-09-18T04:00:00Z",
+    "observed_at": "2026-09-18T04:01:00Z",
+    "final": true,
+    "synthetic": true,
+    "contract_id": "synthetic:DET-YES",
+    "payout_per_contract": "1",
+    "basis": "invented normal winner resolution"
+  },
+  "supersedes_id": null,
+  "correction_reason": null,
+  "format": "page-research-record-1",
+  "saved_at": "2026-09-16T03:58:01.667695+00:00",
+  "id": "83bd037e2304a391857d1f2d0fa619136b2834ae8121828aba8fbb4c1c28f481"
+}

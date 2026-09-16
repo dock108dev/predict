@@ -1,0 +1,236 @@
+[
+  {
+    "game": "DET Lions vs BUF Bills",
+    "team": "Buffalo Bills",
+    "odds": [
+      {
+        "team": "Detroit Lions",
+        "abbreviation": "DET",
+        "american_price": "+180",
+        "decimal_odds": "2.8",
+        "decimal_odds_exact": "14/5",
+        "implied_probability_exact": "5/14",
+        "implied_probability": "0.35714285714285714285714285714285714285714285714286",
+        "probability": "0.342524773804394657"
+      },
+      {
+        "team": "Buffalo Bills",
+        "abbreviation": "BUF",
+        "american_price": "-218",
+        "decimal_odds": "1.4587155963302752293577981651376146788990825688073",
+        "decimal_odds_exact": "159/109",
+        "implied_probability_exact": "109/159",
+        "implied_probability": "0.68553459119496855345911949685534591194968553459121",
+        "probability": "0.657475226195605343"
+      }
+    ],
+    "overround_exact": "95/2226",
+    "probability_exact": "1526/2321",
+    "probability": "0.657475226195605343",
+    "ask": "0.6800",
+    "available": "27741763.45",
+    "purchase_cost": "68",
+    "fee": "1.53",
+    "cash": "69.53",
+    "net": "-3.782477380439465700000000",
+    "roi": "-5.440065267423365022292535596145548684021285775924061556162807421257011362002013519344167985042427729",
+    "target_received_at": "2026-09-16 01:07:35.681097+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  },
+  {
+    "game": "CAR Panthers vs ATL Falcons",
+    "team": "Atlanta Falcons",
+    "odds": [
+      {
+        "team": "Carolina Panthers",
+        "abbreviation": "CAR",
+        "american_price": "-135",
+        "decimal_odds": "1.7407407407407407407407407407407407407407407407407",
+        "decimal_odds_exact": "47/27",
+        "implied_probability_exact": "27/47",
+        "implied_probability": "0.57446808510638297872340425531914893617021276595746",
+        "probability": "0.551441114716548960"
+      },
+      {
+        "team": "Atlanta Falcons",
+        "abbreviation": "ATL",
+        "american_price": "+114",
+        "decimal_odds": "2.14",
+        "decimal_odds_exact": "107/50",
+        "implied_probability_exact": "50/107",
+        "implied_probability": "0.46728971962616822429906542056074766355140186915888",
+        "probability": "0.448558885283451040"
+      }
+    ],
+    "overround_exact": "210/5029",
+    "probability_exact": "2350/5239",
+    "probability": "0.448558885283451040",
+    "ask": "0.4400",
+    "available": "3871156.56",
+    "purchase_cost": "44",
+    "fee": "1.73",
+    "cash": "45.73",
+    "net": "-0.874111471654896000000000",
+    "roi": "-1.911461779258464902689700415482178001312048983162038049420511699103433194839273999562650338945987317",
+    "target_received_at": "2026-09-16 01:07:30.552644+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  },
+  {
+    "game": "NO Saints vs BAL Ravens",
+    "team": "Baltimore Ravens",
+    "odds": [
+      {
+        "team": "New Orleans Saints",
+        "abbreviation": "NO",
+        "american_price": "+320",
+        "decimal_odds": "4.2",
+        "decimal_odds_exact": "21/5",
+        "implied_probability_exact": "5/21",
+        "implied_probability": "0.23809523809523809523809523809523809523809523809524",
+        "probability": "0.228494623655913978"
+      },
+      {
+        "team": "Baltimore Ravens",
+        "abbreviation": "BAL",
+        "american_price": "-410",
+        "decimal_odds": "1.2439024390243902439024390243902439024390243902439",
+        "decimal_odds_exact": "51/41",
+        "implied_probability_exact": "41/51",
+        "implied_probability": "0.80392156862745098039215686274509803921568627450981",
+        "probability": "0.771505376344086022"
+      }
+    ],
+    "overround_exact": "5/119",
+    "probability_exact": "287/372",
+    "probability": "0.771505376344086022",
+    "ask": "0.7900",
+    "available": "3039993.74",
+    "purchase_cost": "79",
+    "fee": "1.17",
+    "cash": "80.17",
+    "net": "-3.019462365591397800000000",
+    "roi": "-3.766324517389793937882000748409629537233379069477360608706498690283148309841586628414618934763627292",
+    "target_received_at": "2026-09-16 01:07:24.993015+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  },
+  {
+    "game": "MIN Vikings vs CHI Bears",
+    "team": "Chicago Bears",
+    "odds": [
+      {
+        "team": "Minnesota Vikings",
+        "abbreviation": "MIN",
+        "american_price": "+185",
+        "decimal_odds": "2.85",
+        "decimal_odds_exact": "57/20",
+        "implied_probability_exact": "20/57",
+        "implied_probability": "0.35087719298245614035087719298245614035087719298246",
+        "probability": "0.336351875808538163"
+      },
+      {
+        "team": "Chicago Bears",
+        "abbreviation": "CHI",
+        "american_price": "-225",
+        "decimal_odds": "1.4444444444444444444444444444444444444444444444444",
+        "decimal_odds_exact": "13/9",
+        "implied_probability_exact": "9/13",
+        "implied_probability": "0.69230769230769230769230769230769230769230769230771",
+        "probability": "0.663648124191461837"
+      }
+    ],
+    "overround_exact": "32/741",
+    "probability_exact": "513/773",
+    "probability": "0.663648124191461837",
+    "ask": "0.6800",
+    "available": "3075582.53",
+    "purchase_cost": "68",
+    "fee": "1.53",
+    "cash": "69.53",
+    "net": "-3.165187580853816300000000",
+    "roi": "-4.552261729978162375952826118222350064720264633970947792319861930102114195311376384294549115489716669",
+    "target_received_at": "2026-09-16 01:07:30.494635+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  },
+  {
+    "game": "CIN Bengals vs HOU Texans",
+    "team": "Cincinnati Bengals",
+    "odds": [
+      {
+        "team": "Cincinnati Bengals",
+        "abbreviation": "CIN",
+        "american_price": "+120",
+        "decimal_odds": "2.2",
+        "decimal_odds_exact": "11/5",
+        "implied_probability_exact": "5/11",
+        "implied_probability": "0.45454545454545454545454545454545454545454545454545",
+        "probability": "0.436507936507936508"
+      },
+      {
+        "team": "Houston Texans",
+        "abbreviation": "HOU",
+        "american_price": "-142",
+        "decimal_odds": "1.7042253521126760563380281690140845070422535211268",
+        "decimal_odds_exact": "121/71",
+        "implied_probability_exact": "71/121",
+        "implied_probability": "0.58677685950413223140495867768595041322314049586776",
+        "probability": "0.563492063492063492"
+      }
+    ],
+    "overround_exact": "5/121",
+    "probability_exact": "55/126",
+    "probability": "0.436507936507936508",
+    "ask": "0.4200",
+    "available": "3432656.10",
+    "purchase_cost": "42",
+    "fee": "1.71",
+    "cash": "43.71",
+    "net": "-0.059206349206349200000000",
+    "roi": "-0.1354526406002040722946694120338595287119652253488904140928849233584991992679020819034545870510180737",
+    "target_received_at": "2026-09-16 01:07:25.676308+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  },
+  {
+    "game": "CLE Browns vs TB Buccaneers",
+    "team": "Cleveland Browns",
+    "odds": [
+      {
+        "team": "Cleveland Browns",
+        "abbreviation": "CLE",
+        "american_price": "+310",
+        "decimal_odds": "4.1",
+        "decimal_odds_exact": "41/10",
+        "implied_probability_exact": "10/41",
+        "implied_probability": "0.24390243902439024390243902439024390243902439024390",
+        "probability": "0.234097895483565855"
+      },
+      {
+        "team": "Tampa Bay Buccaneers",
+        "abbreviation": "TB",
+        "american_price": "-395",
+        "decimal_odds": "1.2531645569620253164556962025316455696202531645570",
+        "decimal_odds_exact": "99/79",
+        "implied_probability_exact": "79/99",
+        "implied_probability": "0.79797979797979797979797979797979797979797979797977",
+        "probability": "0.765902104516434145"
+      }
+    ],
+    "overround_exact": "170/4059",
+    "probability_exact": "990/4229",
+    "probability": "0.234097895483565855",
+    "ask": "0.2200",
+    "available": "3667992.66",
+    "purchase_cost": "22",
+    "fee": "1.21",
+    "cash": "23.21",
+    "net": "0.199789548356585500000000",
+    "roi": "0.8607908158405234812580784144765187419215855234812580784144765187419215855234812580784144765187419216",
+    "target_received_at": "2026-09-16 01:07:24.640561+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "match": true
+  }
+]

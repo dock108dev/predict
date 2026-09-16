@@ -1,0 +1,500 @@
+[
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:19.512060+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP17DETBUF__101466",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "source_event_id": "32144330",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+      "target_side": "yes",
+      "target_team": "Buffalo Bills",
+      "target_book_id": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+      "target_rules_sha256": "ce92b66c81f6920367adca61114536471de41d295ed2fc012b8a3b48349206c0"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:35.681097+00:00",
+      "target_cutoff": "2026-09-16T01:07:35.685652+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:02.584522+00:00"
+    },
+    "conclusion": "For DET Lions vs BUF Bills at 2026-09-18T00:15:00+00:00, Buffalo Bills winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "ce92b66c81f6920367adca61114536471de41d295ed2fc012b8a3b48349206c0",
+        "summary": "If Buffalo wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026, then the market resolves to Yes.",
+        "retained_text": "If Buffalo wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:19.638459+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP20CARATL__101470",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "source_event_id": "35985360",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP20CARATL-ATL",
+      "target_side": "yes",
+      "target_team": "Atlanta Falcons",
+      "target_book_id": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+      "target_rules_sha256": "36b23e4ac34838d8c7205f2d56a6e5a7e4c33b4d17978f9eff641d2b7b44497d"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:30.552644+00:00",
+      "target_cutoff": "2026-09-16T01:07:30.666376+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:03.759286+00:00"
+    },
+    "conclusion": "For CAR Panthers vs ATL Falcons at 2026-09-20T17:00:00+00:00, Atlanta Falcons winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "36b23e4ac34838d8c7205f2d56a6e5a7e4c33b4d17978f9eff641d2b7b44497d",
+        "summary": "If Atlanta wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.",
+        "retained_text": "If Atlanta wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:19.735491+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP20NOBAL__101472",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "source_event_id": "35985380",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP20NOBAL-BAL",
+      "target_side": "yes",
+      "target_team": "Baltimore Ravens",
+      "target_book_id": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+      "target_rules_sha256": "b905a1a2d06aa100f1a2c17d57a3395705ea8b364242e528346c941a9b0e948d"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:24.993015+00:00",
+      "target_cutoff": "2026-09-16T01:07:31.292057+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:04.930958+00:00"
+    },
+    "conclusion": "For NO Saints vs BAL Ravens at 2026-09-20T17:00:00+00:00, Baltimore Ravens winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "b905a1a2d06aa100f1a2c17d57a3395705ea8b364242e528346c941a9b0e948d",
+        "summary": "If Baltimore wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.",
+        "retained_text": "If Baltimore wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:19.846341+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP20MINCHI__101469",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "source_event_id": "35985350",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP20MINCHI-CHI",
+      "target_side": "yes",
+      "target_team": "Chicago Bears",
+      "target_book_id": "917654e5-4e87-48e5-bc03-77392e920cb1",
+      "target_rules_sha256": "827fcead2bdf12f7fc69b5c68c3fc3195983835056ec2c214190a3ec74913307"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:30.494635+00:00",
+      "target_cutoff": "2026-09-16T01:07:33.358614+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:06.106751+00:00"
+    },
+    "conclusion": "For MIN Vikings vs CHI Bears at 2026-09-20T17:00:00+00:00, Chicago Bears winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "827fcead2bdf12f7fc69b5c68c3fc3195983835056ec2c214190a3ec74913307",
+        "summary": "If Chicago wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.",
+        "retained_text": "If Chicago wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:19.953130+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP20CINHOU__101473",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "source_event_id": "35985390",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP20CINHOU-CIN",
+      "target_side": "yes",
+      "target_team": "Cincinnati Bengals",
+      "target_book_id": "45811da2-e61a-44a9-9a3c-99621366dfac",
+      "target_rules_sha256": "31141219610df9a53e5823ce61537bad3aeb3ca82451ef510190d7eef35b6a72"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:25.676308+00:00",
+      "target_cutoff": "2026-09-16T01:07:42.998007+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:07.293857+00:00"
+    },
+    "conclusion": "For CIN Bengals vs HOU Texans at 2026-09-20T17:00:00+00:00, Cincinnati Bengals winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "31141219610df9a53e5823ce61537bad3aeb3ca82451ef510190d7eef35b6a72",
+        "summary": "If Cincinnati wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.",
+        "retained_text": "If Cincinnati wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:20:20.050046+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP20CLETB__101474",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "source_event_id": "35985400",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP20CLETB-CLE",
+      "target_side": "yes",
+      "target_team": "Cleveland Browns",
+      "target_book_id": "87fcee78-d31d-41c1-ac56-d78036fad237",
+      "target_rules_sha256": "6653d00248b33032093c0579ba809cf26766f0755bada18283857b0ccefa5640"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:24.640561+00:00",
+      "target_cutoff": "2026-09-16T01:07:33.865575+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:08.477063+00:00"
+    },
+    "conclusion": "For CLE Browns vs TB Buccaneers at 2026-09-20T17:00:00+00:00, Cleveland Browns winning the ordinary completed full game is the Kalshi YES predicate. The saved page binds these same two participants and schedule. Retained general DraftKings football rules and NFLGAME terms include overtime. This is a separate event-specific semantic assessment, not full settlement equivalence or historical ticket certification.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb/observations.jsonl",
+        "section": "exact selected Kalshi market terms",
+        "sha256": "6653d00248b33032093c0579ba809cf26766f0755bada18283857b0ccefa5640",
+        "summary": "If Cleveland wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.",
+        "retained_text": "If Cleveland wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "verified_at": "2026-09-16T04:02:18.579589+00:00",
+  "focused_tests": 82,
+  "reconciliation_tests": 4,
+  "baseline_candidates": 18,
+  "baseline_ev_scenarios": 96,
+  "baseline_sha256": "a5a08cae151dbd3f9b5ad5ffcdb239dd25a479378bb66afd590c132ba351e63e",
+  "baseline_reproduced_byte_identical_with_write_intercepted": true,
+  "original_evidence_files_unchanged": 1699,
+  "reopened_real_and_synthetic_predictions": true,
+  "files": {
+    "app/reference/research_loop.py": "06c7b9f1f990861f450ca1fb1820ff99fc1559a54a4a79abc8085edd67efe858",
+    "tests/test_research_loop.py": "dfe5b9d413c68f19f5ebd63945dd96b9761c74e07bb33c4d7d2a83e1faa329ca",
+    "docs/page-research-report.md": "78ee38d14e9e6bc648b36b6d0ebb3b57c6a6f6d1e8f061eb4f9ff4616c525759",
+    "docs/public-nfl-reference-report.md": "d4a3d47ac1874b7b6134d505d63d2a99a42f15b2b25e4252b07ece776bef41a8",
+    "docs/ev-research-loop-plan.md": "f59f5e96f8cd91a623e0bd37c27cb3049050bd61869e15573c0e1a31e3cce794"
+  },
+  "scope": "File-only; no network, credentials, scans, outcomes, services, databases, UI, trading, commit or push performed by this task.",
+  "workspace_note": "External HEAD change observed during task; preserved without modification."
+}

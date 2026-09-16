@@ -1,5 +1,9 @@
 # Prediction Market Edge — product direction and implementation outline
 
+## Completed — multi-game saved-page research ranking
+
+September 16: all six saved games now have a separate Page-derived research view, exact same-column DraftKings probabilities, per-event ordinary-winner assessments, conditional net/ROI sorting and same-basis game detail/return. [Report](multi-page-research-report.md). Original observations and the 18-candidate/96-scenario baseline remain intact. Every result is retrospective/time-mismatched; unknown exceptional mass leaves unconditional EV unavailable. No new collection, credentials or prospective scoring was added. The completed list is ready for inspection; further collection and implementation are outside this slice.
+
 ## Current implementation clarification — public-page POC
 
 September 16: the VegasInsider same-column DraftKings parser is implemented; see [report](public-nfl-reference-report.md) and the current Desktop tracker. The next slice uses the saved page, not a mandatory Odds API/Pinnacle feed. Missing bookmaker timing, disclosed delay or independence assessment does not prevent implied-probability and de-vig arithmetic. Label the result “page-derived estimate; bookmaker update time and delay unknown”; retain stronger live/qualified eligibility separately. Do not infer a 15-minute delay or independent true fair value.

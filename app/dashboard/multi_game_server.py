@@ -6,6 +6,8 @@ from app.dashboard.opportunity_board import ROOT,load_sessions,present
 from app.dashboard.multi_game import MultiOwner,OUTPUT,configuration,saved_rows,project_game,default_point,game_calculation,rank_filter
 from app.opportunities.board import SIDES,TEAMS,CANDIDATES
 from app.collection.transport_session import reopen
+from app.reference.page_estimate import for_saved_game
+from app.reference.multi_page import research_row, rank_research
 
 
 def create_app(output=OUTPUT,owner=None,sessions=None):
@@ -55,6 +57,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         timeline,rows=project_game(d['rows'],g);point=next(p for p in timeline if p['id']==q['cutoff'])
         r=present(game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),q.get('probability') or None,q.get('contract')))
         r.update(session=q['session'],hash=sid,live=False)
+        r['page_estimate']=for_saved_game(sid,g,q.get('quantity','100'),q.get('scenario','cent'),live=d['live'])
         return web.json_response(r)
     async def dashboard(req):
         q=req.query;ds=datasets();sid=q.get('capture') or (list(ds)[-1] if ds else None)
@@ -68,7 +71,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             retained=timeline[-2] if d['live'] else point
             r=game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'))
             common=dict(game_id=g['id'],game_title=g['title'],start=g['scheduled_start'],session=sid+'~'+g['id'],hash=sid,cutoff=retained['id'],at=point['at'],historical=not d['live'])
-            if view=='arb':
+            if view=='research':
+                items.append(research_row(sid,g,q.get('quantity','100'),q.get('scenario','cent'),common,live=d['live']))
+            elif view=='arb':
                 for c in r['candidates']:
                     venues=sorted({l['venue'] for l in c['legs']})
                     items.append(dict({**common,**c},id=g['id']+'~'+c['id'],candidate=c['id'],venues=venues,venue_pair='+'.join(venues),assumption='Normal winner settlement · '+q.get('scenario','cent')+' fee scenario · exceptional outcomes unknown'))
@@ -79,7 +84,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                     if p is not None and not basis:raise ValueError('Probability needs an explicit source or basis')
                     ev=game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),p,key)['ev'];leg=ev['leg'];v=leg['venue']
                     items.append(dict(**common,id=g['id']+'~'+key,candidate='',contract=key,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis or 'Assumption needed',venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
-        result['rows']=rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))
+        result['rows']=rank_research(items,q.get('sort','roi'),q.get('search','')) if view=='research' else rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))
         result['total_candidates']=len(items)
         return web.json_response(result)
     async def page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/dashboard.html')

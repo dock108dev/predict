@@ -1,0 +1,22 @@
+{
+  "kind": "sporting",
+  "prediction_id": "8b5aef7d4b20faca041dca01c85acd2cfcbe24c749147ef137c35a9cfe81d5d8",
+  "event_id": "32144330",
+  "data": {
+    "source": "synthetic:invented outcome, not an actual game result",
+    "published_at": "2026-09-18T04:00:00Z",
+    "observed_at": "2026-09-18T04:01:00Z",
+    "final": true,
+    "synthetic": true,
+    "result": "Detroit Lions",
+    "score": {
+      "Detroit Lions": 24,
+      "Buffalo Bills": 21
+    }
+  },
+  "supersedes_id": null,
+  "correction_reason": null,
+  "format": "page-research-record-1",
+  "saved_at": "2026-09-16T04:01:19.134525+00:00",
+  "id": "f754152781c4a68abae50a9cb28ea474f1ca8b4741b9ef8ebf9f02815dba9166"
+}

@@ -1,0 +1,40 @@
+{
+  "method": "ordinary-result-brier-1",
+  "scores": [
+    {
+      "prediction_id": "ccced8bf88a8602579d95333bd7136b61ea81bf11bca23ea8b1f23985d54bfbe",
+      "annotation_id": "c5431ac9e42c5fc15e0ac01d6cb38cca6f6cd1e45c9c5d963b6224d9110a40a7",
+      "brier": "0.432273673060962410229726486210147649",
+      "baseline": "0.25",
+      "difference": "0.182273673060962410229726486210147649",
+      "designation": "synthetic_demonstration"
+    }
+  ],
+  "excluded": [],
+  "prospective_count": 0,
+  "prospective_mean_brier": null,
+  "baseline_mean": null,
+  "settlement_annotations": [
+    {
+      "kind": "settlement",
+      "prediction_id": "ccced8bf88a8602579d95333bd7136b61ea81bf11bca23ea8b1f23985d54bfbe",
+      "event_id": "32144330",
+      "data": {
+        "source": "synthetic:invented outcome, not an actual game result",
+        "published_at": "2026-09-18T04:00:00Z",
+        "observed_at": "2026-09-18T04:01:00Z",
+        "final": true,
+        "synthetic": true,
+        "contract_id": "synthetic:DET-YES",
+        "payout_per_contract": "1",
+        "basis": "invented normal winner resolution"
+      },
+      "supersedes_id": null,
+      "correction_reason": null,
+      "format": "page-research-record-1",
+      "saved_at": "2026-09-16T03:58:01.667695+00:00",
+      "id": "83bd037e2304a391857d1f2d0fa619136b2834ae8121828aba8fbb4c1c28f481"
+    }
+  ],
+  "note": "Synthetic scores excluded from prospective aggregates. Sporting score is not contract settlement or realized profit."
+}

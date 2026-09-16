@@ -1,0 +1,25 @@
+{
+  "method": "Fraction oracle from native reconstructed opposite bids; independent depth walk and fee recurrence",
+  "probability_exact_from_odds": "1526/2321",
+  "stored_probability": "657475226195605343/1000000000000000000",
+  "payout": "6.57475226195605343",
+  "cost": "6.8",
+  "fee": "0.16",
+  "entry_cash": "6.96",
+  "net": "-0.38524773804394657",
+  "roi_ratio": "-0.05535168650056703591954022988505747126436781609195402298850574712643678160919540229885057471264367816",
+  "roi_percent": "-5.535168650056703591954022988505747126436781609195402298850574712643678160919540229885057471264367816",
+  "fills": [
+    [
+      "17/25",
+      "10"
+    ]
+  ],
+  "proof": {
+    "book": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+    "received_at": "2026-09-16 01:07:35.681097+00:00",
+    "listing": "5af79e46-6cd1-4bbf-a44e-6efbded25414",
+    "listing_at": "2026-09-16T01:07:02.611796+00:00",
+    "terms": "The following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+  }
+}

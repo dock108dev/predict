@@ -1,0 +1,43 @@
+{
+  "completed_at": "2026-09-16T04:14:19.205305+00:00",
+  "preexisting_evidence_count": 1715,
+  "changed_evidence": [],
+  "tests": {
+    "focused": 7,
+    "regression": 26,
+    "baseline_candidates": 18,
+    "baseline_ev_scenarios": 96
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8783/game?session=5c9b7dca-a813-4d77-80f5-0691d06068eb%7EKXNFLGAME-26SEP17DETBUF__101466&hash=5c9b7dca-a813-4d77-80f5-0691d06068eb&cutoff=22e4cd98-7081-4a27-bd89-00c60e35b313&quantity=10&scenario=cent&probability=&basis=&contract=kalshi%3Ayes&view=arb&candidate=cross-yes",
+    "narrow_viewport": [
+      390,
+      844
+    ],
+    "document_width": 390,
+    "console_warnings_errors": [],
+    "manual_test": "0.4 -> -2.96; research unchanged -0.39; restored blank",
+    "viewport_reset": true
+  },
+  "final_status": {
+    "state": "idle",
+    "active": false,
+    "operating_mode": "personal-beta",
+    "start_available": true,
+    "error": null,
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null
+  },
+  "implementation_sha256": {
+    "app/reference/page_estimate.py": "926b87af8657a7d1a2805e84466a287db17b3f05e30c601987b653156d62dcdd",
+    "app/dashboard/multi_game_server.py": "76caf5a11ea723b2f8cc10c5f95e0e7392d08894bad6005be35fe3da842d1d82",
+    "app/dashboard/opportunity_static/board.js": "325af90df05401dfda0b0db35db4a8e0af19ba1777918aa70ab4b608ca99aefe",
+    "app/dashboard/opportunity_static/board.css": "99735e6d3914ca7d436ec19de067fdbdc68a8c2c048cb1a5a9e4b4ce50b4a78d",
+    "app/dashboard/opportunity_static/index.html": "bc95ec24fce15d42e0b5c6ce00adca29ba9b923fbe16f2251d4278ebbc43b38a",
+    "tests/test_page_estimate.py": "dade2c3a3a288f3d46de63ffebf93a7df196e388800eeff72c150eb3489fc678"
+  }
+}

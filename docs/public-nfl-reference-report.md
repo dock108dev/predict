@@ -1,5 +1,7 @@
 # Public NFL odds source amendment
 
+**September 16 follow-up:** the separate [page-derived calculation and file-only workflow](page-research-report.md) is now complete. The parser-stage restrictions below describe the earlier stage; missing timing/independence no longer suppress labeled page arithmetic. Strict live qualification remains separate.
+
 Implemented a file-only parser for one named DraftKings column on the [VegasInsider NFL odds page](https://www.vegasinsider.com/nfl/odds/las-vegas/). One direct public-page GET returned HTTP 200 on September 16, 2026 at 03:26:29.205210 UTC. No account, key, subscription, prediction-market scan, polling loop or access-control bypass was used. Source selection was limited to this page; the web reader also inspected that same URL.
 
 ## Retained evidence

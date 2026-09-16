@@ -1,0 +1,734 @@
+{
+  "probability": "0.657475226195605343",
+  "probability_source": "Saved page-derived proportional de-vig estimate",
+  "conditional_on": "Normal winner settlement only; tie, void, refund and discretionary outcomes excluded",
+  "expected_payout": "6.574752261956053430",
+  "expected_profit": "-0.385247738043946570000000",
+  "return_pct": "-5.535168650056703591954022988505747126436781609195402298850574712643678160919540229885057471264367816",
+  "break_even_pct": "69.600",
+  "status": "Conditional scenario",
+  "quantity": "10",
+  "unconditional_ev": null,
+  "current_executable": false,
+  "prospective_evaluation_eligible": false,
+  "label": "Retrospective, time-mismatched research comparison",
+  "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+  "target_received_at": "2026-09-16 01:07:35.681097+00:00",
+  "target_cutoff": "2026-09-16T01:07:35.685652+00:00",
+  "source_url": "https://www.vegasinsider.com/nfl/odds/las-vegas/",
+  "bookmaker": "draftkings",
+  "sides": [
+    {
+      "team": "Detroit Lions",
+      "odds": "+180",
+      "probability": "0.342524773804394657",
+      "percent": "34.2525"
+    },
+    {
+      "team": "Buffalo Bills",
+      "odds": "-218",
+      "probability": "0.657475226195605343",
+      "percent": "65.7475"
+    }
+  ],
+  "fee_scenario": "cent",
+  "fee_basis": "Historical kalshi-july7-observed-sep12 schedule; cent balance, multiplier 1, no event override, one new taker order, one fill per consumed level; no extra account charges or rebates; applicability unverified.",
+  "leg": {
+    "id": "kalshi:yes",
+    "venue": "kalshi",
+    "label": "Kalshi",
+    "side": "yes",
+    "team": "Buffalo Bills",
+    "contract": "Buffalo Bills YES",
+    "ask": "0.6800",
+    "top_size": "11574336.49",
+    "visible_size": "27741763.45",
+    "levels": [
+      {
+        "price": "0.6800",
+        "quantity": "11574336.49",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.6900",
+        "quantity": "9777826.86",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7000",
+        "quantity": "2503134.35",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7100",
+        "quantity": "27099.01",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7200",
+        "quantity": "811.99",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7300",
+        "quantity": "522.08",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7400",
+        "quantity": "1110.93",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7500",
+        "quantity": "5795.37",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7600",
+        "quantity": "3835.27",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7700",
+        "quantity": "7152.50",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7800",
+        "quantity": "9991.86",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.7900",
+        "quantity": "10145.57",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8000",
+        "quantity": "8520.32",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8100",
+        "quantity": "10180.56",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8200",
+        "quantity": "20050.37",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8300",
+        "quantity": "16804.78",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8400",
+        "quantity": "14312.34",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8500",
+        "quantity": "47517.32",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8600",
+        "quantity": "24855.06",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8700",
+        "quantity": "43394.96",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8800",
+        "quantity": "80695.24",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.8900",
+        "quantity": "191929.96",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9000",
+        "quantity": "45542.46",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9100",
+        "quantity": "36946.13",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9200",
+        "quantity": "50698.69",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9300",
+        "quantity": "56881.43",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9400",
+        "quantity": "5354.29",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9500",
+        "quantity": "117801.59",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9600",
+        "quantity": "77420.82",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9700",
+        "quantity": "218024.01",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9800",
+        "quantity": "16424.17",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      },
+      {
+        "price": "0.9900",
+        "quantity": "2736646.67",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313"
+      }
+    ],
+    "transformation": "1 minus opposite Kalshi bid; same quantity",
+    "warnings": [],
+    "age_seconds": "0.004555",
+    "connection": "connected",
+    "received_at": "2026-09-16 01:07:35.681097+00:00",
+    "source_at": "2026-09-16 01:07:35.684000+00:00",
+    "book_id": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+    "fills": [
+      {
+        "price": "0.6800",
+        "quantity": "10",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+        "available": "11574336.49"
+      }
+    ],
+    "notional": "6.8000",
+    "fee_audit": {
+      "scope": "hypothetical venue trading fees; excludes unverified account-specific charges",
+      "engine": "fees-1",
+      "context": {
+        "venue": "kalshi",
+        "environment": "production",
+        "market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+        "product": "event_contract",
+        "trade_time": "2026-09-16T01:07:35.685652+00:00",
+        "calculation_time": "2026-09-16T03:58:02.251974+00:00",
+        "complete_order_history": true,
+        "settlement_status": "UNKNOWN",
+        "fills": [
+          {
+            "fill_id": "0",
+            "order_id": "hypothetical-new-order",
+            "role": "taker",
+            "price": "0.6800",
+            "quantity": "10",
+            "unit": "contracts"
+          }
+        ],
+        "outcomes": {
+          "winner:Buffalo Bills": "1",
+          "winner:Detroit Lions": "0",
+          "tie": "0.5"
+        },
+        "schedule_version": "kalshi-july7-observed-sep12",
+        "series_id": "KXNFLGAME",
+        "event_id": "KXNFLGAME-26SEP17DETBUF",
+        "balance_precision": "0.01",
+        "kalshi_metadata": {
+          "source": "Explicit what-if: retained series type, multiplier 1; no event override",
+          "series_id": "KXNFLGAME",
+          "event_id": "KXNFLGAME-26SEP17DETBUF",
+          "event_history_complete": false,
+          "series_changes": [
+            {
+              "scheduled_ts": "2026-09-16T01:07:35.685652+00:00",
+              "fee_type": "quadratic_with_maker_fees",
+              "fee_multiplier": "1"
+            }
+          ],
+          "event_changes": []
+        }
+      },
+      "context_hash": "32b07001086e0954b661cb9dcbf2f0a757384784a15a811f498ec07974509920",
+      "currency": "USD",
+      "registry": {
+        "schema": 1,
+        "schedules": [
+          {
+            "venue": "kalshi",
+            "product": "event_contract",
+            "version": "kalshi-july7-observed-sep12",
+            "coefficient": "0.07",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "kalshi-rounding.md",
+                "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+                "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+                "status": 200,
+                "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+              },
+              {
+                "file": "kalshi-events.md",
+                "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+                "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+                "status": 200,
+                "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+              },
+              {
+                "file": "kalshi-series.md",
+                "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+                "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+                "status": 200,
+                "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+              }
+            ],
+            "published_effective_date": "2026-07-07",
+            "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+            "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+            "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+            "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+          },
+          {
+            "venue": "polymarket_us",
+            "product": "event_contract",
+            "version": "pmus-2026-07-01",
+            "coefficient": "0.06",
+            "effective_from": "2026-07-01T04:00:00Z",
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "pmus-fees.md",
+                "url": "https://docs.polymarket.us/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.115486+00:00",
+                "status": 200,
+                "sha256": "588880f87fb11d8cfea52d03be13086a13ccc17c9448377158c323190796344a"
+              },
+              {
+                "file": "pmus-fractional-current.md",
+                "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+                "status": 200,
+                "retrieved_at": "2026-09-12T03:20:36.159334+00:00",
+                "sha256": "2bd4d4c9e6649767ea0caf3e60db18f96cda52057e6810ab024b89cfec3ee017"
+              }
+            ],
+            "maker_coefficient": "0.0125"
+          },
+          {
+            "venue": "prophetx",
+            "product": "straight",
+            "version": "prophetx-2026-08-19-v1",
+            "coefficient": "0.02",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "prophetx-fees.html",
+                "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+                "retrieved_at": "2026-09-12T03:13:19.773372+00:00",
+                "status": 200,
+                "sha256": "0605ca9513363b504ef793b409d7669245a523dfd654c91d63d796a602c8422c"
+              },
+              {
+                "file": "prophetx-rebates.pdf",
+                "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+                "retrieved_at": "2026-09-12T03:13:19.945020+00:00",
+                "status": 200,
+                "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18"
+              }
+            ],
+            "published_update_date": "2026-08-19",
+            "effective_note": "Update date is not an exact effective instant"
+          },
+          {
+            "venue": "novig",
+            "product": "pregame",
+            "version": "novig-pregame-observed-sep12",
+            "coefficient": "0",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "novig-fees.md",
+                "url": "https://docs.novig.com/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                "status": 200,
+                "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+              },
+              {
+                "file": "novig-credits.md",
+                "url": "https://docs.novig.com/maker-credit-program.md",
+                "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                "status": 200,
+                "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+              },
+              {
+                "file": "novig-help.html",
+                "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                "status": 200,
+                "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+              }
+            ],
+            "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+          },
+          {
+            "venue": "novig",
+            "product": "live",
+            "version": "novig-live-observed-sep12",
+            "coefficient": "0.03",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "novig-fees.md",
+                "url": "https://docs.novig.com/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                "status": 200,
+                "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+              },
+              {
+                "file": "novig-credits.md",
+                "url": "https://docs.novig.com/maker-credit-program.md",
+                "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                "status": 200,
+                "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+              },
+              {
+                "file": "novig-help.html",
+                "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                "status": 200,
+                "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+              }
+            ],
+            "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+          },
+          {
+            "venue": "novig",
+            "product": "futures",
+            "version": "novig-futures-observed-sep12",
+            "coefficient": "0.06",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "novig-fees.md",
+                "url": "https://docs.novig.com/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                "status": 200,
+                "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+              },
+              {
+                "file": "novig-credits.md",
+                "url": "https://docs.novig.com/maker-credit-program.md",
+                "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                "status": 200,
+                "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+              },
+              {
+                "file": "novig-help.html",
+                "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                "status": 200,
+                "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+              }
+            ],
+            "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+          },
+          {
+            "venue": "novig",
+            "product": "parlay",
+            "version": "novig-parlay-observed-sep12",
+            "coefficient": "0.10",
+            "effective_from": null,
+            "effective_to": null,
+            "sources": [
+              {
+                "file": "novig-fees.md",
+                "url": "https://docs.novig.com/fees.md",
+                "retrieved_at": "2026-09-12T03:13:18.746543+00:00",
+                "status": 200,
+                "sha256": "b25b85aa7e7c67581b381dff3e1e266877cc91c548b57aa2fb97420415d1c48e"
+              },
+              {
+                "file": "novig-credits.md",
+                "url": "https://docs.novig.com/maker-credit-program.md",
+                "retrieved_at": "2026-09-12T03:13:18.927005+00:00",
+                "status": 200,
+                "sha256": "01aabdd22555aa23631711b62a40a59c68b197fd8d97bf662a016a1425012a04"
+              },
+              {
+                "file": "novig-help.html",
+                "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+                "retrieved_at": "2026-09-12T03:13:19.379815+00:00",
+                "status": 200,
+                "sha256": "da7aa3fc944b932aea545fe035c63edc7b6ec8568fe3274dcdbf9dbd75790149"
+              }
+            ],
+            "effective_note": "Coefficient effective instant not specified; pinned documentation scenario only"
+          }
+        ]
+      },
+      "registry_hash": "2e6f8ca6df34a4a86ac7d5e13efa51ae57fd55cb98c8023beaae02398746c211",
+      "schedule": {
+        "venue": "kalshi",
+        "product": "event_contract",
+        "version": "kalshi-july7-observed-sep12",
+        "coefficient": "0.07",
+        "effective_from": null,
+        "effective_to": null,
+        "sources": [
+          {
+            "file": "kalshi-rounding.md",
+            "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+            "retrieved_at": "2026-09-12T03:13:17.393378+00:00",
+            "status": 200,
+            "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22"
+          },
+          {
+            "file": "kalshi-events.md",
+            "url": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes.md",
+            "retrieved_at": "2026-09-12T03:13:17.564619+00:00",
+            "status": 200,
+            "sha256": "0e4212060753fbb2b9eede8db514af92993a63663a2e524d5250fc744944c50e"
+          },
+          {
+            "file": "kalshi-series.md",
+            "url": "https://docs.kalshi.com/api-reference/market/get-series.md",
+            "retrieved_at": "2026-09-12T03:13:17.752189+00:00",
+            "status": 200,
+            "sha256": "76b79fe5581c8e88196f6fa4d17e9375fce392b6526a184c23fdd30f2b4af60a"
+          }
+        ],
+        "published_effective_date": "2026-07-07",
+        "effective_note": "Date only; rounding guide has no effective timestamp. Pin for hypothetical or historical scenario; applicability stays conditional.",
+        "pdf_source": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+        "pdf_browser_capture": "evidence/slice-9/research/kalshi-pdf-browser.json",
+        "pdf_browser_sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f"
+      },
+      "schedule_hash": "a5c33d8d26f9e5978cbb01f287418ce3c6c17d50ea15bd0bad471275a02c78c2",
+      "schedule_applicability": "conditional",
+      "formula_support": "implemented",
+      "rounding_qualification": "documented",
+      "entry_notional": "6.8000",
+      "entry_fees": "0.160000",
+      "entry_cash_requirement": "6.960000",
+      "credits": [
+        {
+          "kind": "order_rounding_refund",
+          "amount": "0.00",
+          "timing": "fill",
+          "conditional": false
+        }
+      ],
+      "outcomes": {
+        "winner:Buffalo Bills": {
+          "gross_payout": "10",
+          "settlement_fee_unrounded": "0",
+          "settlement_fee": "0",
+          "net_payout": "10",
+          "net_cashflow": "3.040000"
+        },
+        "winner:Detroit Lions": {
+          "gross_payout": "0",
+          "settlement_fee_unrounded": "0",
+          "settlement_fee": "0",
+          "net_payout": "0",
+          "net_cashflow": "-6.960000"
+        },
+        "tie": {
+          "gross_payout": "5.0",
+          "settlement_fee_unrounded": "0",
+          "settlement_fee": "0",
+          "net_payout": "5.0",
+          "net_cashflow": "-1.960000"
+        }
+      },
+      "trace": [
+        {
+          "fill_id": "0",
+          "terms": {
+            "fee_type": "quadratic_with_maker_fees",
+            "fee_multiplier": "1"
+          },
+          "raw": "0.1523200000",
+          "trade_fee": "0.152320",
+          "rounding_fee": "0.007680",
+          "rounding_refund": "0.00",
+          "accumulator": "0.007680"
+        }
+      ],
+      "assumptions": [
+        "schedule effective time unknown; explicitly pinned documentation scenario",
+        "native market applicability not independently established",
+        "event override history incomplete",
+        "supplied account precision; FCM/additional account charges excluded and unverified"
+      ],
+      "unsupported": [],
+      "qualification": "conditional",
+      "fill_reconciliation": "unverified",
+      "settlement_status": "UNKNOWN",
+      "resolved_terms": {
+        "fee_type": "quadratic_with_maker_fees",
+        "fee_multiplier": "1"
+      },
+      "entry_balance_debit": "6.960000"
+    },
+    "cash": "6.960000",
+    "fee": "0.160000",
+    "cashflows": {
+      "winner:Buffalo Bills": {
+        "gross_payout": "10",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "10",
+        "net_cashflow": "3.040000"
+      },
+      "winner:Detroit Lions": {
+        "gross_payout": "0",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "0",
+        "net_cashflow": "-6.960000"
+      },
+      "tie": {
+        "gross_payout": "5.0",
+        "settlement_fee_unrounded": "0",
+        "settlement_fee": "0",
+        "net_payout": "5.0",
+        "net_cashflow": "-1.960000"
+      },
+      "postponed_outside_window": null,
+      "canceled": null,
+      "abandoned": null,
+      "pregame_forfeit": null,
+      "shortened_game": null,
+      "discretionary_review": null
+    },
+    "reasons": []
+  },
+  "reasons": [],
+  "assessment": {
+    "format": "ordinary-winner-assessment-1",
+    "assessed_at": "2026-09-16T04:07:47.473289+00:00",
+    "ordinary_winner_comparable": true,
+    "full_settlement_equivalence": false,
+    "comparison_sha256": "c41d61919273e19dc6dec83b6227b09ef4b0e388f8f7d60ef88cf072b86ca959",
+    "binding": {
+      "session": "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "game_id": "KXNFLGAME-26SEP17DETBUF__101466",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "source_event_id": "32144330",
+      "source_bookmaker": "draftkings",
+      "source_market": "full_game_moneyline",
+      "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+      "target_market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+      "target_side": "yes",
+      "target_team": "Buffalo Bills",
+      "target_book_id": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+      "target_rules_sha256": "ce92b66c81f6920367adca61114536471de41d295ed2fc012b8a3b48349206c0"
+    },
+    "observation_times": {
+      "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+      "target_received_at": "2026-09-16 01:07:35.681097+00:00",
+      "target_cutoff": "2026-09-16T01:07:35.685652+00:00",
+      "target_rules_received_at": "2026-09-16 01:07:02.584522+00:00"
+    },
+    "conclusion": "For this saved full-game pair, Buffalo winning the ordinary completed Detroit\u2013Buffalo game, including overtime, is the same sporting outcome as Buffalo YES. Detroit is the other ordinary winner. This is a retrospective semantic assessment, not full settlement equivalence or verification of a DraftKings ticket.",
+    "evidence": [
+      {
+        "url": "https://sportsbook.draftkings.com/help/sport-rules/football?sf260608803=1",
+        "section": "General Football Settlement Rules",
+        "quote": "All bets include overtime statistics.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML was only an application shell. Page states As of December 22, 2025."
+      },
+      {
+        "url": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules?intendedSiteExp=US-SB",
+        "section": "C. Settlement Rules 2, 7, 9; Push definition; D. Resettlement",
+        "summary": "Two-way moneylines include overtime. A two-selection tie without a draw selection pushes and returns the stake. Cancellations void; the general postponement window is two calendar days, with sport-specific interruption rules. Resettlement rights remain distinct.",
+        "basis": "Official page text returned by web search on assessment date; direct HTML shell does not retain these clauses."
+      },
+      {
+        "url": "https://kalshi-public-docs.s3.amazonaws.com/contract_terms/NFLGAME.pdf",
+        "section": "FOOTBALLGAMEWIN, pages 1\u20132",
+        "summary": "Full game defaults to including overtime; the winning team has more points. A two-team tie pays 0.50. Postponement and discretionary settlement differ from sportsbook refunds.",
+        "file": "evidence/page-ev-integration/kalshi-NFLGAME.pdf"
+      },
+      {
+        "file": "evidence/page-research/target-comparison.json",
+        "section": "target_fee_assessment.sources.kalshi.source",
+        "sha256": "ce92b66c81f6920367adca61114536471de41d295ed2fc012b8a3b48349206c0",
+        "summary": "Retained exact market explicitly names Buffalo winning DET Lions vs BUF Bills on September 17; tie 0.50, begins within 48 hours or fair price. Current NFLGAME public terms clarify overtime; historical terms are not rewritten."
+      },
+      {
+        "file": "evidence/public-nfl-reference/vegasinsider.html",
+        "sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+        "summary": "Retained same DraftKings full-game moneyline column: Detroit +180, Buffalo -218; event 32144330, September 18 00:15 UTC (September 17 20:15 EDT). No regulation-only qualifier in selected pair."
+      }
+    ],
+    "exceptional_differences": [
+      {
+        "outcome": "Tie",
+        "draftkings": "Two-way push returns stake.",
+        "kalshi": "Retained terms pay $0.50 per team contract; not a purchase-cost refund."
+      },
+      {
+        "outcome": "Cancellation / interruption",
+        "draftkings": "Cancellation voids; football-specific completion windows and interruption rules can void or use declared/last results.",
+        "kalshi": "Retained cancellation treatment incomplete; current generic terms contain fair-price and declared-result contingencies. Do not infer historical refund or exact payout."
+      },
+      {
+        "outcome": "Postponement",
+        "draftkings": "General rule uses two calendar days, subject to football-specific rules.",
+        "kalshi": "Retained exact market uses begins within 48 hours; otherwise fair price. These windows are not asserted equivalent."
+      },
+      {
+        "outcome": "Refund / discretion",
+        "draftkings": "Push/void stake treatment and resettlement rights.",
+        "kalshi": "Fair-price and outcome-review discretion; unknown payout is not stake refund."
+      }
+    ],
+    "limitations": [
+      "Bookmaker update time and delay unknown.",
+      "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+      "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+      "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+      "Historical fee scenario applicability to an actual account is unverified."
+    ]
+  },
+  "limitations": [
+    "Bookmaker update time and delay unknown.",
+    "Upstream synchronization and independence unassessed; proportional de-vig is a model assumption.",
+    "Current public rules support narrow semantics, not historical jurisdiction/account certification.",
+    "Exceptional probability mass and discretionary cashflows unknown; unconditional EV unavailable.",
+    "Historical fee scenario applicability to an actual account is unverified."
+  ],
+  "display": {
+    "expected_profit": "-0.39",
+    "expected_payout": "6.57",
+    "return_pct": "-5.54",
+    "notional": "6.80",
+    "cash": "6.96",
+    "fee": "0.16"
+  }
+}
