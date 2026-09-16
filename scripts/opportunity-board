@@ -35,7 +35,7 @@ cmd=[str(root/'.venv/bin/python'),'-m','app.dashboard.opportunity_board','--port
 with (runtime/'server.log').open('a') as log:
     proc=subprocess.Popen(cmd,cwd=root,env={'PATH':'/usr/bin:/bin','PYTHONUNBUFFERED':'1','PYTHONDONTWRITEBYTECODE':'1'},stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
 time.sleep(1)
-if proc.poll() is not None: raise SystemExit('Preview failed to start; inspect .local/opportunity-board/server.log')
+if proc.poll() is not None: raise SystemExit(f"Preview failed to start; inspect {runtime / 'server.log'}")
 actual=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','command=']).decode().strip()
 started=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','lstart=']).decode().strip()
 record={'pid':proc.pid,'command':actual,'started':started,'url':f'http://127.0.0.1:{port}','port':port}

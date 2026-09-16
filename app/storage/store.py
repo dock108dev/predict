@@ -347,8 +347,13 @@ class Store:
                 self.event(sid,'failure',dict(error_type=type(exc).__name__,last_committed_count=count,censored=True))
                 self.finish(sid,'failed','ingestion stopped on failure')
             except Exception:
-                journal=ROOT/'.local/failures'; journal.mkdir(parents=True,exist_ok=True)
-                (journal/(str(uuid.uuid4())+'.json')).write_text(json.dumps(dict(session_id=sid,at=now(),error_type=type(exc).__name__,count=count)))
+                try:
+                    journal=ROOT/'.local/failures'; journal.mkdir(parents=True,exist_ok=True)
+                    (journal/(str(uuid.uuid4())+'.json')).write_text(json.dumps(dict(session_id=sid,at=now(),error_type=type(exc).__name__,count=count)))
+                except Exception as report_error:
+                    from app.diagnostics import failure
+                    failure(__name__, 'ingestion', exc)
+                    failure(__name__, 'ingestion_failure_report', report_error)
             raise
 
     def replay_all(self):

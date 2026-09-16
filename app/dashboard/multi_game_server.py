@@ -1,6 +1,6 @@
 """Routes for the existing board's multi-game landing page and drilldown."""
 import json
-import logging
+from app.diagnostics import failure
 from aiohttp import web
 from app.dashboard.local_security import HEADERS,check_browser,calculation_inputs,validate_assumptions
 from app.dashboard.opportunity_board import ROOT,load_sessions,present
@@ -51,7 +51,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         except (KeyError,StopIteration):
             r=web.json_response({'error':'Unknown selection'},status=422)
         except Exception as exc:
-            logging.getLogger(__name__).warning('Dashboard request failed (%s)',type(exc).__name__)
+            failure(__name__, 'dashboard_request', exc)
             r=web.json_response({'error':'Local data unavailable'},status=503)
         r.headers.update(HEADERS)
         return r

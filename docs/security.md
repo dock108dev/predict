@@ -2,7 +2,10 @@
 
 September 16, 2026. This source pass starts at HEAD
 `5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7` **plus the preexisting uncommitted
-SSOT/math changes** documented in [ssot.md](ssot.md). It follows the current
+SSOT/math changes** documented in [ssot.md](ssot.md). This is a historical
+security-pass record. Later diagnostics and dependency maintenance are described
+in [failure handling](error-handling.md) and [development](development.md);
+the original validation counts below are unchanged. It follows the current
 README, [Desktop tracker](../../prediction_arb_next_steps.md), and
 [roadmap](product-roadmap-review.md). The owner's security implementation request
 authorizes these bounded fixes despite the roadmap's general deferral of
@@ -133,8 +136,8 @@ Severity reflects this single-user, direct-loopback deployment.
    **deferred**. Current artifacts inherit local directory/umask ownership; no
    hostile-symlink or same-account attacker protection is claimed. For a shared
    machine, adopt private new runtime directories and symlink-safe creation after
-   deciding whether captures are shared. Choose a supported Python version and
-   lockfile process before pinning the broad dependency ranges. Do not chmod,
+   deciding whether captures are shared. The later [CI maintenance](development.md#pull-request-ci) supplies a Python 3.11
+   offline baseline and hashed dependency lock; runtime requirements still use ranges. Do not chmod,
    migrate, or rewrite owner evidence in a maintenance sweep.
 
 Manual verification outside this repo: Keychain ACLs/entitlements, existing

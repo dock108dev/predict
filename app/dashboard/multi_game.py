@@ -2,11 +2,13 @@
 from copy import deepcopy
 from datetime import datetime,timezone,timedelta
 from decimal import Decimal, ROUND_FLOOR
-from pathlib import Path
+import asyncio
 import json
-from app.collection.multi_game import MultiSession, native_identity
+
+from app.diagnostics import failure
+from app.collection.multi_game import MultiSession
 from app.collection.transport_session import reopen
-from app.dashboard.e6_live import Owner, save_json, digest, verify_all_saved
+from app.dashboard.e6_live import Owner, save_json, digest
 from app.dashboard import e6_real as historical
 from app.opportunities.board import evaluate, contracts
 
@@ -26,50 +28,97 @@ def configuration():
 
 
 class MultiOwner(Owner):
-    def __init__(self,*args,personal_beta=False,session_factory=MultiSession,**kwargs):
-        super().__init__(*args,**kwargs)
-        self.personal_beta=personal_beta;self.session_factory=session_factory;self.starting=False
-    def active(self):return self.starting or super().active()
+
+    def __init__(self, *args, personal_beta=False, session_factory=MultiSession, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.personal_beta = personal_beta
+        self.session_factory = session_factory
+        self.starting = False
+
+    def active(self):
+        return self.starting or super().active()
+
     def saved(self):
-        return [p.parent.name for p in sorted(self.output.glob('*/manifest.json'),key=lambda p:(p.parent/'run-spec.json').stat().st_mtime)]
-    async def start(self,max_games=6,duration=175):
-        if type(max_games) is not int or not 1<=max_games<=6:raise ValueError('Maximum games must be 1 to 6')
-        if type(duration) is not int or not 1<=duration<=180:raise ValueError('Duration must be 1 to 180 seconds')
+        return [p.parent.name for p in sorted(self.output.glob('*/manifest.json'), key=lambda p: (p.parent / 'run-spec.json').stat().st_mtime)]
+
+    async def start(self, max_games=6, duration=175):
+        if type(max_games) is not int or not 1 <= max_games <= 6:
+            raise ValueError('Maximum games must be 1 to 6')
+        if type(duration) is not int or not 1 <= duration <= 180:
+            raise ValueError('Duration must be 1 to 180 seconds')
         async with self.lock:
-            if self.active():raise ValueError('A scan is already running or saving')
-            if not self.personal_beta and (self.session is not None or (self.output/'attempt.json').exists()):raise ValueError('This slice’s one verification scan has been consumed')
-            spec=self.spec_factory();limits=spec.pop('multi_game_limits')
-            spec['duration']=duration;limits['max_games']=max_games
-            if self.personal_beta:spec['capture_authorization']='Personal beta: explicit owner Start; bounded prediction-only scan; zero additional spending'
-            self.error=None;self.starting=True
+            if self.active():
+                raise ValueError('A scan is already running or saving')
+            if getattr(self.session, 'cleanup_errors', []):
+                raise ValueError('Resource cleanup failed; restart the stopped application before another scan')
+            if not self.personal_beta and (self.session is not None or (self.output / 'attempt.json').exists()):
+                raise ValueError('This slice’s one verification scan has been consumed')
+            spec = self.spec_factory()
+            limits = spec.pop('multi_game_limits')
+            spec['duration'] = duration
+            limits['max_games'] = max_games
+            if self.personal_beta:
+                spec['capture_authorization'] = 'Personal beta: explicit owner Start; bounded prediction-only scan; zero additional spending'
+            self.error = None
+            self.starting = True
             try:
-                self.session=self.session_factory(spec,self.output/'pending',self.endpoints)
-                self.session.max_games=max_games
-                folder=self.output/self.session.sid;folder.mkdir();self.session.output=folder
-                save_json(folder/'run-record.json' if self.personal_beta else self.output/'attempt.json',dict(session=self.session.sid,at=datetime.now(timezone.utc).isoformat(),mode='personal-beta' if self.personal_beta else 'one-attempt',limits=limits))
-                save_json(folder/'run-spec.json',spec);save_json(folder/'aggregate-limits.json',limits)
+                self.session = self.session_factory(spec, self.output / 'pending', self.endpoints)
+                self.session.max_games = max_games
+                folder = self.output / self.session.sid
+                folder.mkdir()
+                self.session.output = folder
+                save_json(folder / 'run-record.json' if self.personal_beta else self.output / 'attempt.json', dict(session=self.session.sid, at=datetime.now(timezone.utc).isoformat(), mode='personal-beta' if self.personal_beta else 'one-attempt', limits=limits))
+                save_json(folder / 'run-spec.json', spec)
+                save_json(folder / 'aggregate-limits.json', limits)
                 await self.session.start()
-            except Exception:
-                self.error='Start unavailable; run record retained. No automatic retry.'
+            except Exception as exc:
+                failure(__name__, 'scan_start', exc)
+                self.error = 'Start unavailable; run record retained. No automatic retry.'
                 raise ValueError(self.error) from None
-            finally:self.starting=False
-            self.finalizer=__import__('asyncio').create_task(self.finish(folder))
+            finally:
+                self.starting = False
+            self.finalizer = asyncio.create_task(self.finish(folder))
             return self.session.sid
-    async def finish(self,folder):
+
+    async def finish(self, folder):
         try:
             await self.session.task
-            path=self.session.journal.path
-            path.rename(folder/'observations.jsonl');self.session.journal.path=folder/'observations.jsonl'
-            saved=reopen(self.session.journal.path);save_json(folder/'saved-observations.json',saved)
-            # Native replay handles multiplexed subscriptions; health-derived records
-            # are counted separately, never passed off as new wire observations.
+            if getattr(self.session, 'persistence_error', None) or getattr(self.session, 'cleanup_errors', []):
+                self.error = getattr(self.session, 'persistence_error', None) or 'Capture retained; resource cleanup failed.'
+                return
+            path = self.session.journal.path
+            path.rename(folder / 'observations.jsonl')
+            self.session.journal.path = folder / 'observations.jsonl'
+            saved = reopen(self.session.journal.path)
+            if saved['state'] != 'complete':
+                raise ValueError('Saved journal is incomplete')
+            save_json(folder / 'saved-observations.json', saved)
+            # Replay verifies native frames; derived health records are not new observations.
             from app.collection.native_replay import verify_native_saved
-            replay=verify_native_saved(saved);save_json(folder/'replay.json',replay)
-            save_json(folder/'manifest.json',dict(journal_chain=saved['sha256'],files={n:digest(folder/n) for n in ('run-spec.json','observations.jsonl','saved-observations.json','replay.json','selection.json','aggregate-limits.json')}))
-        except Exception as exc:self.error='Capture retained; saved finalization unavailable: '+type(exc).__name__
+            replay = verify_native_saved(saved)
+            save_json(folder / 'replay.json', replay)
+            save_json(folder / 'manifest.pending.json', dict(journal_chain=saved['sha256'], files={n: digest(folder / n) for n in ('run-spec.json', 'observations.jsonl', 'saved-observations.json', 'replay.json', 'selection.json', 'aggregate-limits.json')}))
+            (folder / 'manifest.pending.json').rename(folder / 'manifest.json')
+        except Exception as exc:
+            failure(__name__, 'scan_finalization', exc)
+            self.session.state = 'failed'
+            self.error = 'Capture retained; saved finalization unavailable: ' + type(exc).__name__
+
     def status(self):
-        s=self.session;active=self.active()
-        return dict(state=('saving' if active and s and s.state=='stopped' else s.state) if s else 'idle',active=active,operating_mode='personal-beta' if self.personal_beta else 'one-attempt',start_available=not active and (self.personal_beta or s is None and not (self.output/'attempt.json').exists()),error=self.error,saved=self.saved(),session=None if s is None else s.sid,cleanup_complete=not active and (s is None or s.cleanup_complete),coverage=getattr(getattr(s,'discovery',None),'coverage',None))
+        s = self.session
+        active = self.active()
+        return dict(
+            state=('saving' if active and s and (s.state == 'stopped') else s.state) if s else 'idle',
+            active=active,
+            operating_mode='personal-beta' if self.personal_beta else 'one-attempt',
+            start_available=not active and (not getattr(s, 'cleanup_errors', [])) and (self.personal_beta or (s is None and (not (self.output / 'attempt.json').exists()))),
+            error=self.error or getattr(s, 'persistence_error', None),
+            cleanup_errors=getattr(s, 'cleanup_errors', []),
+            saved=self.saved(),
+            session=None if s is None else s.sid,
+            cleanup_complete=not active and (s is None or s.cleanup_complete),
+            coverage=getattr(getattr(s, 'discovery', None), 'coverage', None),
+        )
 
 
 def saved_rows(folder):
