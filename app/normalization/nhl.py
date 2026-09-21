@@ -134,7 +134,7 @@ def model_reason(binding,body):
     try:
         key=event_key(e)
         i=binding['market_identity']
-        if key!=i['event'] or any(i[k]!=e[k] for k in ('season','stage','scheduled_start','competition')):
+        if key!=i['event'] or any(i[k]!=e[k] for k in ('season','stage','competition')) or time(i['scheduled_start'])!=time(e['scheduled_start']):
             return 'Model NHL event, season or start binding conflicts'
         registry=Registry.load()
         if r.get('published_outcome')!='home_win':return 'Explicit published home-win output required'

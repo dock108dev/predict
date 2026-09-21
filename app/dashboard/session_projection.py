@@ -165,7 +165,8 @@ class SessionProjection:
                     try:
                         review=winner_review(e,m,meta,source,self.spec.get('mode'))
                         # Additive projection only: retained event/native IDs are untouched.
-                        ident=dict(ident,event=event_key(e),sport='ice_hockey')
+                        canonical=event_key(e)
+                        ident=dict(ident,event=canonical,sport='ice_hockey',scheduled_start=canonical[3])
                         record['identity']=ident
                     except (ValueError,KeyError,TypeError,AttributeError,StopIteration) as exc:
                         record['reason']=str(exc);continue

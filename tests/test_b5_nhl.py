@@ -104,6 +104,8 @@ class NHL(unittest.TestCase):
         rows=fixture();cat=rows[1]['inventory']['kalshi'];cat['events'].append(deepcopy(cat['events'][0]));self.assertEqual(len(projection(rows)[0].snapshot()['games']),1)
         rows=fixture();rows[1]['inventory']['kalshi']['events'][0]['scheduled_start']='2026-10-10T23:01:00+00:00'
         self.assertEqual(projection(rows)[0].snapshot()['games'],[])
+        rows=fixture();rows[1]['inventory']['kalshi']['events'][0]['scheduled_start']='2026-10-10T19:00:00-04:00'
+        self.assertEqual(len(projection(rows)[0].snapshot()['games']),3)
         rows=fixture();rows[1]['inventory']['kalshi']['markets'][0]['product_outcomes'][0]['predicate']='unknown';self.assertEqual(len(projection(rows)[0].snapshot()['games']),1)
         rows=fixture();rows[0]['spec']['mode']='real';self.assertEqual(projection(rows)[0].snapshot()['games'],[])
 
