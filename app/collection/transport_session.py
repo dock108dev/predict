@@ -197,7 +197,7 @@ class TransportSession:
         # Write-ahead before queueing. Queue failures retain the delivered record.
         self.counts['accepted']+=1
         before=self.journal.attempted
-        try:self.journal.save(row)
+        try:self.save_observed(row)
         except BudgetStop as exc:
             if getattr(self, 'segmented_history', False):
                 # A segment/control budget rejection precedes this row's write.
@@ -213,6 +213,14 @@ class TransportSession:
         try:self.queue.put_nowait(row)
         except asyncio.QueueFull:
             self.request_stop('queue_capacity');raise
+
+    def save_observed(self, row):
+        self.journal.save(row)
+        observer=getattr(self,'acknowledged_observer',None)
+        if observer:
+            try: observer(row)
+            except Exception as exc:
+                self.projection_error=type(exc).__name__
 
     def set_health(self, source, value):
         if self.persistence_error:return
@@ -232,6 +240,8 @@ class TransportSession:
         return ObservationJournal(self.output/(self.sid+'.jsonl'),**options)
 
     async def start(self):
+        if self.spec.get('native_sources') and self.spec['mode']=='real' and not getattr(self,'native_authorized',False):
+            raise ValueError('B3 requires approved bounded qualification')
         result=preflight(self.spec, supervised_live=True) if getattr(self,'supervised_live',False) else preflight(self.spec)
         if not result['valid']:raise ValueError(packed(result['errors']))
         if datetime.now(timezone.utc)<time_value(self.spec['start_after']):raise ValueError('before explicit start window')
@@ -249,12 +259,18 @@ class TransportSession:
             self.reference=OddsHTTP(self.endpoints['reference'],self.spec['sources']['the_odds_api']['event_id'],HTTPPolicy(**p),ref_sink,**key_options)
         if self.spec['mode']=='real' and self.credentials is None:
             from .venue_access import load_credentials
-            self.credentials=load_credentials()
+            if self.spec.get('native_sources'):
+                self.credentials={};self.source_access_errors={}
+                for v,c in self.spec['native_sources'].items():
+                    if c['state']=='enabled' and v in ('kalshi','polymarket_us'):
+                        try:self.credentials.update(load_credentials([v]))
+                        except Exception:self.source_access_errors[v]='dedicated credential unavailable'
+            else:self.credentials=load_credentials()
         if getattr(self,'supervised_live',False):
             from .supervised_live import validate_live
             validate_live(self.spec,self.endpoints,self.credentials,require_credentials=True)
         self.producers={v:PredictionProducer(v,self.spec,self.endpoints[v]['rest'],self.endpoints[v]['ws'],self.emit,self.set_health,
-                        credential=(self.credentials or {}).get(v),budget=self.budgets.get(v)) for v in ('kalshi','polymarket_us')}
+                        credential=(self.credentials or {}).get(v),budget=self.budgets.get(v)) for v in ('kalshi','polymarket_us') if not self.spec.get('native_sources') or (self.spec['native_sources'][v]['state']=='enabled' and v not in getattr(self,'source_access_errors',{}))}
         self.output.mkdir(parents=True,exist_ok=True)
         try:
             self.journal=self.open_journal()
@@ -377,7 +393,7 @@ class TransportSession:
             if getattr(self,'profile',None) and self.journal:
                 self.journal.history.finalizing=True
             try:
-                if not self.persistence_error:self.journal.save(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
+                if not self.persistence_error:self.save_observed(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
                     delivered=self.delivered,persisted=self.persisted,ingress_accounting=dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged']),health=self.health,accounting=self.reference.budget.snapshot() if self.reference else None,
                     cleanup_errors=list(self.cleanup_errors),prediction_accounting={v:dict(requests=p.budget.requests,connections=p.budget.connections,
                         dollars_reserved=str(p.budget.dollars),body_bytes_charged=p.budget.bytes) for v,p in self.producers.items()},economics=None))

@@ -18,6 +18,7 @@ class NativeVerifier:
     """One stream group's native state; no retained observation list."""
     def __init__(self, first, profile_name=None):
         self.profile_name=profile_name
+        self.native_product=bool(first.get('spec',{}).get('native_sources'))
         self.engines = {}; self.markets = {}; self.last = {}
         self.counts = {'kalshi': 0, 'polymarket_us': 0}; self.gaps = []
         if profile_name:
@@ -67,6 +68,9 @@ class NativeVerifier:
             book=last[venue]
             # Native parsers sample wall time after recv; that exact saved clock is replay input.
             book=replace(book,raw=replace(book.raw,received_at=datetime.fromisoformat(expected['raw']['received_at'])),receipt_freshness=ReceiptFreshness.RECENT)
+            if self.native_product:
+                from .native_semantics import purchase_book
+                book=purchase_book(book)
             if dump(book)!=expected:raise ValueError('native book replay mismatch: '+venue)
             counts[venue]+=1
             # Verify derived quote packets too, using the existing converter.

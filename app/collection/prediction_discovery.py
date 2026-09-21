@@ -20,16 +20,16 @@ def participant_mapping(event):
         value=p.resolution.canonical_id
         if value is None and isinstance(p.name,str) and ' ' in p.name:
             abbreviation,nickname=p.name.split(' ',1)
-            a=registry.resolve('team',abbreviation,league='NFL');b=registry.resolve('team',nickname,league='NFL')
+            a=registry.resolve('team',abbreviation,league=normalized.league.canonical_id);b=registry.resolve('team',nickname,league=normalized.league.canonical_id)
             if a.status==b.status=='resolved' and a.canonical_id==b.canonical_id:value=a.canonical_id
         mapping[p.name]=value
     return normalized,mapping
 
 
-def validate_pregame(event, market=None):
+def validate_pregame(event, market=None, *, as_of=None):
     from datetime import datetime,timezone
     from .run_spec import time_value
-    if event.scheduled_start is None or event.scheduled_start<=datetime.now(timezone.utc):
+    if event.scheduled_start is None or event.scheduled_start<=(as_of or datetime.now(timezone.utc)):
         raise ValueError('kickoff or unknown schedule')
     if event.raw.ref.venue.value=='polymarket_us':
         rows=[r for r in event.raw.decode().get('events',[]) if str(r.get('id'))==event.raw.ref.event_id]

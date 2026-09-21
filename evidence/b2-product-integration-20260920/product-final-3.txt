@@ -1,0 +1,8 @@
+......../Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+.
+----------------------------------------------------------------------
+Ran 9 tests in 1.244s
+
+OK

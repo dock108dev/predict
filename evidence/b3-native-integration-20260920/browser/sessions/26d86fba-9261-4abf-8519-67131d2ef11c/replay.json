@@ -1,0 +1,30 @@
+{
+  "kalshi-1": {
+    "exact_native_books": {
+      "kalshi": 25,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "bac5f684d539c8acda3eb4509ce16e4d043e76b7ca590dcf92ff71f88be21606",
+    "state": "complete"
+  },
+  "polymarket_us-1": {
+    "exact_native_books": {
+      "kalshi": 0,
+      "polymarket_us": 25
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "bac5f684d539c8acda3eb4509ce16e4d043e76b7ca590dcf92ff71f88be21606",
+    "state": "complete"
+  },
+  "native_rest": {
+    "exact_native_rest_books": {
+      "novig": 3,
+      "prophetx": 0
+    },
+    "price_quantity_packets_verified": true,
+    "limitations": "Source-time, stream handoff, fee applicability and settlement are not qualified by replay"
+  }
+}

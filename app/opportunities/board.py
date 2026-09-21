@@ -35,7 +35,8 @@ def assess(rows, cutoff, identity=None):
             if (not identity and 'If Buffalo wins the DET Lions vs BUF Bills' not in text) or 'within 48 hours' not in text or '$0.50' not in text: raise ValueError('unrecognized retained Kalshi terms')
             postpone='begins within 48 hours of original start; otherwise venue fair price'
         else:
-            m=next(m for e in native['events'] if str(e['id'])==(identity['sources'][venue]['event_id'] if identity else '101466') for m in e['markets'] if str(m['id'])==(identity['sources'][venue]['market_id'] if identity else '657964'))
+            candidates=native.get('markets',[])+[m for e in native.get('events',[]) if str(e['id'])==(identity['sources'][venue]['event_id'] if identity else '101466') for m in e['markets']]
+            m=next(m for m in candidates if str(m['id'])==(identity['sources'][venue]['market_id'] if identity else '657964'))
             text=m['description'];coefficient=str(m.get('feeCoefficient'))
             if (not identity and 'Detroit Lions vs Buffalo Bills' not in text) or 'rescheduled to a date within two days' not in text or '$0.50' not in text:raise ValueError('unrecognized retained US terms')
             postpone='rescheduled date within two days; otherwise last fair market price'
@@ -55,7 +56,7 @@ def contracts(point, identity=None):
         b=card['book'];v=card['venue']
         for key,side in sides.items():
             if not key.startswith(v+':'):continue
-            native=key.split(':')[1];o=None if b is None else next(o for o in b['outcomes'] if o['side']==native)
+            native=side.get('native_id',key.split(':')[1]);o=None if b is None else next(o for o in b['outcomes'] if o['side']==native)
             levels=None;transform='native ask only'
             if o is not None and o['quote']['ask'] is not None:
                 ladder=o['depth']['asks']
@@ -76,7 +77,7 @@ def contracts(point, identity=None):
                 if b['source_progress'] not in ('advanced','unchanged','initial','first','repeated'):warnings.append('Source-time progress: '+b['source_progress'])
             if not levels:warnings.append('No supported purchasable ask')
             result[key]=dict(id=key,venue=v,label=card['label'],side=native,team=side['participant'],
-                contract=((side['participant']+' does not win (NO)' if identity else 'Buffalo does not win (NO)') if key=='kalshi:no' else side['participant']+' '+('YES' if v=='kalshi' else side.get('native_label', 'Long' if native=='1315440' else 'Short'))),
+                contract=((side['participant']+' does not win (NO)' if identity else 'Buffalo does not win (NO)') if side.get('predicate')=='not_win' else side['participant']+' '+('YES' if v=='kalshi' else '' if side.get('native_label')==side['participant'] else side.get('native_label', 'Long' if native=='1315440' else 'Short'))),
                 ask=None if not o else o['quote']['ask'],top_size=None if not o else o['quote']['ask_size'],
                 visible_size=None if levels is None else textnum(sum((Decimal(l['quantity']) for l in levels),Decimal(0))),
                 levels=levels,transformation=transform,warnings=warnings,age_seconds=card['age_seconds'],connection=card['connection'],
@@ -92,7 +93,12 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
     except ValueError as exc:result['reasons'].append(str(exc));return result
     result['fills']=fills;result['notional']=textnum(sum((Decimal(f['price'])*Decimal(f['quantity']) for f in fills),Decimal(0)))
     v=contract['venue'];p=assessment['profiles'].get(v)
-    if p is None:result['reasons'].append('Listing terms missing at cutoff');return result
+    if p is None:
+        if v in ('novig','prophetx'):
+            from app.collection.native_semantics import SEMANTICS
+            result['reasons'] += [SEMANTICS[v]['fees'],SEMANTICS[v]['settlement']]
+        else:result['reasons'].append('Unsupported source fee/settlement handler' if v not in ('kalshi','polymarket_us') else 'Listing terms missing at cutoff')
+        return result
     side=sides[contract['id']]
     pays={s:payout(side,s,p) for s in [*('winner:'+t for t in teams),*SCENARIOS]}
     outcomes={s:x['value'] for s,x in pays.items() if x['kind']=='fraction'}
@@ -105,9 +111,11 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
             c.update(series_id='KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',balance_precision='0.0001' if scenario=='direct' else '0.01',
                 kalshi_metadata=dict(source='Explicit what-if: retained series type, multiplier 1; no event override',series_id='KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',event_history_complete=False,
                     series_changes=[dict(scheduled_ts=at,fee_type='quadratic_with_maker_fees',fee_multiplier='1')],event_changes=[]))
-    else:
+    elif v=='polymarket_us':
         if assessment['pmus_coefficient']!='0.06':result['reasons'].append('Retained coefficient not supported by pinned schedule');return result
         c.update(schedule_version='pmus-2026-07-01',applicability_evidence=assessment['sources'][v],assume_no_settlement_fee=scenario!='unknown',taker_rebate_rate='0')
+    else:
+        result['reasons'].append('Unsupported source fee handler');return result
     audit=calculate(c);result['fee_audit']=audit
     result['cash']=audit['entry_cash_requirement'];result['fee']=None if result['cash'] is None else textnum(Decimal(result['cash'])-Decimal(result['notional']))
     result['cashflows']={s:audit['outcomes'].get(s) for s in pays}
@@ -118,7 +126,7 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
 
 def expected(leg, probability, quantity, identity=None):
     teams=identity['teams'] if identity else TEAMS
-    win='winner:'+(next(t for t in teams if t!=leg['team']) if leg['id']=='kalshi:no' else leg['team'])
+    win='winner:'+(next(t for t in teams if t!=leg['team']) if (identity['sides'][leg['id']]['predicate']=='not_win' if identity else leg['id']=='kalshi:no') else leg['team'])
     lose=next('winner:'+t for t in teams if 'winner:'+t!=win)
     flows=leg['cashflows'];a=flows.get(win);b=flows.get(lose)
     result=dict(probability=textnum(probability),probability_source='User-entered normal-settlement assumption; no independent fair-value estimate',
@@ -145,7 +153,15 @@ def evaluate(point, rows, quantity='100', scenario='cent', probability=None, sel
         if p is not None and not 0<=p<=1:raise ValueError('Probability must be from 0 to 1')
         if scenario not in ('unknown','cent','direct'):raise ValueError('Unknown fee scenario')
         if selected not in sides:raise ValueError('Unknown selected contract')
-        assessment=assess(rows,point['at'],identity);cs=contracts(point,identity)
+        if identity and identity.get('product_identity'):
+            assessment=dict(assessed_at=point['at'],observation_cutoff=point['at'],profiles={},sources={},pmus_coefficient=None,note='Retained product metadata; unsupported rules remain unavailable')
+            for row in rows:
+                try: partial=assess([row],point['at'],identity)
+                except (ValueError,KeyError,StopIteration): continue
+                assessment['profiles'].update(partial['profiles']);assessment['sources'].update(partial['sources'])
+                if partial['pmus_coefficient'] is not None: assessment['pmus_coefficient']=partial['pmus_coefficient']
+        else: assessment=assess(rows,point['at'],identity)
+        cs=contracts(point,identity)
         legs={k:leg_value(c,assessment,point['at'],q,scenario,identity) for k,c in cs.items()}
         candidates=[]
         for cid,title,keys in candidate_defs:

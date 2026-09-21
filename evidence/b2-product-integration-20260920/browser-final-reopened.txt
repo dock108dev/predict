@@ -1,0 +1,64 @@
+- main:
+  - link "PREDICT / PERSONAL BETA":
+    - /url: /
+    - text: PREDICT
+    - generic: / PERSONAL BETA
+  - generic: synthetic · frozen retained cutoff
+  - paragraph: SAVED GAME
+  - heading "Detroit vs Buffalo · moneyline · full_game" [level=1]
+  - link "← Back to dashboard":
+    - /url: /
+  - paragraph: Captured cutoff · 2026-09-21T03:18:22.948999+00:00
+  - generic "Details · saved observation"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:10:54.195659+00:00"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:14:00.132088+00:00"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:18:10.574280+00:00" [selected]
+  - option "1 / 1 · 2026-09-21T03:18:22.948999+00:00 · Durable cutoff" [selected]
+  - navigation "Views":
+    - button "Arb candidates" [pressed]
+    - button "What-if EV"
+  - text: Quantity (contracts per leg)
+  - spinbutton "Quantity (contracts per leg)": "100"
+  - text: Fee assumptions
+  - combobox "Fee assumptions":
+    - option "Cent balance" [selected]
+    - option "0.0001 balance"
+    - option "Unresolved fees"
+  - button "Update"
+  - generic "Details · fee basis"
+  - status
+  - paragraph: Conditional net · normal winners and modeled fees. Exceptional settlement and account fees unresolved.
+  - article:
+    - heading "Cross-venue pair" [level=3]
+    - generic: Unavailable
+    - text: Kalshi
+    - strong: Detroit Lions YES
+    - paragraph: Buy $0.5000
+    - text: Polymarket US
+    - strong: Buffalo Bills Short
+    - paragraph: Buy Unavailable
+    - generic: Net $
+    - strong: Unavailable
+    - generic: Size per leg
+    - strong: 0 · depth limited
+    - paragraph: "Source-time progress: missing · Listing terms missing at cutoff · Purchase ask unsupported"
+    - button "What-if EV →"
+    - generic "Details"
+  - article:
+    - heading "Cross-venue pair" [level=3]
+    - generic: Unavailable
+    - text: Kalshi
+    - strong: Detroit Lions does not win (NO)
+    - paragraph: Buy $0.6000
+    - text: Polymarket US
+    - strong: Detroit Lions Long
+    - paragraph: Buy $0.5000
+    - generic: Net $
+    - strong: Unavailable
+    - generic: Size per leg
+    - strong: "100"
+    - paragraph: "Source-time progress: missing · Listing terms missing at cutoff"
+    - button "What-if EV →"
+    - generic "Details"
+  - generic "Details · provenance"
+  - paragraph: Read-only personal beta · USD per $1 payout contract · Frozen observation drilldown

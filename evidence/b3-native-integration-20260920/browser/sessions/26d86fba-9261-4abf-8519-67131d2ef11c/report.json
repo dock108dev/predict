@@ -1,0 +1,4560 @@
+{
+  "session": "26d86fba-9261-4abf-8519-67131d2ef11c",
+  "state": "stopped",
+  "reason": "manual_stop",
+  "cleanup_complete": true,
+  "health": {
+    "kalshi": "disconnected",
+    "polymarket_us": "disconnected",
+    "novig": "connected",
+    "prophetx": "unselected"
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applied_generation": 1,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 4,
+      "connection_attempts": 1,
+      "body_bytes_charged": 4914,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "k0": {
+          "received_at": "2026-09-21 03:56:24.549085+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applied_generation": 1,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 2,
+      "connection_attempts": 1,
+      "body_bytes_charged": 7363,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "p0": {
+          "received_at": "2026-09-21 03:56:24.547202+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "novig": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "bounded",
+      "market_completeness": "bounded",
+      "state": "connected",
+      "reason": null,
+      "requests": 15,
+      "body_bytes_charged": 2798,
+      "connection_attempts": 0,
+      "update_path": "dated REST snapshot",
+      "usable": 0,
+      "receiving": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "semantics": {
+        "price": "1 minus opposite outcome bid",
+        "quantity": "CASH payout cents / 100 = contracts",
+        "fees": "Novig schedule; applicability/account terms unverified",
+        "settlement": "listing-specific contract association unverified"
+      }
+    },
+    "prophetx": {
+      "discovered_events": 0,
+      "discovered_markets": 0,
+      "generation": 1,
+      "eligible": 0,
+      "selected": 0,
+      "event_discovery": "unselected",
+      "market_completeness": "unestablished",
+      "state": "unselected",
+      "reason": null,
+      "requests": 0,
+      "body_bytes_charged": 0,
+      "connection_attempts": 0,
+      "update_path": "dated REST snapshot",
+      "usable": 0,
+      "receiving": 0,
+      "requested": 0,
+      "acknowledged": 0,
+      "semantics": {
+        "price": "American odds converted to payout probability",
+        "quantity": "unknown; neither quantity nor value used for sizing",
+        "fees": "ProphetX applicability unverified",
+        "settlement": "listing-specific terms unverified"
+      }
+    }
+  },
+  "resources": {
+    "peak_rss_bytes": 73449472,
+    "peak_queue_records": 8,
+    "peak_queue_bytes": 48469,
+    "ingress_bytes": 223199,
+    "journal_bytes": 259176,
+    "elapsed_seconds": 25.42109224999149
+  },
+  "inventory": {
+    "kalshi": {
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "events": [
+        {
+          "id": "k",
+          "title": "Detroit vs Buffalo",
+          "scheduled_start": "2026-09-24T03:55:46.306365+00:00",
+          "native_aliases": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "terms_references": {},
+          "participants": {
+            "Detroit": "NFL:DET",
+            "Buffalo": "NFL:BUF"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-09-24T03:55:46.306365+00:00",
+            [
+              "NFL:BUF",
+              "NFL:DET"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": null,
+            "closed": null,
+            "live": null,
+            "ended": null,
+            "period": null
+          },
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 1,
+              "path": "/trade-api/v2/events",
+              "params": {
+                "series_ticker": "KXNFLGAME",
+                "status": "open",
+                "with_milestones": "true",
+                "limit": 200,
+                "cursor": ""
+              },
+              "received_at": "2026-09-21T03:55:59.987637+00:00",
+              "body_sha256": "e6466ca9898acc00fe459b3dbd61a7570934a5b1d414596083156151fdebd0eb"
+            }
+          ],
+          "conflicting_duplicate": false,
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "k0"
+          ],
+          "matching_status": "matched",
+          "counterpart_event_ids": [
+            "p",
+            "n-event"
+          ],
+          "native_metadata": {
+            "event_ticker": "k",
+            "series_ticker": "KXNFLGAME",
+            "title": "Detroit vs Buffalo"
+          }
+        }
+      ],
+      "markets": [
+        {
+          "id": "k0",
+          "event_id": "k",
+          "native_slug": null,
+          "title": "Detroit wins",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {},
+          "sides": [
+            {
+              "id": "yes",
+              "label": "Detroit",
+              "role": "yes",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            },
+            {
+              "id": "no",
+              "label": "Not Detroit",
+              "role": "no",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            }
+          ],
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 2,
+              "path": "/trade-api/v2/markets",
+              "params": {
+                "event_ticker": "k",
+                "limit": 200,
+                "cursor": ""
+              },
+              "received_at": "2026-09-21T03:55:59.998065+00:00",
+              "body_sha256": "a47c2f41af207f76efa280a8bc3d1e4af761b1e91187df17cc8b45cfaf44fbf2"
+            }
+          ],
+          "conflicting_duplicate": false,
+          "matching_status": "matched",
+          "counterpart_market_ids": [
+            "n-market",
+            "p0"
+          ],
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "native_metadata": {
+            "ticker": "k0",
+            "event_ticker": "k",
+            "title": "Detroit wins",
+            "yes_sub_title": "Detroit",
+            "no_sub_title": "Not Detroit",
+            "status": "active"
+          },
+          "subscription_exclusion": null
+        }
+      ],
+      "discovery": [
+        {
+          "state": "exhausted",
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "limit": 200,
+            "cursor": ""
+          },
+          "path": "/trade-api/v2/events",
+          "filters": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-21T03:55:59.987637+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "e6466ca9898acc00fe459b3dbd61a7570934a5b1d414596083156151fdebd0eb"
+            }
+          ]
+        },
+        {
+          "state": "exhausted",
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "event_ticker": "k",
+            "limit": 200,
+            "cursor": ""
+          },
+          "path": "/trade-api/v2/markets",
+          "filters": {
+            "event_ticker": "k"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-21T03:55:59.998065+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "a47c2f41af207f76efa280a8bc3d1e4af761b1e91187df17cc8b45cfaf44fbf2"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried",
+      "semantics": {
+        "price": "1 minus opposite bid",
+        "quantity": "contracts",
+        "fees": "Kalshi pinned schedule; event override and account precision required",
+        "settlement": "listing-specific; exceptional outcomes may remain unknown"
+      },
+      "environment": "production",
+      "update_path": "native stream",
+      "acquisition_scope": "KXNFLGAME catalog",
+      "counts": {
+        "events": {
+          "discovered": 1,
+          "in_scope": 1,
+          "excluded": 0,
+          "raw_occurrences": 1,
+          "duplicates": 0,
+          "matching": {
+            "matched": 1
+          },
+          "exclusions": {}
+        },
+        "markets": {
+          "discovered": 1,
+          "in_scope": 1,
+          "excluded": 0,
+          "raw_occurrences": 1,
+          "duplicates": 0,
+          "matching": {
+            "matched": 1
+          },
+          "exclusions": {}
+        },
+        "sides": {
+          "supported": 2,
+          "unsupported": 0,
+          "unknown": 0,
+          "total": 2
+        },
+        "in_scope_sides": {
+          "supported": 2
+        },
+        "events_without_retained_markets": 0,
+        "market_discovery": {
+          "exhausted": 1
+        }
+      },
+      "selection": {
+        "ids": [
+          "k0"
+        ],
+        "eligible": 1
+      }
+    },
+    "polymarket_us": {
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "events": [
+        {
+          "id": "p",
+          "title": "fixture",
+          "scheduled_start": "2026-09-24T03:55:46.306365+00:00",
+          "native_aliases": {},
+          "terms_references": {},
+          "participants": {
+            "Detroit Lions": "NFL:DET",
+            "Buffalo Bills": "NFL:BUF"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-09-24T03:55:46.306365+00:00",
+            [
+              "NFL:BUF",
+              "NFL:DET"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": null,
+            "closed": null,
+            "live": null,
+            "ended": null,
+            "period": "NS"
+          },
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 1,
+              "path": "/v1/events",
+              "params": {
+                "tagSlug": "nfl",
+                "active": "true",
+                "closed": "false",
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "limit": 5,
+                "offset": 0
+              },
+              "received_at": "2026-09-21T03:55:59.984357+00:00",
+              "body_sha256": "fe902f31e0b6d3e335e14e239f6f88a319b1c67b2ece448937713a7dd0931435"
+            }
+          ],
+          "conflicting_duplicate": false,
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "p0"
+          ],
+          "matching_status": "matched",
+          "counterpart_event_ids": [
+            "k",
+            "n-event"
+          ],
+          "native_metadata": {
+            "id": "p",
+            "title": "fixture",
+            "startTime": "2026-09-24T03:55:46.306365+00:00",
+            "teams": [
+              {
+                "name": "Detroit Lions",
+                "league": "nfl"
+              },
+              {
+                "name": "Buffalo Bills",
+                "league": "nfl"
+              }
+            ],
+            "period": "NS",
+            "markets": [
+              {
+                "id": "p0",
+                "question": "Winner",
+                "marketType": "moneyline",
+                "sportsMarketType": "football_team_full_game_winner",
+                "status": "OPEN",
+                "gameStartTime": "2026-09-24T03:55:46.306365+00:00",
+                "marketSides": [
+                  {
+                    "id": "p0L",
+                    "long": true,
+                    "description": "Detroit",
+                    "marketId": "p0",
+                    "team": {
+                      "name": "Detroit Lions"
+                    }
+                  },
+                  {
+                    "id": "p0S",
+                    "long": false,
+                    "description": "Buffalo",
+                    "marketId": "p0",
+                    "team": {
+                      "name": "Buffalo Bills"
+                    }
+                  }
+                ],
+                "slug": "p0",
+                "description": "Synthetic fixture full-game winner terms"
+              }
+            ],
+            "gameId": 1
+          }
+        }
+      ],
+      "markets": [
+        {
+          "id": "p0",
+          "event_id": "p",
+          "native_slug": "p0",
+          "title": "Winner",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "description": "Synthetic fixture full-game winner terms"
+          },
+          "sides": [
+            {
+              "id": "p0L",
+              "label": "Detroit",
+              "role": "Long",
+              "purchase_support": "supported",
+              "basis": "native Long offers in existing adapter"
+            },
+            {
+              "id": "p0S",
+              "label": "Buffalo",
+              "role": "Short",
+              "purchase_support": "supported",
+              "basis": "1 minus native Long bid; same contract quantity; B3 conversion"
+            }
+          ],
+          "occurrences": 2,
+          "provenance": [
+            {
+              "inventory_row": 2,
+              "path": "/v1/events",
+              "params": {
+                "tagSlug": "nfl",
+                "active": "true",
+                "closed": "false",
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "limit": 5,
+                "offset": 0
+              },
+              "received_at": "2026-09-21T03:55:59.984357+00:00",
+              "body_sha256": "fe902f31e0b6d3e335e14e239f6f88a319b1c67b2ece448937713a7dd0931435"
+            },
+            {
+              "inventory_row": 3,
+              "path": "/v1/markets",
+              "params": {
+                "gameId": "1",
+                "active": "true",
+                "closed": "false",
+                "limit": 5,
+                "offset": 0
+              },
+              "received_at": "2026-09-21T03:55:59.986231+00:00",
+              "body_sha256": "65b2d57286cb1d57bac275a1376967b1b3288dc77e3bb3e99af9153ea1808d75"
+            }
+          ],
+          "conflicting_duplicate": false,
+          "subscription_evidence_exclusion": null,
+          "subscription_evidence_basis": "native ID, unique slug, resolved event and side teams, explicit roles, native terms; completeness independent",
+          "matching_status": "matched",
+          "counterpart_market_ids": [
+            "k0",
+            "n-market"
+          ],
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "native_metadata": {
+            "id": "p0",
+            "question": "Winner",
+            "marketType": "moneyline",
+            "sportsMarketType": "football_team_full_game_winner",
+            "status": "OPEN",
+            "gameStartTime": "2026-09-24T03:55:46.306365+00:00",
+            "marketSides": [
+              {
+                "id": "p0L",
+                "long": true,
+                "description": "Detroit",
+                "marketId": "p0",
+                "team": {
+                  "name": "Detroit Lions"
+                }
+              },
+              {
+                "id": "p0S",
+                "long": false,
+                "description": "Buffalo",
+                "marketId": "p0",
+                "team": {
+                  "name": "Buffalo Bills"
+                }
+              }
+            ],
+            "slug": "p0",
+            "description": "Synthetic fixture full-game winner terms"
+          },
+          "subscription_exclusion": null
+        }
+      ],
+      "discovery": [
+        {
+          "state": "exhausted",
+          "reason": "short offset page (adapter stopping rule)",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "tagSlug": "nfl",
+            "active": "true",
+            "closed": "false",
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "limit": 5,
+            "offset": 0
+          },
+          "path": "/v1/events",
+          "filters": {
+            "active": "true",
+            "closed": "false",
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "tagSlug": "nfl"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-21T03:55:59.984357+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "fe902f31e0b6d3e335e14e239f6f88a319b1c67b2ece448937713a7dd0931435"
+            }
+          ]
+        },
+        {
+          "state": "exhausted",
+          "reason": "short offset page (adapter stopping rule)",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "gameId": "1",
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0
+          },
+          "path": "/v1/markets",
+          "filters": {
+            "active": "true",
+            "closed": "false",
+            "gameId": "1"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-21T03:55:59.986231+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "65b2d57286cb1d57bac275a1376967b1b3288dc77e3bb3e99af9153ea1808d75"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried",
+      "semantics": {
+        "price": "Long offers; Short = 1 minus Long bid",
+        "quantity": "contracts",
+        "fees": "US pinned schedule and retained coefficient",
+        "settlement": "US listing-specific; settlement charge unknown unless explicitly assumed"
+      },
+      "environment": "production",
+      "update_path": "native stream",
+      "acquisition_scope": "NFL catalog; all returned families retained",
+      "counts": {
+        "events": {
+          "discovered": 1,
+          "in_scope": 1,
+          "excluded": 0,
+          "raw_occurrences": 1,
+          "duplicates": 0,
+          "matching": {
+            "matched": 1
+          },
+          "exclusions": {}
+        },
+        "markets": {
+          "discovered": 1,
+          "in_scope": 1,
+          "excluded": 0,
+          "raw_occurrences": 2,
+          "duplicates": 1,
+          "matching": {
+            "matched": 1
+          },
+          "exclusions": {}
+        },
+        "sides": {
+          "supported": 2,
+          "unsupported": 0,
+          "unknown": 0,
+          "total": 2
+        },
+        "in_scope_sides": {
+          "supported": 2
+        },
+        "events_without_retained_markets": 0,
+        "market_discovery": {
+          "exhausted": 1
+        }
+      },
+      "selection": {
+        "ids": [
+          "p0"
+        ],
+        "eligible": 1
+      }
+    },
+    "novig": {
+      "state": "enabled",
+      "events": [
+        {
+          "id": "n-event",
+          "title": "Detroit Lions vs Buffalo Bills",
+          "scheduled_start": "2026-09-24T03:55:46.306365+00:00",
+          "participants": {
+            "Buffalo Bills": "NFL:BUF",
+            "Detroit Lions": "NFL:DET"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-09-24T03:55:46.306365+00:00",
+            [
+              "NFL:BUF",
+              "NFL:DET"
+            ]
+          ],
+          "exclusion": null,
+          "sport": "american_football",
+          "competition": "NFL",
+          "native_event": [
+            {
+              "id": "n-event",
+              "description": "Detroit Lions vs Buffalo Bills",
+              "league": "NFL",
+              "status": "OPEN_PREGAME",
+              "scheduledStart": "2026-09-24T03:55:46.306365+00:00"
+            }
+          ],
+          "provenance": {
+            "source": "https://api-qa.novig.us/nbx/v2/emm/events?league=NFL&type=Game&status=OPEN_PREGAME&limit=5&offset=0",
+            "received_at": "2026-09-21T03:55:59.967943+00:00",
+            "sha256": "9a85bc742db3f6e8b20f0ca70903952dffda44cddbc7e75546dac11964c97a1d"
+          },
+          "matching_status": "matched",
+          "counterpart_event_ids": [
+            "k",
+            "p"
+          ]
+        }
+      ],
+      "markets": [
+        {
+          "id": "n-market",
+          "event_id": "n-event",
+          "title": "Synthetic away at home",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "product_outcomes": [
+            {
+              "native_id": "home",
+              "participant": "Buffalo Bills",
+              "predicate": "win",
+              "native_label": "Buffalo Bills"
+            },
+            {
+              "native_id": "away",
+              "participant": "Detroit Lions",
+              "predicate": "win",
+              "native_label": "Detroit Lions"
+            }
+          ],
+          "terms": {},
+          "native_metadata": [
+            {
+              "id": "n-market",
+              "eventId": "n-event",
+              "description": "Synthetic away at home",
+              "type": "MONEY",
+              "status": "OPEN",
+              "outcomeIds": [
+                "home",
+                "away"
+              ],
+              "outcomes": [
+                {
+                  "id": "home",
+                  "description": "Buffalo Bills"
+                },
+                {
+                  "id": "away",
+                  "description": "Detroit Lions"
+                }
+              ]
+            }
+          ],
+          "provenance": {
+            "source": "https://api-qa.novig.us/nbx/v2/emm/events/getMarketsByEvent/n-event?currency=CASH",
+            "received_at": "2026-09-21T03:55:59.968958+00:00",
+            "sha256": "f7e9240bf83df1797b0f89a0936633718799a91d32bad68741e41f6d88fd5c92"
+          },
+          "sides": [
+            {
+              "id": "home",
+              "label": "Buffalo Bills",
+              "purchase_support": "supported"
+            },
+            {
+              "id": "away",
+              "label": "Detroit Lions",
+              "purchase_support": "supported"
+            }
+          ],
+          "matching_status": "matched",
+          "counterpart_market_ids": [
+            "k0",
+            "p0"
+          ],
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+        }
+      ],
+      "selection": {
+        "ids": [
+          "n-market"
+        ],
+        "eligible": 1
+      },
+      "event_discovery": "bounded",
+      "market_completeness": "bounded",
+      "source_error": null,
+      "limitations": [
+        "Novig schedule; applicability/account terms unverified",
+        "listing-specific contract association unverified"
+      ],
+      "semantics": {
+        "price": "1 minus opposite outcome bid",
+        "quantity": "CASH payout cents / 100 = contracts",
+        "fees": "Novig schedule; applicability/account terms unverified",
+        "settlement": "listing-specific contract association unverified"
+      },
+      "environment": "qa",
+      "update_path": "dated REST snapshot"
+    },
+    "prophetx": {
+      "state": "unselected",
+      "events": [],
+      "markets": [],
+      "selection": {
+        "ids": [],
+        "eligible": 0
+      },
+      "event_discovery": "unselected",
+      "market_completeness": "unestablished",
+      "source_error": null,
+      "limitations": []
+    }
+  },
+  "discovery": {
+    "published_generation": 1,
+    "published_at": "2026-09-21T03:56:00.013895+00:00",
+    "age_seconds": 25.370436,
+    "refresh": {
+      "state": "completed",
+      "generation": 1,
+      "started_at": "2026-09-21T03:55:59.964979+00:00",
+      "finished_at": "2026-09-21T03:56:00.013895+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 4,
+        "durably_retained": 4,
+        "attempted_requests": 4
+      },
+      "polymarket_us": {
+        "received": 2,
+        "durably_retained": 2,
+        "attempted_requests": 2
+      },
+      "novig": {
+        "received": 0,
+        "durably_retained": 0,
+        "attempted_requests": 15
+      },
+      "prophetx": {
+        "received": 0,
+        "durably_retained": 0,
+        "attempted_requests": 0
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {},
+      "novig": {},
+      "prophetx": {}
+    }
+  },
+  "snapshots": [
+    {
+      "at": "2026-09-21T03:56:00.968456+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1049394,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:00.338851+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050059,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:00.336706+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 68681728,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 32805,
+        "journal_bytes": 38347,
+        "elapsed_seconds": 1.0052004999888595
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:01.972714+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1049564,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:01.350712+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050304,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:01.345024+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 69648384,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 40210,
+        "journal_bytes": 46893,
+        "elapsed_seconds": 2.0094442919944413
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:02.979532+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1049734,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:02.364222+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050549,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:02.357880+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 70205440,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 47619,
+        "journal_bytes": 55443,
+        "elapsed_seconds": 3.016234833994531
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:03.985892+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1049904,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:03.381005+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050794,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:03.372135+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 70696960,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 55036,
+        "journal_bytes": 64001,
+        "elapsed_seconds": 4.022605334001128
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:04.992634+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050074,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:04.398861+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051039,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:04.391697+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 71729152,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 62449,
+        "journal_bytes": 72555,
+        "elapsed_seconds": 5.029364333997364
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:05.999021+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050244,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:05.406268+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051284,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:05.404051+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 71745536,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 69862,
+        "journal_bytes": 81109,
+        "elapsed_seconds": 6.035763084000791
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:07.005064+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050414,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:06.412848+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051529,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:06.409661+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72024064,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 77279,
+        "journal_bytes": 89667,
+        "elapsed_seconds": 7.041781791995163
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:08.008715+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050584,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:07.422949+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051774,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:07.417652+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72105984,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 84692,
+        "journal_bytes": 98221,
+        "elapsed_seconds": 8.045486083996366
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:09.011395+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050754,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:08.431428+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052019,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:08.429399+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72105984,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 92109,
+        "journal_bytes": 106779,
+        "elapsed_seconds": 9.048170875001233
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:10.014801+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1050925,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:09.437170+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052264,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:09.435535+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 7,
+          "body_bytes_charged": 1196,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72204288,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 99506,
+        "journal_bytes": 115317,
+        "elapsed_seconds": 10.051571208998212
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:11.018061+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051096,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:10.442862+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052509,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:10.441177+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72417280,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 113248,
+        "journal_bytes": 131341,
+        "elapsed_seconds": 11.054821375000756
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:12.021374+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051267,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:11.448587+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052754,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:11.446739+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72417280,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 120645,
+        "journal_bytes": 139879,
+        "elapsed_seconds": 12.058144499998889
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:13.024449+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051438,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:12.455117+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052999,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:12.452748+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72597504,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 128046,
+        "journal_bytes": 148421,
+        "elapsed_seconds": 13.061215124995215
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:14.028117+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051609,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:13.482227+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053244,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:13.480330+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72613888,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 135451,
+        "journal_bytes": 156967,
+        "elapsed_seconds": 14.064885333995335
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:15.031485+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051780,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:14.488129+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053489,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:14.486375+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72646656,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 142860,
+        "journal_bytes": 165517,
+        "elapsed_seconds": 15.06824795898865
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:16.034882+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1051951,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:15.493859+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053734,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:15.492289+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72646656,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 150257,
+        "journal_bytes": 174055,
+        "elapsed_seconds": 16.07163758399838
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:17.036070+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052122,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:16.499526+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053979,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:16.497884+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72646656,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 157666,
+        "journal_bytes": 182605,
+        "elapsed_seconds": 17.07283470898983
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:18.039076+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052293,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:17.504995+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1054224,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:17.503369+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72663040,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 165071,
+        "journal_bytes": 191151,
+        "elapsed_seconds": 18.075838916993234
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:19.042782+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052464,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:18.512723+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1054469,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:18.509354+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 11,
+          "body_bytes_charged": 1997,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72843264,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 172472,
+        "journal_bytes": 199693,
+        "elapsed_seconds": 19.079527249996318
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:20.045400+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052635,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:19.520480+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1054714,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:19.517382+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72843264,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 186218,
+        "journal_bytes": 215721,
+        "elapsed_seconds": 20.082161500002258
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:21.048835+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052806,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:20.527398+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1054959,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:20.525699+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72843264,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 193615,
+        "journal_bytes": 224259,
+        "elapsed_seconds": 21.08558254200034
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:22.051596+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1052977,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:21.533155+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1055204,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:21.531472+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72859648,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 201012,
+        "journal_bytes": 232797,
+        "elapsed_seconds": 22.088345833995845
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:23.054038+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053148,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:22.537558+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1055449,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:22.535882+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 72859648,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 208409,
+        "journal_bytes": 241335,
+        "elapsed_seconds": 23.090785374995903
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:24.055437+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053319,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:23.543303+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1055694,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:23.541646+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 73039872,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 215806,
+        "journal_bytes": 249873,
+        "elapsed_seconds": 24.09218854199571
+      }
+    },
+    {
+      "at": "2026-09-21T03:56:25.057330+00:00",
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 4,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1053490,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {
+            "k0": {
+              "received_at": "2026-09-21 03:56:24.549085+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "polymarket_us": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "exhausted",
+          "market_completeness": "exhausted_for_retained_events",
+          "applied_generation": 1,
+          "applied_eligible": 1,
+          "applied_selected": 1,
+          "requested": 1,
+          "acknowledged": 1,
+          "receiving": 1,
+          "usable": 1,
+          "ever": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "peak_simultaneous": {
+            "requested": 1,
+            "acknowledged": 1,
+            "receiving": 1,
+            "usable": 1
+          },
+          "requests": 2,
+          "connection_attempts": 1,
+          "body_bytes_charged": 1055939,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {
+            "p0": {
+              "received_at": "2026-09-21 03:56:24.547202+00:00",
+              "exchange_at": null,
+              "sync": "synchronized",
+              "source_time_progress": "missing"
+            }
+          }
+        },
+        "novig": {
+          "discovered_events": 1,
+          "discovered_markets": 1,
+          "generation": 1,
+          "eligible": 1,
+          "selected": 1,
+          "event_discovery": "bounded",
+          "market_completeness": "bounded",
+          "state": "connected",
+          "reason": null,
+          "requests": 15,
+          "body_bytes_charged": 2798,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 1,
+          "requested": 1,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "1 minus opposite outcome bid",
+            "quantity": "CASH payout cents / 100 = contracts",
+            "fees": "Novig schedule; applicability/account terms unverified",
+            "settlement": "listing-specific contract association unverified"
+          }
+        },
+        "prophetx": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "generation": 1,
+          "eligible": 0,
+          "selected": 0,
+          "event_discovery": "unselected",
+          "market_completeness": "unestablished",
+          "state": "unselected",
+          "reason": null,
+          "requests": 0,
+          "body_bytes_charged": 0,
+          "connection_attempts": 0,
+          "update_path": "dated REST snapshot",
+          "usable": 0,
+          "receiving": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "semantics": {
+            "price": "American odds converted to payout probability",
+            "quantity": "unknown; neither quantity nor value used for sizing",
+            "fees": "ProphetX applicability unverified",
+            "settlement": "listing-specific terms unverified"
+          }
+        }
+      },
+      "resources": {
+        "peak_rss_bytes": 73056256,
+        "peak_queue_records": 8,
+        "peak_queue_bytes": 48469,
+        "ingress_bytes": 223199,
+        "journal_bytes": 258407,
+        "elapsed_seconds": 25.094082541996613
+      }
+    }
+  ],
+  "journal_chain": "bac5f684d539c8acda3eb4509ce16e4d043e76b7ca590dcf92ff71f88be21606",
+  "journal_state": "complete",
+  "accounting": {
+    "received": 216,
+    "accepted": 216,
+    "write_attempted": 216,
+    "durably_acknowledged": 216,
+    "rejected": 0,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 216,
+    "journal_write_attempted": 217,
+    "journal_durably_acknowledged": 217,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 259176,
+    "confirmed_chain": "bac5f684d539c8acda3eb4509ce16e4d043e76b7ca590dcf92ff71f88be21606",
+    "total_upstream": null,
+    "lost": null
+  },
+  "collection_seconds": 25.399349499988602,
+  "ever_market_ids": {
+    "kalshi": {
+      "requested": [
+        "k0"
+      ],
+      "acknowledged": [
+        "k0"
+      ],
+      "receiving": [
+        "k0"
+      ],
+      "usable": [
+        "k0"
+      ]
+    },
+    "polymarket_us": {
+      "requested": [
+        "p0"
+      ],
+      "acknowledged": [
+        "p0"
+      ],
+      "receiving": [
+        "p0"
+      ],
+      "usable": [
+        "p0"
+      ]
+    },
+    "novig": {
+      "requested": [
+        "n-market"
+      ],
+      "acknowledged": [],
+      "receiving": [
+        "n-market"
+      ],
+      "usable": []
+    },
+    "prophetx": {
+      "requested": [],
+      "acknowledged": [],
+      "receiving": [],
+      "usable": []
+    }
+  },
+  "limitations": [
+    "Filtered open/active catalogs; hidden/unopened/closed universe not claimed",
+    "US gameId filtering and short-page exhaustion do not guarantee upstream atomic snapshot or all listings",
+    "US Short purchase depth unavailable",
+    "Usable means synchronized and receipt-recent, not economic or settlement qualification"
+  ]
+}

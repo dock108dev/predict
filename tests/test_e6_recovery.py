@@ -91,13 +91,23 @@ class Recovery(unittest.TestCase):
         self.assertEqual(guard.read_bytes(),before)
 
 class ReadOnlySurface(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        # Retained indexes bind a host device ID. Copy bytes to an isolated fixture
+        # and bind a new index; never rewrite historical identity or relax validation.
+        from app.dashboard.e6_recovery import CATALOG
+        self.temp=tempfile.TemporaryDirectory();self.catalog=Path(self.temp.name)/'catalog';self.catalog.mkdir()
+        for old in CATALOG.glob('*/recovery.json'):
+            report=json.loads(old.read_text());folder=self.catalog/old.parent.name;folder.mkdir()
+            source=folder/'source.jsonl';source.write_bytes(Path(report['source']['path']).read_bytes())
+            index(source,folder/'recovery.json')
+    def tearDown(self):self.temp.cleanup()
     async def test_catalog_reopen_no_activation_and_identity_error(self):
         from aiohttp.test_utils import TestClient,TestServer
         from app.dashboard.e6_recovery import Reader,load_saved,card_source,CATALOG
         from app.dashboard.e6_live import create_app
         from unittest.mock import patch
         with patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('credentials')):
-            app=create_app(owner=Reader(CATALOG),saved_loader=load_saved,assets=ROOT/'app/dashboard/e6_recovery_static',card_source=card_source())
+            app=create_app(owner=Reader(self.catalog),saved_loader=load_saved,assets=ROOT/'app/dashboard/e6_recovery_static',card_source=card_source())
             async with TestClient(TestServer(app)) as c:
                 r=await c.get('/api/status');status=await r.json()
                 self.assertFalse(status['start_available']);self.assertFalse(status['active'])
@@ -110,11 +120,14 @@ class ReadOnlySurface(unittest.IsolatedAsyncioTestCase):
     def test_offline_guarded_reopening(self):
         code="""
 from app.dashboard.e5_preview import isolate_process
-from app.dashboard.e6_recovery import CATALOG,load_saved
+from app.dashboard.e6_recovery import load_saved
+from pathlib import Path
+import sys
+CATALOG=Path(sys.argv[1])
 isolate_process()
 for p in CATALOG.glob('*/recovery.json'):
  v=load_saved(p.parent);assert not v['live'];assert v['recovery']['accounting']['crash_time'] is None
 print('all recovery indexes reopened with outbound, credential-file, database and subprocess guards active')
 """
-        r=subprocess.run([sys.executable,'-c',code],cwd=ROOT,capture_output=True,text=True,env={'PATH':'/usr/bin:/bin'},check=True)
+        r=subprocess.run([sys.executable,'-c',code,str(self.catalog)],cwd=ROOT,capture_output=True,text=True,env={'PATH':'/usr/bin:/bin'},check=True)
         self.assertIn('guards active',r.stdout)

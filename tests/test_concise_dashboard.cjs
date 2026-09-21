@@ -17,9 +17,10 @@ assert(view.reasons(visible.find(x=>x.reasons.includes('Books more than 5 second
 const source=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');
 const fields={probability:{value:'0',validity:{valid:true}},basis:{value:'explicit local test'},contract:{value:'kalshi:yes'}};
 let game='event-a',stored='{}';
-const ctx={$:id=>fields[id],session:()=>({game:{id:game}}),localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v}};
+const ctx={referenceId:null,$:id=>fields[id],session:()=>({game:{id:game}}),localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v}};
 vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function loadAssumption'),source.indexOf("$('back').onclick")),ctx);
 ctx.saveAssumption();game='event-b';ctx.loadAssumption();assert.equal(fields.probability.value,'');
 game='event-a';fields.contract.value='kalshi:no';ctx.loadAssumption();assert.equal(fields.probability.value,'');
 fields.contract.value='kalshi:yes';ctx.loadAssumption();assert.equal(fields.probability.value,'0');assert.equal(fields.basis.value,'explicit local test');
+const beforeReference=stored;ctx.referenceId='synthetic-model';fields.probability.value='0.57';fields.basis.value='model reference';ctx.saveAssumption();assert.equal(stored,beforeReference);
 console.log('PASS: 12 cross-venue / 6 internal, unavailable and negative/zero labels, event/outcome assumption isolation');

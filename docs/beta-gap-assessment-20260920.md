@@ -1,8 +1,8 @@
 # Predict — current beta gap assessment
 
-September 20, 2026. **NOT READY FOR BETA SIGNOFF.** Reviewed current local source, retained reports and public provider documentation. No runtime test, live collection, account/credential access or owner demo was performed.
+Updated September 21, 2026. **NOT READY FOR BETA SIGNOFF.** Reconciled B2 implementation and current B3 offline/native-fixture evidence. No B3 authenticated access or external market collection occurred.
 
-**B1 COMPLETE:** [coverage matrix](b1-coverage-matrix.md) and [B2 implementation handoff](b2-product-integration-handoff.md) delivered. **B2 NEXT; not implemented.**
+**B1 COMPLETE:** [coverage matrix](b1-coverage-matrix.md) and [B2 implementation handoff](b2-product-integration-handoff.md) delivered. **B2 COMPLETE, fixture-backed. B3 IN PROGRESS; production qualification blocked.**
 
 ## Confirmed target
 
@@ -12,28 +12,25 @@ At least four prediction venues: **Kalshi, Novig, Polymarket US, plus one to sel
 
 | Beta area | What exists | What remains |
 |---|---|---|
-| Kalshi | Bounded production discovery/books/stream evidence; qualified offline diagnostic | Broader sports/markets, practical sustained coverage and integrated dashboard flow |
-| Polymarket US | Bounded production discovery/streaming evidence | Coverage completeness unknown; Short purchase depth unsupported in current normalized path; broader sport/market and product integration |
-| Novig | Offline-tested adapter, book/lifecycle/recovery logic | Recorded handoff lacks provisioned QA/production access and real wire confirmation; product integration |
-| Fourth venue | ProphetX sandbox REST prices and authenticated transport/recovery are partially implemented | ProphetX recommended, owner selection pending. Quantity/value units, actual selection-update delivery and production remain unqualified |
+| Kalshi | Bounded production discovery/books/stream evidence; qualified offline diagnostic | Fresh B3 production overlap; broader sports/markets and practical sustained coverage |
+| Polymarket US | Bounded production discovery/streaming evidence | Coverage completeness unknown; B3 Short conversion verified offline; no fresh Short qualification; broader sport/market qualification |
+| Novig | Native adapter integrated into shared runtime, history and ordinary fixture comparisons | Provisioned QA/production access, real wire confirmation and native listing-period association |
+| Fourth venue | Provisional shared REST producer and retained sandbox price replay; fourth slot remains unselected | ProphetX recommended, owner selection pending. Quantity/value units, actual selection-update delivery and production remain unqualified |
 | Independent model reference | Generic reference records/research scaffolding | B4 assess FPI/BPI independence and outputs, MoneyPuck NHL probabilities, FanGraphs MLB futures and KenPom access; MLB game forecasts and other unsupported cells stay open |
 | Free delayed Pinnacle | The Odds API documents a free tier and website-sourced, possibly delayed Pinnacle; not integrated | B4 verify free entitlement, actual populated cells, delay/time semantics and quota fit; retain provenance and integrate |
 | Sports | NFL-centered observed pipeline; NFL/MLB identity registry work | NBA/NHL/NCAAF/NCAAB identities and real feeds; MLB product/data qualification; six-sport acceptance evidence |
 | Market families | Predominantly NFL pregame full-game winner flow | Spreads/totals, exact half/period definitions, futures identity and settlement; corresponding cross-venue matching and math |
 | Opportunity product | Saved multi-game views, sorting/filtering/detail, what-if EV, historical page research; 18 Arb rows/96 EV scenarios independently reconciled | Four-venue current comparisons, model/Pinnacle inputs and broader market UI in one ordinary product |
-| Collection/history | Segmented journals, exact replay and finite refresh/Stop/resource controls | Shared collector-to-comparison integration, representative useful session duration/recovery, broader retention, result/settlement linkage |
+| Collection/history | Segmented journals, exact replay and finite refresh/Stop/resource controls | B2 shared collector-to-comparison integration complete; representative useful real session duration/recovery, broader retention, result/settlement linkage |
 | Beta acceptance | Several bounded component successes | Complete agreed scope and integrated evidence, then owner review; no beta signoff recorded |
 
 The independent model source and Pinnacle are two distinct requirements. Existing VegasInsider/DraftKings saved-page research does not satisfy either named integration merely by being reference data. No positive Arb/EV finding is required; negative, zero, near-miss and unavailable outputs are valid when original-input arithmetic is correct.
 
-## Implementation evidence behind the gaps
+## Current implementation evidence
 
-- `app/collection/venue_access.py` defines the ordinary source destinations/credential references for Kalshi and Polymarket US; it is not a four-venue runtime.
-- `app/collection/multi_game.py` constructs explicit Kalshi/US pairs and native side identities; expansion needs more than registering an adapter.
-- `app/dashboard/multi_game_server.py` excludes sessions with `status_coverage` from its ordinary current multi-game dataset branch. Coverage controls and diagnostic success do not establish the current comparison flow.
-- `app/collection/odds_http.py` explicitly restricts its provider path to numeric loopback mocks. Reference scaffolding is not live provider activation.
-- [ProphetX handoff](slice-3.md): actual sandbox REST and recovery, unresolved size semantics, no selection-update frames in retained bounded tests. [Novig handoff](slice-5.md): offline tests and absent issued credentials at the recorded inspection, not a new account check.
-- [Personal-beta report](personal-beta-operation-report.md) and [math report](math-reconciliation-report.md) establish useful retained product/calculation work. Their old operational next actions are not current authorization.
+[B2 completion](b2-product-integration-handoff.md) supplies ordinary current/saved coverage comparisons, immutable cutoffs and common history. [B3 engineering](b3-native-integration.md) adds native REST acquisition branches, source states, purchase semantics and original-body replay. [Per-venue evidence](../evidence/b3-native-integration-20260920/final-report.md) distinguishes synthetic tests, historical QA and production observations. No source status is promoted by a fixture.
+
+Novig access and real listing period/rules are unresolved. ProphetX remains recommended and unselected; retained sandbox price interpretation is usable but quantity/value ownership is unknown. Source-specific fee applicability and settlement gaps remain null. Actual model/Pinnacle acquisition remains B4. Broader native canonical matching and economics remain B5.
 
 ## Retained diagnostic success
 
@@ -49,6 +46,6 @@ Owner help is limited to Novig issued provisioning, fourth-venue selection/appro
 
 ## Concrete next action
 
-**B2 — implement the delivered [collector-to-product handoff](b2-product-integration-handoff.md).** Connect acknowledged coverage records to a common current/saved projection, remove product-level two-venue assumptions with explicit source handlers, and support ordinary updates, comparison details, Stop and reopening. Use isolated fixtures and retained inputs; unavailable B3/B4 sources must not block this work. B5 still owns the actual breadth definitions and mappings. B1 completion is assessment/handoff completion only; no implementation or beta readiness is implied.
+Obtain the fourth-venue selection and Novig provisioning references, then finalize and seek one approval of the [bounded B3 qualification proposal](b3-native-qualification-proposal.md). No secrets in chat. Native engineering and isolated fixture verification have progressed; B3 is not complete and beta is NOT READY FOR SIGNOFF.
 
-This report and the active plans replace the prior contradictory optional-reference/NFL-only/deferred-venue direction. [Old planning snapshots](history/beta-reset-20260920/README.md) are inactive history; prior evidence and uncommitted implementation remain preserved. No implementation or new run was performed in this documentation reset.
+Independent work remains in native listing-period/rule association and native REST segmented replay. Preserve B2, old evidence and consumed attempts. B4 model/Pinnacle acquisition and B5 broader sport/market semantics remain separate slices.

@@ -283,6 +283,8 @@ class Client:
                 self.diagnostics.append({'path': path, 'status': status})
                 if status == 200:
                     result = Response(body, str(r.request.url), datetime.now(timezone.utc))
+                    if path in GET_PATHS - {'/websocket/connection-config'} and any(secret and secret in body for secret in (self.credentials.access_key,self.credentials.secret_key,self.access,self.refresh)):
+                        raise APIError()
                     if self.observer and path in GET_PATHS - {'/websocket/connection-config'}:
                         self.observer(result)
                     return result

@@ -14,7 +14,7 @@ from app.reference.multi_page import research_row, rank_research
 def create_app(output=OUTPUT,owner=None,sessions=None):
     if owner is None:
         from app.dashboard.coverage_owner import CoverageOwner
-        owner=CoverageOwner(output,spec_factory=configuration)
+        owner=CoverageOwner(output,spec_factory=configuration,product_mode=True,pilot_output=ROOT/'evidence/product-sessions')
     retained_sessions=load_sessions() if sessions is None else sessions
     def datasets():
         values={}
@@ -23,14 +23,39 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             game=dict(id=src['kalshi']['event_id']+'__'+src['polymarket_us']['event_id'],title=p['event'],scheduled_start=p['kickoff'],teams=list(TEAMS),sides={k:dict(v,**({'native_label':'Long' if k.endswith('1315440') else 'Short'} if k.startswith('polymarket') else {})) for k,v in SIDES.items()},sources=src,candidates=CANDIDATES)
             values[sid]=dict(rows=rows,games=[game],coverage=dict(selected=1,found={},common=1,excluded=[],truncated_by_limit=0),live=False,label='Saved · '+p['capture_start']+' · 1 game · Completed')
         for sid in owner.saved():
-            saved=saved_rows(owner.output/sid)
-            select=next(r for r in saved['rows'] if r['type']=='multi_game_selection')
-            values[sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=False,label=('Local test' if saved['rows'][0]['spec']['mode']=='mock' else 'Saved')+' · '+saved['rows'][0]['observed_at']+' · '+str(len(select['games']))+' games · Completed')
+            try:
+                saved=saved_rows(owner.output/sid)
+                select=next(r for r in saved['rows'] if r['type']=='multi_game_selection')
+                values[sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=False,label=('Local test' if saved['rows'][0]['spec']['mode']=='mock' else 'Saved')+' · '+saved['rows'][0]['observed_at']+' · '+str(len(select['games']))+' games · Completed')
+            except (ValueError,OSError,KeyError,StopIteration) as exc:
+                values[sid]=dict(games=[],error='Incomplete saved package: '+str(exc),label='Incomplete · '+sid)
+        from app.dashboard import session_history
+        if hasattr(owner,'history_paths'):
+            for sid,folder in owner.history_paths().items():
+                if sid in values or (owner.active() and owner.session and sid==owner.session.sid):continue
+                try:
+                    snapshot=session_history.load(folder)
+                    values[sid]=dict(product=snapshot,folder=folder,games=snapshot['games'],label=snapshot['data_mode']+' · '+snapshot['state']+' · '+str(snapshot['started_at']))
+                except (ValueError,OSError,KeyError) as exc:
+                    values[sid]=dict(games=[],error='Incomplete or corrupt saved package: '+str(exc),label='Incomplete · '+sid)
+        if hasattr(owner,'current_snapshot') and owner.session and owner.active():
+            snapshot=owner.current_snapshot()
+            if snapshot:values[owner.session.sid]=dict(product=snapshot,folder=owner.session.output,games=snapshot['games'],label=snapshot['data_mode']+' · '+snapshot['state'])
         s=owner.session
-        if owner.active() and s and s.journal and not hasattr(s,'status_coverage'):
+        if owner.active() and s and s.journal and not hasattr(s,'projection'):
             saved=reopen(s.journal.path);select=next((r for r in saved['rows'] if r['type']=='multi_game_selection'),None)
             if select:values[s.sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=True,label='Current multi-game scan')
         return values
+    def product_cutoff(sid,d,cutoff):
+        from app.dashboard import session_history
+        if owner.active() and owner.session and sid==owner.session.sid:
+            if owner.session.persistence_error:raise ValueError('Persistence failed')
+            snapshot=owner.cutoffs.get(cutoff)
+            if snapshot is None and not owner.session.segmented_history:
+                snapshot=session_history.project_rows(reopen(owner.session.journal.path)['rows'][:owner.session.journal.count],cutoff)
+            if snapshot is None:raise ValueError('Older segmented cutoff available after Stop')
+            return snapshot
+        return session_history.load(d['folder'],cutoff)
     @web.middleware
     async def guard(request,handler):
         try:
@@ -72,15 +97,27 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def catalog(req):
         items=[]
         for sid,d in datasets().items():
+            if 'product' in d and req.query.get('session','').startswith(sid+'~') and req.query.get('cutoff'):
+                snap=product_cutoff(sid,d,req.query['cutoff']);d=dict(d,product=snap,games=snap['games'])
             for g in d['games']:
+                if 'product' in d:
+                    p=d['product']['points'][g['id']]
+                    items.append(dict(id=sid+'~'+g['id'],hash=sid,label=g['title']+' · '+d['label'],game=g,data_mode=d['product']['data_mode'],default_cutoff=0,timeline=[dict(id=p['id'],at=p['at'],label=p['label'])]))
+                    continue
                 timeline,_=project_game(d['rows'],g)
                 point=default_point(timeline)
                 items.append(dict(id=sid+'~'+g['id'],hash=sid,label=g['title']+' · '+d['label'],game=g,data_mode=d['rows'][0]['spec']['mode'],default_cutoff=timeline.index(point),timeline=[dict(id=p['id'],at=p['at'],label=p['label']) for p in timeline]))
         return web.json_response(items)
     async def calculation(req):
         q=req.query;sid,gid=q['session'].split('~',1);d=datasets()[sid];g=next((g for g in d['games'] if g['id']==gid),None)
-        if g is None:raise ValueError('Unknown game')
+        if g is None and 'product' not in d:raise ValueError('Unknown game')
         if q['hash']!=sid:raise ValueError('session identity mismatch')
+        if 'product' in d:
+            from app.dashboard import session_history,product_view
+            snapshot=product_cutoff(sid,d,q['cutoff'])
+            g=next(g for g in snapshot['games'] if g['id']==gid)
+            r=present(product_view.calculate(snapshot,g,q));r.update(session=q['session'],hash=sid,live=False,page_estimate=None)
+            return web.json_response(r)
         timeline,rows=project_game(d['rows'],g);point=next((p for p in timeline if p['id']==q['cutoff']),None)
         if point is None:raise ValueError('Unknown cutoff')
         r=present(game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),q.get('probability') or None,q.get('contract')))
@@ -93,7 +130,15 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         ds=datasets();sid=q.get('capture') or (list(ds)[-1] if ds else None)
         result=dict(status=owner.status(),captures=[dict(id=s,label=d['label']) for s,d in ds.items()],capture=sid,rows=[],coverage=None)
         if not sid:return web.json_response(result)
-        d=ds[sid];result.update(coverage=d['coverage'],live=d['live'],last_update=d['rows'][-1]['observed_at'],capture_time=d['rows'][0]['observed_at'],data_mode=d['rows'][0]['spec']['mode'])
+        d=ds[sid]
+        if d.get('error'):
+            result.update(state='incomplete',error=d['error']);return web.json_response(result)
+        if 'product' in d:
+            from app.dashboard import product_view
+            p=d['product'];items=product_view.dashboard(p,q,assumptions)
+            result.update(rows=items,total_candidates=len(items),live=p['view_mode']=='current',state=p['state'],data_mode=p['data_mode'],capture_time=p['started_at'],last_update=p['last_update'],sources=p['sources'],references=p['references'],market_catalog=p['market_catalog'],durable_cursor=p['durable_cursor'],coverage=dict(selected=len(p['games']),excluded=[m for m in p['market_catalog'] if m.get('reason')],truncated_by_limit=p['comparison_groups_beyond_limit'],sources=p['sources'],generation=p['generation'],refresh=p['refresh']))
+            return web.json_response(result)
+        result.update(coverage=d['coverage'],live=d['live'],last_update=d['rows'][-1]['observed_at'],capture_time=d['rows'][0]['observed_at'],data_mode=d['rows'][0]['spec']['mode'])
         view=q.get('view','arb');items=[]
         for g in d['games']:
             timeline,rows=project_game(d['rows'],g,d['live']);point=timeline[-1] if d['live'] else default_point(timeline)

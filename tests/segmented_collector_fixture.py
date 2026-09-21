@@ -57,13 +57,16 @@ class Fixture:
         finally:c['closed']=True;self.changed.set()
         return socket
 
-    async def start(self, output, *, duration=180, profile_name=None):
+    async def start(self, output, *, duration=180, profile_name=None, product_mode=False, segmented=True):
         app=web.Application();app.router.add_get('/ws',self.ws);app.router.add_get('/{path:.*}',self.rest)
         self.server=TestServer(app);await self.server.start_server()
         url=str(self.server.make_url('/')).rstrip('/')
         self.endpoints={v:dict(rest=url,ws=url.replace('http:','ws:')+'/ws') for v in ('kalshi','polymarket_us')}
+        from app.dashboard.coverage_owner import spec
+        def product_spec():
+            value=spec();value.update(mode='mock',reference_enabled=False);return value
         self.owner=CoverageOwner(Path(output)/'unused-saved',pilot_output=Path(output)/'pilot',
-            endpoints=self.endpoints,mock_segmented=True,profile_name=profile_name)
+            endpoints=self.endpoints,mock_segmented=segmented,profile_name=profile_name,product_mode=product_mode,spec_factory=product_spec)
         await self.owner.start(duration=duration)
         s=self.owner.session
         original_save=s.journal.save
@@ -74,7 +77,7 @@ class Fixture:
             self.changed.set()
         # Start was already durably admitted; include it without retaining the run.
         from app.collection.segmented import iter_journal
-        for r,_ in iter_journal(s.journal.history.active.path):
+        for r,_ in iter_journal(s.journal.history.active.path if segmented else s.journal.path):
             if not r['type'].startswith('d3_'):self.sequence.update(packed(r).encode());self.rows+=1
         s.journal.save=observed_save
         await self.wait(lambda:len(self.active())==(2 if self.kalshi_markets<=20 else 3))

@@ -154,11 +154,13 @@ def event_record(venue, page, body, native, index, as_of):
     try:
         r = response(venue, page, body)
         if venue == 'kalshi':
-            event = kalshi.parse_event(r, native, 'KXNFLGAME')
+            event = kalshi.parse_event(r, native, native.get('series_ticker','KXNFLGAME'))
         else:
-            event = polymarket_us.parse_event(r, native)
-        if venue == 'polymarket_us' and params(page).get('tagSlug') != 'nfl' and '/leagues/nfl/' not in page['path']:
-            raise ValueError('NFL query scope unestablished')
+            event = polymarket_us.parse_event(r, native, league=params(page).get('tagSlug','nfl'))
+        if venue == 'polymarket_us' and not params(page).get('tagSlug') and '/leagues/nfl/' not in page['path']:
+            raise ValueError('league query scope unestablished')
+        if venue=='polymarket_us' and params(page).get('tagSlug') and any(t.get('league') and str(t['league']).lower()!=str(params(page)['tagSlug']).lower() for t in native.get('teams',[])):
+            raise ValueError('native league conflicts with discovery scope')
         # Normalize this occurrence alone: identical duplicate native rows must
         # not look like ambiguous event identity to the shared extractor. Original
         # bytes remain in the hashed source; this view is used only for identity.
@@ -169,8 +171,11 @@ def event_record(venue, page, body, native, index, as_of):
         record['participants'] = mapping
         start = event.scheduled_start
         record['scheduled_start'] = start.isoformat() if start else None
-        resolved = normalized.league.canonical_id == 'NFL' and len(mapping) == 2 and None not in mapping.values() and len(set(mapping.values())) == 2
+        record.update(sport={'NFL':'american_football','NBA':'basketball','MLB':'baseball','NHL':'hockey','NCAAF':'american_football','NCAAB':'basketball'}.get(normalized.league.canonical_id,event.sport or 'unknown'),competition=normalized.league.canonical_id or event.league)
+        resolved = normalized.league.status == 'resolved' and len(mapping) == 2 and None not in mapping.values() and len(set(mapping.values())) == 2
         record['identity'] = 'resolved' if resolved else 'unresolved'
+        if normalized.league.status=='conflicting' or any(p.resolution.status=='conflicting' for p in normalized.participants):
+            record['exclusion']='native_competition_conflict'
         if resolved and start:
             record['canonical_key'] = [start.astimezone(timezone.utc).isoformat(), sorted(mapping.values())]
         if not start:
@@ -185,16 +190,16 @@ def event_record(venue, page, body, native, index, as_of):
     return record
 
 
-def market_record(venue, page, body, native, eid, index):
+def market_record(venue, page, body, native, eid, index, series_id='KXNFLGAME'):
     mid = str(native.get('ticker' if venue == 'kalshi' else 'id') or f'unknown-market-row-{index}')
     record = dict(id=mid, event_id=eid, native_slug=native.get('slug'), title=native.get('title',native.get('question')),
                   market_type='unknown', period='unknown', status='unknown', exclusion=None,
                   terms={k:native[k] for k in ('rules_primary','rules_secondary','description','resolutionSource') if k in native}, sides=[])
     try:
         r = response(venue, page, body)
-        market = kalshi.parse_market(r, native, eid, 'KXNFLGAME') if venue == 'kalshi' else polymarket_us.parse_market(r, native, eid)
+        market = kalshi.parse_market(r, native, eid, series_id) if venue == 'kalshi' else polymarket_us.parse_market(r, native, eid)
         record.update(market_type=market.market_type.value, status=market.state.value)
-        full = venue == 'kalshi' or native.get('sportsMarketType') == 'football_team_full_game_winner'
+        full = (venue == 'kalshi' and series_id in kalshi.SPORT_SERIES) or native.get('sportsMarketType') == 'football_team_full_game_winner'
         record['period'] = 'full_game' if full else 'unknown_or_other'
         if market.market_type.value != 'moneyline' or not full:
             record['exclusion'] = 'unsupported_market_type_or_period'
@@ -261,7 +266,7 @@ def catalog(pages, venue, as_of):
                 eid = candidates[0] if len(candidates) == 1 else 'unknown'
             else:
                 eid = str(native.get('event_ticker') or params(page).get('event_ticker') or 'unknown')
-            insert(markets,market_record(venue,page,body,native,eid,row_index),native,provenance(page,row_index,body))
+            insert(markets,market_record(venue,page,body,native,eid,row_index,events.get(eid,{}).get('native_aliases',{}).get('series_ticker','unknown')),native,provenance(page,row_index,body))
     for event in events.values():
         if venue == 'kalshi':
             states = [d['state'] for d in discoveries if d['path'].endswith('/markets') and d['filters'].get('event_ticker')==event['id']]
@@ -331,7 +336,7 @@ def match_catalogs(catalogs):
     for values in buckets.values():
         ambiguous = any(len(rows)>1 for rows in values.values())
         for venue, events in values.items():
-            other = values.get(next(v for v in VENUES if v!=venue), [])
+            other = [e for v,rows in values.items() if v!=venue for e in rows]
             for event in events:
                 event['matching_status'] = 'ambiguous' if ambiguous else ('matched' if other else 'unmatched')
                 event['counterpart_event_ids'] = [e['id'] for e in other]
@@ -340,8 +345,8 @@ def match_catalogs(catalogs):
         for market in cat['markets']:
             event = events.get(market['event_id'])
             market['matching_status'] = 'excluded' if market['exclusion'] else (event['matching_status'] if event else 'unresolved')
-            other_cat = catalogs[next(v for v in VENUES if v != venue)]
-            market['counterpart_market_ids'] = sorted(m['id'] for m in other_cat['markets']
+            other_markets = [m for v,c in catalogs.items() if v!=venue for m in c['markets']]
+            market['counterpart_market_ids'] = sorted(m['id'] for m in other_markets
                 if event and m['event_id'] in event['counterpart_event_ids'] and not m['exclusion'])
             if market['matching_status'] == 'matched' and not market['counterpart_market_ids']:
                 market['matching_status'] = 'unmatched_missing_market'

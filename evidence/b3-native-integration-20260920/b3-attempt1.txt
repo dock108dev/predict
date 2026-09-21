@@ -1,0 +1,47 @@
+Executing <Task pending name='Task-2' coro=<Runtime.test_native_rest_into_ordinary_product_and_saved_cutoff() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py:89> cb=[_run_until_complete_cb() at /opt/anaconda3/lib/python3.11/asyncio/base_events.py:180] created at /opt/anaconda3/lib/python3.11/asyncio/runners.py:100> took 0.102 seconds
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+ERROR: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.Runtime.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 99, in wait
+    try:await asyncio.wait_for(self.changed.wait(),.05)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/tasks.py", line 476, in wait_for
+    await waiter
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 98, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    await f.images()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 141, in images
+    if mid not in c['images']:await self.send(c,mid)
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 118, in send
+    await self.wait(lambda:self.books>before or self.owner.session.stop_event.is_set())
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 91, in wait
+    async with asyncio.timeout(20):
+  File "/opt/anaconda3/lib/python3.11/asyncio/timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+
+----------------------------------------------------------------------
+Ran 4 tests in 20.298s
+
+FAILED (errors=1)

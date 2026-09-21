@@ -1,0 +1,24 @@
+test_separate_from_manual_and_rankings (tests.test_page_estimate.PageRouteTests.test_separate_from_manual_and_rankings) ... Executing <Task pending name='Task-2' coro=<PageRouteTests.test_separate_from_manual_and_rankings() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_page_estimate.py:83> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.101 seconds
+Executing <Task pending name='Task-4' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.301 seconds
+Executing <Task pending name='Task-4' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.128 seconds
+ERROR
+
+======================================================================
+ERROR: test_separate_from_manual_and_rankings (tests.test_page_estimate.PageRouteTests.test_separate_from_manual_and_rankings)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_page_estimate.py", line 88, in test_separate_from_manual_and_rankings
+    self.assertIsNone(r['ev']['probability']);self.assertIsNone(r['ev']['expected_profit'])
+                      ~^^^^^^
+KeyError: 'ev'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.540s
+
+FAILED (errors=1)

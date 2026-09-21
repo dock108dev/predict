@@ -1,0 +1,44 @@
+TAP version 13
+# evalmachine.<anonymous>:3
+#  if(referenceId)return;
+#  ^
+# ReferenceError: referenceId is not defined
+#     at Object.saveAssumption (evalmachine.<anonymous>:3:2)
+#     at Object.<anonymous> (/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_concise_dashboard.cjs:22:5)
+#     at Module._compile (node:internal/modules/cjs/loader:1688:14)
+#     at Object..js (node:internal/modules/cjs/loader:1820:10)
+#     at Module.load (node:internal/modules/cjs/loader:1423:32)
+#     at Function._load (node:internal/modules/cjs/loader:1246:12)
+#     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+#     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+#     at node:internal/main/run_main_module:36:49
+# Node.js v22.18.0
+# Subtest: tests/test_concise_dashboard.cjs
+not ok 1 - tests/test_concise_dashboard.cjs
+  ---
+  duration_ms: 30.978792
+  type: 'test'
+  location: '/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_concise_dashboard.cjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# PASS: research drilldown preserves basis without writing page probabilities into manual inputs
+# Subtest: tests/test_multi_page_ui.cjs
+ok 2 - tests/test_multi_page_ui.cjs
+  ---
+  duration_ms: 26.602
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 35.997708

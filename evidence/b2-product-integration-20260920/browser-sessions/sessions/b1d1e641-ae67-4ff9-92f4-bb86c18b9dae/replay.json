@@ -1,0 +1,22 @@
+{
+  "kalshi-1": {
+    "exact_native_books": {
+      "kalshi": 173,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "f6d16878d2e672a70866e4ea08dabe44b70c4e3df535786091a2df289dd94c16",
+    "state": "complete"
+  },
+  "polymarket_us-1": {
+    "exact_native_books": {
+      "kalshi": 0,
+      "polymarket_us": 173
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "f6d16878d2e672a70866e4ea08dabe44b70c4e3df535786091a2df289dd94c16",
+    "state": "complete"
+  }
+}

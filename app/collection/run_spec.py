@@ -32,7 +32,7 @@ def preflight(spec, now=None, *, supervised_live=False):
             errors.append(key+': missing')
     if errors:
         return dict(valid=False, activation_enabled=False, errors=errors, economics='unavailable')
-    optional={'reference_enabled','reference_cadence','http','supervised_profile'}
+    optional={'reference_enabled','reference_cadence','http','supervised_profile','native_sources'}
     policy=None
     if 'supervised_profile' in spec:
         from .supervised import profile
@@ -41,6 +41,10 @@ def preflight(spec, now=None, *, supervised_live=False):
         if supervised_live:
             if spec.get('mode')!='real' or spec.get('reference_enabled',False): errors.append('supervised live requires prediction-only real mode')
         elif spec.get('mode')!='mock' or spec.get('reference_enabled',False): errors.append('supervised profile is isolated mock only')
+    if 'native_sources' in spec:
+        from .native_product import validate_sources
+        try: validate_sources(spec)
+        except (ValueError, TypeError, KeyError): errors.append('native_sources: invalid bounded source configuration')
     if reference_enabled(spec):
         for key in ('reference_cadence','http'):
             if key not in spec:errors.append(key+': missing')

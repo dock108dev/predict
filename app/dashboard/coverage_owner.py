@@ -30,13 +30,20 @@ def replay_groups(saved):
     for group in groups:
         rows = [saved['rows'][0]]+[r for r in saved['rows'] if r.get('stream_group')==group]
         result[group] = verify_native_saved(dict(saved,rows=rows))
+    if saved['rows'][0].get('spec',{}).get('native_sources'):
+        from app.collection.native_rest_replay import verify
+        result['native_rest']=verify(saved['rows'])
     return result
 
 
 class CoverageOwner(MultiOwner):
-    def __init__(self, *args, pilot_output=OUTPUT, session_factory=ContinuousSession, mock_segmented=False, profile_name=None, supervised_live=False, **kwargs):
+    def __init__(self, *args, pilot_output=OUTPUT, session_factory=ContinuousSession, mock_segmented=False, profile_name=None, supervised_live=False, product_mode=False, native_approval_path=None, **kwargs):
         from app.collection.supervised import profile
         self.profile=profile(profile_name) if profile_name else None
+        self.cutoffs={}
+        self.product_mode=product_mode
+        self.native_approval_path=native_approval_path
+        if product_mode and (supervised_live or profile_name): raise ValueError('product mode cannot consume supervised allowances')
         self.supervised_live = supervised_live
         self.segmented_history = mock_segmented or supervised_live
         if supervised_live:
@@ -69,7 +76,7 @@ class CoverageOwner(MultiOwner):
         async with self.lock:
             if self.active():
                 raise ValueError('Collector already running or finalizing')
-            if (self.pilot_output/'attempt.json').exists():
+            if not self.product_mode and (self.pilot_output/'attempt.json').exists():
                 raise ValueError('D2 pilot consumed; no automatic or second live run authorized')
             self.owner_lock = ((OUTPUT if self.supervised_live else self.pilot_output)/'collector.lock').open('a')
             try:
@@ -80,7 +87,16 @@ class CoverageOwner(MultiOwner):
                 raise ValueError('Another collector owns the pilot') from None
             self.starting = True
             try:
-                value = spec(); value['duration'] = duration
+                value = self.spec_factory() if self.product_mode else spec(); value.pop('multi_game_limits',None); value['duration'] = duration
+                if self.product_mode:
+                    from app.collection.mock_history import validate_mock
+                    if value.get('native_sources') and value['mode']=='real':
+                        from app.collection.native_approval import validate_approval
+                        validate_approval(value,self.endpoints,self.native_approval_path,self.pilot_output,consume=True)
+                    else:
+                        validate_mock(value,self.endpoints)
+                        value['capture_authorization']='B2 explicit product fixture session; no real-source allowance'
+                    self.error=None
                 options = {}
                 if self.supervised_live:
                     value.update(mode='real',reference_enabled=False,capture_authorization='One explicitly authorized supervised live session; 300s maximum; direct Stop at 240s; zero spend')
@@ -93,10 +109,16 @@ class CoverageOwner(MultiOwner):
                     value.update(supervised_profile=self.profile['name'],discovery_cadence=120)
                     value['prediction'].update(messages=self.profile['group_messages'],session_bytes=self.profile['body_bytes'],discovery_requests=self.profile['requests'])
                 self.session = self.session_factory(value,self.pilot_output/'pending',self.endpoints,**options)
+                if isinstance(self.session,ContinuousSession):
+                    from app.dashboard.session_projection import SessionProjection
+                    self.session.product_session=self.product_mode
+                    self.session.native_authorized=bool(self.product_mode and value.get('native_sources') and value['mode']=='real')
+                    self.session.projection=SessionProjection()
+                    self.session.acknowledged_observer=self.session.projection.apply
                 folder = self.pilot_output/self.session.sid
                 folder.mkdir()
                 self.session.output = folder
-                save_json(self.pilot_output/'attempt.json',dict(session=self.session.sid,at=datetime.now(timezone.utc).isoformat(),duration=duration))
+                save_json(folder/'product-run.json' if self.product_mode else self.pilot_output/'attempt.json',dict(session=self.session.sid,at=datetime.now(timezone.utc).isoformat(),duration=duration))
                 save_json(folder/'run-spec.json',value)
                 limits = dict(LIMITS,
                     effective_ingress_bytes=16*MIB,effective_ingress_records=2048,
@@ -119,7 +141,7 @@ class CoverageOwner(MultiOwner):
             except Exception:
                 if self.session and self.session.task:
                     await self.session.stop()
-                self.error = 'D2 Start failed; attempt retained, no retry authorized'
+                self.error = 'Product fixture Start failed; run retained' if self.product_mode else 'D2 Start failed; attempt retained, no retry authorized'
                 self.release()
                 raise
             finally:
@@ -166,7 +188,7 @@ class CoverageOwner(MultiOwner):
                 ever_market_ids={v:{k:sorted(ids) for k,ids in p.ever.items()} for v,p in session.producers.items()},
                 limitations=['Filtered open/active catalogs; hidden/unopened/closed universe not claimed',
                     'US gameId filtering and short-page exhaustion do not guarantee upstream atomic snapshot or all listings',
-                    'US Short purchase depth unavailable',
+                    'US Short depth derived only from supplied Long bids; completeness unverified' if session.spec.get('native_sources') else 'US Short purchase depth unavailable',
                     'Usable means synchronized and receipt-recent, not economic or settlement qualification'])
             save_json(folder/'report.json',summary)
             names = ['run-spec.json','aggregate-limits.json',session.journal.path.name,'replay.json','report.json']
@@ -194,7 +216,37 @@ class CoverageOwner(MultiOwner):
         if self.segmented_history:
             value.update(operating_mode='isolated-supervised-live' if self.supervised_live else 'isolated-mock-segmented',
                 finalization=getattr(self, 'mock_result', None))
+        if self.product_mode:
+            configured=self.spec_factory().get('mode')=='mock'
+            if self.native_approval_path and not configured:
+                try:
+                    from app.collection.native_approval import validate_approval
+                    validate_approval(self.spec_factory(),self.endpoints,self.native_approval_path,self.pilot_output)
+                    configured=True
+                except (ValueError,OSError):pass
+            value.update(operating_mode='product-session',start_available=configured and not self.active() and not getattr(self.session,'cleanup_errors',[]),pilot_allowance='One approved B3 qualification; no automatic repeat' if self.native_approval_path else 'Explicit bounded fixture sessions; real source Start not authorized')
         return value
+
+    def history_paths(self):
+        from app.dashboard.session_history import list_sessions
+        return list_sessions([self.output,self.pilot_output])
+
+    def current_snapshot(self):
+        s=self.session
+        if not s or not hasattr(s,'projection'): return None
+        if s.persistence_error: raise ValueError('Current projection unavailable: persistence failed')
+        if getattr(s,'projection_error',None):
+            if s.segmented_history: raise ValueError('Projection unavailable until verified saved reconciliation')
+            from app.dashboard.session_projection import SessionProjection
+            rebuilt=SessionProjection()
+            for row in reopen(s.journal.path)['rows'][:s.journal.count]: rebuilt.apply(row)
+            s.projection=rebuilt;s.acknowledged_observer=rebuilt.apply;s.projection_error=None
+        state=self.status()['state']
+        frozen=s.projection.snapshot(mode='saved')
+        self.cutoffs[frozen['durable_cursor']]=frozen
+        from app.dashboard.bounds import retained_bytes
+        while len(self.cutoffs)>8 or retained_bytes(self.cutoffs)>32*1024*1024:self.cutoffs.pop(next(iter(self.cutoffs)))
+        return s.projection.snapshot(mode='current' if state=='running' else 'saved',state='saving' if self.active() and state!='running' else 'current' if state=='running' else 'incomplete' if self.error else 'saved')
 
     async def finish_mock_segmented(self, folder):
         # Same collector/task owner; only persistence finalization is substituted.

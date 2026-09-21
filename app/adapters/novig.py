@@ -131,13 +131,13 @@ class NovigAdapter(ReadOnlyAdapter):
     def __init__(self, *, environment, client_id, client_secret, client=None, league='NFL',
                  max_requests=30, max_pages=1, page_size=5, max_markets=2, retries=1,
                  max_bytes=8_000_000, sleep=asyncio.sleep, clock=time.monotonic, now=None,
-                 stream_factory=None, stream_options=None, evidence_kind=EvidenceKind.OBSERVATION):
+                 stream_factory=None, stream_options=None, evidence_kind=EvidenceKind.OBSERVATION, observer=None):
         if environment not in HOSTS:
             raise ValueError('explicit QA or production required')
         for n, limit in ((max_requests,100),(max_pages,5),(page_size,100),(max_markets,10),(max_bytes,50_000_000)):
             if type(n) is not int or not 1 <= n <= limit:
                 raise ValueError('invalid bound')
-        if type(retries) is not int or not 0 <= retries <= 2 or league not in ('NFL','MLB'):
+        if type(retries) is not int or not 0 <= retries <= 2 or league not in ('NFL','NBA','MLB','NHL','NCAAF','NCAAB'):
             raise ValueError('invalid retry or league')
         self.environment, self.client_id, self.client_secret = environment, identity(client_id), identity(client_secret)
         self.client = client or httpx.AsyncClient(timeout=5, follow_redirects=False)
@@ -146,6 +146,7 @@ class NovigAdapter(ReadOnlyAdapter):
         self.sleep,self.clock,self.now = sleep,clock,now or (lambda: datetime.now(timezone.utc))
         self.stream_factory,self.stream_options = stream_factory,stream_options or {}
         self.kind = evidence_kind
+        self.observer = observer
         self.requests,self.bytes,self.renewals = 0,0,0
         self.token,self.expires = None,0
         self.closed = False
@@ -215,7 +216,11 @@ class NovigAdapter(ReadOnlyAdapter):
             if status == 200:
                 decode(body)
                 r=Response(body,HOSTS[self.environment]+'/nbx/v2/emm/'+path + ('?'+str(httpx.QueryParams(params)) if params else ''),self.now(),self.kind)
+                # Authentication responses are never retained. Refuse echoes in data.
+                if any(secret and secret in body for secret in (self.client_id,self.client_secret,self.token)):
+                    raise ValueError('credential echo suppressed')
                 self.responses.append(r)
+                if self.observer:self.observer(r)
                 if headers.get('X-RateLimit-Remaining') == '0':
                     await self._delay(headers,0)
                 return r

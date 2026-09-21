@@ -82,15 +82,23 @@ class PageRouteTests(unittest.IsolatedAsyncioTestCase):
         x,a=retained();sid=a['binding']['session'];g=x['target_identity']
         client=TestClient(TestServer(create_app(sessions={})));await client.start_server()
         try:
-            catalog=await (await client.get('/api/sessions')).json();item=next(i for i in catalog if i['game']['id']==g['id'])
+            catalog=await (await client.get('/api/sessions')).json();item=next(i for i in catalog if i['id']==sid+'~'+g['id'])
             query=dict(session=item['id'],hash=sid,cutoff=item['timeline'][item['default_cutoff']]['id'],quantity='10',scenario='cent',contract='kalshi:yes')
-            r=await (await client.get('/api/calculate',params=query)).json()
+            response=await client.get('/api/calculate',params=query)
+            self.assertEqual(response.status,200,await response.text())
+            r=await response.json()
             self.assertIsNone(r['ev']['probability']);self.assertIsNone(r['ev']['expected_profit'])
             query['probability']='0.4'
             manual=await (await client.get('/api/calculate',params=query)).json()
             self.assertEqual(manual['ev']['probability'],'0.4');self.assertEqual(manual['page_estimate'],r['page_estimate'])
             dashboard=await (await client.get('/api/dashboard',params=dict(capture=sid,view='ev'))).json()
             self.assertTrue(all(row['probability'] is None and row['profit'] is None for row in dashboard['rows']))
-            other=next(i for i in catalog if i['game']['id']!=g['id']);query.update(session=other['id'],cutoff=other['timeline'][other['default_cutoff']]['id'])
+            other=next(i for i in catalog if i['hash']==sid and i['game']['id']!=g['id']);query.update(session=other['id'],cutoff=other['timeline'][other['default_cutoff']]['id'])
             self.assertNotEqual((await (await client.get('/api/calculate',params=query)).json())['page_estimate']['assessment']['binding']['game_id'],g['id'])
         finally:await client.close()
+
+    async def test_exact_binding_with_reversed_catalog(self):
+        from app.dashboard.multi_game import MultiOwner
+        original=MultiOwner.saved
+        with patch.object(MultiOwner,'saved',lambda owner:list(reversed(original(owner)))):
+            await self.test_separate_from_manual_and_rankings()

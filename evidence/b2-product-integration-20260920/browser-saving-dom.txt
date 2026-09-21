@@ -1,0 +1,105 @@
+- main:
+  - link "PREDICT / PERSONAL BETA":
+    - /url: /
+    - text: PREDICT
+    - generic: / PERSONAL BETA
+  - generic: Stopping · observations frozen
+  - paragraph: PREGAME · SOURCE COVERAGE
+  - heading "Across the games" [level=1]
+  - button "Start scan" [disabled]
+  - button "Stop" [disabled] [active]
+  - button "Refresh"
+  - text: Seconds
+  - spinbutton "Seconds" [disabled]: "175"
+  - text: Saved scans
+  - combobox "Saved scans":
+    - option "synthetic · saved · 2026-09-21T03:10:54.195659+00:00"
+    - option "synthetic · saved · 2026-09-21T03:14:00.132088+00:00"
+    - option "synthetic · current" [selected]
+  - status: Stopping feeds and saving observations…
+  - paragraph:
+    - strong: Captured 9/20/2026, 11:18:10 PM EDT
+  - generic "Details"
+  - navigation "Opportunity views":
+    - button "Arb candidates" [pressed]
+    - button "What-if EV"
+    - button "Page-derived research"
+  - text: Size per leg
+  - spinbutton "Size per leg": "100"
+  - text: Find a game
+  - searchbox "Find a game"
+  - generic "Filters & sorting"
+  - option "What-if · cent balance" [selected]
+  - option "What-if · 0.0001 balance"
+  - option "Unresolved fees"
+  - option "Net ROI · high to low" [selected]
+  - option "Net dollars · high to low"
+  - option "All sources" [selected]
+  - option "Kalshi"
+  - option "Polymarket US"
+  - option "Novig"
+  - option "ProphetX"
+  - option "All, including unavailable" [selected]
+  - option "Usable"
+  - option "Unavailable"
+  - paragraph: "Conditional net: normal winners, modeled fees. Exceptional settlement and account fees unresolved."
+  - alert
+  - paragraph: 2 cross-venue pairs shown
+  - region "Source coverage and market gaps":
+    - paragraph: Kalshi · configured | Polymarket US · configured | Novig · not_configured | ProphetX · not_configured
+    - generic "Markets and coverage gaps"
+  - table:
+    - rowgroup:
+      - 'row "Detroit vs Buffalo · moneyline · full_game Buy / top price Detroit Lions YES Kalshi · $0.5000 Buffalo Bills Short Polymarket US · Ask unavailable Net $ Unavailable Source-time progress: missing · Listing terms missing at cutoff · Purchase ask unsupported Size 0 per leg · depth limited"':
+        - cell "Detroit vs Buffalo · moneyline · full_game":
+          - link "Detroit vs Buffalo · moneyline · full_game":
+            - /url: /game?session=07dd921a-3b96-4bde-977d-035cea382478%7E2dd7953c7ea38ec158835d4b8ce732c41bcbed5ea1c58556e435e03ef685878f&hash=07dd921a-3b96-4bde-977d-035cea382478&cutoff=110-cb4e6fc0a6d85da539ff78ebbdb2ccf7e97b160950c7eaf00152bb582e136aa3&quantity=100&scenario=cent&candidate=0677112b21cbdd7afb71fc40e1db28d202dd1c64cf8adf8ff05dad7def3f2ce2&view=arb&contract=kalshi%3Ayes%3Ae022199b34c2d7add82ab42ca973568bb34fa71e45dcbfa2680851d46bb2708d
+        - cell "Buy / top price Detroit Lions YES Kalshi · $0.5000 Buffalo Bills Short Polymarket US · Ask unavailable":
+          - text: Buy / top price
+          - text: Detroit Lions YES
+          - generic: Kalshi · $0.5000
+          - text: Buffalo Bills Short
+          - generic: Polymarket US · Ask unavailable
+        - 'cell "Net $ Unavailable Source-time progress: missing · Listing terms missing at cutoff · Purchase ask unsupported"':
+          - text: Net $ Unavailable
+          - generic: "Source-time progress: missing · Listing terms missing at cutoff · Purchase ask unsupported"
+        - cell "Size 0 per leg · depth limited":
+          - text: Size 0
+          - generic: per leg · depth limited
+        - cell:
+          - generic "Details"
+      - 'row "Detroit vs Buffalo · moneyline · full_game Buy / top price Detroit Lions does not win (NO) Kalshi · $0.6000 Detroit Lions Long Polymarket US · $0.5000 Net $ Unavailable Source-time progress: missing · Listing terms missing at cutoff Size 100 per leg"':
+        - cell "Detroit vs Buffalo · moneyline · full_game":
+          - link "Detroit vs Buffalo · moneyline · full_game":
+            - /url: /game?session=07dd921a-3b96-4bde-977d-035cea382478%7E2dd7953c7ea38ec158835d4b8ce732c41bcbed5ea1c58556e435e03ef685878f&hash=07dd921a-3b96-4bde-977d-035cea382478&cutoff=110-cb4e6fc0a6d85da539ff78ebbdb2ccf7e97b160950c7eaf00152bb582e136aa3&quantity=100&scenario=cent&candidate=54a597612c55b268212f7b5f45b7c2b2cc40589c49db8b7b24883e827c9918e8&view=arb&contract=kalshi%3Ano%3A5c05e98b55a5ab91cbc3b1190d74b301eab33b08a2c4f60e397be46d9f55d763
+        - cell "Buy / top price Detroit Lions does not win (NO) Kalshi · $0.6000 Detroit Lions Long Polymarket US · $0.5000":
+          - text: Buy / top price
+          - text: Detroit Lions does not win (NO)
+          - generic: Kalshi · $0.6000
+          - text: Detroit Lions Long
+          - generic: Polymarket US · $0.5000
+        - 'cell "Net $ Unavailable Source-time progress: missing · Listing terms missing at cutoff"':
+          - text: Net $ Unavailable
+          - generic: "Source-time progress: missing · Listing terms missing at cutoff"
+        - cell "Size 100 per leg":
+          - text: Size 100
+          - generic: per leg
+        - cell:
+          - generic "Details"
+          - paragraph: ROI Unavailable
+          - paragraph: Normal winner comparison; fees apply only where retained source terms and the pinned source handler support them. Unknown fee, settlement or depth inputs leave net dollars unavailable. Synthetic integration inputs.
+          - paragraph:
+            - text: Scheduled 9/23/2026, 11:17:54 PM
+            - text: Cutoff 2026-09-21T03:18:25.045475+00:00
+            - text: Unavailable at cutoff
+          - paragraph:
+            - text: model_reference · B2 synthetic fixture / independent-model · probability 0.57
+            - text: As of 2026-09-21T01:18:11.751014+00:00 · Received 2026-09-21T03:18:11.751169+00:00 · Delay unknown
+            - text: Synthetic integration reference; no provider acquisition or real ratings
+          - paragraph:
+            - text: bookmaker_reference · B2 synthetic fixture / pinnacle · native_odds 2.15
+            - text: As of 2026-09-21T01:18:11.751014+00:00 · Received 2026-09-21T03:18:11.751633+00:00 · Delay unknown
+            - text: Synthetic integration reference; no provider acquisition or real ratings
+          - link "Game details →":
+            - /url: /game?session=07dd921a-3b96-4bde-977d-035cea382478%7E2dd7953c7ea38ec158835d4b8ce732c41bcbed5ea1c58556e435e03ef685878f&hash=07dd921a-3b96-4bde-977d-035cea382478&cutoff=110-cb4e6fc0a6d85da539ff78ebbdb2ccf7e97b160950c7eaf00152bb582e136aa3&quantity=100&scenario=cent&candidate=54a597612c55b268212f7b5f45b7c2b2cc40589c49db8b7b24883e827c9918e8&view=arb&contract=kalshi%3Ano%3A5c05e98b55a5ab91cbc3b1190d74b301eab33b08a2c4f60e397be46d9f55d763
+  - generic "Details · calculation & scan limits"

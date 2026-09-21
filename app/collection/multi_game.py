@@ -46,7 +46,7 @@ def common_events(events, now):
         for e in values:
             n,m=participant_mapping(e)
             try:
-                validate_pregame(e)
+                validate_pregame(e,as_of=now)
                 if n.league.canonical_id!='NFL' or len(m)!=2 or None in m.values() or len(set(m.values()))!=2:raise ValueError('unresolved participants')
                 if e.scheduled_start<=now+timedelta(seconds=300):raise ValueError('less than five minutes before kickoff')
                 key=(e.scheduled_start,tuple(sorted(m.values())))

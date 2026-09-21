@@ -1,0 +1,217 @@
+..../Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:72: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+Executing <Task pending name='Task-1' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.314 seconds
+.Executing <Task pending name='Task-14' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.274 seconds
+.Executing <Task pending name='Task-19' coro=<AioHTTPTestCase.asyncSetUp() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/test_utils.py:578> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.331 seconds
+.......Executing <Task finished name='Task-37' coro=<SavedDiscoveryTests.test_catalog_identity_duplicates_schedule_and_native_sides() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_multi_game.py:96> exception=AssertionError('17 != 32') created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.524 seconds
+FExecuting <Task pending name='Task-42' coro=<PersonalBeta.test_two_starts_stop_saved_switch_and_restart() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_personal_beta.py:14> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.337 seconds
+Executing <Task pending name='Task-54' coro=<LocalSession.produce() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/personal_beta_mock.py:42> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 0.244 seconds
+Executing <Task pending name='Task-44' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.164 seconds
+Executing <Task finished name='Task-55' coro=<MultiOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game.py:83> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 0.390 seconds
+Executing <Task pending name='Task-44' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.171 seconds
+Executing <Task pending name='Task-64' coro=<LocalSession.produce() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/personal_beta_mock.py:42> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 0.228 seconds
+Executing <Task pending name='Task-44' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.336 seconds
+Executing <Task finished name='Task-65' coro=<MultiOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game.py:83> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 0.303 seconds
+Executing <Task pending name='Task-44' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.299 seconds
+Executing <Task pending name='Task-44' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.254 seconds
+./Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+./Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+./Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+./Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/traceback.py:271: ResourceWarning: unclosed file <_io.TextIOWrapper name='/private/tmp/e6pg-oyywma7r/owner.lock' mode='a' encoding='UTF-8'>
+  tb.tb_frame.clear()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+./Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:25: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['owner_lock']=owner_lock
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:26: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['env']=env;app['output']=Path(output);app['output'].mkdir(parents=True,exist_ok=True)
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:27: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['session']=None;app['lock']=asyncio.Lock();app['reader']=ThreadPoolExecutor(1,thread_name_prefix='e6-saved-reader');app['reading']=False;app['active_requests']=0
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:29: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['clock']=WallClock(origin.isoformat())
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:31: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['recovered']=Repository(db,output,checked({})).recover()
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: DeprecationWarning: Changing state of started or joined application is deprecated
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:78: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app['active_requests']+=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: DeprecationWarning: Changing state of started or joined application is deprecated
+  finally:app['active_requests']-=1
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/server.py:82: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  finally:app['active_requests']-=1
+.E....../Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:72: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+dashboard_request failed (BudgetStop); frames=multi_game_server.py:59:guard > multi_game_server.py:79:start > coverage_owner.py:122:start > test_continuous.py:167:start > continuous.py:685:start > transport_session.py:269:start > continuous.py:672:emit
+FF/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: ResourceWarning: unclosed file <_io.FileIO name='/var/folders/2k/njrlmfj97sv5pjrqxl22hq8w0000gn/T/tmprq68ae2g/j.jsonl' mode='xb' closefd=True>
+  obj, end = self.scan_once(s, idx)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+...
+======================================================================
+ERROR: test_unmocked_discovery_to_grouped_sockets_and_manual_stop (tests.test_continuous.FullLocalTransport.test_unmocked_discovery_to_grouped_sockets_and_manual_stop)
+Only endpoints/credentials are substituted; real D2 request path executes.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_continuous.py", line 250, in test_unmocked_discovery_to_grouped_sockets_and_manual_stop
+    await s.start()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 685, in start
+    await super().start()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/transport_session.py", line 269, in start
+    self.emit('session',dict(type='session_started',spec=self.spec,provenance=('real venue observation; economics unqualified' if self.spec['mode']=='real' else 'local mock; fabricated protocol and identified retained metadata')))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 672, in emit
+    raise BudgetStop(reason)
+app.collection.odds_http.BudgetStop: rss_cap
+
+======================================================================
+FAIL: test_catalog_identity_duplicates_schedule_and_native_sides (tests.test_multi_game.SavedDiscoveryTests.test_catalog_identity_duplicates_schedule_and_native_sides)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_multi_game.py", line 113, in test_catalog_identity_duplicates_schedule_and_native_sides
+    pairs,excluded=common_events(es,now);self.assertEqual(len(pairs),32);self.assertEqual(excluded,[])
+                                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+AssertionError: 17 != 32
+
+======================================================================
+FAIL: test_browser_client_close_manual_stop_idle_restart_and_single_owner (tests.test_continuous.Lifecycle.test_browser_client_close_manual_stop_idle_restart_and_single_owner)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_continuous.py", line 186, in test_browser_client_close_manual_stop_idle_restart_and_single_owner
+    self.assertEqual(r.status,200,await r.text())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 503 != 200 : {"error": "Local data unavailable"}
+
+======================================================================
+FAIL: test_journal_reserved_stop_preserves_terminal (tests.test_continuous.Lifecycle.test_journal_reserved_stop_preserves_terminal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_continuous.py", line 158, in test_journal_reserved_stop_preserves_terminal
+    self.assertEqual(s.reason,'journal_reserved_stop')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'rss_cap' != 'journal_reserved_stop'
+- rss_cap
++ journal_reserved_stop
+
+
+----------------------------------------------------------------------
+Ran 32 tests in 12.975s
+
+FAILED (failures=3, errors=1)

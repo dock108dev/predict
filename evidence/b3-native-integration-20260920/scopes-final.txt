@@ -1,0 +1,16 @@
+native_snapshot failed (ConnectionError); frames=native_product.py:197:run > test_b3_native.py:142:get_snapshot
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+FAIL: test_hash_and_query_scope (tests.test_coverage.CoverageTests.test_hash_and_query_scope)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_coverage.py", line 150, in test_hash_and_query_scope
+    self.assertEqual(cat['counts']['events']['excluded'],1)
+AssertionError: 0 != 1
+
+----------------------------------------------------------------------
+Ran 30 tests in 2.692s
+
+FAILED (failures=1)

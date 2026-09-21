@@ -1,0 +1,32 @@
+{
+  "base_head": "4be57ba25b692f1d4fe648d11a209f90caa35c46",
+  "working_tree": "uncommitted B2 implementation",
+  "files_sha256": {
+    "app/collection/continuous.py": "b01d02165e44cc0228c3b11ec5726acc34d8165897eef5f258695b463726c54f",
+    "app/collection/coverage.py": "973bb3376e9daffef9052310cef74289a82f60ba65f5a2d08deaaa650a863fb1",
+    "app/collection/multi_game.py": "09ba5977a6c2deb281682bac0af9e051c029987d5bf86abf2d5f3c3bfdcdab4c",
+    "app/collection/prediction_discovery.py": "08236d2448c1a8503b3d28a6a2cb3d1fd27454a9a3149d5b7bb274911f58eca1",
+    "app/collection/transport_session.py": "4d71db2e9d8c6d591ec169e539a1bc3cf857466ddd40a7a835c44319ed3ce05b",
+    "app/dashboard/coverage_owner.py": "d157b1324b178f1dfeaa02c2fc6a17c260f4391454e71c03219f7f27fb8b4e90",
+    "app/dashboard/multi_game.py": "50526d7265991cfc7b1c2d651ecff22a73bec2b83da3f5163cf9de5c9351246b",
+    "app/dashboard/multi_game_server.py": "44dbd23306b42fffd8d296e07aa53efebbb4c00e863945e1e5ee74ea64474b7c",
+    "app/dashboard/opportunity_static/board.js": "4963e085eb8cb9bdc5969f6bf9a0b60163a0cb34e681b0f2e4615ed73db5270b",
+    "app/dashboard/opportunity_static/dashboard.html": "17d18cbd14f766a3e33f56b6b52db687e2ac7f8eb69c6566ae6f568dde40f70b",
+    "app/dashboard/opportunity_static/dashboard.js": "110b127976e849cf14d08ceba1daad009e94ebf4058605af74e96aa6f1fe3cd9",
+    "app/dashboard/opportunity_static/index.html": "036e27daaccf79e2b39e29100f5720ba10f17cec2718369e8fd00966a56ad501",
+    "app/dashboard/product_view.py": "bf163c0ec84f9bc809d0e2ec2e358c809de3790c230c8c1e3f0a2a3e29ed7ff3",
+    "app/dashboard/session_history.py": "938336e6ec4bf751868bfc865fc6ec79594ed1b420d8499f2782f74be2062002",
+    "app/dashboard/session_projection.py": "688b953e6912e51208406d8fd93dc0df3892ab41552c7ec9a9e584476fee2e05",
+    "app/opportunities/board.py": "ec4d280f12c5481965a41b9e5df1b27e74fc155f41b52c48236d83107b53f4a6",
+    "scripts/check-ci": "e940416e81c467c024249f5e36480b5cafc7c236abc3e52fefee3bf8211e30ae",
+    "tests/b2_browser_preview.py": "f6c624940cdcc3de73379581d2b6edd669f53b39b660a5fc58876749ec09fd61",
+    "tests/segmented_collector_fixture.py": "3d008815a6622e83cb2f02c1df9cbd87a79562cab3d81c3491309e72b58fb120",
+    "tests/test_b2_product.py": "f60c1b9108dbaffec333762e8643f93e2a4f558ac66ed5cf2d62bf580f3441e5",
+    "tests/test_concise_dashboard.cjs": "754d6863ef9ea076dc36c5f5df394a858316d0ef8bee7959213e925e597336b3",
+    "tests/test_e6_recovery.py": "d81151cb8b59696dd0f18ba4bbc7e517258914a3ef0d582e45d2d2cc78c3a9fd",
+    "tests/test_page_estimate.py": "ae9c128acbd4d42e50136c7f1f193a2b0ceaf729c6aca3381d2d44e0e2d98635",
+    "tests/test_session_projection.py": "5a9a16ff89780d8b9d0b1a8b6894a9174e823b2485f8f0f6ba0e25d1af3f3863"
+  },
+  "implementation_sha256": "1821c3df3ec7aa1232cf6220a296d8ff428a907de5027367193d469e6a4a33b7",
+  "recorded_at": "2026-09-21T03:32:59.768831+00:00"
+}

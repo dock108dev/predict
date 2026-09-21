@@ -34,10 +34,11 @@ class Credential:
         return self.signer.headers()
 
 
-def load_credentials():
+def load_credentials(venues=None):
     from keyring.backends.macOS import Keyring
     result={}
     for venue,service,account in [('kalshi','prediction-arb.kalshi.production','market-data'),('polymarket_us','prediction-arb.polymarket-us','retail-api')]:
+        if venues is not None and venue not in venues:continue
         try:
             value=Keyring().get_password(service,account)
             if not value:raise ValueError()

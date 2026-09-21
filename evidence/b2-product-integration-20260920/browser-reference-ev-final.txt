@@ -1,0 +1,56 @@
+- main:
+  - link "PREDICT / PERSONAL BETA":
+    - /url: /
+    - text: PREDICT
+    - generic: / PERSONAL BETA
+  - generic: synthetic · frozen retained cutoff
+  - paragraph: SAVED GAME
+  - heading "Detroit vs Buffalo · moneyline · full_game" [level=1]
+  - link "← Back to dashboard":
+    - /url: /
+  - paragraph: Captured cutoff · 2026-09-21T03:18:25.463445+00:00
+  - generic "Details · saved observation"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:10:54.195659+00:00"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:14:00.132088+00:00"
+  - option "Detroit vs Buffalo · moneyline · full_game · synthetic · saved · 2026-09-21T03:18:10.574280+00:00" [selected]
+  - option "1 / 1 · 2026-09-21T03:18:25.463445+00:00 · Durable cutoff" [selected]
+  - navigation "Views":
+    - button "Arb candidates"
+    - button "What-if EV" [pressed]
+  - text: Quantity (contracts per leg)
+  - spinbutton "Quantity (contracts per leg)": "100"
+  - text: Fee assumptions
+  - combobox "Fee assumptions":
+    - option "Cent balance" [selected]
+    - option "0.0001 balance"
+    - option "Unresolved fees"
+  - button "Update"
+  - generic "Details · fee basis"
+  - status
+  - heading "What-if EV" [level=2]
+  - paragraph: Dated reference probability · model_reference · B2 synthetic fixture · received 2026-09-21T03:18:11.751169+00:00. Editing the probability or basis creates a separate manual assumption.
+  - text: Selected contract
+  - combobox "Selected contract":
+    - option "Detroit Lions YES · Kalshi" [selected]
+    - option "Detroit Lions does not win (NO) · Kalshi"
+    - option "Detroit Lions Long · Polymarket US"
+    - option "Buffalo Bills Short · Polymarket US"
+  - text: Probability (0 to 1)
+  - spinbutton "Probability (0 to 1)": "0.57"
+  - text: Basis
+  - textbox "Basis":
+    - /placeholder: Your reasoning or model source
+    - text: model_reference · B2 synthetic fixture · 2026-09-21T01:18:11.751014+00:00
+  - paragraph: Normal winners only; excludes tie, void, refund and discretionary outcomes.
+  - article:
+    - heading "Detroit Lions YES · Kalshi" [level=3]
+    - generic: Unavailable
+    - paragraph: Buy $0.5000 · p = 0.57
+    - generic: What-if net $
+    - strong: Unavailable
+    - generic: Size
+    - strong: "100"
+    - paragraph: "Source-time progress: missing · Listing terms missing at cutoff"
+    - generic "Details"
+  - generic "Details · provenance"
+  - paragraph: Read-only personal beta · USD per $1 payout contract · Frozen observation drilldown

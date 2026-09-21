@@ -1,0 +1,33 @@
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+ERROR: test_initial_source_failure_retains_other_source_and_refresh_generation (tests.test_session_projection.PartialDiscovery.test_initial_source_failure_retains_other_source_and_refresh_generation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_session_projection.py", line 155, in test_initial_source_failure_retains_other_source_and_refresh_generation
+    await d.discover()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 359, in discover
+    cats, markets = self.project()
+                    ^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 329, in project
+    if getattr(self.session, 'mock_segmented', False) or (getattr(self.session,'product_session',False) and self.session.spec['mode']=='mock'):
+                                                                                                            ~~~~~~~~~~~~~~~~~^^^^^^^^
+KeyError: 'mode'
+
+----------------------------------------------------------------------
+Ran 60 tests in 1.758s
+
+FAILED (errors=1)

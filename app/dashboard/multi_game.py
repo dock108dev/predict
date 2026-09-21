@@ -172,7 +172,7 @@ def default_point(timeline):
 
 
 def game_calculation(point,rows,game,quantity,scenario,probability=None,contract=None):
-    selected=contract or next(k for k,s in game['sides'].items() if s.get('native_label')=='Long')
+    selected=contract or next((k for k,s in game['sides'].items() if s.get('native_label')=='Long'),next(iter(game['sides'])))
     r=evaluate(point,rows,quantity,scenario,probability,selected,game)
     cs=contracts(point,game);q=Decimal(quantity)
     # One visible requested basis; actual modeled quantity is capped by real depth.

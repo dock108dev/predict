@@ -1,0 +1,8 @@
+native_snapshot failed (ConnectionError); frames=native_product.py:186:run > test_b3_native.py:143:get_snapshot
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+----------------------------------------------------------------------
+Ran 17 tests in 1.757s
+
+OK

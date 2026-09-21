@@ -201,6 +201,9 @@ class PredictionProducer:
             **({'profile_name':self.spec['supervised_profile']} if self.spec.get('supervised_profile') else {}))
         try:
             async for book in self.stream.run():
+                if self.spec.get('native_sources'):
+                    from .native_semantics import purchase_book
+                    book = purchase_book(book)
                 # Preserve native book/receipt semantics; health updates aren't new wire arrivals.
                 data=json.loads(json.dumps(asdict(book),default=str))
                 from app.arbitrage import book_observations

@@ -1,0 +1,1 @@
+{"state": "idle", "active": false, "operating_mode": "product-session", "start_available": true, "error": null, "cleanup_errors": [], "saved": [], "session": null, "cleanup_complete": true, "coverage": null, "pilot_allowance": "Explicit bounded fixture sessions; real source Start not authorized", "stop_reason": null, "previous_pilot": null, "discovery": null, "resources": null}

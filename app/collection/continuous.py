@@ -65,7 +65,7 @@ def select_inventory(inventory, at, cap=100):
 
 
 def endpoints_for(session):
-    if getattr(session, 'mock_segmented', False):
+    if getattr(session, 'mock_segmented', False) or (getattr(session,'product_session',False) and session.spec['mode']=='mock'):
         from .mock_history import fixture_endpoints
         return fixture_endpoints(session)
     return ENDPOINTS
@@ -158,20 +158,22 @@ class REST(MockREST):
 class Discovery:
     def __init__(self, session):
         self.session = session
+        self.venues = tuple(session.spec.get("native_sources", {})) or coverage.VENUES
+        self.native_catalogs = {}
         self.lock = asyncio.Lock()
         self.completed = False
         self.generation = 0
         self.pages = []
         self.inventory = None
-        self.markets = {v: {} for v in coverage.VENUES}
+        self.markets = {v: {} for v in self.venues}
         self.coverage = None
         self.clients = {}
         self.published_generation = None
         self.published_at = None
         self.refresh = dict(state='pending', generation=0)
         self.partial = None
-        self.responses = {v:dict(received=0, durably_retained=0) for v in coverage.VENUES}
-        self.blocked = {v:{} for v in coverage.VENUES}
+        self.responses = {v:dict(received=0, durably_retained=0) for v in self.venues}
+        self.blocked = {v:{} for v in self.venues}
 
     def status(self):
         return dict(published_generation=self.published_generation, published_at=self.published_at,
@@ -215,6 +217,8 @@ class Discovery:
                 if set(g['ids']) & set(self.blocked[venue]):
                     g['invalidated'] = True
                     g['usable'].clear()
+        if getattr(self.session,'product_session',False) and self.blocked[venue]:
+            self.session.emit('session',dict(type='product_coverage_status',coverage=self.session.status_coverage(),refresh=self.refresh,safety_exclusions=self.blocked))
 
     def receipt(self, venue, row):
         if row.get('status') is not None:
@@ -260,6 +264,21 @@ class Discovery:
 
     async def venue(self, venue):
         s = self.session
+        if s.spec.get('native_sources'):
+            config = s.spec['native_sources'][venue]
+            if venue in getattr(s,'source_access_errors',{}):
+                from .native_product import empty_catalog
+                self.native_catalogs[venue]=empty_catalog('unavailable',s.source_access_errors[venue])
+                return
+            if config['state'] != 'enabled':
+                from .native_product import empty_catalog
+                self.native_catalogs[venue] = empty_catalog(config['state'])
+                return
+            if venue not in coverage.VENUES:
+                cat, markets = await s.producers[venue].native_discover()
+                self.native_catalogs[venue] = cat
+                self.markets[venue] = markets
+                return
         if venue not in self.clients:
             self.clients[venue] = REST(endpoints_for(self.session)[venue]['rest'], s.spec['prediction'],
                 lambda r: self.receipt(venue, r), 5, s.producers[venue].budget,
@@ -280,40 +299,56 @@ class Discovery:
                     values.append(r.json())
                 client.account_limits(*values)
                 s.emit(venue, dict(type='verified_account_budget', limits=values[0], costs=values[1]))
-            await self.pages_for(venue, '/trade-api/v2/events',
-                dict(series_ticker='KXNFLGAME', status='open', with_milestones='true'), 'events', 200)
-            cat = coverage.catalog(self.pages, venue, now())
-            for event in cat['events']:
-                if event['exclusion'] is None:
-                    await self.pages_for(venue, '/trade-api/v2/markets',
-                        dict(event_ticker=event['id']), 'markets', 200)
+            series=s.spec.get('native_sources',{}).get(venue,{}).get('series',['KXNFLGAME'])
+            for series_id in series:
+                await self.pages_for(venue, '/trade-api/v2/events',
+                    dict(series_ticker=series_id,status='open',with_milestones='true'),'events',200)
+                cat=coverage.catalog(self.pages,venue,now())
+                for event in cat['events']:
+                    if event['exclusion'] is None and event['native_aliases'].get('series_ticker')==series_id:
+                        await self.pages_for(venue,'/trade-api/v2/markets',dict(event_ticker=event['id']),'markets',200)
         else:
-            rows = await self.pages_for(venue, '/v1/events', dict(tagSlug='nfl', active='true',
-                closed='false', orderBy='startTime', orderDirection='asc',
-                sportsMarketTypes='football_team_full_game_winner'), 'events', 5)
-            # Independent market pagination by native gameId; never a slug-list intersection.
-            for event in {str(e['id']):e for e in rows}.values():
-                if event.get('gameId'):
-                    await self.pages_for(venue, '/v1/markets', dict(gameId=str(event['gameId']),
-                        sportsMarketTypes='SPORTS_MARKET_TYPE_MONEYLINE', active='true', closed='false'), 'markets', 5)
+            tags=s.spec.get('native_sources',{}).get(venue,{}).get('tags',['nfl'])
+            for tag in tags:
+                query=dict(tagSlug=tag,active='true',closed='false',orderBy='startTime',orderDirection='asc')
+                if not s.spec.get('native_sources'):query['sportsMarketTypes']='football_team_full_game_winner'
+                rows=await self.pages_for(venue,'/v1/events',query,'events',5)
+                for event in {str(e['id']):e for e in rows}.values():
+                    if event.get('gameId'):
+                        query=dict(gameId=str(event['gameId']),active='true',closed='false')
+                        if not s.spec.get('native_sources'):query['sportsMarketTypes']='SPORTS_MARKET_TYPE_MONEYLINE'
+                        await self.pages_for(venue,'/v1/markets',query,'markets',5)
 
     def project(self):
-        cats = {v: coverage.catalog(self.pages, v, now()) for v in coverage.VENUES}
+        cats = {v: deepcopy(self.native_catalogs[v]) if v in self.native_catalogs else coverage.catalog(self.pages, v, now()) for v in self.venues}
         coverage.match_catalogs(cats)
-        markets = {v: {} for v in coverage.VENUES}
+        markets = {v: {} for v in self.venues}
         for v, cat in cats.items():
+            if v in self.native_catalogs:
+                markets[v] = self.markets.get(v,{})
+                continue
+            if self.session.spec.get('native_sources'):
+                from .native_semantics import SEMANTICS
+                cat.update(semantics=SEMANTICS[v],environment='production',update_path='native stream',
+                    acquisition_scope=self.session.spec['native_sources'][v].get('series',['KXNFLGAME']) if v=='kalshi' else self.session.spec['native_sources'][v].get('tags',['nfl']))
+                for item in cat['events']+cat['markets']:
+                    item['native_metadata']=deepcopy(item.get('_native'))
+                if v=='polymarket_us':
+                    for item in cat['markets']:
+                        for side in item['sides']:
+                            if side.get('role')=='Short':side.update(purchase_support='supported',basis='1 minus native Long bid; same contract quantity; B3 conversion')
             cat['counts'] = coverage.totals(cat)
             for row in cat['markets']:
                 proof = row['provenance'][0]
                 page = next(p for p in self.pages if p['body_sha256']==proof['body_sha256'])
                 body, _ = coverage.decode_page(page)
                 r = coverage.response(v, page, body)
-                if getattr(self.session, 'mock_segmented', False):
+                if getattr(self.session, 'mock_segmented', False) or (getattr(self.session,'product_session',False) and self.session.spec.get('mode','mock')=='mock'):
                     from dataclasses import replace
                     from app.models.core import EvidenceKind
                     r = replace(r, kind=EvidenceKind.SYNTHETIC)
                 try:
-                    markets[v][row['id']] = (kalshi.parse_market(r,row['_native'],row['event_id'],'KXNFLGAME')
+                    markets[v][row['id']] = (kalshi.parse_market(r,row['_native'],row['event_id'],next(e['native_aliases'].get('series_ticker','unknown') for e in cat['events'] if e['id']==row['event_id']))
                         if v=='kalshi' else polymarket_us.parse_market(r,row['_native'],row['event_id']))
                 except (ValueError, KeyError, TypeError):
                     row['parse_exclusion'] = 'market_parse_error'
@@ -334,11 +369,16 @@ class Discovery:
             self.partial = None
             self.refresh = dict(state='running', generation=self.generation, started_at=now().isoformat())
             try:
-                results = await asyncio.gather(*(self.venue(v) for v in coverage.VENUES), return_exceptions=True)
+                results = await asyncio.gather(*(self.venue(v) for v in self.venues), return_exceptions=True)
                 errors = [type(e).__name__+':'+str(e) for e in results if isinstance(e, BaseException)]
-                if errors:
+                if errors and (not getattr(self.session,'product_session',False) or (self.completed and not self.session.spec.get('native_sources'))):
                     raise ValueError('; '.join(errors))
                 cats, markets = self.project()
+                if errors:
+                    for v,result in zip(self.venues,results):
+                        if isinstance(result,BaseException):
+                            cats[v].update(event_discovery='failed',market_completeness='partial',selection=dict(ids=[],eligible=None),source_error=type(result).__name__)
+                            markets[v]={}
                 if getattr(self.session,'profile',None):
                     for cat in cats.values():
                         if len(cat['events'])>128 or len(cat['markets'])>256: raise BudgetStop('supervised_catalog_cap')
@@ -355,14 +395,14 @@ class Discovery:
                 self.published_generation, self.published_at = self.generation, at
                 self.completed = True
                 self.coverage = cats
-                self.blocked = {v:{} for v in coverage.VENUES}
+                self.blocked = {v:{} for v in self.venues}
                 self.refresh.update(state='completed', finished_at=at)
                 return self.markets
             except BaseException as exc:
                 self.refresh.update(state='interrupted' if isinstance(exc, asyncio.CancelledError) else 'failed',
                                     reason=type(exc).__name__+':'+str(exc), finished_at=now().isoformat())
                 # Durable partial progress is diagnostic only, never a coverage denominator.
-                self.partial = {v:coverage.catalog(self.pages,v,now()) for v in coverage.VENUES}
+                self.partial = {v:coverage.catalog(self.pages,v,now()) for v in self.venues}
                 for cat in self.partial.values():
                     for row in cat['events']+cat['markets']:
                         row.pop('_native',None)
@@ -560,6 +600,12 @@ class Venue:
             if getattr(self.session,'segmented_history',False) and self.session.stop_event.is_set(): return
             for group in self.groups.values():
                 if group['task'].done():
+                    if self.session.spec.get('native_sources'):
+                        self.health(next(n for n,g in self.groups.items() if g is group), 'disconnected')
+                        try: await group['task']
+                        except Exception: pass
+                        await self.session.stop_event.wait()
+                        return
                     await group['task']
                     self.session.request_stop('native_stream_ended')
                     return
@@ -583,6 +629,8 @@ class ContinuousSession(TransportSession):
         self.mock_segmented = mock_segmented
         self.supervised_live = supervised_live
         self.segmented_history = mock_segmented or supervised_live
+        if self.spec.get('native_sources') and self.segmented_history:
+            raise ValueError('B3 native REST currently requires the shared flat journal')
         if supervised_live:
             from .supervised_live import validate_live
             if mock_segmented: raise ValueError('live and mock modes are exclusive')
@@ -685,6 +733,10 @@ class ContinuousSession(TransportSession):
         await super().start()
         self.discovery = Discovery(self)
         self.producers = {v:Venue(self,v) for v in coverage.VENUES}
+        if self.spec.get('native_sources'):
+            from .native_product import NativeVenue
+            self.producers = {v: self.producers[v] if v in coverage.VENUES and c['state']=='enabled' and v not in getattr(self,'source_access_errors',{}) else NativeVenue(self,v,dict(c,state='unavailable') if v in getattr(self,'source_access_errors',{}) else c) for v,c in self.spec['native_sources'].items()}
+            self.health = {v:'idle' for v in self.producers}
         return self.sid
 
     async def discoveries(self):
@@ -695,7 +747,10 @@ class ContinuousSession(TransportSession):
             await self.pause(max(0,tick-time.monotonic()))
             if self.stop_event.is_set():
                 break
-            await self.discovery.discover(force=True)
+            try:await self.discovery.discover(force=True)
+            except Exception:
+                if not getattr(self,'product_session',False):raise
+                self.emit('session',dict(type='product_coverage_status',coverage=self.status_coverage(),refresh=self.discovery.refresh,safety_exclusions=self.discovery.blocked))
             if self.profile:
                 await self.stop_event.wait()
                 return
@@ -729,6 +784,12 @@ class ContinuousSession(TransportSession):
             await self.pause(1)
             if self.stop_event.is_set():
                 break
+            if getattr(self,'product_session',False):
+                status=dict(coverage=self.status_coverage(),refresh=self.discovery.refresh,safety_exclusions=self.discovery.blocked)
+                encoded=packed(status)
+                if encoded!=getattr(self,'last_product_status',None):
+                    self.emit('session',dict(type='product_coverage_status',**status))
+                    self.last_product_status=encoded
             stats = self.resources()
             if stats['peak_rss_bytes']>=(self.profile['soft_rss'] if self.profile else LIMITS['rss_bytes']):
                 self.request_stop('rss_cap')

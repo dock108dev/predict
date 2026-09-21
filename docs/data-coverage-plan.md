@@ -21,16 +21,17 @@ B1 included code-path inspection, retained-evidence review, targeted official pu
 
 The [B1 dependency ledger](b1-coverage-matrix.md#owning-slice-dependency-ledger-and-owner-help) records current evidence, exact owner assistance and completion checks. Maintain each dependency's current evidence, next action, engineering/owner/provider responsibility and completion check. Unknowns are work items, not assumptions of success and not a blanket project stop. The four-plus-two/six-sport beta floor stays unchanged while slices progress.
 
-## B2 — connect collection to the product — NEXT
+## B2 — connect collection to the product — COMPLETE
 
-Implement the [B2 handoff](b2-product-integration-handoff.md), including its versioned projection contract, exact module changes and focused acceptance checks. Reuse `ContinuousSession`, `CoverageOwner`, native adapters, journals, canonical matching and the existing calculation engine/UI. Connect coverage-session observations to current comparison rows in `multi_game_server.py`; remove hardcoded two-venue/event/side assumptions through reusable identities. Keep per-source catalogs (including unmatched markets), health, exclusions and fresh/current versus saved data visible. Preserve Start/Stop ownership and history.
+Delivered the [shared session projection, ordinary dashboard integration and verified history readers](b2-product-integration-handoff.md). Explicit fixture sessions now update comparisons, expose source/market gaps and dated references, freeze during saving, and reopen immutable cutoffs. Three source identities and two events include a non-Kalshi pair; unknown third-source economics remain unsupported. Existing 18-Arb/96-EV math reconciliation and focused collector/history/browser checks passed. [Exact identity and evidence](../evidence/b2-product-integration-20260920/final-report.md).
 
-Exit: retained-data and fixture integration shows multiple venue combinations, model/reference roles, correct period/line isolation, unavailable-source behavior, current updates, Stop and reopening through one ordinary UI. Fixtures prove integration only. B2 can proceed while access for B3/B4 is pending.
+This is fixture-backed integration, not production-source qualification. Real product Start remains unavailable without a new allowance. Existing D2/supervised consumed-attempt protections remain intact. B3 is in progress; real qualification is blocked on selection/access and approval.
 
-## B3 — four prediction venues
+## B3 — four prediction venues — IN PROGRESS; real qualification blocked
 
-Finish shared-runtime ingestion for the selected fourth venue and Novig; extend Kalshi/US coverage to the confirmed universe. Qualify actual production discovery/books, usable sides/depth, terms/fees and recovery within a newly scoped live allowance. Keep US Short depth and coverage limitations explicit. For ProphetX if selected, resolve quantity/value semantics and actual update delivery before sized comparisons.
+[B3 engineering](b3-native-integration.md) connects Novig and a provisional unselected ProphetX REST branch through the existing collector, native observation journal, ordinary projection, source health and Stop. Source-specific purchase conversion, failure isolation, retained replay and shared-history ordering are offline verified. Kalshi series/US tag scopes are configurable; unsupported discovered native metadata remains visible. Native REST currently uses shared flat history; B2 segmented behavior is preserved.
 
+Fourth-venue selection and Novig provisioning are unanswered. No B3 QA/production collection or four-venue production comparison is qualified. Finalize the [single bounded proposal](b3-native-qualification-proposal.md) with the selected venue/access references before requesting approval and any new authenticated access. Unknown Novig listing period/rules and ProphetX sizes remain explicit prerequisites/limitations.
 Exit: each of four venues has observed production input, integrated health/history and useful comparison participation; source-specific gaps are visible. Offline adapters do not count. No inference of full exchange delivery from short samples.
 
 ## B4 — model reference and free delayed Pinnacle
@@ -57,7 +58,7 @@ Only after engineering readiness, guide one short action at a time through the p
 
 ## Scope and execution boundaries
 
-The B1 request authorizes the completed assessment and documentation handoff only. B2 implementation, beta launch, new collection, account/credential access, spending, outreach and trading were not performed. B2 remains the next engineering task. Independent engineering can be instructed without waiting for every provider. Preserve existing work/evidence and consumed attempts; any changed source/runtime requires applicable new verification. No automatic reuse or reset of historical run allowances.
+The B2 request authorized implementation, focused tests, read-only retained observations and an isolated fixture browser verification. These are complete. No new real collection, credential/account access, spending, outreach, trading or release was authorized or performed. B3 implementation/public documentation/offline replay/isolated fixtures are authorized. Source selection/access and approval of the concrete bounded proposal remain required before new real access. Existing evidence and consumed attempts are preserved; fixture success does not transfer to live readiness.
 
 ## Retained foundation
 
