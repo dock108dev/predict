@@ -1,0 +1,123 @@
+{
+  "fixture": "retained",
+  "observations": 1915,
+  "books": 575,
+  "packets": 1150,
+  "exact_rows_order": true,
+  "sequence_sha256": "28d9a8d013a1ed3218a67de8834ac0ee556e06370ef1f83ad5118fc33ef2116b",
+  "native_replay": {
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 88,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 175
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-2": {
+      "exact_native_books": {
+        "kalshi": 59,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-3": {
+      "exact_native_books": {
+        "kalshi": 249,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-4": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    }
+  },
+  "seconds": 10.965034084001672,
+  "observations_per_second": 174.6460599510625,
+  "baseline_rss": 61849600,
+  "peak_rss": 76529664,
+  "traced_current": 7636995,
+  "traced_peak": 8546511,
+  "segment_samples": [
+    {
+      "observations": 174,
+      "rss_peak": 68911104,
+      "traced_current": 2493330
+    },
+    {
+      "observations": 1197,
+      "rss_peak": 76021760,
+      "traced_current": 7887840
+    },
+    {
+      "observations": 1915,
+      "rss_peak": 76529664,
+      "traced_current": 8048624
+    }
+  ],
+  "implementation": "two sequential verification passes; one row plus native engine state, no whole-run list",
+  "disk_bytes": 4952235,
+  "segments": [
+    {
+      "bytes": 930559,
+      "chain": "94318b501fbf30662e94fcaf5f6d65195c69290e53337b42729217aa7b699575",
+      "encoded": 901323,
+      "expanded": 3559369,
+      "expanded_physical": 3559796,
+      "logical": 174,
+      "name": "segment-0000.jsonl",
+      "observations": 174,
+      "physical": 176,
+      "sha256": "57ceca67687bbb29d44eabb0e420ad2e25ed400a1a11613c7ec0a8a17753fe26"
+    },
+    {
+      "bytes": 2381353,
+      "chain": "1e17f3c8ab347a0cad54c4bfa650194f07a6b9448f18d5419c2b33b3e6fd8dc3",
+      "encoded": 2213670,
+      "expanded": 7916555,
+      "expanded_physical": 7916988,
+      "logical": 1023,
+      "name": "segment-0001.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "7578c820fd6f504cdb90f3985badc4ae296ddf6db8b4088e93b9ed7b0d366b4c"
+    },
+    {
+      "bytes": 1638830,
+      "chain": "1306c6fbcf5a05406165667d83c91f4cf6089335473643849081c50ab56da781",
+      "encoded": 1520308,
+      "expanded": 5294811,
+      "expanded_physical": 5295908,
+      "logical": 717,
+      "name": "segment-0002.jsonl",
+      "observations": 718,
+      "physical": 720,
+      "sha256": "b65ae890933d498837fb055c9265e6123c87215ac75e075fda2ea855974276a5"
+    }
+  ]
+}

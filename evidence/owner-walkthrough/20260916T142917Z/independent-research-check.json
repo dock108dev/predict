@@ -1,0 +1,308 @@
+[
+  {
+    "game": "CLE Browns vs TB Buccaneers",
+    "purchase": "Cleveland Browns YES",
+    "market_id": "KXNFLGAME-26SEP20CLETB-CLE",
+    "schedule": "2026-09-20T17:00:00+00:00",
+    "odds": {
+      "Cleveland Browns": "+310",
+      "Tampa Bay Buccaneers": "-395"
+    },
+    "implied_probabilities": {
+      "Cleveland Browns": "0.2439024390243902439024390243902439024390243902439024390243902439024390243902439024390243902439024390",
+      "Tampa Bay Buccaneers": "0.7979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797980"
+    },
+    "overround": "0.04188223700418822370041882237004188223700418822370041882237004188223700418822370041882237004188223700",
+    "exact_devig_fraction": "990/4229",
+    "stored_probability": "0.234097895483565855",
+    "first_level_size": "212417.12",
+    "available": "3667992.66",
+    "fills": [
+      {
+        "price": "0.22",
+        "quantity": "100"
+      }
+    ],
+    "cost": "22",
+    "fee": "1.21",
+    "entry_cash": "23.21",
+    "expected_payout": "23.4097895483565855",
+    "net": "0.1997895483565855",
+    "roi": "0.8607908158405234812580784144765187419215855234812580784144765187419215855234812580784144765187419216",
+    "display": {
+      "expected_profit": "0.20",
+      "expected_payout": "23.41",
+      "return_pct": "0.86",
+      "notional": "22.00",
+      "cash": "23.21",
+      "fee": "1.21"
+    },
+    "target_received_at": "2026-09-16 01:07:24.640561+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "6653d00248b33032093c0579ba809cf26766f0755bada18283857b0ccefa5640",
+    "native_proof": {
+      "book": "87fcee78-d31d-41c1-ac56-d78036fad237",
+      "received_at": "2026-09-16 01:07:24.640561+00:00",
+      "listing": "5d7fa37f-1845-4132-8a32-0af4e125b709",
+      "listing_at": "2026-09-16T01:07:08.500032+00:00",
+      "terms": "The following market refers to the team who wins the CLE Browns vs TB Buccaneers Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  },
+  {
+    "game": "CIN Bengals vs HOU Texans",
+    "purchase": "Cincinnati Bengals YES",
+    "market_id": "KXNFLGAME-26SEP20CINHOU-CIN",
+    "schedule": "2026-09-20T17:00:00+00:00",
+    "odds": {
+      "Cincinnati Bengals": "+120",
+      "Houston Texans": "-142"
+    },
+    "implied_probabilities": {
+      "Cincinnati Bengals": "0.4545454545454545454545454545454545454545454545454545454545454545454545454545454545454545454545454545",
+      "Houston Texans": "0.5867768595041322314049586776859504132231404958677685950413223140495867768595041322314049586776859504"
+    },
+    "overround": "0.04132231404958677685950413223140495867768595041322314049586776859504132231404958677685950413223140496",
+    "exact_devig_fraction": "55/126",
+    "stored_probability": "0.436507936507936508",
+    "first_level_size": "100900.28",
+    "available": "3432656.1",
+    "fills": [
+      {
+        "price": "0.42",
+        "quantity": "100"
+      }
+    ],
+    "cost": "42",
+    "fee": "1.71",
+    "entry_cash": "43.71",
+    "expected_payout": "43.6507936507936508",
+    "net": "-0.0592063492063492",
+    "roi": "-0.1354526406002040722946694120338595287119652253488904140928849233584991992679020819034545870510180737",
+    "display": {
+      "expected_profit": "-0.06",
+      "expected_payout": "43.65",
+      "return_pct": "-0.14",
+      "notional": "42.00",
+      "cash": "43.71",
+      "fee": "1.71"
+    },
+    "target_received_at": "2026-09-16 01:07:25.676308+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "31141219610df9a53e5823ce61537bad3aeb3ca82451ef510190d7eef35b6a72",
+    "native_proof": {
+      "book": "45811da2-e61a-44a9-9a3c-99621366dfac",
+      "received_at": "2026-09-16 01:07:25.676308+00:00",
+      "listing": "7224e34e-4577-4d50-bcbc-cee94b016f71",
+      "listing_at": "2026-09-16T01:07:07.330648+00:00",
+      "terms": "The following market refers to the team who wins the CIN Bengals vs HOU Texans Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  },
+  {
+    "game": "CAR Panthers vs ATL Falcons",
+    "purchase": "Atlanta Falcons YES",
+    "market_id": "KXNFLGAME-26SEP20CARATL-ATL",
+    "schedule": "2026-09-20T17:00:00+00:00",
+    "odds": {
+      "Carolina Panthers": "-135",
+      "Atlanta Falcons": "+114"
+    },
+    "implied_probabilities": {
+      "Carolina Panthers": "0.5744680851063829787234042553191489361702127659574468085106382978723404255319148936170212765957446809",
+      "Atlanta Falcons": "0.4672897196261682242990654205607476635514018691588785046728971962616822429906542056074766355140186916"
+    },
+    "overround": "0.04175780473255120302246967587989659972161463511632531318353549413402266852256909922449791210976337244",
+    "exact_devig_fraction": "2350/5239",
+    "stored_probability": "0.448558885283451040",
+    "first_level_size": "94291.81",
+    "available": "3871156.56",
+    "fills": [
+      {
+        "price": "0.44",
+        "quantity": "100"
+      }
+    ],
+    "cost": "44",
+    "fee": "1.73",
+    "entry_cash": "45.73",
+    "expected_payout": "44.855888528345104",
+    "net": "-0.874111471654896",
+    "roi": "-1.911461779258464902689700415482178001312048983162038049420511699103433194839273999562650338945987317",
+    "display": {
+      "expected_profit": "-0.87",
+      "expected_payout": "44.86",
+      "return_pct": "-1.91",
+      "notional": "44.00",
+      "cash": "45.73",
+      "fee": "1.73"
+    },
+    "target_received_at": "2026-09-16 01:07:30.552644+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "36b23e4ac34838d8c7205f2d56a6e5a7e4c33b4d17978f9eff641d2b7b44497d",
+    "native_proof": {
+      "book": "781d0db2-d5a3-47f3-942f-1279cf8fab24",
+      "received_at": "2026-09-16 01:07:30.552644+00:00",
+      "listing": "dd744650-c243-4ff0-890a-7811848c334d",
+      "listing_at": "2026-09-16T01:07:03.782844+00:00",
+      "terms": "The following market refers to the team who wins the CAR Panthers vs ATL Falcons Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  },
+  {
+    "game": "NO Saints vs BAL Ravens",
+    "purchase": "Baltimore Ravens YES",
+    "market_id": "KXNFLGAME-26SEP20NOBAL-BAL",
+    "schedule": "2026-09-20T17:00:00+00:00",
+    "odds": {
+      "New Orleans Saints": "+320",
+      "Baltimore Ravens": "-410"
+    },
+    "implied_probabilities": {
+      "New Orleans Saints": "0.2380952380952380952380952380952380952380952380952380952380952380952380952380952380952380952380952381",
+      "Baltimore Ravens": "0.8039215686274509803921568627450980392156862745098039215686274509803921568627450980392156862745098039"
+    },
+    "overround": "0.04201680672268907563025210084033613445378151260504201680672268907563025210084033613445378151260504202",
+    "exact_devig_fraction": "287/372",
+    "stored_probability": "0.771505376344086022",
+    "first_level_size": "267514.99",
+    "available": "3039993.74",
+    "fills": [
+      {
+        "price": "0.79",
+        "quantity": "100"
+      }
+    ],
+    "cost": "79",
+    "fee": "1.17",
+    "entry_cash": "80.17",
+    "expected_payout": "77.1505376344086022",
+    "net": "-3.0194623655913978",
+    "roi": "-3.766324517389793937882000748409629537233379069477360608706498690283148309841586628414618934763627292",
+    "display": {
+      "expected_profit": "-3.02",
+      "expected_payout": "77.15",
+      "return_pct": "-3.77",
+      "notional": "79.00",
+      "cash": "80.17",
+      "fee": "1.17"
+    },
+    "target_received_at": "2026-09-16 01:07:24.993015+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "b905a1a2d06aa100f1a2c17d57a3395705ea8b364242e528346c941a9b0e948d",
+    "native_proof": {
+      "book": "eb7c8cf5-05b2-4e03-a629-8291ed6ac4e3",
+      "received_at": "2026-09-16 01:07:24.993015+00:00",
+      "listing": "8e635689-25b2-4f04-a83c-e573f8a91cfe",
+      "listing_at": "2026-09-16T01:07:04.954714+00:00",
+      "terms": "The following market refers to the team who wins the NO Saints vs BAL Ravens Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  },
+  {
+    "game": "MIN Vikings vs CHI Bears",
+    "purchase": "Chicago Bears YES",
+    "market_id": "KXNFLGAME-26SEP20MINCHI-CHI",
+    "schedule": "2026-09-20T17:00:00+00:00",
+    "odds": {
+      "Minnesota Vikings": "+185",
+      "Chicago Bears": "-225"
+    },
+    "implied_probabilities": {
+      "Minnesota Vikings": "0.3508771929824561403508771929824561403508771929824561403508771929824561403508771929824561403508771930",
+      "Chicago Bears": "0.6923076923076923076923076923076923076923076923076923076923076923076923076923076923076923076923076923"
+    },
+    "overround": "0.04318488529014844804318488529014844804318488529014844804318488529014844804318488529014844804318488529",
+    "exact_devig_fraction": "513/773",
+    "stored_probability": "0.663648124191461837",
+    "first_level_size": "50452.14",
+    "available": "3075582.53",
+    "fills": [
+      {
+        "price": "0.68",
+        "quantity": "100"
+      }
+    ],
+    "cost": "68",
+    "fee": "1.53",
+    "entry_cash": "69.53",
+    "expected_payout": "66.3648124191461837",
+    "net": "-3.1651875808538163",
+    "roi": "-4.552261729978162375952826118222350064720264633970947792319861930102114195311376384294549115489716669",
+    "display": {
+      "expected_profit": "-3.17",
+      "expected_payout": "66.36",
+      "return_pct": "-4.55",
+      "notional": "68.00",
+      "cash": "69.53",
+      "fee": "1.53"
+    },
+    "target_received_at": "2026-09-16 01:07:30.494635+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "827fcead2bdf12f7fc69b5c68c3fc3195983835056ec2c214190a3ec74913307",
+    "native_proof": {
+      "book": "917654e5-4e87-48e5-bc03-77392e920cb1",
+      "received_at": "2026-09-16 01:07:30.494635+00:00",
+      "listing": "c782febb-3f29-4b53-93bf-1c8c7aa3f0bc",
+      "listing_at": "2026-09-16T01:07:06.141875+00:00",
+      "terms": "The following market refers to the team who wins the MIN Vikings vs CHI Bears Pro Football game originally scheduled for Sep 20, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  },
+  {
+    "game": "DET Lions vs BUF Bills",
+    "purchase": "Buffalo Bills YES",
+    "market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+    "schedule": "2026-09-18T00:15:00+00:00",
+    "odds": {
+      "Detroit Lions": "+180",
+      "Buffalo Bills": "-218"
+    },
+    "implied_probabilities": {
+      "Detroit Lions": "0.3571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571",
+      "Buffalo Bills": "0.6855345911949685534591194968553459119496855345911949685534591194968553459119496855345911949685534591"
+    },
+    "overround": "0.04267744833782569631626235399820305480682839173405211141060197663971248876909254267744833782569631626",
+    "exact_devig_fraction": "1526/2321",
+    "stored_probability": "0.657475226195605343",
+    "first_level_size": "11574336.49",
+    "available": "27741763.45",
+    "fills": [
+      {
+        "price": "0.68",
+        "quantity": "100"
+      }
+    ],
+    "cost": "68",
+    "fee": "1.53",
+    "entry_cash": "69.53",
+    "expected_payout": "65.7475226195605343",
+    "net": "-3.7824773804394657",
+    "roi": "-5.440065267423365022292535596145548684021285775924061556162807421257011362002013519344167985042427729",
+    "display": {
+      "expected_profit": "-3.78",
+      "expected_payout": "65.75",
+      "return_pct": "-5.44",
+      "notional": "68.00",
+      "cash": "69.53",
+      "fee": "1.53"
+    },
+    "target_received_at": "2026-09-16 01:07:35.681097+00:00",
+    "reference_retrieved_at": "2026-09-16T03:26:29.205210+00:00",
+    "source_sha256": "c99eb822036ca23691b06c2d701b0cbe9ec6042d0d26890942e3b86ba16cb753",
+    "terms_sha256": "ce92b66c81f6920367adca61114536471de41d295ed2fc012b8a3b48349206c0",
+    "native_proof": {
+      "book": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+      "received_at": "2026-09-16 01:07:35.681097+00:00",
+      "listing": "5af79e46-6cd1-4bbf-a44e-6efbded25414",
+      "listing_at": "2026-09-16T01:07:02.611796+00:00",
+      "terms": "The following market refers to the team who wins the DET Lions vs BUF Bills Pro Football game originally scheduled for Sep 17, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "matches_running_dashboard": true
+  }
+]

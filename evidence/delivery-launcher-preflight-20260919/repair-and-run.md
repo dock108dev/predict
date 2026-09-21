@@ -1,0 +1,11 @@
+# Authorized repair and single timed attempt
+
+The owner's follow-up authorized fixing the preflight findings, documenting the repair and continuing without a hold. The original envelope is preserved. [Revised envelope](revised-envelope.json) retains the exact spec, attempt, destinations and all budgets; only candidate/source identity and approval/command binding change.
+
+Executable candidate: `8aae112d9af82cf30662eb4030c52998c50ac60783f544b3aec725289da0802f`. Source identity: `4bc0a48bcdcd7b62dcf3b09944900e76261a115227bb7b3cd7f9c8e21b7c4dc4`. Spec: `e7427b51b8594af05260cb2e17d2d62f1d07503dc18c3d38584d0261b691002a`. Attempt: `f72e404a-91e6-4fcf-8159-cfe562727346`. Four test/fixture/auditor files changed; production executable files, Git HEAD, existing tracked diff, runtime/dependencies and profiles match the original freeze.
+
+The fixture now records its monotonic origin and at most 96 HTTP observations plus one WebSocket observation in at most 32 KiB. Origin, request path/query/time and final server counters are retained in one exclusive helper file after server cleanup, inside the existing helper reservation and outer write/output accounting. No secrets are recorded. The auditor compares server requests to client request order/path/query/time and the Stop boundary and reports fixture origin relative to Start. Bounds and negative telemetry checks are exercised by the launcher suite.
+
+105 guarded checks pass: 34 launcher, 49 diagnostic, 17 regressions, one retained exact replay and four saved-math checks. The launcher suite took 30.226 seconds and 77.44 MiB peak; all checks passed their existing limits. Streaming preservation verification confirmed all 2,824 prior evidence files unchanged with 24.73 MiB peak, within 4 GiB total preservation input. The earlier whole-file hashing helper's 266.77 MiB failure remains recorded and is not erased or treated as a collector measurement.
+
+Approval was recorded using the documented candidate/spec/attempt mechanism after revised preflight passed. Exactly one explicit Start was issued at 2026-09-20T01:24:52.719814Z (September 19 local time). The marker is now consumed. No additional attempt is authorized. Timed result and audit follow in separate artifacts.

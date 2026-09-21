@@ -1,0 +1,748 @@
+{
+  "as_of": "2026-09-16T16:00:00+00:00",
+  "caveats": [
+    "Historical/synthetic inventory only; no new data collected.",
+    "Exhausted applies only to a captured query traversal, not the whole live venue.",
+    "Polymarket embedded markets are not independently proven exhaustive.",
+    "Matching is event identity plus retained market presence, not outcome/contract/settlement equivalence.",
+    "Purchase support is adapter capability, not available liquidity or live qualification."
+  ],
+  "current_counts": null,
+  "current_full_coverage": false,
+  "first_retrieval": "2026-09-16T14:00:00+00:00",
+  "format": "coverage-inventory-1",
+  "last_retrieval": "2026-09-16T14:00:00+00:00",
+  "scope": "NFL pregame full-game winner; retained endpoint filters are part of the denominator",
+  "snapshot_age_seconds": 7200.0,
+  "source": {
+    "classification": "synthetic",
+    "historical_collection": {},
+    "path": "evidence/d1-coverage/synthetic-pages.json",
+    "sha256": "9029bc323214fef5d64286879883a8bb18d57b551fd4c0263c9976b1f161fe61"
+  },
+  "venues": {
+    "kalshi": {
+      "active_subscriptions": null,
+      "counts": {
+        "events": {
+          "discovered": 2,
+          "duplicates": 1,
+          "excluded": 0,
+          "exclusions": {},
+          "in_scope": 2,
+          "matching": {
+            "matched": 1,
+            "unmatched": 1
+          },
+          "raw_occurrences": 3
+        },
+        "events_without_retained_markets": 0,
+        "in_scope_sides": {
+          "supported": 4
+        },
+        "market_discovery": {
+          "exhausted": 2
+        },
+        "markets": {
+          "discovered": 2,
+          "duplicates": 0,
+          "excluded": 0,
+          "exclusions": {},
+          "in_scope": 2,
+          "matching": {
+            "matched": 1,
+            "unmatched": 1
+          },
+          "raw_occurrences": 2
+        },
+        "sides": {
+          "supported": 4,
+          "total": 4,
+          "unknown": 0,
+          "unsupported": 0
+        }
+      },
+      "discovery": [
+        {
+          "filters": {
+            "series_ticker": "KXNFLGAME",
+            "status": "unopened"
+          },
+          "next_position": null,
+          "page_evidence": [
+            {
+              "body_sha256": "076b40cb82aad77cde74b515bb70a16b2ad1812f33024038d7257ff673729d19",
+              "complete": true,
+              "received_at": "2026-09-16T14:00:00Z",
+              "status": 200
+            }
+          ],
+          "path": "/events",
+          "query": {
+            "cursor": "",
+            "limit": 10,
+            "series_ticker": "KXNFLGAME",
+            "status": "unopened"
+          },
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "state": "exhausted",
+          "unused_pages": 0,
+          "used_pages": 1
+        },
+        {
+          "filters": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "next_position": null,
+          "page_evidence": [
+            {
+              "body_sha256": "d3f33f6a88c8e7f689d1914171bd8670e916b0ce5ff2fe3ce6138bdfcc7185b2",
+              "complete": true,
+              "received_at": "2026-09-16T14:00:00Z",
+              "status": 200
+            }
+          ],
+          "path": "/events",
+          "query": {
+            "cursor": "",
+            "limit": 2,
+            "series_ticker": "KXNFLGAME"
+          },
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "state": "exhausted",
+          "unused_pages": 0,
+          "used_pages": 1
+        },
+        {
+          "filters": {
+            "event_ticker": "k"
+          },
+          "next_position": null,
+          "page_evidence": [
+            {
+              "body_sha256": "fcf7265c73a5833f0a9548d1feb9c2a08cf470f338bc55d2dbc72453622f8557",
+              "complete": true,
+              "received_at": "2026-09-16T14:00:00Z",
+              "status": 200
+            }
+          ],
+          "path": "/markets",
+          "query": {
+            "cursor": "",
+            "event_ticker": "k",
+            "limit": 2
+          },
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "state": "exhausted",
+          "unused_pages": 0,
+          "used_pages": 1
+        },
+        {
+          "filters": {
+            "event_ticker": "unmatched"
+          },
+          "next_position": null,
+          "page_evidence": [
+            {
+              "body_sha256": "d88f01e72a72d33527cb69766dfd5de4344fd58ffd51f7563771436c2ff0d8d2",
+              "complete": true,
+              "received_at": "2026-09-16T14:00:00Z",
+              "status": 200
+            }
+          ],
+          "path": "/markets",
+          "query": {
+            "cursor": "",
+            "event_ticker": "unmatched",
+            "limit": 2
+          },
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "state": "exhausted",
+          "unused_pages": 0,
+          "used_pages": 1
+        }
+      ],
+      "event_discovery": "exhausted",
+      "events": [
+        {
+          "canonical_key": [
+            "2026-09-20T17:00:00+00:00",
+            [
+              "NFL:BUF",
+              "NFL:DET"
+            ]
+          ],
+          "conflicting_duplicate": false,
+          "counterpart_event_ids": [
+            "p"
+          ],
+          "exclusion": null,
+          "id": "k",
+          "identity": "resolved",
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "km"
+          ],
+          "matching_status": "matched",
+          "native_aliases": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "occurrences": 1,
+          "participants": {
+            "Buffalo": "NFL:BUF",
+            "Detroit": "NFL:DET"
+          },
+          "provenance": [
+            {
+              "body_sha256": "d3f33f6a88c8e7f689d1914171bd8670e916b0ce5ff2fe3ce6138bdfcc7185b2",
+              "inventory_row": 3,
+              "params": {
+                "cursor": "",
+                "limit": 2,
+                "series_ticker": "KXNFLGAME"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "scheduled_start": "2026-09-20T17:00:00+00:00",
+          "status": {
+            "active": null,
+            "closed": null,
+            "ended": null,
+            "live": null,
+            "period": null,
+            "status": null
+          },
+          "terms_references": {},
+          "title": "Detroit vs Buffalo"
+        },
+        {
+          "canonical_key": [
+            "2026-09-20T17:00:00+00:00",
+            [
+              "NFL:CHI",
+              "NFL:MIN"
+            ]
+          ],
+          "conflicting_duplicate": false,
+          "counterpart_event_ids": [],
+          "exclusion": null,
+          "id": "unmatched",
+          "identity": "resolved",
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "other"
+          ],
+          "matching_status": "unmatched",
+          "native_aliases": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "occurrences": 2,
+          "participants": {
+            "Chicago": "NFL:CHI",
+            "Minnesota": "NFL:MIN"
+          },
+          "provenance": [
+            {
+              "body_sha256": "076b40cb82aad77cde74b515bb70a16b2ad1812f33024038d7257ff673729d19",
+              "inventory_row": 1,
+              "params": {
+                "cursor": "",
+                "limit": 10,
+                "series_ticker": "KXNFLGAME",
+                "status": "unopened"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            },
+            {
+              "body_sha256": "076b40cb82aad77cde74b515bb70a16b2ad1812f33024038d7257ff673729d19",
+              "inventory_row": 2,
+              "params": {
+                "cursor": "",
+                "limit": 10,
+                "series_ticker": "KXNFLGAME",
+                "status": "unopened"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "scheduled_start": "2026-09-20T17:00:00+00:00",
+          "status": {
+            "active": null,
+            "closed": null,
+            "ended": null,
+            "live": null,
+            "period": null,
+            "status": null
+          },
+          "terms_references": {},
+          "title": "Chicago vs Minnesota"
+        }
+      ],
+      "historical_collection": null,
+      "market_completeness": "exhausted_for_retained_events",
+      "markets": [
+        {
+          "conflicting_duplicate": false,
+          "counterpart_market_ids": [
+            "pm"
+          ],
+          "event_id": "k",
+          "exclusion": null,
+          "id": "km",
+          "market_type": "moneyline",
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "matching_status": "matched",
+          "native_slug": null,
+          "occurrences": 1,
+          "period": "full_game",
+          "provenance": [
+            {
+              "body_sha256": "fcf7265c73a5833f0a9548d1feb9c2a08cf470f338bc55d2dbc72453622f8557",
+              "inventory_row": 4,
+              "params": {
+                "cursor": "",
+                "event_ticker": "k",
+                "limit": 2
+              },
+              "path": "/markets",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "sides": [
+            {
+              "basis": "opposite native bid complement in existing adapter",
+              "id": "yes",
+              "label": "Detroit",
+              "purchase_support": "supported",
+              "role": "yes"
+            },
+            {
+              "basis": "opposite native bid complement in existing adapter",
+              "id": "no",
+              "label": "Not Detroit",
+              "purchase_support": "supported",
+              "role": "no"
+            }
+          ],
+          "status": "active",
+          "terms": {},
+          "title": "Detroit wins"
+        },
+        {
+          "conflicting_duplicate": false,
+          "counterpart_market_ids": [],
+          "event_id": "unmatched",
+          "exclusion": null,
+          "id": "other",
+          "market_type": "moneyline",
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "matching_status": "unmatched",
+          "native_slug": null,
+          "occurrences": 1,
+          "period": "full_game",
+          "provenance": [
+            {
+              "body_sha256": "d88f01e72a72d33527cb69766dfd5de4344fd58ffd51f7563771436c2ff0d8d2",
+              "inventory_row": 5,
+              "params": {
+                "cursor": "",
+                "event_ticker": "unmatched",
+                "limit": 2
+              },
+              "path": "/markets",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "sides": [
+            {
+              "basis": "opposite native bid complement in existing adapter",
+              "id": "yes",
+              "label": "Detroit",
+              "purchase_support": "supported",
+              "role": "yes"
+            },
+            {
+              "basis": "opposite native bid complement in existing adapter",
+              "id": "no",
+              "label": "Not Detroit",
+              "purchase_support": "supported",
+              "role": "no"
+            }
+          ],
+          "status": "active",
+          "terms": {},
+          "title": "Detroit wins"
+        }
+      ],
+      "subscription_basis": "offline inventory; no live subscription state queried"
+    },
+    "polymarket_us": {
+      "active_subscriptions": null,
+      "counts": {
+        "events": {
+          "discovered": 3,
+          "duplicates": 0,
+          "excluded": 0,
+          "exclusions": {},
+          "in_scope": 3,
+          "matching": {
+            "matched": 1,
+            "unmatched": 1,
+            "unresolved": 1
+          },
+          "raw_occurrences": 3
+        },
+        "events_without_retained_markets": 0,
+        "in_scope_sides": {
+          "supported": 3,
+          "unsupported": 3
+        },
+        "market_discovery": {
+          "embedded_only": 3
+        },
+        "markets": {
+          "discovered": 3,
+          "duplicates": 0,
+          "excluded": 0,
+          "exclusions": {},
+          "in_scope": 3,
+          "matching": {
+            "matched": 1,
+            "unmatched": 1,
+            "unresolved": 1
+          },
+          "raw_occurrences": 3
+        },
+        "sides": {
+          "supported": 3,
+          "total": 6,
+          "unknown": 0,
+          "unsupported": 3
+        }
+      },
+      "discovery": [
+        {
+          "filters": {
+            "tagSlug": "nfl"
+          },
+          "next_position": null,
+          "page_evidence": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "complete": true,
+              "received_at": "2026-09-16T14:00:00Z",
+              "status": 200
+            }
+          ],
+          "path": "/events",
+          "query": {
+            "limit": 10,
+            "offset": 0,
+            "tagSlug": "nfl"
+          },
+          "reason": "short offset page (adapter stopping rule)",
+          "retained_pages": 1,
+          "state": "exhausted",
+          "unused_pages": 0,
+          "used_pages": 1
+        }
+      ],
+      "event_discovery": "exhausted",
+      "events": [
+        {
+          "canonical_key": [
+            "2026-09-20T17:00:00+00:00",
+            [
+              "NFL:BUF",
+              "NFL:DET"
+            ]
+          ],
+          "conflicting_duplicate": false,
+          "counterpart_event_ids": [
+            "k"
+          ],
+          "exclusion": null,
+          "id": "p",
+          "identity": "resolved",
+          "market_discovery": "embedded_only",
+          "market_ids": [
+            "pm"
+          ],
+          "matching_status": "matched",
+          "native_aliases": {},
+          "occurrences": 1,
+          "participants": {
+            "Buffalo Bills": "NFL:BUF",
+            "Detroit Lions": "NFL:DET"
+          },
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 1,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "scheduled_start": "2026-09-20T17:00:00+00:00",
+          "status": {
+            "active": null,
+            "closed": null,
+            "ended": null,
+            "live": null,
+            "period": "NS",
+            "status": null
+          },
+          "terms_references": {},
+          "title": "fixture"
+        },
+        {
+          "canonical_key": [
+            "2026-09-20T17:00:00+00:00",
+            [
+              "NFL:ATL",
+              "NFL:CAR"
+            ]
+          ],
+          "conflicting_duplicate": false,
+          "counterpart_event_ids": [],
+          "exclusion": null,
+          "id": "solo",
+          "identity": "resolved",
+          "market_discovery": "embedded_only",
+          "market_ids": [
+            "solom"
+          ],
+          "matching_status": "unmatched",
+          "native_aliases": {},
+          "occurrences": 1,
+          "participants": {
+            "Atlanta Falcons": "NFL:ATL",
+            "Carolina Panthers": "NFL:CAR"
+          },
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 5,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "scheduled_start": "2026-09-20T17:00:00+00:00",
+          "status": {
+            "active": null,
+            "closed": null,
+            "ended": null,
+            "live": null,
+            "period": "NS",
+            "status": null
+          },
+          "terms_references": {},
+          "title": "fixture"
+        },
+        {
+          "canonical_key": null,
+          "conflicting_duplicate": false,
+          "counterpart_event_ids": [],
+          "exclusion": null,
+          "id": "unknown",
+          "identity": "unresolved",
+          "market_discovery": "embedded_only",
+          "market_ids": [
+            "unknownm"
+          ],
+          "matching_status": "unresolved",
+          "native_aliases": {},
+          "occurrences": 1,
+          "participants": {
+            "Buffalo Bills": "NFL:BUF",
+            "Mystery": null
+          },
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 3,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "scheduled_start": "2026-09-20T17:00:00+00:00",
+          "status": {
+            "active": null,
+            "closed": null,
+            "ended": null,
+            "live": null,
+            "period": "NS",
+            "status": null
+          },
+          "terms_references": {},
+          "title": "fixture"
+        }
+      ],
+      "historical_collection": null,
+      "market_completeness": "unestablished",
+      "markets": [
+        {
+          "conflicting_duplicate": false,
+          "counterpart_market_ids": [
+            "km"
+          ],
+          "event_id": "p",
+          "exclusion": null,
+          "id": "pm",
+          "market_type": "moneyline",
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "matching_status": "matched",
+          "native_slug": null,
+          "occurrences": 1,
+          "period": "full_game",
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 2,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "sides": [
+            {
+              "basis": "native Long offers in existing adapter",
+              "id": "pmL",
+              "label": "Detroit",
+              "purchase_support": "supported",
+              "role": "Long"
+            },
+            {
+              "basis": "Short purchase ladder not reconstructed by existing adapter",
+              "id": "pmS",
+              "label": "Buffalo",
+              "purchase_support": "unsupported",
+              "role": "Short"
+            }
+          ],
+          "status": "active",
+          "terms": {},
+          "title": "Winner"
+        },
+        {
+          "conflicting_duplicate": false,
+          "counterpart_market_ids": [],
+          "event_id": "solo",
+          "exclusion": null,
+          "id": "solom",
+          "market_type": "moneyline",
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "matching_status": "unmatched",
+          "native_slug": null,
+          "occurrences": 1,
+          "period": "full_game",
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 6,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "sides": [
+            {
+              "basis": "native Long offers in existing adapter",
+              "id": "solomL",
+              "label": "Detroit",
+              "purchase_support": "supported",
+              "role": "Long"
+            },
+            {
+              "basis": "Short purchase ladder not reconstructed by existing adapter",
+              "id": "solomS",
+              "label": "Buffalo",
+              "purchase_support": "unsupported",
+              "role": "Short"
+            }
+          ],
+          "status": "active",
+          "terms": {},
+          "title": "Winner"
+        },
+        {
+          "conflicting_duplicate": false,
+          "counterpart_market_ids": [],
+          "event_id": "unknown",
+          "exclusion": null,
+          "id": "unknownm",
+          "market_type": "moneyline",
+          "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established",
+          "matching_status": "unresolved",
+          "native_slug": null,
+          "occurrences": 1,
+          "period": "full_game",
+          "provenance": [
+            {
+              "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9",
+              "inventory_row": 4,
+              "params": {
+                "limit": 10,
+                "offset": 0,
+                "tagSlug": "nfl"
+              },
+              "path": "/events",
+              "received_at": "2026-09-16T14:00:00Z"
+            }
+          ],
+          "sides": [
+            {
+              "basis": "native Long offers in existing adapter",
+              "id": "unknownmL",
+              "label": "Detroit",
+              "purchase_support": "supported",
+              "role": "Long"
+            },
+            {
+              "basis": "Short purchase ladder not reconstructed by existing adapter",
+              "id": "unknownmS",
+              "label": "Buffalo",
+              "purchase_support": "unsupported",
+              "role": "Short"
+            }
+          ],
+          "status": "active",
+          "terms": {},
+          "title": "Winner"
+        }
+      ],
+      "subscription_basis": "offline inventory; no live subscription state queried"
+    }
+  }
+}

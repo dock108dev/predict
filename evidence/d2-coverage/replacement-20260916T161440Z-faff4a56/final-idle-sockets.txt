@@ -1,0 +1,2 @@
+COMMAND   PID              USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+Python  59392 michaelfuscoletti    6u  IPv4 0x58494d2c0360843d      0t0  TCP 127.0.0.1:8783 (LISTEN)

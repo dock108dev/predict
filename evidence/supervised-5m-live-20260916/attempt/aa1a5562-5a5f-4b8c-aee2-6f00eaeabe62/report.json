@@ -1,0 +1,997 @@
+{
+  "session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "reason": "manual_stop",
+  "collection_seconds": 240.2668675829991,
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete",
+    "operator_stop": true,
+    "native_verified": true,
+    "replay_seconds": 5.0393412910052575,
+    "replay_baseline_rss": 113672192,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 146,
+      "verified_account_budget": 1,
+      "coverage_inventory": 2,
+      "market_selected": 96,
+      "coverage_applied": 4,
+      "source_health": 2039,
+      "prediction_command": 5,
+      "prediction_frame": 1889,
+      "prediction_book": 2034,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1,
+      2
+    ],
+    "applied_generations": {
+      "polymarket_us": 2,
+      "kalshi": 2
+    },
+    "replay_traced_start": 0,
+    "replay_traced_peak": 0,
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 245.18969708299846,
+    "baseline_rss": 72679424,
+    "peak_rss": 132136960,
+    "traced_peak": 0,
+    "traced_current": 0,
+    "profile": "predict-supervised-segmented-5m-v1",
+    "replay_state_samples": [
+      {
+        "rows": 1024,
+        "bytes": 15073386,
+        "rss": 131645440
+      },
+      {
+        "rows": 2048,
+        "bytes": 15033435,
+        "rss": 131858432
+      },
+      {
+        "rows": 3072,
+        "bytes": 15025545,
+        "rss": 132055040
+      },
+      {
+        "rows": 4096,
+        "bytes": 14828458,
+        "rss": 132055040
+      },
+      {
+        "rows": 5120,
+        "bytes": 14851275,
+        "rss": 132055040
+      },
+      {
+        "rows": 6144,
+        "bytes": 14862667,
+        "rss": 132136960
+      }
+    ],
+    "live_state_samples": [
+      {
+        "seconds": 1.1189153750019614,
+        "bytes": 75682,
+        "rss": 76349440,
+        "logical": 2,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 11.501110458004405,
+        "bytes": 1058256,
+        "rss": 84672512,
+        "logical": 37,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 21.549587458001042,
+        "bytes": 1237341,
+        "rss": 84770816,
+        "logical": 72,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 32.003749540999706,
+        "bytes": 9394233,
+        "rss": 103841792,
+        "logical": 573,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 42.63415387499845,
+        "bytes": 9634414,
+        "rss": 104169472,
+        "logical": 675,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 53.23289716600266,
+        "bytes": 9883838,
+        "rss": 104415232,
+        "logical": 852,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 63.86525862500275,
+        "bytes": 10131358,
+        "rss": 104775680,
+        "logical": 1451,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 74.55479575000209,
+        "bytes": 10340788,
+        "rss": 105021440,
+        "logical": 1665,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 85.20284916600212,
+        "bytes": 10552357,
+        "rss": 105414656,
+        "logical": 1973,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 95.88430379100464,
+        "bytes": 10635125,
+        "rss": 105611264,
+        "logical": 2247,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 106.57064837500366,
+        "bytes": 10642518,
+        "rss": 105676800,
+        "logical": 2622,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 117.27065525000216,
+        "bytes": 10654958,
+        "rss": 105693184,
+        "logical": 3053,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 127.34734450000542,
+        "bytes": 10458835,
+        "rss": 110067712,
+        "logical": 3266,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 137.82383358300285,
+        "bytes": 10554778,
+        "rss": 110329856,
+        "logical": 3493,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 148.31714962499973,
+        "bytes": 10655947,
+        "rss": 110510080,
+        "logical": 3891,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 158.82804125000257,
+        "bytes": 12636204,
+        "rss": 113590272,
+        "logical": 4026,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 169.5257759160013,
+        "bytes": 12638362,
+        "rss": 113623040,
+        "logical": 4414,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 180.23335462500108,
+        "bytes": 12629920,
+        "rss": 113623040,
+        "logical": 4617,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 190.93684929099982,
+        "bytes": 12622630,
+        "rss": 113623040,
+        "logical": 4844,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 201.64236458300002,
+        "bytes": 12617349,
+        "rss": 113639424,
+        "logical": 5132,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 212.31487808300153,
+        "bytes": 12616560,
+        "rss": 113655808,
+        "logical": 5574,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 223.00780216600106,
+        "bytes": 12616666,
+        "rss": 113655808,
+        "logical": 5805,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 233.71981783299998,
+        "bytes": 12608867,
+        "rss": 113655808,
+        "logical": 6088,
+        "generation": 2,
+        "groups": 5
+      }
+    ],
+    "rate_peaks": {
+      "rows": 422,
+      "encoded": 1141180,
+      "expanded": 5310637,
+      "frames": 109
+    },
+    "frames_received": 1889,
+    "stop_to_closed_seconds": 0.08789083299780032
+  },
+  "accounting": {
+    "received": 6232,
+    "accepted": 6217,
+    "write_attempted": 6229,
+    "durably_acknowledged": 6217,
+    "rejected": 15,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 6217,
+    "journal_write_attempted": 6232,
+    "journal_durably_acknowledged": 6232,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 15940835,
+    "confirmed_chain": "527de69c9604b12f953930c61172fcff119ed41289c9eefc093c097d315435c0",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 6217,
+      "observations": 6218,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 6218,
+      "encoded_ingress": 14920265,
+      "expanded_ingress": 52336725,
+      "physical_records": 6232,
+      "control_records": 14,
+      "physical_write_attempts": 6232,
+      "journal_encoded_bytes": 15940835,
+      "journal_expanded_payload_bytes": 52340411,
+      "manifest_records": 1,
+      "manifest_bytes": 3272,
+      "manifest_writes": 8,
+      "manifest_publications": 8,
+      "manifest_write_bytes": 17436,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 16050172
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 132136960,
+    "peak_queue_records": 15,
+    "peak_queue_bytes": 559650,
+    "ingress_bytes": 14920265,
+    "journal_bytes": 15940835,
+    "elapsed_seconds": 245.30820925000444
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 32,
+      "discovered_markets": 64,
+      "generation": 2,
+      "eligible": 64,
+      "selected": 64,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 64,
+      "applied_selected": 64,
+      "requested": 64,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "peak_simultaneous": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "requests": 68,
+      "connection_attempts": 4,
+      "body_bytes_charged": 1241006,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "KXNFLGAME-26SEP20INDKC-IND": {
+          "received_at": "2026-09-16 20:58:10.005893+00:00",
+          "exchange_at": "2026-09-16 20:58:09.966000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "first"
+        },
+        "KXNFLGAME-26SEP17DETBUF-BUF": {
+          "received_at": "2026-09-16 21:00:25.320268+00:00",
+          "exchange_at": "2026-09-16 21:00:25.276000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20INDKC-KC": {
+          "received_at": "2026-09-16 20:59:56.146425+00:00",
+          "exchange_at": "2026-09-16 20:59:56.114000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP17DETBUF-DET": {
+          "received_at": "2026-09-16 20:58:53.599587+00:00",
+          "exchange_at": "2026-09-16 20:58:53.416000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27ARISF-ARI": {
+          "received_at": "2026-09-16 20:58:44.783743+00:00",
+          "exchange_at": "2026-09-16 20:58:44.533000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LAC": {
+          "received_at": "2026-09-16 20:58:47.463687+00:00",
+          "exchange_at": "2026-09-16 20:58:47.108000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CARATL-ATL": {
+          "received_at": "2026-09-16 21:00:19.350534+00:00",
+          "exchange_at": "2026-09-16 21:00:19.320000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27ARISF-SF": {
+          "received_at": "2026-09-16 20:57:37.488952+00:00",
+          "exchange_at": "2026-09-16 20:57:37.447000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27LARDEN-DEN": {
+          "received_at": "2026-09-16 20:56:50.698079+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LV": {
+          "received_at": "2026-09-16 20:57:56.147849+00:00",
+          "exchange_at": "2026-09-16 20:57:56.101000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CARATL-CAR": {
+          "received_at": "2026-09-16 21:00:17.785364+00:00",
+          "exchange_at": "2026-09-16 21:00:17.660000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27BALDAL-BAL": {
+          "received_at": "2026-09-16 20:56:50.718085+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LARDEN-LAR": {
+          "received_at": "2026-09-16 20:56:50.724236+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-MIA": {
+          "received_at": "2026-09-16 21:00:02.329160+00:00",
+          "exchange_at": "2026-09-16 21:00:02.232000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CINHOU-CIN": {
+          "received_at": "2026-09-16 20:58:09.980134+00:00",
+          "exchange_at": "2026-09-16 20:58:09.948000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27BALDAL-DAL": {
+          "received_at": "2026-09-16 20:56:50.744642+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP28PHICHI-CHI": {
+          "received_at": "2026-09-16 20:56:50.750991+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-SF": {
+          "received_at": "2026-09-16 20:59:58.412820+00:00",
+          "exchange_at": "2026-09-16 20:59:58.384000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CINHOU-HOU": {
+          "received_at": "2026-09-16 20:59:32.268765+00:00",
+          "exchange_at": "2026-09-16 20:59:32.240000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27KCMIA-KC": {
+          "received_at": "2026-09-16 20:57:21.937596+00:00",
+          "exchange_at": "2026-09-16 20:57:21.897000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP28PHICHI-PHI": {
+          "received_at": "2026-09-16 21:00:07.739009+00:00",
+          "exchange_at": "2026-09-16 21:00:07.710000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20SEAARI-ARI": {
+          "received_at": "2026-09-16 21:00:17.447453+00:00",
+          "exchange_at": "2026-09-16 21:00:17.422000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CLETB-CLE": {
+          "received_at": "2026-09-16 21:00:02.348873+00:00",
+          "exchange_at": "2026-09-16 21:00:02.251000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27KCMIA-MIA": {
+          "received_at": "2026-09-16 20:56:50.807680+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20SEAARI-SEA": {
+          "received_at": "2026-09-16 21:00:17.355313+00:00",
+          "exchange_at": "2026-09-16 21:00:17.323000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20CLETB-TB": {
+          "received_at": "2026-09-16 21:00:02.322341+00:00",
+          "exchange_at": "2026-09-16 21:00:02.232000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27LACBUF-BUF": {
+          "received_at": "2026-09-16 21:00:01.825760+00:00",
+          "exchange_at": "2026-09-16 21:00:01.784000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20WASDAL-DAL": {
+          "received_at": "2026-09-16 21:00:08.628001+00:00",
+          "exchange_at": "2026-09-16 21:00:08.601000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-GB": {
+          "received_at": "2026-09-16 20:58:56.852433+00:00",
+          "exchange_at": "2026-09-16 20:58:56.819000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27LACBUF-LAC": {
+          "received_at": "2026-09-16 21:00:00.861673+00:00",
+          "exchange_at": "2026-09-16 21:00:00.836000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "first"
+        },
+        "KXNFLGAME-26SEP20WASDAL-WAS": {
+          "received_at": "2026-09-16 20:59:46.200282+00:00",
+          "exchange_at": "2026-09-16 20:59:46.129000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-NYJ": {
+          "received_at": "2026-09-16 21:00:18.522035+00:00",
+          "exchange_at": "2026-09-16 21:00:18.496000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27LVNO-LV": {
+          "received_at": "2026-09-16 20:56:50.868772+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-LAR": {
+          "received_at": "2026-09-16 20:59:38.312259+00:00",
+          "exchange_at": "2026-09-16 20:59:38.281000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20JACDEN-DEN": {
+          "received_at": "2026-09-16 20:59:54.844590+00:00",
+          "exchange_at": "2026-09-16 20:59:54.798000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27LVNO-NO": {
+          "received_at": "2026-09-16 20:56:50.888745+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-NYG": {
+          "received_at": "2026-09-16 20:59:13.116728+00:00",
+          "exchange_at": "2026-09-16 20:59:13.022000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20JACDEN-JAC": {
+          "received_at": "2026-09-16 20:59:31.257229+00:00",
+          "exchange_at": "2026-09-16 20:59:31.210000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27MINTB-MIN": {
+          "received_at": "2026-09-16 21:00:01.016023+00:00",
+          "exchange_at": "2026-09-16 21:00:00.986000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "first"
+        },
+        "KXNFLGAME-26SEP24ATLGB-ATL": {
+          "received_at": "2026-09-16 20:59:22.569403+00:00",
+          "exchange_at": "2026-09-16 20:59:22.540000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20MINCHI-CHI": {
+          "received_at": "2026-09-16 21:00:17.163355+00:00",
+          "exchange_at": "2026-09-16 21:00:17.132000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27MINTB-TB": {
+          "received_at": "2026-09-16 20:56:50.930070+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP24ATLGB-GB": {
+          "received_at": "2026-09-16 20:56:50.937450+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MINCHI-MIN": {
+          "received_at": "2026-09-16 21:00:18.255461+00:00",
+          "exchange_at": "2026-09-16 21:00:18.224000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27NEJAC-JAC": {
+          "received_at": "2026-09-16 20:56:50.949269+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CAR": {
+          "received_at": "2026-09-16 20:59:14.850749+00:00",
+          "exchange_at": "2026-09-16 20:59:14.818000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP20NOBAL-BAL": {
+          "received_at": "2026-09-16 20:58:39.801097+00:00",
+          "exchange_at": "2026-09-16 20:58:39.655000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27NEJAC-NE": {
+          "received_at": "2026-09-16 20:56:50.967833+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CLE": {
+          "received_at": "2026-09-16 20:56:50.977192+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20NOBAL-NO": {
+          "received_at": "2026-09-16 21:00:14.950209+00:00",
+          "exchange_at": "2026-09-16 21:00:14.924000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27NYJDET-DET": {
+          "received_at": "2026-09-16 21:00:09.033927+00:00",
+          "exchange_at": "2026-09-16 21:00:08.975000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27CINPIT-CIN": {
+          "received_at": "2026-09-16 20:56:50.997095+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-PHI": {
+          "received_at": "2026-09-16 21:00:05.353023+00:00",
+          "exchange_at": "2026-09-16 21:00:05.323000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27NYJDET-NYJ": {
+          "received_at": "2026-09-16 20:56:51.009563+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CINPIT-PIT": {
+          "received_at": "2026-09-16 20:56:51.016056+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-TEN": {
+          "received_at": "2026-09-16 21:00:05.384337+00:00",
+          "exchange_at": "2026-09-16 21:00:05.359000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-SEA": {
+          "received_at": "2026-09-16 20:59:48.791356+00:00",
+          "exchange_at": "2026-09-16 20:59:48.762000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27HOUIND-HOU": {
+          "received_at": "2026-09-16 20:56:51.054095+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PITNE-NE": {
+          "received_at": "2026-09-16 20:59:46.688470+00:00",
+          "exchange_at": "2026-09-16 20:59:46.663000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-WAS": {
+          "received_at": "2026-09-16 20:59:48.776042+00:00",
+          "exchange_at": "2026-09-16 20:59:48.746000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27HOUIND-IND": {
+          "received_at": "2026-09-16 20:56:51.081816+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PITNE-PIT": {
+          "received_at": "2026-09-16 21:00:20.444437+00:00",
+          "exchange_at": "2026-09-16 21:00:20.370000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27TENNYG-NYG": {
+          "received_at": "2026-09-16 20:59:24.764525+00:00",
+          "exchange_at": "2026-09-16 20:59:24.737000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "KXNFLGAME-26SEP27TENNYG-TEN": {
+          "received_at": "2026-09-16 20:56:51.107025+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 32,
+      "discovered_markets": 32,
+      "generation": 2,
+      "eligible": 32,
+      "selected": 32,
+      "event_discovery": "exhausted",
+      "market_completeness": "unestablished",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 32,
+      "applied_selected": 32,
+      "requested": 32,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "peak_simultaneous": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "requests": 78,
+      "connection_attempts": 1,
+      "body_bytes_charged": 5031120,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "657964": {
+          "received_at": "2026-09-16 21:00:04.219818+00:00",
+          "exchange_at": "2026-09-16 21:00:04.126220+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657966": {
+          "received_at": "2026-09-16 21:00:24.443000+00:00",
+          "exchange_at": "2026-09-16 21:00:24.321422+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657969": {
+          "received_at": "2026-09-16 20:59:59.412592+00:00",
+          "exchange_at": "2026-09-16 20:59:59.261016+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657972": {
+          "received_at": "2026-09-16 21:00:17.011970+00:00",
+          "exchange_at": "2026-09-16 21:00:16.695453+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657975": {
+          "received_at": "2026-09-16 20:59:55.340817+00:00",
+          "exchange_at": "2026-09-16 20:59:55.275346+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657978": {
+          "received_at": "2026-09-16 21:00:08.443555+00:00",
+          "exchange_at": "2026-09-16 21:00:08.339057+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657980": {
+          "received_at": "2026-09-16 21:00:24.456167+00:00",
+          "exchange_at": "2026-09-16 21:00:24.318931+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657983": {
+          "received_at": "2026-09-16 21:00:25.058503+00:00",
+          "exchange_at": "2026-09-16 21:00:24.872890+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657986": {
+          "received_at": "2026-09-16 21:00:22.857472+00:00",
+          "exchange_at": "2026-09-16 21:00:22.756566+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657989": {
+          "received_at": "2026-09-16 21:00:09.969459+00:00",
+          "exchange_at": "2026-09-16 21:00:09.843659+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657992": {
+          "received_at": "2026-09-16 20:59:55.645599+00:00",
+          "exchange_at": "2026-09-16 20:59:55.596022+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657994": {
+          "received_at": "2026-09-16 21:00:24.202411+00:00",
+          "exchange_at": "2026-09-16 21:00:24.142447+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657996": {
+          "received_at": "2026-09-16 21:00:23.747281+00:00",
+          "exchange_at": "2026-09-16 21:00:23.546391+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "657999": {
+          "received_at": "2026-09-16 21:00:25.455670+00:00",
+          "exchange_at": "2026-09-16 21:00:25.363286+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "658002": {
+          "received_at": "2026-09-16 21:00:23.753753+00:00",
+          "exchange_at": "2026-09-16 21:00:23.548291+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "658005": {
+          "received_at": "2026-09-16 21:00:24.642740+00:00",
+          "exchange_at": "2026-09-16 21:00:24.573756+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "779756": {
+          "received_at": "2026-09-16 21:00:25.386529+00:00",
+          "exchange_at": "2026-09-16 21:00:25.254554+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825195": {
+          "received_at": "2026-09-16 21:00:25.668657+00:00",
+          "exchange_at": "2026-09-16 21:00:25.518919+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825196": {
+          "received_at": "2026-09-16 21:00:04.380386+00:00",
+          "exchange_at": "2026-09-16 21:00:04.252706+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825198": {
+          "received_at": "2026-09-16 21:00:25.884603+00:00",
+          "exchange_at": "2026-09-16 21:00:25.665140+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825199": {
+          "received_at": "2026-09-16 21:00:00.815994+00:00",
+          "exchange_at": "2026-09-16 21:00:00.694824+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825200": {
+          "received_at": "2026-09-16 21:00:25.877995+00:00",
+          "exchange_at": "2026-09-16 21:00:25.684397+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825201": {
+          "received_at": "2026-09-16 21:00:19.623836+00:00",
+          "exchange_at": "2026-09-16 21:00:19.513868+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825202": {
+          "received_at": "2026-09-16 21:00:11.129069+00:00",
+          "exchange_at": "2026-09-16 21:00:11.005087+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825204": {
+          "received_at": "2026-09-16 21:00:12.663173+00:00",
+          "exchange_at": "2026-09-16 21:00:12.548183+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825205": {
+          "received_at": "2026-09-16 20:59:48.929357+00:00",
+          "exchange_at": "2026-09-16 20:59:46.124822+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825206": {
+          "received_at": "2026-09-16 21:00:20.951578+00:00",
+          "exchange_at": "2026-09-16 21:00:20.856382+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825208": {
+          "received_at": "2026-09-16 21:00:01.133088+00:00",
+          "exchange_at": "2026-09-16 21:00:01.014148+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825209": {
+          "received_at": "2026-09-16 21:00:15.930003+00:00",
+          "exchange_at": "2026-09-16 21:00:15.730716+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825210": {
+          "received_at": "2026-09-16 20:59:58.133166+00:00",
+          "exchange_at": "2026-09-16 20:59:57.889686+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "825211": {
+          "received_at": "2026-09-16 21:00:01.817604+00:00",
+          "exchange_at": "2026-09-16 21:00:01.637483+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        },
+        "848861": {
+          "received_at": "2026-09-16 21:00:11.100499+00:00",
+          "exchange_at": "2026-09-16 21:00:11.018320+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "advanced"
+        }
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 2,
+    "published_at": "2026-09-16T20:59:00.214626+00:00",
+    "age_seconds": 90.821642,
+    "refresh": {
+      "state": "completed",
+      "generation": 2,
+      "started_at": "2026-09-16T20:58:25.728509+00:00",
+      "finished_at": "2026-09-16T20:59:00.214626+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 68,
+        "durably_retained": 68,
+        "attempted_requests": 68
+      },
+      "polymarket_us": {
+        "received": 78,
+        "durably_retained": 78,
+        "attempted_requests": 78
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {}
+    }
+  },
+  "producer_tasks_done": true,
+  "streams_closed": true
+}

@@ -1,0 +1,57 @@
+{
+  "mode": "real",
+  "reference_enabled": false,
+  "event": "NFL:KXNFLGAME-26SEP17DETBUF:101466",
+  "participants": [
+    "NFL:BUF",
+    "NFL:DET"
+  ],
+  "scheduled_start": "2026-09-17T16:15:55.365482+00:00",
+  "start_after": "2026-09-16T16:15:54.365458+00:00",
+  "start_before": "2026-09-16T16:25:55.365458+00:00",
+  "duration": 180,
+  "discovery_cadence": 60,
+  "stale_seconds": 30,
+  "sources": {
+    "kalshi": {
+      "event_id": "KXNFLGAME-26SEP17DETBUF",
+      "market_id": "KXNFLGAME-26SEP17DETBUF-BUF",
+      "participant_mapping": {
+        "DET Lions": "NFL:DET",
+        "BUF Bills": "NFL:BUF"
+      },
+      "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+      "entitlement_reference": "account-api-limits.json; official-access.json"
+    },
+    "polymarket_us": {
+      "event_id": "101466",
+      "market_id": "657964",
+      "participant_mapping": {
+        "Detroit Lions": "NFL:DET",
+        "Buffalo Bills": "NFL:BUF"
+      },
+      "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+      "entitlement_reference": "account-api-limits.json; official-access.json"
+    }
+  },
+  "mapping_revision": "multi-game-native-1",
+  "assessment_revisions": {
+    "pairing": null,
+    "lineage": null,
+    "fees": null,
+    "settlement": null
+  },
+  "prediction": {
+    "messages": 600,
+    "connections": 2,
+    "frame_bytes": 1048576,
+    "session_bytes": 16777216,
+    "discovery_requests": 100,
+    "dollar_cap_per_source": "0",
+    "dollars_per_discovery_request": "0",
+    "dollars_per_connection": "0",
+    "plan_evidence": "docs/e6-prediction-only-report.md#access"
+  },
+  "cleanup": "close only this session transports; retain isolated file journals",
+  "capture_authorization": "D2: one explicitly authorized pilot, <=180 seconds from Start including discovery; zero spend"
+}

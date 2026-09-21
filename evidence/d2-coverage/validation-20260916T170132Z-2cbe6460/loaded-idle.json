@@ -1,0 +1,24 @@
+{
+  "state": "idle",
+  "active": false,
+  "operating_mode": "d2-bounded-inventory",
+  "start_available": false,
+  "error": null,
+  "cleanup_errors": [],
+  "saved": [
+    "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+    "5accf9ee-94b9-4b09-8130-6849f842155e"
+  ],
+  "session": null,
+  "cleanup_complete": true,
+  "coverage": null,
+  "pilot_allowance": "one pilot; idle startup; no autoresume",
+  "stop_reason": null,
+  "previous_pilot": {
+    "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+    "reason": "session_ingress_cap",
+    "collection_seconds": 123.55746458399517,
+    "cleanup_complete": true
+  },
+  "resources": null
+}

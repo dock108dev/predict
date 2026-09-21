@@ -44,10 +44,13 @@ class MockREST:
         self.limits=limits; self.sink=sink; self.timeout=timeout
         self.requests=0; self.bytes=0; self.client=None;self.budget=budget
 
+    async def pace(self):
+        if self.venue:await asyncio.sleep(getattr(self, 'request_interval', 1))
+
     async def get(self, url, params=None, **kwargs):
         if self.budget.requests >= self.limits['discovery_requests']:
             raise BudgetStop('prediction_discovery_request_cap')
-        if self.venue:await asyncio.sleep(1)  # <=1 sequential request/second/source
+        await self.pace()
         self.budget.reserve('discovery_request')
         self.requests+=1
         if self.client is None:
@@ -75,7 +78,7 @@ class MockREST:
                 if response.headers.get('Content-Encoding','identity')!='identity':raise ValueError('compressed discovery refused')
                 if self.credential:self.credential.check(bytes(body),headers)
                 complete=True
-                return httpx.Response(status,content=bytes(body),request=httpx.Request('GET',self.endpoint+path))
+                return httpx.Response(status,content=bytes(body),headers={k:response.headers[k] for k in ('Retry-After',) if k in response.headers},request=httpx.Request('GET',self.endpoint+path))
         finally:
             if complete:self.budget.bytes-=reserved-len(body)
             raw=bytes(body)
@@ -176,13 +179,26 @@ class PredictionProducer:
             self.budget.reserve('connection')
             self.handshake_headers=self.credential.headers() if self.credential else {}
             wire_limit=min(limits['frame_bytes'],self.budget.remaining_bytes())
-            socket=await connect(self.ws_endpoint,max_size=wire_limit,max_queue=1,
+            connector=connect
+            if getattr(self, 'mock_segmented', False):
+                if self.real or self.credential: raise ValueError('mock credential boundary')
+                mock_endpoint(self.ws_endpoint)
+                class NoRedirect(connect):
+                    def process_redirect(self, exc): return exc
+                connector=NoRedirect
+            if self.real and self.spec.get('supervised_profile'):
+                # The isolated real profile never follows a credentialed redirect.
+                class NoLiveRedirect(connect):
+                    def process_redirect(self, exc): return exc
+                connector=NoLiveRedirect
+            socket=await connector(self.ws_endpoint,max_size=wire_limit,max_queue=1,
                                  compression=None,open_timeout=3,close_timeout=1,proxy=None,additional_headers=self.handshake_headers)
             self.health(self.venue,'awaiting_snapshot')
             return Socket(socket,wire_limit)
         self.stream=(KStream if self.venue=='kalshi' else PStream)(market if isinstance(market,list) else [market],factory,
             duration=self.spec['duration'],max_messages=limits['messages'],max_connections=limits['connections'],
-            stale_seconds=self.spec['stale_seconds'],kind=self.kind)
+            stale_seconds=self.spec['stale_seconds'],kind=self.kind,
+            **({'profile_name':self.spec['supervised_profile']} if self.spec.get('supervised_profile') else {}))
         try:
             async for book in self.stream.run():
                 # Preserve native book/receipt semantics; health updates aren't new wire arrivals.
@@ -197,6 +213,8 @@ class PredictionProducer:
                 self.emit(self.venue,dict(type='prediction_book',book=data,packets=packets,
                     receipt_semantics='derived native book state; wire arrivals separately retained'))
                 self.health(self.venue,'connected' if book.sync.value=='synchronized' else ('disconnected' if self.stream.connection is None else 'ineligible'))
+                if getattr(self, 'after_book', None):
+                    await self.after_book()
         finally:
             await self.stream.aclose()
             self.health(self.venue,'disconnected')

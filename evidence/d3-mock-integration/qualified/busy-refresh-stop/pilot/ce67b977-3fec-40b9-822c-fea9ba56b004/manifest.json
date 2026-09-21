@@ -1,0 +1,11 @@
+{
+  "session": "ce67b977-3fec-40b9-822c-fea9ba56b004",
+  "mode": "isolated-mock-segmented",
+  "files": {
+    "run-spec.json": "0953af863ee513f41e948729a0a7b44563badc36b9445a20542aae8b1ac214a0",
+    "aggregate-limits.json": "a7a774b78d178aa091f1248b56b6843c1e1161f03ab311c75c415aa3fb38430b",
+    "history/manifest.json": "084f287924c4dfa48d985ca4b8dd037ee7ebaead09a93840c565509595b4fa20",
+    "replay.json": "ef2289b1f963b852ad1a42e0dd61a5468f6145f58d4d625dd5268a25747dd264",
+    "report.json": "60e3e809b3adfa6b19c01150e0f38707a1ef36794ce4c855d87de4b3f9df56d8"
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "by_type": {
+    "session_started": {
+      "records": 1,
+      "bytes": 1862,
+      "components": {
+        "economics": 16,
+        "health": 49,
+        "ingress_id": 51,
+        "observed_at": 48,
+        "provenance": 60,
+        "session_id": 51,
+        "source": 18,
+        "spec": 1535,
+        "type": 24
+      }
+    },
+    "prediction_discovery_http": {
+      "records": 74,
+      "bytes": 1139597,
+      "components": {
+        "body_b64": 1090810,
+        "body_sha256": 5920,
+        "complete": 1110,
+        "discovery_generation": 1776,
+        "economics": 1184,
+        "health": 3626,
+        "ingress_id": 3774,
+        "observed_at": 3552,
+        "params": 7986,
+        "path": 1844,
+        "received_at": 3552,
+        "requests": 944,
+        "session_id": 3774,
+        "source": 1531,
+        "started_at": 3478,
+        "status": 888,
+        "type": 2516
+      }
+    },
+    "verified_account_budget": {
+      "records": 1,
+      "bytes": 1594,
+      "components": {
+        "costs": 1178,
+        "economics": 16,
+        "health": 49,
+        "ingress_id": 51,
+        "limits": 142,
+        "observed_at": 48,
+        "session_id": 51,
+        "source": 17,
+        "type": 32
+      }
+    },
+    "coverage_inventory": {
+      "records": 1,
+      "bytes": 286951,
+      "components": {
+        "discovery_error": 22,
+        "economics": 16,
+        "generation": 14,
+        "health": 49,
+        "ingress_id": 51,
+        "inventory": 286567,
+        "observed_at": 48,
+        "previous_generation": 26,
+        "published_at": 49,
+        "session_id": 51,
+        "source": 18,
+        "type": 27
+      }
+    },
+    "market_selected": {
+      "records": 96,
+      "bytes": 2128673,
+      "components": {
+        "economics": 1536,
+        "health": 4704,
+        "ingress_id": 4896,
+        "market": 2100289,
+        "observed_at": 4608,
+        "session_id": 4896,
+        "source": 1856,
+        "stream_group": 2624,
+        "type": 2304
+      }
+    },
+    "source_health": {
+      "records": 580,
+      "bytes": 490683,
+      "components": {
+        "economics": 9280,
+        "gap_reason": 10000,
+        "health": 34279,
+        "ingress_id": 29580,
+        "market_ids": 292520,
+        "observed_at": 27840,
+        "session_id": 29580,
+        "source": 11092,
+        "state": 11060,
+        "stream_group": 15732,
+        "type": 12760
+      }
+    },
+    "prediction_command": {
+      "records": 5,
+      "bytes": 5359,
+      "components": {
+        "body": 3707,
+        "connection": 70,
+        "economics": 80,
+        "health": 338,
+        "ingress_id": 255,
+        "observed_at": 240,
+        "session_id": 255,
+        "source": 92,
+        "stream_group": 132,
+        "type": 135
+      }
+    },
+    "prediction_frame": {
+      "records": 581,
+      "bytes": 1344716,
+      "components": {
+        "body_b64": 1082505,
+        "body_sha256": 46480,
+        "connection": 8134,
+        "economics": 9296,
+        "health": 34319,
+        "ingress_id": 29631,
+        "observed_at": 27888,
+        "received_at": 27888,
+        "session_id": 29631,
+        "source": 11109,
+        "stream_group": 15757,
+        "type": 14525
+      }
+    },
+    "prediction_book": {
+      "records": 575,
+      "bytes": 11371300,
+      "components": {
+        "book": 5718479,
+        "economics": 9200,
+        "health": 33957,
+        "ingress_id": 29325,
+        "observed_at": 27600,
+        "packets": 5428964,
+        "receipt_semantics": 47150,
+        "session_id": 29325,
+        "source": 11000,
+        "stream_group": 15600,
+        "type": 13800
+      }
+    },
+    "session_finished": {
+      "records": 1,
+      "bytes": 665,
+      "components": {
+        "accounting": 17,
+        "cleanup_errors": 19,
+        "delivered": 16,
+        "economics": 16,
+        "health": 65,
+        "ingress_accounting": 133,
+        "observed_at": 48,
+        "persisted": 16,
+        "prediction_accounting": 216,
+        "reason": 30,
+        "session_id": 51,
+        "type": 25
+      }
+    }
+  },
+  "repeated_subtrees": {
+    "body_b64": {
+      "occurrences": 655,
+      "repeated_bytes": 988
+    },
+    "book": {
+      "occurrences": 575,
+      "repeated_bytes": 0
+    },
+    "inventory": {
+      "occurrences": 1,
+      "repeated_bytes": 0
+    },
+    "raw": {
+      "occurrences": 671,
+      "repeated_bytes": 0
+    },
+    "packets": {
+      "occurrences": 575,
+      "repeated_bytes": 0
+    },
+    "quotes": {
+      "occurrences": 1150,
+      "repeated_bytes": 80817
+    },
+    "market": {
+      "occurrences": 96,
+      "repeated_bytes": 0
+    },
+    "body": {
+      "occurrences": 5,
+      "repeated_bytes": 0
+    }
+  },
+  "note": "Component sums omit braces/commas; nested repeat categories overlap, not additive."
+}

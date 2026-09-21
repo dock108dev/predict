@@ -1,0 +1,90 @@
+{
+  "at": "2026-09-16T16:23:23.104270+00:00",
+  "head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+  "source_verification_reference": "evidence/d2-coverage/verification.json",
+  "source_hash_count": 180,
+  "source_differences_before": [],
+  "source_differences_after": [],
+  "configuration": {
+    "wrapper": "evidence/d2-coverage/replacement-20260916T161440Z-faff4a56/serve-beta.py",
+    "wrapper_sha256": "c82cb7fd25bdf0f2f305f57017e53031d3977f176b8e7ccb80dab3a8096a3d86",
+    "pilot_output": "evidence/d2-coverage/replacement-20260916T161440Z-faff4a56",
+    "shared_lock": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/d2-coverage/collector.lock",
+    "original_attempt_preserved": true,
+    "limits_changed": false
+  },
+  "prior_evidence_files_verified": 1802,
+  "prior_evidence_changes": [],
+  "checks": {
+    "reused_recorded_offline_tests": 67,
+    "rerun_D2_tests": 12,
+    "source_unchanged": true,
+    "pilot_manifest_verified": true,
+    "shared_lock_unowned": true,
+    "final_idle_status": {
+      "state": "idle",
+      "active": false,
+      "operating_mode": "d2-bounded-inventory",
+      "start_available": false,
+      "error": null,
+      "cleanup_errors": [],
+      "saved": [
+        "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+        "5accf9ee-94b9-4b09-8130-6849f842155e"
+      ],
+      "session": null,
+      "cleanup_complete": true,
+      "coverage": null,
+      "pilot_allowance": "one pilot; idle startup; no autoresume",
+      "stop_reason": null,
+      "previous_pilot": {
+        "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+        "reason": "session_ingress_cap",
+        "collection_seconds": 123.55746458399517,
+        "cleanup_complete": true
+      },
+      "resources": null
+    }
+  },
+  "outcome": {
+    "duration_seconds": 123.55746458399517,
+    "reason": "session_ingress_cap",
+    "D2_complete": false,
+    "kalshi_markets": 64,
+    "polymarket_us_embedded_markets": 32,
+    "polymarket_us_full_denominator": null,
+    "polymarket_us_subscriptions": 0,
+    "browser_independence": true,
+    "manual_stop_verified": false,
+    "manual_stop_note": "Requested prompt around 120 seconds was missed; active at 120.52 seconds before resource stop at 123.56 seconds"
+  },
+  "journal_chain": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+  "pilot_manifest_sha256": "24cad320326128b1d66ad542a0d359948127c8bd3f73a33b84385a6c8945053f",
+  "evidence_sha256": {
+    "serve-beta.py": "c82cb7fd25bdf0f2f305f57017e53031d3977f176b8e7ccb80dab3a8096a3d86",
+    "offline-confirmation.log": "80e2d01e16094e1f7f28fd02473f52b610c21db39cc4a7697d8de087055e7273",
+    "audit.json": "c9ff4cb25b525ea9d6afaa89a08ba5f3a690f7d8ffd247ace717a4046bcbe9ca",
+    "audit-capture.py": "9802e97f7b15a47b00e85c843c241589c8e264519e66bb959e99991ce0c62e73",
+    "generation-2-embedded-us.json": "c3129dc070de3e698632158888db47a9320d0a75f5f91784cb439344114fc9b5",
+    "collector.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "generation-3-embedded-us.json": "0ffcbd8045b6d39508ff005fe1733d03b82a49db0e619e0f32d0cf225985e928",
+    "stopped-status.json": "92cc48cd268a629076817bb63a096df794f2608ff0d5fc7e47c166f3e046a6d8",
+    "final-idle-status.json": "4d81d0e196ce834c40313252b1ff946c1151c62c45fc1418c4a44c8443704921",
+    "final-idle-sockets.txt": "0e45f5744542f66efc935e55e67cbf521f99f089c2c17fa93ccefec1f6f57913",
+    "stopped-sockets.txt": "5c6522d730cb67c7d98ece7532e87c3ea0c5d91d54777e587763610d3736bc97",
+    "browser-evidence.json": "7eef91a6961469aad2c19aca12fd026732f0d1c7116854176cd420406d7c3495",
+    "idle-before-start.json": "2377024e81bb67961e8120c1d41edcaf4bdff052af80831e958d3d75935325f4",
+    "attempt.json": "b02cf9cb1f1184f4372d185da467d532ad96bc160414286997c2b57a88f0f592",
+    "independent-status.jsonl": "d331c2ce0772562faab88310d077bfadd2e92ae632024692fe48af39cde0376d",
+    "preflight.json": "4ab6a3267282d7f2aa0dced9509c242ed8175e87864f3be360f4ea1b07aec24b",
+    "generation-1-embedded-us.json": "c2dae6e7848fb392c5696af01c14d6a8f6b64579bda14404a9e121c5f80cf394",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/report.json": "68f69629d5ab04907b4810397274ac8715b61b3f4c1b24aa0523067d2f9dafa6",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/aggregate-limits.json": "b5900dc9855758754872ccdd099f127fae1e15f72d07058336e8014c56d7d6f6",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/replay.json": "b57abb84a8d7497d9220ad3f8164658e02e123d4b113d1fccc04e2ca0ec53409",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/manifest.json": "24cad320326128b1d66ad542a0d359948127c8bd3f73a33b84385a6c8945053f",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/run-spec.json": "b8ce9dc5aec084cbf50572f1aae504f105110223936171459adcb8bda56f39f7",
+    "97dbc1e0-36c7-49c8-a19b-f4856278e21c/97dbc1e0-36c7-49c8-a19b-f4856278e21c.jsonl": "647076df45ff1791de03761ed2adaeac372cf1ce13e9f57966a69228ab877c87"
+  },
+  "report_sha256": "60e2493fef7d97b7d52dabbd1222b58355b081259dce79f739cc7d40148b0f87"
+}

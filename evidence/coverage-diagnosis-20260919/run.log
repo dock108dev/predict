@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/coverage-diagnosis-20260919/diagnose.py", line 8, in <module>
+    from app.collection.segmented import SegmentedReader
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/segmented.py", line 15, in <module>
+    from app.reference.records import packed
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/reference/records.py", line 9, in <module>
+    from app.storage.store import exact_time
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/__init__.py", line 2, in <module>
+    from .store import Store, CapturePolicy, connect
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/storage/store.py", line 13, in <module>
+    import psycopg
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/psycopg/__init__.py", line 9, in <module>
+    from . import pq  # noqa: F401 import early to stabilize side effects
+    ^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/psycopg/pq/__init__.py", line 114, in <module>
+    import_from_libpq()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/psycopg/pq/__init__.py", line 108, in import_from_libpq
+            raise ImportError(f"""\
+    ...<2 lines>...
+    {sattempts}""")
+ImportError: no pq wrapper available.
+Attempts made:
+- couldn't import psycopg 'c' implementation: No module named 'psycopg_c'
+- couldn't import psycopg 'binary' implementation: function() argument 'code' must be code, not str
+- couldn't import psycopg 'python' implementation: function() argument 'code' must be code, not str

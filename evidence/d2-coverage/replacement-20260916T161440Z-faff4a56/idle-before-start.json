@@ -1,0 +1,28 @@
+{
+  "process": {
+    "pid": 58131,
+    "command": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/michaelfuscoletti/Desktop/prediction-arb/evidence/d2-coverage/replacement-20260916T161440Z-faff4a56/serve-beta.py",
+    "started": "Wed Sep 16 12:15:38 2026",
+    "url": "http://127.0.0.1:8783",
+    "port": 8783
+  },
+  "status": {
+    "state": "idle",
+    "active": false,
+    "operating_mode": "d2-bounded-inventory",
+    "start_available": true,
+    "error": null,
+    "cleanup_errors": [],
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "5accf9ee-94b9-4b09-8130-6849f842155e"
+    ],
+    "session": null,
+    "cleanup_complete": true,
+    "coverage": null,
+    "pilot_allowance": "one pilot; idle startup; no autoresume",
+    "stop_reason": null,
+    "previous_pilot": null,
+    "resources": null
+  }
+}

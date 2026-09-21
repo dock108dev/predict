@@ -1,0 +1,133 @@
+{
+  "fixture": "qualified-retained",
+  "observations": 1915,
+  "books": 575,
+  "packets": 1150,
+  "exact_rows_order": true,
+  "sequence_sha256": "28d9a8d013a1ed3218a67de8834ac0ee556e06370ef1f83ad5118fc33ef2116b",
+  "native_replay": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 88,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 175
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    },
+    "kalshi-2": {
+      "exact_native_books": {
+        "kalshi": 59,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    },
+    "kalshi-3": {
+      "exact_native_books": {
+        "kalshi": 249,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    },
+    "kalshi-4": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "5c5c9ccb86d2757c39ff5ffa7b28a7602fcf93e78491aa463cf041c7b5edace1",
+      "state": "complete"
+    }
+  },
+  "seconds": 11.270385415999044,
+  "observations_per_second": 169.91433117110026,
+  "baseline_rss": 61849600,
+  "peak_rss": 95698944,
+  "traced_current": 15114290,
+  "traced_peak": 15934106,
+  "segment_samples": [
+    {
+      "observations": 174,
+      "rss_peak": 69500928,
+      "traced_current": 2499939
+    },
+    {
+      "observations": 1197,
+      "rss_peak": 90587136,
+      "traced_current": 15318035
+    },
+    {
+      "observations": 1915,
+      "rss_peak": 95698944,
+      "traced_current": 15526030
+    }
+  ],
+  "implementation": "two sequential verification passes; one row plus native engine state, no whole-run list",
+  "disk_bytes": 4952231,
+  "segments": [
+    {
+      "bytes": 930555,
+      "chain": "38f1f9ae6a1116ce9746d97eee36edcc77b560fa42783f5611864ccb78b98ddb",
+      "encoded": 901323,
+      "expanded": 3559369,
+      "expanded_physical": 3559796,
+      "logical": 174,
+      "name": "segment-0000.jsonl",
+      "observations": 174,
+      "physical": 176,
+      "sha256": "c51621127383846b120d160c22141ff9d51a625649706af32177b96f91f07785"
+    },
+    {
+      "bytes": 2381353,
+      "chain": "1d3d5a57ec8174ef7d35156a2950927edbe3c4264efd0819aaa71725ae254c34",
+      "encoded": 2213670,
+      "expanded": 7916555,
+      "expanded_physical": 7916988,
+      "logical": 1023,
+      "name": "segment-0001.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "3884442682b6e61506efff512c5199dc2d0e9248a62ba24f92fb8379cc4f70c3"
+    },
+    {
+      "bytes": 1638830,
+      "chain": "b0c7dc3179e49933d9db8647e8a05cbab6b70d056ca48e3b35b34c173d901755",
+      "encoded": 1520308,
+      "expanded": 5294811,
+      "expanded_physical": 5295908,
+      "logical": 717,
+      "name": "segment-0002.jsonl",
+      "observations": 718,
+      "physical": 720,
+      "sha256": "7c329735dad271c63611a6f01c8aad26e93535b2af95c0d227952285b9e51992"
+    }
+  ]
+}

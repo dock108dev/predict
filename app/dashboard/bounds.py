@@ -23,7 +23,12 @@ def retained_bytes(value):
             if hasattr(v,'__dict__'):n+=visit(vars(v))
             else:n+=sum(visit(getattr(v,f.name)) for f in fields(v))
         return n
-    return visit(value)
+    try:
+        return visit(value)
+    finally:
+        # The recursive closure forms a cycle. Do not leave its potentially
+        # large set of object identities waiting for cyclic garbage collection.
+        seen.clear()
 
 
 class CaptureQueue(asyncio.Queue):

@@ -1,0 +1,827 @@
+{
+  "session": "9d5fe41c-e159-49a4-8106-1a7d02b644d0",
+  "reason": "manual_stop",
+  "collection_seconds": 50.30081866699766,
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete",
+    "operator_stop": true,
+    "native_verified": true,
+    "replay_seconds": 11.099029250006424,
+    "replay_baseline_rss": 176963584,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 74,
+      "verified_account_budget": 1,
+      "coverage_inventory": 1,
+      "market_selected": 96,
+      "source_health": 549,
+      "prediction_command": 5,
+      "coverage_applied": 2,
+      "prediction_frame": 548,
+      "prediction_book": 544,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1
+    ],
+    "applied_generations": {
+      "polymarket_us": 1,
+      "kalshi": 1
+    },
+    "replay_traced_start": 42334598,
+    "replay_traced_peak": 53326874,
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 61.395064625001396,
+    "baseline_rss": 71352320,
+    "peak_rss": 266420224,
+    "traced_peak": 53326874,
+    "traced_current": 50850996,
+    "profile": "predict-supervised-segmented-5m-v1",
+    "replay_state_samples": [
+      {
+        "rows": 1024,
+        "bytes": 15039146,
+        "rss": 266420224
+      }
+    ],
+    "live_state_samples": [
+      {
+        "seconds": 1.0080466250001336,
+        "bytes": 77846,
+        "rss": 72105984,
+        "logical": 2,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 11.708223207999254,
+        "bytes": 1080239,
+        "rss": 82329600,
+        "logical": 36,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 21.803299374994822,
+        "bytes": 1274482,
+        "rss": 82755584,
+        "logical": 75,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 31.97104120799486,
+        "bytes": 9389402,
+        "rss": 111575040,
+        "logical": 594,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 42.23453745799634,
+        "bytes": 9627970,
+        "rss": 150929408,
+        "logical": 1281,
+        "generation": 1,
+        "groups": 5
+      }
+    ],
+    "rate_peaks": {
+      "rows": 156,
+      "encoded": 482844,
+      "expanded": 2861135,
+      "frames": 40
+    },
+    "frames_received": 548,
+    "stop_to_closed_seconds": 0.05684183399716858
+  },
+  "accounting": {
+    "received": 1839,
+    "accepted": 1821,
+    "write_attempted": 1825,
+    "durably_acknowledged": 1821,
+    "rejected": 18,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 1821,
+    "journal_write_attempted": 1828,
+    "journal_durably_acknowledged": 1828,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 4991567,
+    "confirmed_chain": "c9defc6868e168b99c84d6a508aeac0f979cf54ae4d2cf113cf40e8e931fb825",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 1821,
+      "observations": 1822,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 1822,
+      "encoded_ingress": 4691289,
+      "expanded_ingress": 18101623,
+      "physical_records": 1828,
+      "control_records": 6,
+      "physical_write_attempts": 1828,
+      "journal_encoded_bytes": 4991567,
+      "journal_expanded_payload_bytes": 18103573,
+      "manifest_records": 1,
+      "manifest_bytes": 2053,
+      "manifest_writes": 4,
+      "manifest_publications": 4,
+      "manifest_write_bytes": 6340,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 5028025
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 266420224,
+    "peak_queue_records": 4,
+    "peak_queue_bytes": 551495,
+    "ingress_bytes": 4691289,
+    "journal_bytes": 4991567,
+    "elapsed_seconds": 61.40346941699681
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 32,
+      "discovered_markets": 64,
+      "generation": 1,
+      "eligible": 64,
+      "selected": 64,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 64,
+      "applied_selected": 64,
+      "requested": 64,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "peak_simultaneous": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "requests": 35,
+      "connection_attempts": 4,
+      "body_bytes_charged": 1069164,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "KXNFLGAME-26SEP17DETBUF-BUF": {
+          "received_at": "2026-09-16 19:28:15.570566+00:00",
+          "exchange_at": "2026-09-16 17:03:30.387000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP17DETBUF-DET": {
+          "received_at": "2026-09-16 19:28:15.885658+00:00",
+          "exchange_at": "2026-09-16 17:03:25.912000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CARATL-ATL": {
+          "received_at": "2026-09-16 19:28:16.022124+00:00",
+          "exchange_at": "2026-09-16 17:03:22.798000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CARATL-CAR": {
+          "received_at": "2026-09-16 19:28:16.207571+00:00",
+          "exchange_at": "2026-09-16 17:03:21.904000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CINHOU-CIN": {
+          "received_at": "2026-09-16 19:28:16.652876+00:00",
+          "exchange_at": "2026-09-16 17:03:17.028000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CINHOU-HOU": {
+          "received_at": "2026-09-16 19:28:17.150040+00:00",
+          "exchange_at": "2026-09-16 17:03:34.028000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CLETB-CLE": {
+          "received_at": "2026-09-16 19:28:17.287683+00:00",
+          "exchange_at": "2026-09-16 17:03:29.360000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CLETB-TB": {
+          "received_at": "2026-09-16 19:28:17.466566+00:00",
+          "exchange_at": "2026-09-16 17:03:29.623000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-GB": {
+          "received_at": "2026-09-16 19:28:17.899442+00:00",
+          "exchange_at": "2026-09-16 17:03:12.394000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-NYJ": {
+          "received_at": "2026-09-16 19:28:12.369358+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20INDKC-IND": {
+          "received_at": "2026-09-16 19:28:12.817821+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20INDKC-KC": {
+          "received_at": "2026-09-16 19:28:13.005506+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20JACDEN-DEN": {
+          "received_at": "2026-09-16 19:28:13.137905+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20JACDEN-JAC": {
+          "received_at": "2026-09-16 19:28:13.454312+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LAC": {
+          "received_at": "2026-09-16 19:28:13.637703+00:00",
+          "exchange_at": "2026-09-16 17:03:16.411000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LV": {
+          "received_at": "2026-09-16 19:28:14.107985+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-MIA": {
+          "received_at": "2026-09-16 19:28:14.297610+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-SF": {
+          "received_at": "2026-09-16 19:28:14.754259+00:00",
+          "exchange_at": "2026-09-16 17:03:31.160000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20MINCHI-CHI": {
+          "received_at": "2026-09-16 19:28:14.933502+00:00",
+          "exchange_at": "2026-09-16 17:03:29.737000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20MINCHI-MIN": {
+          "received_at": "2026-09-16 19:28:15.385343+00:00",
+          "exchange_at": "2026-09-16 17:03:19.607000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20NOBAL-BAL": {
+          "received_at": "2026-09-16 19:28:13.491260+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20NOBAL-NO": {
+          "received_at": "2026-09-16 19:28:14.002168+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-PHI": {
+          "received_at": "2026-09-16 19:28:14.144359+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-TEN": {
+          "received_at": "2026-09-16 19:28:14.334390+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PITNE-NE": {
+          "received_at": "2026-09-16 19:28:14.656461+00:00",
+          "exchange_at": "2026-09-16 17:03:33.909000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20PITNE-PIT": {
+          "received_at": "2026-09-16 19:28:14.786788+00:00",
+          "exchange_at": "2026-09-16 17:03:22.903000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20SEAARI-ARI": {
+          "received_at": "2026-09-16 19:28:15.279719+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20SEAARI-SEA": {
+          "received_at": "2026-09-16 19:28:15.418702+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20WASDAL-DAL": {
+          "received_at": "2026-09-16 19:28:15.603645+00:00",
+          "exchange_at": "2026-09-16 17:03:30.072000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20WASDAL-WAS": {
+          "received_at": "2026-09-16 19:28:15.919695+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-LAR": {
+          "received_at": "2026-09-16 19:28:16.055331+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-NYG": {
+          "received_at": "2026-09-16 19:28:16.544508+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP24ATLGB-ATL": {
+          "received_at": "2026-09-16 19:28:16.686624+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP24ATLGB-GB": {
+          "received_at": "2026-09-16 19:28:17.004848+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27ARISF-ARI": {
+          "received_at": "2026-09-16 19:28:17.181572+00:00",
+          "exchange_at": "2026-09-16 17:03:22.330000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27ARISF-SF": {
+          "received_at": "2026-09-16 19:28:17.318371+00:00",
+          "exchange_at": "2026-09-16 17:03:31.744000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27BALDAL-BAL": {
+          "received_at": "2026-09-16 19:28:17.496143+00:00",
+          "exchange_at": "2026-09-16 17:03:34.343000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27BALDAL-DAL": {
+          "received_at": "2026-09-16 19:28:17.930988+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CAR": {
+          "received_at": "2026-09-16 19:28:13.037560+00:00",
+          "exchange_at": "2026-09-16 17:03:14.568000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CLE": {
+          "received_at": "2026-09-16 19:28:13.174248+00:00",
+          "exchange_at": "2026-09-16 17:03:13.581000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27CINPIT-CIN": {
+          "received_at": "2026-09-16 19:28:15.455178+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CINPIT-PIT": {
+          "received_at": "2026-09-16 19:28:15.956503+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27HOUIND-HOU": {
+          "received_at": "2026-09-16 19:28:16.091838+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27HOUIND-IND": {
+          "received_at": "2026-09-16 19:28:16.581549+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27KCMIA-KC": {
+          "received_at": "2026-09-16 19:28:16.722642+00:00",
+          "exchange_at": "2026-09-16 17:03:33.408000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27KCMIA-MIA": {
+          "received_at": "2026-09-16 19:28:17.035765+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LACBUF-BUF": {
+          "received_at": "2026-09-16 19:28:17.215691+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LACBUF-LAC": {
+          "received_at": "2026-09-16 19:28:17.352293+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LARDEN-DEN": {
+          "received_at": "2026-09-16 19:28:17.832599+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LARDEN-LAR": {
+          "received_at": "2026-09-16 19:28:12.252194+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LVNO-LV": {
+          "received_at": "2026-09-16 19:28:12.747801+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LVNO-NO": {
+          "received_at": "2026-09-16 19:28:12.891298+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27MINTB-MIN": {
+          "received_at": "2026-09-16 19:28:13.068601+00:00",
+          "exchange_at": "2026-09-16 17:03:16.201000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27MINTB-TB": {
+          "received_at": "2026-09-16 19:28:13.527436+00:00",
+          "exchange_at": "2026-09-16 17:03:31.920000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27NEJAC-JAC": {
+          "received_at": "2026-09-16 19:28:14.038616+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NEJAC-NE": {
+          "received_at": "2026-09-16 19:28:14.180583+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NYJDET-DET": {
+          "received_at": "2026-09-16 19:28:14.370845+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NYJDET-NYJ": {
+          "received_at": "2026-09-16 19:28:14.688995+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-SEA": {
+          "received_at": "2026-09-16 19:28:14.820225+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-WAS": {
+          "received_at": "2026-09-16 19:28:15.316105+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27TENNYG-NYG": {
+          "received_at": "2026-09-16 19:28:17.867363+00:00",
+          "exchange_at": "2026-09-16 17:03:19.349000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27TENNYG-TEN": {
+          "received_at": "2026-09-16 19:28:17.069991+00:00",
+          "exchange_at": "2026-09-16 17:03:19.348000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP28PHICHI-CHI": {
+          "received_at": "2026-09-16 19:28:17.252007+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP28PHICHI-PHI": {
+          "received_at": "2026-09-16 19:28:17.388690+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 32,
+      "discovered_markets": 32,
+      "generation": 1,
+      "eligible": 32,
+      "selected": 32,
+      "event_discovery": "exhausted",
+      "market_completeness": "unestablished",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 32,
+      "applied_selected": 32,
+      "requested": 32,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "peak_simultaneous": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "requests": 39,
+      "connection_attempts": 1,
+      "body_bytes_charged": 1028669,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "657964": {
+          "received_at": "2026-09-16 19:28:14.458342+00:00",
+          "exchange_at": "2026-09-16 17:03:33.244607+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657966": {
+          "received_at": "2026-09-16 19:28:14.482719+00:00",
+          "exchange_at": "2026-09-16 17:03:23.620474+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657969": {
+          "received_at": "2026-09-16 19:28:14.500404+00:00",
+          "exchange_at": "2026-09-16 17:03:23.699189+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657972": {
+          "received_at": "2026-09-16 19:28:14.518326+00:00",
+          "exchange_at": "2026-09-16 17:03:22.711442+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657975": {
+          "received_at": "2026-09-16 19:28:14.583737+00:00",
+          "exchange_at": "2026-09-16 17:03:23.219919+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657978": {
+          "received_at": "2026-09-16 19:28:14.601569+00:00",
+          "exchange_at": "2026-09-16 17:03:32.374521+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657980": {
+          "received_at": "2026-09-16 19:28:14.620450+00:00",
+          "exchange_at": "2026-09-16 17:03:23.649348+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657983": {
+          "received_at": "2026-09-16 19:28:14.638929+00:00",
+          "exchange_at": "2026-09-16 17:03:33.781255+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657986": {
+          "received_at": "2026-09-16 19:28:15.638597+00:00",
+          "exchange_at": "2026-09-16 17:03:23.618375+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657989": {
+          "received_at": "2026-09-16 19:28:15.657133+00:00",
+          "exchange_at": "2026-09-16 17:03:26.939544+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657992": {
+          "received_at": "2026-09-16 19:28:15.675944+00:00",
+          "exchange_at": "2026-09-16 17:03:22.739722+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657994": {
+          "received_at": "2026-09-16 19:28:15.694950+00:00",
+          "exchange_at": "2026-09-16 17:02:17.273298+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657996": {
+          "received_at": "2026-09-16 19:28:15.714171+00:00",
+          "exchange_at": "2026-09-16 17:03:30.855506+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657999": {
+          "received_at": "2026-09-16 19:28:15.732481+00:00",
+          "exchange_at": "2026-09-16 17:03:19.653842+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "658002": {
+          "received_at": "2026-09-16 19:28:15.750136+00:00",
+          "exchange_at": "2026-09-16 17:03:33.115379+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "658005": {
+          "received_at": "2026-09-16 19:28:15.767711+00:00",
+          "exchange_at": "2026-09-16 17:03:19.657908+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "779756": {
+          "received_at": "2026-09-16 19:28:15.786301+00:00",
+          "exchange_at": "2026-09-16 17:03:16.231958+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825195": {
+          "received_at": "2026-09-16 19:28:16.836920+00:00",
+          "exchange_at": "2026-09-16 17:03:33.577147+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825196": {
+          "received_at": "2026-09-16 19:28:16.856900+00:00",
+          "exchange_at": "2026-09-16 17:03:25.969074+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825198": {
+          "received_at": "2026-09-16 19:28:16.874832+00:00",
+          "exchange_at": "2026-09-16 17:03:34.313346+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825199": {
+          "received_at": "2026-09-16 19:28:16.892141+00:00",
+          "exchange_at": "2026-09-16 17:03:30.474371+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825200": {
+          "received_at": "2026-09-16 19:28:16.911272+00:00",
+          "exchange_at": "2026-09-16 17:03:33.580863+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825201": {
+          "received_at": "2026-09-16 19:28:16.929813+00:00",
+          "exchange_at": "2026-09-16 17:01:48.144842+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825202": {
+          "received_at": "2026-09-16 19:28:16.948723+00:00",
+          "exchange_at": "2026-09-16 17:03:29.189263+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825204": {
+          "received_at": "2026-09-16 19:28:16.967231+00:00",
+          "exchange_at": "2026-09-16 17:03:25.277080+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825205": {
+          "received_at": "2026-09-16 19:28:16.985006+00:00",
+          "exchange_at": "2026-09-16 17:03:33.111281+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825206": {
+          "received_at": "2026-09-16 19:28:17.965298+00:00",
+          "exchange_at": "2026-09-16 17:03:33.511438+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825208": {
+          "received_at": "2026-09-16 19:28:17.981540+00:00",
+          "exchange_at": "2026-09-16 17:03:31.432443+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825209": {
+          "received_at": "2026-09-16 19:28:17.999132+00:00",
+          "exchange_at": "2026-09-16 17:03:03.980931+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825210": {
+          "received_at": "2026-09-16 19:28:18.016982+00:00",
+          "exchange_at": "2026-09-16 17:03:23.544904+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825211": {
+          "received_at": "2026-09-16 19:28:18.035728+00:00",
+          "exchange_at": "2026-09-16 17:03:33.645045+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "848861": {
+          "received_at": "2026-09-16 19:28:18.053654+00:00",
+          "exchange_at": "2026-09-16 17:03:32.784028+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        }
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 1,
+    "published_at": "2026-09-16T19:27:53.711244+00:00",
+    "age_seconds": 35.56579,
+    "refresh": {
+      "state": "completed",
+      "generation": 1,
+      "started_at": "2026-09-16T19:27:27.875801+00:00",
+      "finished_at": "2026-09-16T19:27:53.711244+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 35,
+        "durably_retained": 35,
+        "attempted_requests": 35
+      },
+      "polymarket_us": {
+        "received": 39,
+        "durably_retained": 39,
+        "attempted_requests": 39
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {}
+    }
+  },
+  "producer_tasks_done": true,
+  "streams_closed": true
+}

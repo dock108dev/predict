@@ -1,0 +1,11 @@
+{
+  "before": "2bb98f5bef358ced807ff1048af46b8d7debc9327e74cf75066149875720eb75",
+  "after": "63f5510b768065130bbb6b645dc6b8fc8bb5afb4ee2623d07a63a41a075d654c",
+  "changed": [
+    "app/collection/delivery_analysis.py",
+    "app/collection/delivery_capture.py",
+    "tests/test_delivery_capture.py"
+  ],
+  "verification": "49 focused checks including actual disconnected HTTP and native ticker/path mismatch",
+  "timed_runs": "no extra run; both earlier identities preserved"
+}

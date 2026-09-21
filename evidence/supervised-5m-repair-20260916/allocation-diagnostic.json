@@ -1,0 +1,133 @@
+{
+  "fixture_retained_bytes": 4058815,
+  "baseline": [
+    4103127,
+    7803667
+  ],
+  "samples": [
+    {
+      "call": 1,
+      "traced": [
+        6891871,
+        7803667
+      ],
+      "rss": 84754432
+    },
+    {
+      "call": 2,
+      "traced": [
+        9678133,
+        10145317
+      ],
+      "rss": 86851584
+    },
+    {
+      "call": 3,
+      "traced": [
+        12464445,
+        12931629
+      ],
+      "rss": 90177536
+    },
+    {
+      "call": 4,
+      "traced": [
+        15250757,
+        15717941
+      ],
+      "rss": 98205696
+    },
+    {
+      "call": 5,
+      "traced": [
+        18037069,
+        18504253
+      ],
+      "rss": 99942400
+    },
+    {
+      "call": 6,
+      "traced": [
+        20823413,
+        21290597
+      ],
+      "rss": 102711296
+    },
+    {
+      "call": 7,
+      "traced": [
+        23609725,
+        24076909
+      ],
+      "rss": 106561536
+    },
+    {
+      "call": 8,
+      "traced": [
+        26396037,
+        26863221
+      ],
+      "rss": 110379008
+    },
+    {
+      "call": 9,
+      "traced": [
+        29182349,
+        29649533
+      ],
+      "rss": 114212864
+    },
+    {
+      "call": 10,
+      "traced": [
+        31968725,
+        32435909
+      ],
+      "rss": 126451712
+    },
+    {
+      "call": 11,
+      "traced": [
+        34755037,
+        35222221
+      ],
+      "rss": 130301952
+    },
+    {
+      "call": 12,
+      "traced": [
+        37541349,
+        38008533
+      ],
+      "rss": 134119424
+    }
+  ],
+  "before_gc": [
+    37542041,
+    38008533
+  ],
+  "after_gc": [
+    4109597,
+    38008533
+  ],
+  "collected": 60,
+  "top": [
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:19: size=31.9 MiB, count=258128, average=129 B",
+    "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: size=2954 KiB, count=53139, average=57 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/supervised_fixture.py:27: size=623 KiB, count=3361, average=190 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/recovery.py:22: size=285 KiB, count=2430, average=120 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/supervised_fixture.py:28: size=66.6 KiB, count=1348, average=51 B",
+    "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:337: size=44.4 KiB, count=897, average=51 B",
+    "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py:365: size=22.1 KiB, count=189, average=120 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/supervised_fixture.py:34: size=7235 B, count=82, average=88 B",
+    "/tmp/predict_memory_diagnostic.py:18: size=3872 B, count=61, average=63 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:17: size=2784 B, count=24, average=116 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:16: size=2592 B, count=12, average=216 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/supervised_fixture.py:37: size=1520 B, count=1, average=1520 B",
+    "/tmp/predict_memory_diagnostic.py:17: size=960 B, count=24, average=40 B",
+    "/tmp/predict_memory_diagnostic.py:12: size=952 B, count=5, average=190 B",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/supervised_fixture.py:39: size=768 B, count=1, average=768 B"
+  ],
+  "rss": 185303040,
+  "note": "same-process fixture; diagnostic GC disabled for 12 calls only; no collector run"
+}

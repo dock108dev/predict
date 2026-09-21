@@ -1,0 +1,52 @@
+{
+  "reopened": true,
+  "report": {
+    "format": "d3a-offline-segments-1",
+    "folder": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/d3a-offline/retained-interrupted",
+    "sources": {
+      "manifest.json": {
+        "device": 16777233,
+        "inode": 361568736,
+        "size": 878,
+        "mtime_ns": 1789581379843027886,
+        "ctime_ns": 1789581379843135094,
+        "sha256": "9ebfe2aeff9dd3ad459a480983c09895077a0d4556271429d6c39c65c11cd80e"
+      },
+      "segment-0000.jsonl": {
+        "device": 16777233,
+        "inode": 361568735,
+        "size": 930563,
+        "mtime_ns": 1789581379842375261,
+        "ctime_ns": 1789581379842375261,
+        "sha256": "69e5181f2ab58c6683085dbf4386b55f0e359db58a726b29ecebbe926f67f150"
+      },
+      "segment-0001.jsonl": {
+        "device": 16777233,
+        "inode": 361568737,
+        "size": 316744,
+        "mtime_ns": 1789581379905450537,
+        "ctime_ns": 1789581379905450537,
+        "sha256": "d51865d9a1f4e9615688453926e472e0ff29df4df872846192aa33137e1bb656"
+      },
+      "writer.lock": {
+        "device": 16777233,
+        "inode": 361568733,
+        "size": 0,
+        "mtime_ns": 1789581379703024461,
+        "ctime_ns": 1789581379703048711,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "state": "interrupted",
+    "published": 174,
+    "tail": {
+      "name": "segment-0001.jsonl",
+      "verified_physical": 127,
+      "verified_offset": 316737,
+      "excluded_trailing_bytes": 7,
+      "qualification": "unpublished physical prefix only; no durable acknowledgement inferred"
+    },
+    "restart": "new run directory and explicit source session boundary required",
+    "recovery_identity": "43ecaa36f7727f6625061a52307b1efccaaa8811550a90d035921a112427c3b2"
+  }
+}

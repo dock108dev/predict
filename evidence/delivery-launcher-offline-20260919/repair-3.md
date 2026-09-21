@@ -1,0 +1,3 @@
+# Bounded repair 3 — retained audit wrapper
+
+The 103 implementation checks passed. The additional read-only retained diagnostic audit then stopped because its wrapper requested `replay_state_peak` from the intentionally incomplete cutoff result. The analyzer correctly returns an insufficient-evidence result without that metric for an interrupted journal. Direct-run deterministic equality and its memory assertion had already passed. Preserve retained-audit.log. Repair only the new audit wrapper to retain cutoff memory as unknown and assert the incomplete classification; do not modify the analyzer, historical inputs, resource ceiling, or any qualification result. Rerun only this affected read-only audit into new outputs.

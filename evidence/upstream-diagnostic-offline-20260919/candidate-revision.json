@@ -1,0 +1,10 @@
+{
+  "before": "3601a26697b27172d924552f883b0d7800d027e41ef848182174da196d5ee89f",
+  "after": "2bb98f5bef358ced807ff1048af46b8d7debc9327e74cf75066149875720eb75",
+  "changed": [
+    "app/collection/delivery_analysis.py",
+    "app/collection/delivery_capture.py",
+    "tests/test_delivery_capture.py"
+  ],
+  "reason": "post-Stop native receive admission guard and focused regression; direct timed run remains associated with its original candidate"
+}

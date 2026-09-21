@@ -1,0 +1,223 @@
+Across the games
+Start scan
+Stop
+Refresh
+Games (max)
+6
+Seconds
+30
+Saved scans
+Current multi-game scan
+Scan running · order held until Refresh
+
+Captured 9/16/2026, 10:57:00 AM EDT
+
+Details
+6 games · 0 excluded · 26 beyond limit
+
+Last observation: 2026-09-16T14:57:28.479924+00:00
+
+{
+  "beyond_limit": [
+    {
+      "event": "KXNFLGAME-26SEP20GBNYJ",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "title": "GB Packers vs NY Jets"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20PITNE",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "title": "PIT Steelers vs NE Patriots"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20PHITEN",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "title": "PHI Eagles vs TEN Titans"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20JACDEN",
+      "scheduled_start": "2026-09-20T20:05:00+00:00",
+      "title": "JAC Jaguars vs DEN Broncos"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20LVLAC",
+      "scheduled_start": "2026-09-20T20:05:00+00:00",
+      "title": "LV Raiders vs LA Chargers"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20SEAARI",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "title": "SEA Seahawks vs ARI Cardinals"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20WASDAL",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "title": "WAS Commanders vs DAL Cowboys"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20MIASF",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "title": "MIA Dolphins vs SF 49ers"
+    },
+    {
+      "event": "KXNFLGAME-26SEP20INDKC",
+      "scheduled_start": "2026-09-21T00:20:00+00:00",
+      "title": "IND Colts vs KC Chiefs"
+    },
+    {
+      "event": "KXNFLGAME-26SEP21NYGLAR",
+      "scheduled_start": "2026-09-22T00:15:00+00:00",
+      "title": "NY Giants vs LA Rams"
+    },
+    {
+      "event": "KXNFLGAME-26SEP24ATLGB",
+      "scheduled_start": "2026-09-25T00:15:00+00:00",
+      "title": "Atlanta vs Green Bay"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27LACBUF",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Los Angeles C vs Buffalo"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27CARCLE",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Carolina vs Cleveland"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27CINPIT",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Cincinnati vs Pittsburgh"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27NYJDET",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "New York J vs Detroit"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27HOUIND",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Houston vs Indianapolis"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27NEJAC",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "New England vs Jacksonville"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27KCMIA",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Kansas City vs Miami"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27TENNYG",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Tennessee vs New York G"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27SEAWAS",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "title": "Seattle vs Washington"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27ARISF",
+      "scheduled_start": "2026-09-27T20:05:00+00:00",
+      "title": "Arizona vs San Francisco"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27MINTB",
+      "scheduled_start": "2026-09-27T20:05:00+00:00",
+      "title": "Minnesota vs Tampa Bay"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27BALDAL",
+      "scheduled_start": "2026-09-27T20:25:00+00:00",
+      "title": "Baltimore vs Dallas"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27LVNO",
+      "scheduled_start": "2026-09-27T20:25:00+00:00",
+      "title": "Las Vegas vs New Orleans"
+    },
+    {
+      "event": "KXNFLGAME-26SEP27LARDEN",
+      "scheduled_start": "2026-09-28T00:20:00+00:00",
+      "title": "Los Angeles R vs Denver"
+    },
+    {
+      "event": "KXNFLGAME-26SEP28PHICHI",
+      "scheduled_start": "2026-09-29T00:15:00+00:00",
+      "title": "Philadelphia vs Chicago"
+    }
+  ],
+  "catalog_truncated": false,
+  "common": 32,
+  "excluded": [],
+  "found": {
+    "kalshi": 32,
+    "polymarket_us": 32
+  },
+  "selected": 6,
+  "truncated_by_limit": 26
+}
+Arb candidates
+What-if EV
+Page-derived research
+Size per leg
+100
+Find a game
+Team or game
+Filters & sorting
+Retrospective, time-mismatched research · saved DraftKings probabilities and Kalshi YES asks. Conditional ordinary winners only; unconditional EV unavailable.
+
+0 page-covered games · 6 shown
+
+Game / purchase	Page probability	Ask / size	Conditional net / ROI	Assumptions
+DET Lions vs BUF Bills
+Buy Buffalo Bills YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details
+CAR Panthers vs ATL Falcons
+Buy Atlanta Falcons YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details
+CIN Bengals vs HOU Texans
+Buy Cincinnati Bengals YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details
+CLE Browns vs TB Buccaneers
+Buy Cleveland Browns YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details
+MIN Vikings vs CHI Bears
+Buy Chicago Bears YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details
+NO Saints vs BAL Ravens
+Buy Baltimore Ravens YES · Kalshi
+Unavailable	Unavailable
+100 requested / unknown available
+Unavailable
+ROI unavailable
+No bound saved page for this capture; research is retrospective only
+Details

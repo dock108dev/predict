@@ -1,0 +1,25 @@
+test_controls_and_terminal_fit_inside_segment_payload_limits (tests.test_segmented.Segments.test_controls_and_terminal_fit_inside_segment_payload_limits) ... ok
+test_every_rotation_publication_boundary_and_index_identity (tests.test_segmented.Segments.test_every_rotation_publication_boundary_and_index_identity) ... ok
+test_incomplete_cleanup_and_post_terminal_refused (tests.test_segmented.Segments.test_incomplete_cleanup_and_post_terminal_refused) ... ok
+test_missing_reordered_corrupt_and_dependency_fail_closed (tests.test_segmented.Segments.test_missing_reordered_corrupt_and_dependency_fail_closed) ... ok
+test_partial_write_and_fsync_failure_are_not_acknowledgements (tests.test_segmented.Segments.test_partial_write_and_fsync_failure_are_not_acknowledgements) ... ok
+test_real_575_exact_across_metadata_and_stream_boundaries (tests.test_segmented.Segments.test_real_575_exact_across_metadata_and_stream_boundaries) ... ok
+test_resource_guards (tests.test_segmented.Segments.test_resource_guards) ... ok
+test_restart_and_active_writer_guards (tests.test_segmented.Segments.test_restart_and_active_writer_guards) ... ok
+test_rotation_never_resets_cumulative_counters (tests.test_segmented.Segments.test_rotation_never_resets_cumulative_counters) ... ok
+test_run_encoded_expanded_and_per_row_limits (tests.test_segmented.Segments.test_run_encoded_expanded_and_per_row_limits) ... ok
+test_failed_finalization_never_reports_runtime_success (tests.test_segmented.CrashBoundaries.test_failed_finalization_never_reports_runtime_success) ... ok
+test_native_dependencies_and_clocks_fail_closed (tests.test_segmented.CrashBoundaries.test_native_dependencies_and_clocks_fail_closed) ... ok
+test_process_exit_at_every_rotation_boundary (tests.test_segmented.CrashBoundaries.test_process_exit_at_every_rotation_boundary) ... ok
+test_recovery_device_identity_is_not_normalized (tests.test_segmented.CrashBoundaries.test_recovery_device_identity_is_not_normalized) ... ok
+test_pending_queue_stop_and_both_feeds_tasks_finalize (tests.test_segmented.Owner.test_pending_queue_stop_and_both_feeds_tasks_finalize) ... ok
+test_storage_unresolved_and_queue_byte_accounting (tests.test_segmented.Owner.test_storage_unresolved_and_queue_byte_accounting) ... ok
+test_terminal_finalization_and_cleanup_failure (tests.test_segmented.Owner.test_terminal_finalization_and_cleanup_failure) ... ok
+test_original_exact_with_bounded_native_state (tests.test_supervised.Retained.test_original_exact_with_bounded_native_state) ... ok
+test_fresh_old_new_recovery_and_health_books (tests.test_segmented.SavedCalculations.test_fresh_old_new_recovery_and_health_books) ... ok
+test_saved_calculations_exact_after_segmented_reopening (tests.test_segmented.SavedCalculations.test_saved_calculations_exact_after_segmented_reopening) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 16.415s
+
+OK

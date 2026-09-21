@@ -1,0 +1,16 @@
+{
+  "evidence/d2-coverage/offline-repair-20260916/saved-replay.json": "c1f4830530146850dbef57bad0a90773bfb1fcb74a82c28d736d355fbc65c975",
+  "evidence/d2-coverage/offline-repair-20260916/checks-final.log": "5fc96491b443fc9fa31eb09f7ac07ee746d4d1657a6a4b68f7e9194a73a8b738",
+  "evidence/d2-coverage/offline-repair-20260916/prior-evidence-sha256.json": "bfa95c008449d6110d1384e549dae722ea056e653ccaf6b132fe25d6e266c5e4",
+  "evidence/d2-coverage/offline-repair-20260916/checks.log": "2da95180f186571585b3d01af2f898cb450feb312869f685de58a21deed7fc5d",
+  "evidence/d2-coverage/offline-repair-20260916/derive.py": "b37e31d7b4156b5ef787c07beaccc5dbfbdc9ab702b24dca15e613d3288b443e",
+  "evidence/d2-coverage/offline-repair-20260916/generation-1.json": "9f20c5803dfdf17279b7a81f68a004d6f95533bda2688ac0251d8f9b4fcd2ebb",
+  "evidence/d2-coverage/offline-repair-20260916/generation-2.json": "a1d769d3262c871e016ac6cdcd7c3ea7f57f610df69eb480480f4605d89f87bc",
+  "evidence/d2-coverage/offline-repair-20260916/interrupted-third.json": "7c27a0854aa7c5436bc6043e4dd4dc2a81c0e6c8773209fbcb558635272a898b",
+  "evidence/d2-coverage/offline-repair-20260916/safety-final.log": "df56886e69dd62cbe817ae506332ba576eae4c5b5b27226ea258771b63eacc6a",
+  "evidence/d2-coverage/offline-repair-20260916/verification.json": "4422c05c954cc31a1acb71d1f97f7d6462671fe1e7a2fee2c54edfcb90d96f70",
+  "docs/data-coverage-d2-offline-repair-report.md": "a486d637cd6664b81071076b1afe9a0c4080f93b98e82c6b21cea9dc87113aed",
+  "docs/data-coverage-d2-validation-handoff.md": "53358ceb3c51da9e7a8778c62fb111f72a31fcf4cba728a01e4012b9dd640274",
+  "docs/data-coverage-plan.md": "2c67a13304bea404c62df90bca60c9b7b2547f096d82e649facf7ed7de0c0f8d",
+  "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "4f90538d021218302928a714ece877b83522d9797c938e821203bf06feb0d7ba"
+}

@@ -1,0 +1,14 @@
+{
+  "candidate": "63f5510b768065130bbb6b645dc6b8fc8bb5afb4ee2623d07a63a41a075d654c",
+  "focused_tests": 49,
+  "existing_regressions": 17,
+  "retained_tests": 1,
+  "saved_math_tests": 4,
+  "total_distinct_tests": 71,
+  "major_attempts_consumed": 2,
+  "no_additional_major_run": true,
+  "live_authorized": false,
+  "final_revision_full_timed_run": false,
+  "source_preservation": "preservation.json",
+  "new_retained_artifacts_bytes": 17942844
+}

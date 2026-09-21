@@ -1,0 +1,52 @@
+[
+  {
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/32258feb-b734-4e7f-8c1e-0741809bd236/recovery.json",
+    "source_differences": {
+      "device": {
+        "indexed": 16777234,
+        "current": 16777233
+      }
+    },
+    "other_report_differences": []
+  },
+  {
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/affd42c4-204e-430e-840e-d55ce992130c/recovery.json",
+    "source_differences": {
+      "device": {
+        "indexed": 16777234,
+        "current": 16777233
+      }
+    },
+    "other_report_differences": []
+  },
+  {
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/a5bed671-fa55-4f48-9a91-4b6db4031a86/recovery.json",
+    "source_differences": {
+      "device": {
+        "indexed": 16777234,
+        "current": 16777233
+      }
+    },
+    "other_report_differences": []
+  },
+  {
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/eee030dc-1932-4559-a18e-0a8ed9440095/recovery.json",
+    "source_differences": {
+      "device": {
+        "indexed": 16777234,
+        "current": 16777233
+      }
+    },
+    "other_report_differences": []
+  },
+  {
+    "index": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/e6/interrupted-recovery/catalog/5c52619a-3455-4c74-974d-a7ed0780433a/recovery.json",
+    "source_differences": {
+      "device": {
+        "indexed": 16777234,
+        "current": 16777233
+      }
+    },
+    "other_report_differences": []
+  }
+]

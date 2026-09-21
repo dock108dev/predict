@@ -1,0 +1,71 @@
+Executing <Task finished name='Task-4' coro=<CoverageOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py:116> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 2.822 seconds
+Executing <Task pending name='Task-2' coro=<Integration.test_busy_refresh_active_stop_exact_incremental_finalization() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_segmented_collector.py:48> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.347 seconds
+discovery failed (ValueError); frames=transport_session.py:341:run > continuous.py:380:discover > continuous.py:310:discover
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/normalization/registry.py:87: ResourceWarning: unclosed file <_io.BufferedWriter name='/var/folders/2k/njrlmfj97sv5pjrqxl22hq8w0000gn/T/tmp6phm5lfh/pilot/417a5daf-1224-4b61-b2de-8786476e32e3/history/writer.lock'>
+  self.aliases = MappingProxyType({k: MappingProxyType({**v, 'targets': tuple(v['targets'])}) for k, v in self.aliases.items()})
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/normalization/registry.py:87: ResourceWarning: unclosed file <_io.FileIO name='/var/folders/2k/njrlmfj97sv5pjrqxl22hq8w0000gn/T/tmp6phm5lfh/pilot/417a5daf-1224-4b61-b2de-8786476e32e3/history/segment-0000.jsonl' mode='xb' closefd=True>
+  self.aliases = MappingProxyType({k: MappingProxyType({**v, 'targets': tuple(v['targets'])}) for k, v in self.aliases.items()})
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/normalization/registry.py:87: ResourceWarning: unclosed <socket.socket fd=6, family=2, type=1, proto=0, laddr=('127.0.0.1', 54783)>
+  self.aliases = MappingProxyType({k: MappingProxyType({**v, 'targets': tuple(v['targets'])}) for k, v in self.aliases.items()})
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+Executing <Task finished name='Task-538' coro=<CoverageOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py:116> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 1.360 seconds
+Executing <Task finished name='Task-766' coro=<CoverageOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py:116> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 6.245 seconds
+Executing <Task finished name='Task-1518' coro=<CoverageOwner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py:116> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 1.352 seconds
+======================================================================
+ERROR: test_queue_rejection_keeps_durable_native_frames (tests.test_segmented_collector.Integration.test_queue_rejection_keeps_durable_native_frames)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py", line 488, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py", line 118, in finish
+    return await self.finish_mock_segmented(folder)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py", line 194, in finish_mock_segmented
+    await self.session.task
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 632, in run
+    await super().run()
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/transport_session.py", line 365, in run
+    self.closing=True; await consumer
+                       ^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/transport_session.py", line 264, in consume
+    try:row=await asyncio.wait_for(self.queue.get(),.1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py", line 488, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_segmented_collector.py", line 227, in pending_get
+    blocked.set();await release.wait();return await real_get()
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/locks.py", line 213, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_segmented_collector.py", line 243, in test_queue_rejection_keeps_durable_native_frames
+    finally:await f.close()
+            ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 147, in close
+    if self.owner and self.owner.finalizer:await asyncio.wait_for(self.owner.finalizer,30)
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py", line 487, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py", line 114, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+
+----------------------------------------------------------------------
+Ran 11 tests in 77.991s
+
+FAILED (errors=1)

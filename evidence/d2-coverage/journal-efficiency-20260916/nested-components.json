@@ -1,0 +1,22 @@
+{
+  "json_text": {
+    "total_value_bytes": 3963462,
+    "identical_repeat_bytes": 1533518,
+    "occurrences": 671
+  },
+  "normalized": {
+    "total_value_bytes": 702145,
+    "identical_repeat_bytes": 404016,
+    "occurrences": 1150
+  },
+  "quotes": {
+    "total_value_bytes": 120223,
+    "identical_repeat_bytes": 80817,
+    "occurrences": 1150
+  },
+  "raw_b64": {
+    "total_value_bytes": 4283492,
+    "identical_repeat_bytes": 2141746,
+    "occurrences": 1150
+  }
+}

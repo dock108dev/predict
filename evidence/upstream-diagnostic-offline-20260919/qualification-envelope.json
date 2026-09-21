@@ -1,0 +1,22 @@
+{
+  "candidate": "3601a26697b27172d924552f883b0d7800d027e41ef848182174da196d5ee89f",
+  "head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "major_runs": [
+    {
+      "name": "direct",
+      "attempt": "261c39b2-8362-4f31-ae55-e8f9037f77ae",
+      "intake": 240
+    },
+    {
+      "name": "cutoff",
+      "attempt": "ed437dd3-c78a-4a1c-a68a-86e3b7ec21cc",
+      "intake": 300
+    }
+  ],
+  "maximum_major_runs": 2,
+  "wall_per_run": 660,
+  "cpu_per_run": 600,
+  "collector_output": 234881024,
+  "harness_output": 8388608,
+  "all_new_artifacts": 1073741824
+}

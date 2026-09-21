@@ -1,0 +1,211 @@
+{
+  "collection": {
+    "rss": 266420224,
+    "traced": [
+      41754103,
+      43098094
+    ],
+    "top": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:19: size=29.3 MiB, count=490228, average=63 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:63: size=1894 KiB, count=96, average=19.7 KiB",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/models/core.py:41: size=1669 KiB, count=14240, average=120 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:23: size=1281 KiB, count=20499, average=64 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:89: size=1110 KiB, count=144, average=7895 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:118: size=1057 KiB, count=12362, average=88 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: size=942 KiB, count=11472, average=84 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:119: size=521 KiB, count=6067, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi_stream.py:33: size=214 KiB, count=64, average=3416 B",
+      "<frozen importlib._bootstrap_external>:511: size=175 KiB, count=1384, average=129 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: size=135 KiB, count=102, average=1352 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/websockets/asyncio/messages.py:184: size=119 KiB, count=36, average=3372 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:199: size=113 KiB, count=1804, average=64 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:263: size=108 KiB, count=163, average=677 B",
+      "<frozen abc>:123: size=95.5 KiB, count=1136, average=86 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:202: size=94.2 KiB, count=482, average=200 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:164: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:157: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:132: size=87.0 KiB, count=1103, average=81 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:143: size=82.5 KiB, count=640, average=132 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py:697: size=67.5 KiB, count=200, average=346 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:206: size=52.3 KiB, count=20, average=2676 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1515: size=47.6 KiB, count=406, average=120 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py:227: size=33.2 KiB, count=145, average=235 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:337: size=32.2 KiB, count=646, average=51 B"
+    ]
+  },
+  "finalization": {
+    "rss": 271679488,
+    "traced": [
+      36897848,
+      53326874
+    ],
+    "top": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:19: size=24.1 MiB, count=395519, average=64 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:63: size=1894 KiB, count=96, average=19.7 KiB",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/models/core.py:41: size=1669 KiB, count=14240, average=120 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:23: size=1281 KiB, count=20499, average=64 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:89: size=1110 KiB, count=144, average=7895 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:118: size=1058 KiB, count=12365, average=88 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: size=1009 KiB, count=11441, average=90 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:119: size=521 KiB, count=6059, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi_stream.py:33: size=214 KiB, count=64, average=3416 B",
+      "<frozen importlib._bootstrap_external>:511: size=175 KiB, count=1384, average=129 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/websockets/asyncio/messages.py:184: size=119 KiB, count=36, average=3372 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:199: size=116 KiB, count=1863, average=64 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:263: size=107 KiB, count=159, average=688 B",
+      "<frozen abc>:123: size=95.3 KiB, count=1132, average=86 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:202: size=93.6 KiB, count=477, average=201 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:164: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:157: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:132: size=86.9 KiB, count=1102, average=81 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:143: size=82.5 KiB, count=640, average=132 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py:697: size=67.5 KiB, count=200, average=346 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:206: size=52.3 KiB, count=20, average=2676 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1515: size=52.0 KiB, count=444, average=120 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/tracemalloc.py:67: size=48.9 KiB, count=696, average=72 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/tracemalloc.py:193: size=43.5 KiB, count=796, average=56 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:337: size=41.7 KiB, count=839, average=51 B"
+    ]
+  },
+  "outcome": {
+    "status": "complete",
+    "operator_stop": true,
+    "native_verified": true,
+    "replay_seconds": 11.099029250006424,
+    "replay_baseline_rss": 176963584,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 74,
+      "verified_account_budget": 1,
+      "coverage_inventory": 1,
+      "market_selected": 96,
+      "source_health": 549,
+      "prediction_command": 5,
+      "coverage_applied": 2,
+      "prediction_frame": 548,
+      "prediction_book": 544,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1
+    ],
+    "applied_generations": {
+      "polymarket_us": 1,
+      "kalshi": 1
+    },
+    "replay_traced_start": 42334598,
+    "replay_traced_peak": 53326874,
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 61.395064625001396,
+    "baseline_rss": 71352320,
+    "peak_rss": 266420224,
+    "traced_peak": 53326874,
+    "traced_current": 50850996,
+    "profile": "predict-supervised-segmented-5m-v1",
+    "replay_state_samples": [
+      {
+        "rows": 1024,
+        "bytes": 15039146,
+        "rss": 266420224
+      }
+    ],
+    "live_state_samples": [
+      {
+        "seconds": 1.0080466250001336,
+        "bytes": 77846,
+        "rss": 72105984,
+        "logical": 2,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 11.708223207999254,
+        "bytes": 1080239,
+        "rss": 82329600,
+        "logical": 36,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 21.803299374994822,
+        "bytes": 1274482,
+        "rss": 82755584,
+        "logical": 75,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 31.97104120799486,
+        "bytes": 9389402,
+        "rss": 111575040,
+        "logical": 594,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 42.23453745799634,
+        "bytes": 9627970,
+        "rss": 150929408,
+        "logical": 1281,
+        "generation": 1,
+        "groups": 5
+      }
+    ],
+    "rate_peaks": {
+      "rows": 156,
+      "encoded": 482844,
+      "expanded": 2861135,
+      "frames": 40
+    },
+    "frames_received": 548,
+    "stop_to_closed_seconds": 0.05684183399716858,
+    "disk_bytes": 5057487
+  },
+  "retained_components": {
+    "fixture": 4137997,
+    "discovery": 3752502,
+    "native": 7240017
+  },
+  "after_gc_before": [
+    41106109,
+    53326874
+  ],
+  "after_gc": {
+    "rss": 271695872,
+    "traced": [
+      11604139,
+      53326874
+    ],
+    "top": [
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:63: size=1894 KiB, count=96, average=19.7 KiB",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/models/core.py:41: size=1669 KiB, count=14240, average=120 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/bounds.py:23: size=1409 KiB, count=22551, average=64 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:89: size=1110 KiB, count=144, average=7895 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:118: size=1057 KiB, count=12358, average=88 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:361: size=1001 KiB, count=11290, average=91 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi.py:119: size=520 KiB, count=6051, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/kalshi_stream.py:33: size=214 KiB, count=64, average=3416 B",
+      "<frozen importlib._bootstrap_external>:511: size=175 KiB, count=1384, average=129 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/websockets/asyncio/messages.py:184: size=119 KiB, count=36, average=3372 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:199: size=113 KiB, count=1804, average=64 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:263: size=107 KiB, count=156, average=701 B",
+      "<frozen abc>:123: size=95.2 KiB, count=1130, average=86 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copy.py:202: size=93.6 KiB, count=477, average=201 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:164: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:157: size=93.0 KiB, count=1082, average=88 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/polymarket_us.py:132: size=86.9 KiB, count=1102, average=81 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/coverage.py:143: size=82.5 KiB, count=640, average=132 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py:697: size=67.5 KiB, count=200, average=346 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/prediction_producer.py:206: size=52.3 KiB, count=20, average=2676 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1515: size=46.3 KiB, count=395, average=120 B",
+      "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:337: size=40.0 KiB, count=806, average=51 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py:227: size=33.2 KiB, count=145, average=235 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/yarl/_url.py:982: size=30.3 KiB, count=220, average=141 B",
+      "/Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/yarl/_parse.py:245: size=28.9 KiB, count=592, average=50 B"
+    ]
+  },
+  "rss_peak": 271695872
+}

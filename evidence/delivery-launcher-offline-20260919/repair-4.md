@@ -1,0 +1,3 @@
+# Final review repair — bind the emitted session spec
+
+Final inspection found that the launcher validated and retained the externally approved spec, but the collector's generated `spec.json` was only implicitly bound through source hashes. Add an explicit equality check against the approved duration, Stop, slots, mode, profile and subcaps before scheduling discovery, and make the read-only auditor check the same binding. Add a negative fixture assertion. Preserve the initial executable/source manifests and approval template as pre-final freeze records; they are superseded, not executable after this source change. Rerun affected launcher checks and the requested guarded suites, then issue new final manifests. No attempt has been started or consumed.

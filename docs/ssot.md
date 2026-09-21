@@ -1,11 +1,14 @@
 # Current sources of truth
 
-Current source baseline: September 16, 2026, commit `6ce2964`, incorporating the
-failure-handling, repository-cleanup and CI changes, plus uncommitted documentation
-and launcher diagnostic edits. This accuracy pass began at `00bc5ee` before that
-external commit appeared. The [Desktop tracker](../../prediction_arb_next_steps.md)
-and [roadmap](product-roadmap-review.md) still own product scope. Existing services
-were not restarted, and source validation is not owner acceptance.
+Product scope was reset September 20, 2026: the [beta definition](product-roadmap-review.md),
+[B1–B7 delivery plan](data-coverage-plan.md) and [Desktop tracker](../../prediction_arb_next_steps.md)
+are authoritative. Four prediction venues, model plus free delayed Pinnacle references,
+six sports and the requested market families are required. Beta signoff is not ready.
+Earlier D/E/slice reports retain component evidence, not active next-action authority.
+
+Local HEAD inspected in this documentation pass: `edad00dd980cc8535d69a815d1199b82dd0e83cb`,
+with existing uncommitted work. No current runtime/hosted qualification is inferred.
+The domain map below describes existing implementation, not completion of the expanded beta.
 
 The domain and retention decisions below originate from the earlier SSOT pass at
 `5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7` and remain applicable. See
@@ -29,23 +32,25 @@ Known callers: `app/dashboard/opportunity_board.py` (both factory and CLI),
 
 Domain: Configuration and scan lifecycle
 
-SSOT module/file: `app/dashboard/multi_game.py` (`configuration`, `MultiOwner`)
+SSOT module/file: `app/dashboard/coverage_owner.py` (`CoverageOwner`, D2 production mode), extending `app/dashboard/multi_game.py:MultiOwner`
 
-Why this is authoritative: constructs bounded multi-game configuration and owns
-Start, overlap rejection, Stop/finalization and saved-scan status. Production
-factory explicitly selects personal-beta operation. No scheduled collection.
+Why this is authoritative: production selects the bounded D2 inventory collector,
+with one Start/Stop owner, finalizer, process lock and persistent consumed-attempt
+guard. Startup is idle, with no scheduled collection or autoresume. Historical
+MultiOwner configuration/sample tests and saved calculations remain supported.
 
 Known callers: multi-game server; local-only beta test producer.
 
 Domain: Ingestion and event identity
 
-SSOT module/file: `app/collection/multi_game.py`, using `app/normalization/registry.py`
-and existing venue adapters
+SSOT module/file: `app/collection/continuous.py` with `app/collection/coverage.py`,
+using `app/normalization/registry.py` and existing venue adapters
 
-Why this is authoritative: `MultiSession` discovers common pregame events and
-binds actual native purchase sides before subscriptions; normalization remains
-in the shared registry. It extends `TransportSession` rather than creating a
-second transport lifecycle.
+Why this is authoritative: `ContinuousSession` builds each venue catalog before
+matching and subscriptions, retaining unmatched/excluded markets, refreshing every
+60 seconds and enforcing the kickoff margin. It extends `TransportSession` and
+reuses native producers/stream parsers. `MultiSession` retains historical sample
+compatibility; its six-game selection no longer controls production collection.
 
 Known callers: `MultiOwner`; `PredictionProducer`; native replay checks.
 
@@ -169,3 +174,62 @@ lines during this pass; it was not edited or reverted by this work. No provider 
 credential lookup, database work, application restart, packaging, full CI matrix,
 commit or publishing was performed. Browser/live checks were not run; this pass
 claims focused source validation only.
+
+## D1 independent coverage projection — September 16, 2026
+
+`app/collection/coverage.py` owns offline catalog completeness/accounting and report
+projection, before intersection or scan selection. It shares native adapter
+`parse_event`/`parse_market` conversion and `prediction_discovery.participant_mapping`
+with the existing normalization registry. It never replaces the collection owner,
+matching/settlement qualification or calculation engines. Retained market absence
+is unknown coverage, not a zero venue denominator. See [D1](data-coverage-d1-report.md).
+
+D3's chosen persistence direction is to extend `ObservationJournal`/native replay
+with bounded segments and manifests; the historical SQL API remains separate.
+This decision performs no migration or new collection.
+
+
+## D2 evidence boundary — September 16, 2026
+
+The sole authorized pilot failed in local discovery after 2.434 seconds. Its
+immutable journal/manifest and frozen pilot source are under `evidence/d2-coverage/`.
+The repaired candidate has 67 focused offline checks; no replacement live run
+occurred. Current denominators, wider subscriptions and live browser/Stop evidence
+are unestablished. [D2 report](data-coverage-d2-report.md) owns those observations;
+the Desktop tracker/coverage plan retain incomplete status. This does not authorize
+D3, another pilot, indefinite collection or migration.
+
+D2 offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
+
+
+## D3a offline segmented history — September 16, 2026
+
+`collection/segmented.py` extends `ObservationJournal` with the separately versioned
+`d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
+read-only interrupted-prefix indexes. `NativeVerifier` shares the legacy native
+parsers/converter; `GroupedNativeVerifier` keeps sequential stream state across
+segments without a whole-run list. Metadata, command and native image dependencies
+must precede a usable book. No checkpoints or external payload store are used.
+
+`dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
+expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
+completed histories. The production factory still selects legacy `CoverageOwner`.
+D2 transport, 2,048 lifetime ingress allowance and original recovery identity checks
+are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
+live segmented route or daily collection authorization. See [D3a results, storage
+format and recovery limits](data-coverage-d3a-report.md). D2 and full D3 are incomplete.
+
+
+## Mock-only segmented collector integration — September 16, 2026
+
+`CoverageOwner(mock_segmented=True)` requires an isolated output root and explicit
+numeric-loopback fixture endpoints. It runs the existing `ContinuousSession`,
+discovery and native producers, using `SegmentedTransportJournal` and sequential
+finalization. Production construction does not select this option. No credential
+resolution, reference feed or external redirect is permitted in the mock path.
+Published catalog generations, producer-applied generations and usable books are
+separate; shared lifecycle cleanup creates the terminal only after producer joins
+and queue accounting. Failure cannot manufacture completion. D3a policy and D2
+limits/attempt protection remain unchanged. Busy local Stop passes; resource
+pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
+Next is an offline sustained-capacity policy/experiment, not a live pilot.

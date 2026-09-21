@@ -1,0 +1,4424 @@
+{
+  "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+  "journal_chain": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+  "start": "2026-09-16T16:15:55.483297+00:00",
+  "end": "2026-09-16T16:17:58.923576+00:00",
+  "duration": 123.55746458399517,
+  "reason": "session_ingress_cap",
+  "generation": {
+    "1": {
+      "first_request": "2026-09-16T16:15:55.985520+00:00",
+      "last_receipt": "2026-09-16T16:16:19.380463+00:00",
+      "published": true,
+      "events": {
+        "kalshi": 32,
+        "polymarket_us": 32
+      },
+      "markets": {
+        "kalshi": 64,
+        "polymarket_us": 0
+      },
+      "embedded_us_counts": {
+        "events": {
+          "discovered": 32,
+          "in_scope": 32,
+          "excluded": 0,
+          "raw_occurrences": 32,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 32
+          },
+          "exclusions": {}
+        },
+        "markets": {
+          "discovered": 32,
+          "in_scope": 32,
+          "excluded": 0,
+          "raw_occurrences": 32,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 32
+          },
+          "exclusions": {}
+        },
+        "sides": {
+          "supported": 32,
+          "unsupported": 32,
+          "unknown": 0,
+          "total": 64
+        },
+        "in_scope_sides": {
+          "supported": 32,
+          "unsupported": 32
+        },
+        "events_without_retained_markets": 0,
+        "market_discovery": {
+          "embedded_only": 32
+        }
+      },
+      "embedded_us_market_ids": [
+        "657964",
+        "657966",
+        "657969",
+        "657972",
+        "657975",
+        "657978",
+        "657980",
+        "657983",
+        "657986",
+        "657989",
+        "657992",
+        "657994",
+        "657996",
+        "657999",
+        "658002",
+        "658005",
+        "779756",
+        "825195",
+        "825196",
+        "825198",
+        "825199",
+        "825200",
+        "825201",
+        "825202",
+        "825204",
+        "825205",
+        "825206",
+        "825208",
+        "825209",
+        "825210",
+        "825211",
+        "848861"
+      ],
+      "independent_us_market_pages": 32,
+      "us_completeness_assessment": "UNESTABLISHED: empty independent responses contradict retained embedded markets; runtime exhaustion flag is not proof"
+    },
+    "2": {
+      "first_request": "2026-09-16T16:16:55.869556+00:00",
+      "last_receipt": "2026-09-16T16:17:18.633810+00:00",
+      "published": true,
+      "events": {
+        "kalshi": 32,
+        "polymarket_us": 32
+      },
+      "markets": {
+        "kalshi": 64,
+        "polymarket_us": 0
+      },
+      "embedded_us_counts": {
+        "events": {
+          "discovered": 32,
+          "in_scope": 32,
+          "excluded": 0,
+          "raw_occurrences": 32,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 32
+          },
+          "exclusions": {}
+        },
+        "markets": {
+          "discovered": 32,
+          "in_scope": 32,
+          "excluded": 0,
+          "raw_occurrences": 32,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 32
+          },
+          "exclusions": {}
+        },
+        "sides": {
+          "supported": 32,
+          "unsupported": 32,
+          "unknown": 0,
+          "total": 64
+        },
+        "in_scope_sides": {
+          "supported": 32,
+          "unsupported": 32
+        },
+        "events_without_retained_markets": 0,
+        "market_discovery": {
+          "embedded_only": 32
+        }
+      },
+      "embedded_us_market_ids": [
+        "657964",
+        "657966",
+        "657969",
+        "657972",
+        "657975",
+        "657978",
+        "657980",
+        "657983",
+        "657986",
+        "657989",
+        "657992",
+        "657994",
+        "657996",
+        "657999",
+        "658002",
+        "658005",
+        "779756",
+        "825195",
+        "825196",
+        "825198",
+        "825199",
+        "825200",
+        "825201",
+        "825202",
+        "825204",
+        "825205",
+        "825206",
+        "825208",
+        "825209",
+        "825210",
+        "825211",
+        "848861"
+      ],
+      "independent_us_market_pages": 32,
+      "us_completeness_assessment": "UNESTABLISHED: empty independent responses contradict retained embedded markets; runtime exhaustion flag is not proof"
+    },
+    "3": {
+      "first_request": "2026-09-16T16:17:55.868839+00:00",
+      "last_receipt": "2026-09-16T16:17:58.140134+00:00",
+      "published": false,
+      "events": {
+        "kalshi": 32,
+        "polymarket_us": 20
+      },
+      "markets": {
+        "kalshi": 6,
+        "polymarket_us": 20
+      },
+      "embedded_us_counts": {
+        "events": {
+          "discovered": 20,
+          "in_scope": 20,
+          "excluded": 0,
+          "raw_occurrences": 20,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 20
+          },
+          "exclusions": {}
+        },
+        "markets": {
+          "discovered": 20,
+          "in_scope": 20,
+          "excluded": 0,
+          "raw_occurrences": 20,
+          "duplicates": 0,
+          "matching": {
+            "unmatched": 20
+          },
+          "exclusions": {}
+        },
+        "sides": {
+          "supported": 20,
+          "unsupported": 20,
+          "unknown": 0,
+          "total": 40
+        },
+        "in_scope_sides": {
+          "supported": 20,
+          "unsupported": 20
+        },
+        "events_without_retained_markets": 0,
+        "market_discovery": {
+          "embedded_only": 20
+        }
+      },
+      "embedded_us_market_ids": [
+        "657964",
+        "657966",
+        "657969",
+        "657972",
+        "657975",
+        "657978",
+        "657980",
+        "657983",
+        "657986",
+        "657989",
+        "657992",
+        "657994",
+        "657996",
+        "657999",
+        "658002",
+        "658005",
+        "779756",
+        "825195",
+        "825196",
+        "825198"
+      ],
+      "independent_us_market_pages": 0,
+      "us_completeness_assessment": "UNESTABLISHED: empty independent responses contradict retained embedded markets; runtime exhaustion flag is not proof"
+    }
+  },
+  "native_frames": {
+    "subscribed": 4,
+    "orderbook_snapshot": 64,
+    "orderbook_delta": 427
+  },
+  "market_book_receipt_counts": {
+    "KXNFLGAME-26SEP17DETBUF-BUF": 16,
+    "KXNFLGAME-26SEP27ARISF-ARI": 6,
+    "KXNFLGAME-26SEP17DETBUF-DET": 10,
+    "KXNFLGAME-26SEP27ARISF-SF": 5,
+    "KXNFLGAME-26SEP20CARATL-ATL": 22,
+    "KXNFLGAME-26SEP27LARDEN-DEN": 9,
+    "KXNFLGAME-26SEP27BALDAL-BAL": 12,
+    "KXNFLGAME-26SEP20CARATL-CAR": 20,
+    "KXNFLGAME-26SEP27LARDEN-LAR": 10,
+    "KXNFLGAME-26SEP20INDKC-IND": 5,
+    "KXNFLGAME-26SEP27BALDAL-DAL": 1,
+    "KXNFLGAME-26SEP20CINHOU-CIN": 5,
+    "KXNFLGAME-26SEP28PHICHI-CHI": 1,
+    "KXNFLGAME-26SEP20INDKC-KC": 12,
+    "KXNFLGAME-26SEP27KCMIA-KC": 7,
+    "KXNFLGAME-26SEP20CINHOU-HOU": 7,
+    "KXNFLGAME-26SEP28PHICHI-PHI": 9,
+    "KXNFLGAME-26SEP20LVLAC-LAC": 7,
+    "KXNFLGAME-26SEP27KCMIA-MIA": 5,
+    "KXNFLGAME-26SEP20CLETB-CLE": 3,
+    "KXNFLGAME-26SEP20LVLAC-LV": 11,
+    "KXNFLGAME-26SEP27LACBUF-BUF": 1,
+    "KXNFLGAME-26SEP20CLETB-TB": 9,
+    "KXNFLGAME-26SEP20MIASF-MIA": 4,
+    "KXNFLGAME-26SEP27LACBUF-LAC": 8,
+    "KXNFLGAME-26SEP20GBNYJ-GB": 11,
+    "KXNFLGAME-26SEP20MIASF-SF": 6,
+    "KXNFLGAME-26SEP27LVNO-LV": 1,
+    "KXNFLGAME-26SEP20GBNYJ-NYJ": 5,
+    "KXNFLGAME-26SEP20SEAARI-ARI": 7,
+    "KXNFLGAME-26SEP27LVNO-NO": 1,
+    "KXNFLGAME-26SEP20JACDEN-DEN": 10,
+    "KXNFLGAME-26SEP20SEAARI-SEA": 6,
+    "KXNFLGAME-26SEP27MINTB-MIN": 13,
+    "KXNFLGAME-26SEP20JACDEN-JAC": 8,
+    "KXNFLGAME-26SEP20WASDAL-DAL": 9,
+    "KXNFLGAME-26SEP27MINTB-TB": 1,
+    "KXNFLGAME-26SEP20MINCHI-CHI": 11,
+    "KXNFLGAME-26SEP20WASDAL-WAS": 5,
+    "KXNFLGAME-26SEP27NEJAC-JAC": 1,
+    "KXNFLGAME-26SEP20MINCHI-MIN": 8,
+    "KXNFLGAME-26SEP21NYGLAR-LAR": 17,
+    "KXNFLGAME-26SEP27NEJAC-NE": 14,
+    "KXNFLGAME-26SEP20NOBAL-BAL": 10,
+    "KXNFLGAME-26SEP21NYGLAR-NYG": 25,
+    "KXNFLGAME-26SEP27NYJDET-DET": 1,
+    "KXNFLGAME-26SEP20NOBAL-NO": 8,
+    "KXNFLGAME-26SEP24ATLGB-ATL": 1,
+    "KXNFLGAME-26SEP27NYJDET-NYJ": 7,
+    "KXNFLGAME-26SEP20PHITEN-PHI": 15,
+    "KXNFLGAME-26SEP24ATLGB-GB": 5,
+    "KXNFLGAME-26SEP27SEAWAS-SEA": 1,
+    "KXNFLGAME-26SEP20PHITEN-TEN": 18,
+    "KXNFLGAME-26SEP27CARCLE-CAR": 14,
+    "KXNFLGAME-26SEP27SEAWAS-WAS": 14,
+    "KXNFLGAME-26SEP20PITNE-NE": 4,
+    "KXNFLGAME-26SEP27CARCLE-CLE": 1,
+    "KXNFLGAME-26SEP27TENNYG-NYG": 7,
+    "KXNFLGAME-26SEP20PITNE-PIT": 5,
+    "KXNFLGAME-26SEP27CINPIT-CIN": 6,
+    "KXNFLGAME-26SEP27TENNYG-TEN": 1,
+    "KXNFLGAME-26SEP27CINPIT-PIT": 7,
+    "KXNFLGAME-26SEP27HOUIND-HOU": 1,
+    "KXNFLGAME-26SEP27HOUIND-IND": 1
+  },
+  "source_time_progress": {
+    "missing": 64,
+    "first": 50,
+    "advanced": 330,
+    "repeated": 47
+  },
+  "observed_per_market_receipt_intervals_seconds": {
+    "count": 427,
+    "minimum": 0.002028,
+    "median": 0.952091,
+    "maximum": 87.419916
+  },
+  "preserved_health_transitions": [
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.056493+00:00",
+      "stream_group": "kalshi-3",
+      "state": "awaiting_snapshot",
+      "gap_reason": "fresh synchronization required"
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.060325+00:00",
+      "stream_group": "kalshi-1",
+      "state": "awaiting_snapshot",
+      "gap_reason": "fresh synchronization required"
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.064549+00:00",
+      "stream_group": "kalshi-4",
+      "state": "awaiting_snapshot",
+      "gap_reason": "fresh synchronization required"
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.072904+00:00",
+      "stream_group": "kalshi-2",
+      "state": "awaiting_snapshot",
+      "gap_reason": "fresh synchronization required"
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.100326+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.104701+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.108521+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.112420+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.115722+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.118892+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.122795+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.125810+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.128600+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.131628+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.135036+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.137855+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.140631+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.143176+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.145993+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.148430+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.150802+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.153566+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.156085+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.158304+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.160796+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.163905+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.166019+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.168482+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.171883+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.174230+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.176520+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.179227+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.181715+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.184219+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.186483+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.189067+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.191456+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.195141+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.197770+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.200156+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.202480+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.205191+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.207599+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.210024+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.212742+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.215238+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.217535+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.219991+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.222713+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.225242+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.227650+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.230266+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.232800+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.235156+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.237312+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.239741+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.242249+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.244434+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.246990+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.249382+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.251891+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.254583+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.257010+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.259470+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.262220+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.264563+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.266789+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.269316+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:20.984225+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:21.432020+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:21.441224+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.321067+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.893823+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.899665+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.904219+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.908334+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.912110+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.915662+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.981625+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.985940+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:25.989734+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:26.049838+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:26.054575+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:26.344218+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:26.350751+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:26.944376+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:27.997621+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:30.347351+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:30.355321+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.352180+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.773304+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.778338+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.782807+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.786488+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:31.819116+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:33.308130+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:34.441034+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:35.327053+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:35.333614+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:36.412994+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:37.158775+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:37.316876+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:37.752033+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:38.272381+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:38.315413+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:39.533744+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:39.538703+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.014960+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.201838+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.451713+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.517276+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.522698+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.550870+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.565895+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:43.763409+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.577130+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.663202+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.671820+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.695414+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.712666+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.717208+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.731454+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.766759+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.798483+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.835981+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.910214+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.937495+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:44.970676+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.005499+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.174480+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.179993+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.208100+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.213972+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:45.241568+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:46.160643+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:47.430720+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:47.437530+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:48.148433+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:48.243330+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:48.263584+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:48.268243+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:48.798380+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:49.146368+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:49.664641+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.157635+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.161596+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.168902+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.172441+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.175760+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.178994+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.224429+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.227697+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.230754+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.233602+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.236041+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.238614+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.240849+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.243300+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.245620+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.250196+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.252326+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.254228+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.256279+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.258142+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.259961+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.261885+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.263685+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.667782+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.671314+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.674706+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.677831+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.680955+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.683719+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.686447+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.689074+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.759121+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.762690+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.765751+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.768762+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.771861+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.774727+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.777032+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.780730+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.782846+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.784802+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.787438+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.789691+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.791754+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.793621+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.795793+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:50.797770+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:51.091076+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:51.521933+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:51.758242+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.039753+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.044803+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.049009+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.052752+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.056419+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.060816+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.063949+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.066980+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.070070+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.072902+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.075399+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.077966+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.080626+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.083037+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.085511+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.088005+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.090249+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.092591+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.094720+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.096860+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.099228+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.101359+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.103433+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.105550+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.107600+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.109598+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.111780+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.113856+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.115781+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.117846+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.119741+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.121671+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.123451+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.125357+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.127331+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.129571+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.131485+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.133289+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.135538+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.137787+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.140430+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.142415+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.144200+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.146439+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.148545+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.150193+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.152215+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.154658+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.190441+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.625258+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.983806+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.989218+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:52.993548+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:53.419455+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:53.570716+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:53.954488+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:55.323555+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:55.510873+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:56.467853+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:57.934592+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:58.940769+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:59.015281+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:16:59.666264+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.987445+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.990044+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.992109+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.994101+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.996619+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:00.998790+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.000722+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.015184+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.017402+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.021054+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.023355+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.025366+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.088166+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.090418+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.097931+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.100011+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.125482+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.128343+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.160407+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.163300+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.234738+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.238196+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.303864+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.308288+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.311981+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.315611+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:01.449016+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:02.628439+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:03.002505+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:03.007505+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:05.442867+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:05.477538+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:05.486576+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:05.628687+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:06.339848+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:06.784458+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:08.253171+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:08.258393+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:08.943916+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:09.257367+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:09.279692+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:09.284463+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:09.518345+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:09.523609+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.005500+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.010873+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.015161+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.018635+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.021900+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.025405+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.028524+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.031595+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.034163+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.036806+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.039620+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.042261+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.044753+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.047317+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.049806+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.052005+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.054506+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.056922+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.059103+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.061151+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.065776+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.067756+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.069859+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.072005+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.073947+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.075778+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.077727+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.079891+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.081983+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.083886+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.085768+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.088227+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.090361+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.092216+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.094189+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.096424+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.098403+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.100310+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.102583+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.104690+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.107180+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.109098+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.111198+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.113144+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.115220+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.117036+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.552317+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.616084+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:10.931476+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:11.051827+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:11.523971+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:11.583605+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.079745+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.182570+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.817816+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.823229+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.826730+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.831376+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.834566+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.838916+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.841953+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.845044+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.847831+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.850704+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.853249+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.856067+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.858302+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.860978+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.863236+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.866495+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.868860+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.871454+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.873873+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.876014+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.878235+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.880521+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.882565+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.884570+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.886754+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.888882+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.890988+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.893100+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.895360+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.897484+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.944880+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.947224+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.949371+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:12.951505+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.023503+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.026872+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.030081+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.033002+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.035723+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.038618+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.041085+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.043510+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.049199+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.051561+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.054062+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.056352+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.058501+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.144295+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.148185+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.151376+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.155378+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.158253+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:13.465473+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:15.032370+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:15.609242+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:15.892956+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:15.903293+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:19.163410+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:19.166948+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:19.746589+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:19.766665+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.483975+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.489221+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.493219+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.497277+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.500739+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.504183+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.507535+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.510401+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.513300+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.515729+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.518385+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.520765+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.523290+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.525772+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.528210+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.530669+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.533178+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.535714+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.538181+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.540493+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.542668+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.544959+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.547126+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.549188+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.551362+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.553655+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.582826+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.585679+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.588117+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.590531+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.592900+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.595247+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.597452+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.599581+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.601739+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.603916+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.605986+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.608089+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.610508+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:21.621856+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.352968+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.358926+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.363615+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.367714+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.371490+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.375143+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:22.469470+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.204005+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.208754+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.213313+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.217426+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.221203+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.224583+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.227845+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.230713+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.234466+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:24.237185+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.229907+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.263487+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.691190+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.836094+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.841155+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.970368+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:25.975536+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:30.186741+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.238703+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.253391+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.257642+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.261083+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.264832+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.267854+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.281019+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.283383+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.493075+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:31.512540+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:32.267958+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:32.542361+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:32.813336+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:32.923903+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:32.940038+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:33.272504+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:34.470821+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:34.593923+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:39.483668+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:39.652444+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:39.721221+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:39.831989+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:40.337536+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:40.341140+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:40.418594+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:40.463666+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.474000+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.478820+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.524702+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.929862+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.933909+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.937323+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.940331+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.943272+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:42.983289+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.429453+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.449820+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.453465+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.457971+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.461153+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.488071+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:43.758803+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:45.268733+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:45.689006+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.216397+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.221341+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.225872+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.274152+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.528390+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:46.934166+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:47.561330+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:47.597948+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:48.030354+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:48.043605+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:48.465252+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:48.949001+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:49.495229+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:49.518583+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:49.527199+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:49.615434+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:50.033821+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:50.487230+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:50.498599+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:50.601306+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.609712+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.614996+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.618642+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.622397+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.850636+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:51.906800+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.413242+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.417068+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.420611+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.423629+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.509278+00:00",
+      "stream_group": "kalshi-3",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:52.813378+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:53.488074+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:54.323794+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:54.329348+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:54.634895+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:55.997096+00:00",
+      "stream_group": "kalshi-4",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.034637+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.038524+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.042098+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.117034+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.121683+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.125875+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:56.505398+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.026213+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.031273+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.035575+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.039543+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.080212+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:57.299497+00:00",
+      "stream_group": "kalshi-1",
+      "state": "connected",
+      "gap_reason": null
+    },
+    {
+      "source": "kalshi",
+      "observed_at": "2026-09-16T16:17:58.158700+00:00",
+      "stream_group": "kalshi-2",
+      "state": "connected",
+      "gap_reason": null
+    }
+  ],
+  "final_accounting": {
+    "accounting": null,
+    "cleanup_errors": [],
+    "delivered": 1869,
+    "economics": null,
+    "health": {
+      "kalshi": "disconnected",
+      "polymarket_us": "idle"
+    },
+    "ingress_accounting": {
+      "accepted": 1869,
+      "durably_acknowledged": 1869,
+      "received": 1870,
+      "rejected": 1,
+      "unresolved": 0,
+      "write_attempted": 1869
+    },
+    "observed_at": "2026-09-16T16:17:58.923576+00:00",
+    "persisted": 1869,
+    "prediction_accounting": {
+      "kalshi": {
+        "body_bytes_charged": 1579941,
+        "connections": 4,
+        "dollars_reserved": "0",
+        "requests": 72
+      },
+      "polymarket_us": {
+        "body_bytes_charged": 915411,
+        "connections": 0,
+        "dollars_reserved": "0",
+        "requests": 83
+      }
+    },
+    "reason": "session_ingress_cap",
+    "session_id": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+    "type": "session_finished"
+  },
+  "pilot_directory_bytes": 19181257,
+  "manual_stop": {
+    "verified": false,
+    "requested": false,
+    "reason": "Operator missed requested prompt around 120 seconds; active at 120.52 seconds; resource stop followed at 123.56 seconds"
+  },
+  "browser_independence": {
+    "verified": true,
+    "basis": "Viewing tab closed while running; independent loopback status recorded ongoing REST requests; reopened active viewing tab"
+  },
+  "completion": "incomplete: US market-discovery conflict and manual Stop unverified"
+}

@@ -1,0 +1,16 @@
+{
+  "evidence/d2-coverage/record-capacity-decision-20260916/prior-sha256.json": "96c08812b039283ddb71f85fbf19dc6066cd08122239af0e614a3ac81b20f410",
+  "evidence/d2-coverage/record-capacity-decision-20260916/fresh-recovery-experiment.py": "5b6095e34a5353fbb95be4d2345c304fec1a153e274efb91f08863f9db5737a2",
+  "evidence/d2-coverage/record-capacity-decision-20260916/preencoding-experiment.py": "fb4185017b1f36f508cdbc18a41d54beb9f91733c6607e3da47c06fc3dfb8d5e",
+  "evidence/d2-coverage/record-capacity-decision-20260916/preencoding-legacy-tests.log": "53410cd207ff360bd3587be1b8d02a4db3570d17f684c9362e8b832227df19c4",
+  "evidence/d2-coverage/record-capacity-decision-20260916/preencoding-identity.json": "943205e39ea6d8f1021eb6ecab6ed03d1209da44b5c34d1ad06c6b8e8d6d01fe",
+  "evidence/d2-coverage/record-capacity-decision-20260916/current-legacy-tests.log": "6e815d1f720c2065ee6c62925f03ec1e4b73a92d0c131c9f08a47de9b3c2b0a8",
+  "evidence/d2-coverage/record-capacity-decision-20260916/fresh-recovery.json": "8c73999b97117d3226b910225d8d417ad06738db47cc388534700d32a41e6e55",
+  "evidence/d2-coverage/record-capacity-decision-20260916/workload-analysis.json": "4637fab2aa964e281cd19c7d81364fa47913cf804ac7fbf466ede463019d1bde",
+  "evidence/d2-coverage/record-capacity-decision-20260916/verification.json": "5fc2f25a1eea6c3859864f03e9bd7720185d11d716db2ea5ac52cacb2795a15e",
+  "evidence/d2-coverage/record-capacity-decision-20260916/analyze.py": "8e394d903de7edbfb39a10722b676e721fefb0d4bdb7494130886f6efb399a15",
+  "docs/data-coverage-d2-capacity-decision.md": "e5befb5e0f302f364faf3ffc634f92a997d4d1aa4fd91838a2c7fba6904b155a",
+  "docs/data-coverage-d3a-prompt.md": "3ceb20f83cbe0147179ebfbb33ea441258d77ba527ae03bad67869b03722642b",
+  "docs/data-coverage-plan.md": "cb477457eb563f13dda059040f2cd2d9931620c4c19b7ea393629f4883a55ef8",
+  "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "38caa6d946112e8cec310b9a393873280aa00990bade4967159348c7865dc174"
+}

@@ -13,11 +13,12 @@ and retention decisions; this guide describes how those pieces connect.
    `GET /api/status`, `/api/dashboard`, `/api/sessions` and `/api/calculate`
    expose status, projections, cutoffs and calculations. Same-origin JSON
    `POST /api/start` and `/api/stop` control the owner.
-3. `MultiOwner` owns one scan and its finalizer. `MultiSession` extends
-   `TransportSession`; discovery uses shared normalization and native venue
-   adapters, then binds event/market/purchase sides before subscribing.
-   Async producer tasks collect bounded REST/WebSocket observations; there is
-   no separate worker service or job scheduler.
+3. Production uses `CoverageOwner`, the D2 mode of `MultiOwner`, with one
+   collector/finalizer and a persistent one-attempt guard. `ContinuousSession`
+   extends `TransportSession`; D1 inventory builds each venue independently
+   before subscriptions. `/coverage` supplies bounded pilot Start/Stop and health.
+   Historical `MultiSession` remains for retained sample-mode workflows/tests.
+   No separate worker service or job scheduler is introduced.
 4. The journal retains native inputs and health changes. Finalization reopens the
    journal, verifies native replay and publishes a manifest. Saved reads validate
    recorded file hashes and the journal chain. See [recovery](error-handling.md)
@@ -76,3 +77,67 @@ retirement prerequisites are recorded in [SSOT](ssot.md#conflicts-removed-and-re
 Use [configuration](configuration.md) for paths and credentials and
 [development](development.md) for targeted tests. Historical test counts and
 owner-review artifacts describe their original candidate, not the current checkout.
+
+## Offline coverage inventory
+
+`python -m app.collection.coverage` reads retained native discovery HTTP envelopes
+or explicitly synthetic page fixtures. Independent venue catalogs preserve all
+observed events/markets, including unresolved identities and unsupported sides,
+then annotate event overlap and retained counterpart market presence. Page-chain
+completeness and count partitions are explicit and independent of the beta's six
+game cap. Reports do not authorize subscriptions or prove contract equivalence.
+See [D1 report and command](data-coverage-d1-report.md). D2 will connect this
+foundation to collection; the running beta is unchanged by D1.
+
+
+## D2 bounded collector — current implementation
+
+`collection/continuous.py` owns live discovery/reconciliation, reusing D1 catalogs,
+native stream engines and the existing journal. `dashboard/coverage_owner.py`
+owns the one-pilot guard, process lock, grouped native replay and finalization.
+The production factory selects this owner. Startup is idle; the consumed attempt
+prevents another Start, including after restart. Collection belongs to the server,
+not a browser request. The 60-second refresh and five-minute cutoff remain inside
+the same finite Start deadline and budgets.
+
+D2 evidence is separate under `evidence/d2-coverage/<session>/`: immutable journal,
+run spec, limits, replay, report and manifest. It is not added to saved calculation
+catalogs or live opportunity ranking. Existing saved math/history remains unchanged.
+The one live pilot failed before catalogs/subscriptions; the repaired code has only
+offline validation. See [D2 outcome and gaps](data-coverage-d2-report.md). D3 segments,
+outcomes, settlement and D4 dashboard integration remain deferred.
+
+D2 offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
+
+
+## D3a offline segmented history — September 16, 2026
+
+`collection/segmented.py` extends `ObservationJournal` with the separately versioned
+`d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
+read-only interrupted-prefix indexes. `NativeVerifier` shares the legacy native
+parsers/converter; `GroupedNativeVerifier` keeps sequential stream state across
+segments without a whole-run list. Metadata, command and native image dependencies
+must precede a usable book. No checkpoints or external payload store are used.
+
+`dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
+expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
+completed histories. The production factory still selects legacy `CoverageOwner`.
+D2 transport, 2,048 lifetime ingress allowance and original recovery identity checks
+are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
+live segmented route or daily collection authorization. See [D3a results, storage
+format and recovery limits](data-coverage-d3a-report.md). D2 and full D3 are incomplete.
+
+
+## Mock-only segmented collector integration — September 16, 2026
+
+`CoverageOwner(mock_segmented=True)` requires an isolated output root and explicit
+numeric-loopback fixture endpoints. It runs the existing `ContinuousSession`,
+discovery and native producers, using `SegmentedTransportJournal` and sequential
+finalization. Production construction does not select this option. No credential
+resolution, reference feed or external redirect is permitted in the mock path.
+Published catalog generations, producer-applied generations and usable books are
+separate; shared lifecycle cleanup creates the terminal only after producer joins
+and queue accounting. Failure cannot manufacture completion. D3a policy and D2
+limits/attempt protection remain unchanged. Busy local Stop passes; resource
+pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
+Next is an offline sustained-capacity policy/experiment, not a live pilot.

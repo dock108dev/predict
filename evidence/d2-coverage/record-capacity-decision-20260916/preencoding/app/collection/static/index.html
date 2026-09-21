@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Predict · Synthetic collection</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/watch.css"><script src="/watch.js" defer></script></head>
+<body><header><h1>Predict · Market watch</h1><p>Synthetic collection · Atlanta / Pittsburgh · NFL pregame moneyline</p></header><main>
+<section class="panel"><h2>Collection session</h2><p>Injected synthetic feeds. Event time is simulated; session duration uses real elapsed time.</p>
+<label>Duration <select id="duration"><option value="900">15 minutes</option><option value="30">30 seconds</option></select></label>
+<button id="start">Start synthetic session</button> <button id="stop" disabled>Stop and save</button>
+<p id="status" role="status">Loading session state…</p><p id="counts"></p><p id="error" role="alert"></p></section>
+<section class="panel"><h2>Source health</h2><div id="health"></div></section>
+<section class="panel"><h2>Prediction books</h2><label>Selected venue <select id="venue"><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option></select></label><div id="books"></div></section>
+<section class="panel"><h2>Reference observations</h2><p id="reference">Awaiting a receipt-bound calculation cutoff.</p></section>
+<section class="panel"><h2>Our price and economics</h2><p id="basis">Conditional on a normal team-winner result. Exceptional probability mass and expected profit remain unknown.</p>
+<div id="economics"></div><details><summary>Calculation and assumptions</summary><pre id="details"></pre></details></section>
+<section class="panel"><h2>Saved synthetic history</h2><select id="saved"><option value="">Choose a saved session</option></select> <button id="reopen">Reopen saved history</button> <button id="current">Show current session</button><p id="coverage"></p><label>Saved cutoff <select id="cutoff"></select></label></section>
+</main></body></html>

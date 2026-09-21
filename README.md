@@ -1,10 +1,17 @@
 # Prediction Arb
 
 A local, read-only dashboard for cross-venue sports prediction prices, conditional
-arbitrage calculations, explicit what-if EV, and saved-page research. The current
-personal beta supports a multi-game view; trading is not implemented.
+arbitrage calculations, explicit what-if EV, and saved-page research. The existing prototype supports saved multi-game views; trading is not implemented.
 
-## Run locally
+**September 20: not ready for beta signoff.** The required beta is Kalshi, Novig,
+Polymarket US and a fourth venue, plus a power-index/model reference and free
+delayed Pinnacle data; NFL, NBA, MLB, NHL, NCAAF and NCAAB; winners, spreads,
+totals, halftime and futures. Live/in-play is a stretch goal. See the
+[current beta definition](docs/product-roadmap-review.md),
+[gap assessment](docs/beta-gap-assessment-20260920.md) and
+[B1–B7 delivery plan](docs/data-coverage-plan.md).
+
+## Existing prototype tooling
 
 From the repository root, using Python 3.11 or newer. The owner-operated live
 workflow requires macOS Keychain; offline CI runs on Linux. No Node.js or
@@ -20,8 +27,10 @@ Reuse an existing `.venv` when available. The launcher starts idle at
 [Predict](http://127.0.0.1:8783/) and prints a different port if needed. Explicit
 **Start scan** collects within 1–6 games and 1–180 seconds (defaults: six games,
 175 seconds). **Stop** finishes saving; **Saved scans** reopens retained results.
-Launching the app does not authorize collection. Live access requires the existing
-venue credentials and authorization described in the [operation guide](docs/personal-beta-operation-report.md).
+These are existing tool controls, not qualification for the expanded beta.
+Launching does not authorize collection or reuse of a consumed attempt. Check
+the current tracker and applicable run-specific scope before any Start; the
+[operation report](docs/personal-beta-operation-report.md) describes historical implementation.
 
 ```sh
 scripts/opportunity-board status
@@ -57,6 +66,6 @@ and never enters live ranking or prospective scoring. See the
 
 The older PostgreSQL dashboard and E5/E6 previews are separate historical tools.
 Their lifecycle and authorization boundaries remain in the linked handoffs.
-[PLAN.md](PLAN.md) is the preserved original proposal; current scope comes from the
-roadmap and tracker. The roadmap also records the local SDA and Scroll Down source
-copies and their completed reuse audit.
+[PLAN.md](PLAN.md) routes to the current definition and delivery order. Previous
+planning versions and their historical reuse notes are preserved in
+[planning history](docs/history/beta-reset-20260920/README.md).

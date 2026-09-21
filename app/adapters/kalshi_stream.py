@@ -254,8 +254,10 @@ class BookReconstructor:
 class MarketStream:
     def __init__(self, markets, factory, *, duration=30, max_messages=500, max_connections=2,
                  stale_seconds=10, snapshot_timeout=10, sleep=asyncio.sleep,
-                 kind=EvidenceKind.OBSERVATION, reconnect_after_messages=None, reconnect_after_seconds=None):
-        for value, limit in ((max_messages, 5000), (max_connections, 5)):
+                 kind=EvidenceKind.OBSERVATION, reconnect_after_messages=None, reconnect_after_seconds=None, profile_name=None):
+        from app.collection.supervised import profile, bound_native
+        policy = profile(profile_name) if profile_name else None
+        for value, limit in ((max_messages, policy['group_messages'] if policy else 5000), (max_connections, 5)):
             if type(value) is not int or not 1 <= value <= limit:
                 raise ValueError('invalid stream bound')
         if not 0 < duration <= 300 or not 0 < stale_seconds <= 120 or not 0 < snapshot_timeout <= 30:
@@ -271,9 +273,15 @@ class MarketStream:
         self.stale_seconds, self.snapshot_timeout = stale_seconds, snapshot_timeout
         self.reconnect_after_messages = reconnect_after_messages
         self.connection, self.closed, self.transport_health = None, False, 'not_started'
+        self._receive_task = None
         self.diagnostics, self.reason, self.message_count = [], 'not_started', 0
+        if policy: bound_native(self)
 
     async def _close_connection(self):
+        receive, self._receive_task = self._receive_task, None
+        if receive is not None:
+            receive.cancel()
+            await asyncio.gather(receive, return_exceptions=True)
         connection, self.connection = self.connection, None
         if connection is not None:
             try:
@@ -310,17 +318,37 @@ class MarketStream:
                         if attempt == 0 and self.reconnect_after_seconds and loop.time() - connected_at >= self.reconnect_after_seconds:
                             self.diagnostics.append({"event": "deliberate_timed_disconnect", "generation": generation})
                             break
+                        # Expiry is per receipt, independent of shared-socket traffic.
+                        # Keep one receive across timer wakes; wait_for would cancel it.
+                        now = datetime.now(timezone.utc)
+                        timeout = min(0.5, deadline - loop.time())
+                        for mid, book in tuple(self.engine.last.items()):
+                            if book.sync != BookSync.SYNCHRONIZED or book.receipt_freshness == ReceiptFreshness.STALE:
+                                continue
+                            age = (now - book.raw.received_at).total_seconds()
+                            if age > self.stale_seconds:
+                                stale = replace(book, receipt_freshness=ReceiptFreshness.STALE)
+                                self.engine.last[mid] = stale
+                                yield stale
+                            else:
+                                # datetime receipts have microsecond resolution. At
+                                # equality, wake on the next representable age, not
+                                # a zero-timeout spin or an altered >= comparison.
+                                timeout = min(timeout, max(0.000001, self.stale_seconds - age))
+                        if self.closed:
+                            break
+                        if self._receive_task is None:
+                            self._receive_task = asyncio.create_task(self.connection.recv())
+                        if not self._receive_task.done():
+                            await asyncio.wait({self._receive_task}, timeout=timeout)
+                            # Check expiry before processing even a simultaneous
+                            # receive, without discarding the completed frame.
+                            continue
+                        receive, self._receive_task = self._receive_task, None
                         try:
-                            body = await asyncio.wait_for(self.connection.recv(), min(0.5, deadline - loop.time()))
+                            body = receive.result()
                         except TimeoutError:
-                            now = datetime.now(timezone.utc)
-                            for mid, book in tuple(self.engine.last.items()):
-                                if book.sync == BookSync.SYNCHRONIZED and (now - book.raw.received_at).total_seconds() > self.stale_seconds and book.receipt_freshness != ReceiptFreshness.STALE:
-                                    stale = replace(book, receipt_freshness=ReceiptFreshness.STALE)
-                                    self.engine.last[mid] = stale
-                                    yield stale
-                            if len(self.engine.sides) != len(self.engine.markets) and loop.time() >= initial_deadline:
-                                raise RecoveryRequired('initial snapshot deadline')
+                            # Preserve transport-provided timeout handling too.
                             continue
                         self.message_count += 1
                         local_count += 1

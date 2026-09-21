@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-16T17:36:31.101135+00:00",
+  "production_candidate": "f9c30390d1b91bdf70bbf860772c06a5d95fa2f1e08f7f1dbbefd5fcbedeb072",
+  "production_source_files_verified": 183,
+  "production_changes": [],
+  "original_evidence_files_verified": 1882,
+  "original_evidence_changes": [],
+  "preencoding_hashes_verified": 181,
+  "legacy_current_and_preencoding": "same two ReadOnlySurface failures; unchanged filesystem device mismatch",
+  "fresh_old_and_new_recovery": "passed; row/replay equivalence, torn prefix and identity rejection",
+  "implemented": false,
+  "live_access": false
+}

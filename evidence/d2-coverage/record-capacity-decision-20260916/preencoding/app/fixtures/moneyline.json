@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "event_id": "invented-event-001",
+  "market_id": "invented-moneyline-001",
+  "title": "Comets at Lanterns",
+  "sport": "fictional_sport",
+  "league": "synthetic_league",
+  "participants": ["Comets", "Lanterns"],
+  "received_at": "2026-09-11T12:00:00+00:00",
+  "exchange_at": null,
+  "quantity_unit": "synthetic_lots",
+  "outcomes": [
+    {"id": "comets-win", "label": "Comets", "bids": [["0.410000000000000000000000001", "12.125"], ["0.40", "5.25"]], "asks": null},
+    {"id": "lanterns-win", "label": "Lanterns", "bids": [["0.57", "9.50"]], "asks": null}
+  ],
+  "rule_text": "Invented fixture: Comets win if the fictional result names Comets. All exception rules are unspecified.",
+  "updates": [
+    {"kind": "quote", "received_at": "2026-09-11T12:00:01+00:00", "exchange_at": "2026-09-11T11:59:59.500000+00:00", "outcome_id": "comets-win", "bid": "0.42", "quantity": null},
+    {"kind": "market", "received_at": "2026-09-11T12:00:02+00:00", "exchange_at": null, "state": "suspended"}
+  ]
+}

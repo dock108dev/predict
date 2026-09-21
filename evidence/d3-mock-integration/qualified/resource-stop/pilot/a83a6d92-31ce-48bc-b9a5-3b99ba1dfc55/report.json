@@ -1,0 +1,325 @@
+{
+  "session": "a83a6d92-31ce-48bc-b9a5-3b99ba1dfc55",
+  "reason": "offline_segment_cap",
+  "collection_seconds": 4.840729750001628,
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete",
+    "operator_stop": false,
+    "native_verified": true,
+    "replay_seconds": 5.359874207999383,
+    "replay_baseline_rss": 69566464,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 6,
+      "verified_account_budget": 1,
+      "coverage_inventory": 1,
+      "market_selected": 22,
+      "coverage_applied": 2,
+      "source_health": 1353,
+      "prediction_command": 3,
+      "prediction_frame": 1353,
+      "prediction_book": 1350,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1
+    ],
+    "applied_generations": {
+      "polymarket_us": 1,
+      "kalshi": 1
+    },
+    "replay_traced_start": 0,
+    "replay_traced_peak": 2148814,
+    "reason": "offline_segment_cap",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 10.197230999998283,
+    "baseline_rss": 64028672,
+    "peak_rss": 71548928,
+    "traced_peak": 2148814,
+    "traced_current": 1550611
+  },
+  "accounting": {
+    "received": 4100,
+    "accepted": 4092,
+    "write_attempted": 4098,
+    "durably_acknowledged": 4092,
+    "rejected": 8,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 4092,
+    "journal_write_attempted": 4101,
+    "journal_durably_acknowledged": 4101,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 4713272,
+    "confirmed_chain": "fc547444f70685d0710a3f3c31c5490df530c1b6fb561e7bb0df130859dffa16",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 4092,
+      "observations": 4093,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 4093,
+      "encoded_ingress": 4041875,
+      "expanded_ingress": 7002162,
+      "physical_records": 4101,
+      "control_records": 8,
+      "physical_write_attempts": 4101,
+      "journal_encoded_bytes": 4713272,
+      "journal_expanded_payload_bytes": 7004558,
+      "manifest_records": 1,
+      "manifest_bytes": 1834,
+      "manifest_writes": 5,
+      "manifest_publications": 5,
+      "manifest_write_bytes": 6027,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 4719240
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 71548928,
+    "peak_queue_records": 3,
+    "peak_queue_bytes": 62276,
+    "ingress_bytes": 4041875,
+    "journal_bytes": 4713272,
+    "elapsed_seconds": 10.202326708000328
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 1,
+      "discovered_markets": 21,
+      "generation": 1,
+      "eligible": 21,
+      "selected": 21,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 21,
+      "applied_selected": 21,
+      "requested": 21,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 21,
+        "acknowledged": 21,
+        "receiving": 21,
+        "usable": 21
+      },
+      "peak_simultaneous": {
+        "requested": 21,
+        "acknowledged": 21,
+        "receiving": 21,
+        "usable": 21
+      },
+      "requests": 4,
+      "connection_attempts": 2,
+      "body_bytes_charged": 160309,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "k0": {
+          "received_at": "2026-09-16 18:24:02.245009+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k1": {
+          "received_at": "2026-09-16 18:23:57.597869+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k10": {
+          "received_at": "2026-09-16 18:23:57.601890+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k11": {
+          "received_at": "2026-09-16 18:23:57.605654+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k12": {
+          "received_at": "2026-09-16 18:23:57.609781+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k13": {
+          "received_at": "2026-09-16 18:23:57.613521+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k14": {
+          "received_at": "2026-09-16 18:23:57.617509+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k15": {
+          "received_at": "2026-09-16 18:23:57.621155+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k16": {
+          "received_at": "2026-09-16 18:23:57.625080+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k17": {
+          "received_at": "2026-09-16 18:23:57.628837+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k18": {
+          "received_at": "2026-09-16 18:23:57.632887+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k19": {
+          "received_at": "2026-09-16 18:23:57.636917+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k2": {
+          "received_at": "2026-09-16 18:23:57.641043+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k20": {
+          "received_at": "2026-09-16 18:23:57.645002+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k3": {
+          "received_at": "2026-09-16 18:23:57.649006+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k4": {
+          "received_at": "2026-09-16 18:23:57.653093+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k5": {
+          "received_at": "2026-09-16 18:23:57.657424+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k6": {
+          "received_at": "2026-09-16 18:23:57.661251+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k7": {
+          "received_at": "2026-09-16 18:23:57.665314+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k8": {
+          "received_at": "2026-09-16 18:23:57.669446+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "k9": {
+          "received_at": "2026-09-16 18:24:02.238621+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 2,
+      "connection_attempts": 1,
+      "body_bytes_charged": 110018,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "p0": {
+          "received_at": "2026-09-16 18:24:02.242035+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 1,
+    "published_at": "2026-09-16T18:23:57.544529+00:00",
+    "age_seconds": 10.170318,
+    "refresh": {
+      "state": "completed",
+      "generation": 1,
+      "started_at": "2026-09-16T18:23:57.515804+00:00",
+      "finished_at": "2026-09-16T18:23:57.544529+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 4,
+        "durably_retained": 4,
+        "attempted_requests": 4
+      },
+      "polymarket_us": {
+        "received": 2,
+        "durably_retained": 2,
+        "attempted_requests": 2
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {}
+    }
+  },
+  "producer_tasks_done": true,
+  "streams_closed": true
+}

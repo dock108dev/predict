@@ -1,0 +1,783 @@
+{
+  "reason": "direct_stop",
+  "cleanup_complete": true,
+  "accounting": {
+    "received": 13123,
+    "accepted": 13123,
+    "rejected": 0,
+    "durable": 13123,
+    "drained": 13123,
+    "pending": 0,
+    "unresolved": 0,
+    "durable_not_queued": 0,
+    "frames": 1447,
+    "queue_peak_objects": 1,
+    "queue_peak_bytes": 5360,
+    "state_peak": 14845,
+    "rss": 78430208,
+    "logical": 13123,
+    "observations": 13124,
+    "original_terminal_records": 1,
+    "observation_write_attempts": 13124,
+    "encoded_ingress": 6150854,
+    "expanded_ingress": 5741944,
+    "physical_records": 13150,
+    "control_records": 26,
+    "physical_write_attempts": 13150,
+    "journal_encoded_bytes": 8302394,
+    "journal_expanded_payload_bytes": 5747768,
+    "manifest_records": 1,
+    "manifest_bytes": 5105,
+    "manifest_writes": 14,
+    "manifest_publications": 14,
+    "manifest_write_bytes": 43362,
+    "checkpoint_records": 0,
+    "checkpoint_bytes": 0,
+    "disk_bytes": 8538325
+  },
+  "books": {
+    "received": 1446,
+    "emitted": 1446,
+    "admitted": 1446,
+    "durable": 1446,
+    "queued": 1446,
+    "drained": 1446
+  },
+  "analysis": {
+    "schema": "delivery-analysis-v1",
+    "complete": true,
+    "records": 13124,
+    "native_frames": 1447,
+    "native_sha256": "6925545e7bb40c60b3f2f6fa26f39414b9e5518f89a2a80e218e327d50efd571",
+    "stale_seen": true,
+    "clock_uncertain": false,
+    "comparisons": [
+      {
+        "request_id": "a32150b0-066e-4eae-9ec0-406faaf04547",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1792687e-24a7-4e5d-938b-0de34d41b95a",
+        "receipt_mono": 112130.67216235399,
+        "overlap": false,
+        "slot": 60,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112135.32977324951,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.833498001564294e-06,
+          "utc": "2026-09-20T01:25:52.728208+00:00",
+          "utc_offset": 1789755417.3984349
+        },
+        "ended": {
+          "mono": 112135.33570233299,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.249974831007421e-07,
+          "utc": "2026-09-20T01:25:52.734138+00:00",
+          "utc_offset": 1789755417.3984356
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:25:52 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "a03145e9-8fa9-41f5-a98f-f095e689ace3",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1792687e-24a7-4e5d-938b-0de34d41b95a",
+        "receipt_mono": 112130.67216235399,
+        "overlap": false,
+        "slot": 75,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112150.3315085,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.8750000637955964e-06,
+          "utc": "2026-09-20T01:26:07.729882+00:00",
+          "utc_offset": 1789755417.3983736
+        },
+        "ended": {
+          "mono": 112150.337177604,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.040063453838229e-07,
+          "utc": "2026-09-20T01:26:07.735552+00:00",
+          "utc_offset": 1789755417.3983746
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:26:07 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "2ceae016-d845-45b9-8db7-f7abd81fe758",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1792687e-24a7-4e5d-938b-0de34d41b95a",
+        "receipt_mono": 112130.67216235399,
+        "overlap": false,
+        "slot": 90,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112165.33032870799,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.4999972083605826e-06,
+          "utc": "2026-09-20T01:26:22.728641+00:00",
+          "utc_offset": 1789755417.3983123
+        },
+        "ended": {
+          "mono": 112165.3367727705,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.45501131657511e-07,
+          "utc": "2026-09-20T01:26:22.735086+00:00",
+          "utc_offset": 1789755417.3983133
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:26:22 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": true,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "bd93832b-951d-4a91-905c-f1b1d76a6cc1",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1792687e-24a7-4e5d-938b-0de34d41b95a",
+        "receipt_mono": 112130.67216235399,
+        "overlap": false,
+        "slot": 105,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112180.32737999951,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 5.458503437694162e-06,
+          "utc": "2026-09-20T01:26:37.725629+00:00",
+          "utc_offset": 1789755417.3982491
+        },
+        "ended": {
+          "mono": 112180.3344524785,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.874979590065777e-07,
+          "utc": "2026-09-20T01:26:37.732705+00:00",
+          "utc_offset": 1789755417.3982527
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:26:37 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": true,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "0a06eb8d-c7bf-489b-b291-23cecea8e3dd",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "0ed89897-1253-4f0b-bac6-cc8dad461cbd",
+        "receipt_mono": 112210.2349485415,
+        "overlap": false,
+        "slot": 135,
+        "body_sha256": "3f5203eca2eb06d6c3537e1664130fca0f803f2c753453005f4a856c3173fe8d",
+        "started": {
+          "mono": 112210.328493666,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.0000006770715117e-06,
+          "utc": "2026-09-20T01:27:07.726623+00:00",
+          "utc_offset": 1789755417.3981295
+        },
+        "ended": {
+          "mono": 112210.33530589551,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 8.955030352808535e-07,
+          "utc": "2026-09-20T01:27:07.733436+00:00",
+          "utc_offset": 1789755417.3981302
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:27:07 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "70a573ff-aa2a-4206-bd3c-7b771a632097",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1da65cea-849f-4157-bdc2-0c98b78a6d6f",
+        "receipt_mono": 112225.208777333,
+        "overlap": false,
+        "slot": 150,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112225.326333562,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.4790060706436634e-06,
+          "utc": "2026-09-20T01:27:22.724402+00:00",
+          "utc_offset": 1789755417.3980684
+        },
+        "ended": {
+          "mono": 112225.3316148125,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.875052349641919e-07,
+          "utc": "2026-09-20T01:27:22.729684+00:00",
+          "utc_offset": 1789755417.3980694
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:27:22 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "ddd2fb07-1e2c-4420-a189-ab73c6dbd328",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "6aba0bfe-280d-4acd-9370-cb2420b2cf57",
+        "receipt_mono": 112240.210060583,
+        "overlap": false,
+        "slot": 165,
+        "body_sha256": "3f5203eca2eb06d6c3537e1664130fca0f803f2c753453005f4a856c3173fe8d",
+        "started": {
+          "mono": 112240.32572320799,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 4.167006409261376e-06,
+          "utc": "2026-09-20T01:27:37.723729+00:00",
+          "utc_offset": 1789755417.3980057
+        },
+        "ended": {
+          "mono": 112240.33082747899,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.039990694262087e-07,
+          "utc": "2026-09-20T01:27:37.728835+00:00",
+          "utc_offset": 1789755417.3980076
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:27:37 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "f40a265b-4469-41e3-98d0-5f092c355f93",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "e9e71d62-07b4-4cb0-aa3f-d7e9bcd0d138",
+        "receipt_mono": 112255.21516987501,
+        "overlap": false,
+        "slot": 180,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112255.32505704151,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.833498001564294e-06,
+          "utc": "2026-09-20T01:27:52.723003+00:00",
+          "utc_offset": 1789755417.397946
+        },
+        "ended": {
+          "mono": 112255.330892354,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.460031727328897e-07,
+          "utc": "2026-09-20T01:27:52.728839+00:00",
+          "utc_offset": 1789755417.3979466
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:27:52 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "41fb6c52-edea-483b-8840-581055336879",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "a1f19f6c-b9c8-4123-b5d0-bc618488fe10",
+        "receipt_mono": 112270.211843125,
+        "overlap": false,
+        "slot": 195,
+        "body_sha256": "3f5203eca2eb06d6c3537e1664130fca0f803f2c753453005f4a856c3173fe8d",
+        "started": {
+          "mono": 112270.325393354,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.8959984774701297e-06,
+          "utc": "2026-09-20T01:28:07.723278+00:00",
+          "utc_offset": 1789755417.3978846
+        },
+        "ended": {
+          "mono": 112270.33069389549,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 5.205001798458397e-07,
+          "utc": "2026-09-20T01:28:07.728580+00:00",
+          "utc_offset": 1789755417.397886
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:28:07 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "aa28ac53-4c23-43b8-acc3-b1c24b810bed",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "8dde331e-efc1-4445-91bb-3b8508414c04",
+        "receipt_mono": 112285.2073385205,
+        "overlap": false,
+        "slot": 210,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112285.3260302285,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 1.937500201165676e-06,
+          "utc": "2026-09-20T01:28:22.723854+00:00",
+          "utc_offset": 1789755417.3978238
+        },
+        "ended": {
+          "mono": 112285.331127104,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.040063453838229e-07,
+          "utc": "2026-09-20T01:28:22.728952+00:00",
+          "utc_offset": 1789755417.3978248
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:28:22 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "676f0c3b-c21a-4760-89ea-1c1932e88072",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "81207e2f-f2fe-4a99-adbc-02c0161378c1",
+        "receipt_mono": 112300.214326354,
+        "overlap": false,
+        "slot": 225,
+        "body_sha256": "3f5203eca2eb06d6c3537e1664130fca0f803f2c753453005f4a856c3173fe8d",
+        "started": {
+          "mono": 112300.32506783301,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 2.292006684001535e-06,
+          "utc": "2026-09-20T01:28:37.722830+00:00",
+          "utc_offset": 1789755417.3977623
+        },
+        "ended": {
+          "mono": 112300.3303667705,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.45501131657511e-07,
+          "utc": "2026-09-20T01:28:37.728130+00:00",
+          "utc_offset": 1789755417.3977633
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:28:37 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "1E+1"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      },
+      {
+        "request_id": "06090b38-1b5c-4702-972c-3b7feef406d3",
+        "primary_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "primary_id": "1e959847-6429-411e-b6c5-878e74e01e51",
+        "receipt_mono": 112315.210683791,
+        "overlap": false,
+        "slot": 240,
+        "body_sha256": "68ebb9b899aa8f32ea8102326bc3ba14af97bdfbc02d8fc6873e8354f04455e6",
+        "started": {
+          "mono": 112315.3258385205,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 4.47950151283294e-06,
+          "utc": "2026-09-20T01:28:52.723540+00:00",
+          "utc_offset": 1789755417.3977015
+        },
+        "ended": {
+          "mono": 112315.331882916,
+          "resolution": 4.166666666666666e-08,
+          "uncertainty": 6.250047590583563e-07,
+          "utc": "2026-09-20T01:28:52.729585+00:00",
+          "utc_offset": 1789755417.397702
+        },
+        "market": "KXNFLGAME-FIXTURE-DET",
+        "server_state_age": null,
+        "timing_uncertain": false,
+        "headers": {
+          "Date": "Sun, 20 Sep 2026 01:28:52 GMT"
+        },
+        "classification": "sampled_consistency",
+        "stale_at_send": false,
+        "reference_state": {
+          "yes": [
+            [
+              "0.4",
+              "11"
+            ]
+          ],
+          "no": [
+            [
+              "0.5",
+              "2E+1"
+            ]
+          ]
+        },
+        "reason": "returned images only; exchange time/cache age unknown"
+      }
+    ],
+    "local": [],
+    "replay_state_peak": 52516,
+    "limitations": [
+      "REST state age/order unknown",
+      "agreement does not prove uninterrupted delivery",
+      "no exchange completeness or sustained capacity claim"
+    ]
+  },
+  "requests": {
+    "initial": 4,
+    "refresh": 2,
+    "reference": 12
+  },
+  "bodies": {
+    "http": 2188,
+    "primary": 298295
+  },
+  "close_seconds": 0.0019594999903347343,
+  "exact_identities": 13123
+}

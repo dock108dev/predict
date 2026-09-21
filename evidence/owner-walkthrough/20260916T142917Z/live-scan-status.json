@@ -1,0 +1,157 @@
+{
+  "state": "stopped",
+  "active": false,
+  "operating_mode": "personal-beta",
+  "start_available": true,
+  "error": null,
+  "cleanup_errors": [],
+  "saved": [
+    "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+    "5accf9ee-94b9-4b09-8130-6849f842155e"
+  ],
+  "session": "5accf9ee-94b9-4b09-8130-6849f842155e",
+  "cleanup_complete": true,
+  "coverage": {
+    "found": {
+      "kalshi": 32,
+      "polymarket_us": 32
+    },
+    "common": 32,
+    "selected": 6,
+    "excluded": [],
+    "truncated_by_limit": 26,
+    "catalog_truncated": false,
+    "beyond_limit": [
+      {
+        "event": "KXNFLGAME-26SEP20GBNYJ",
+        "title": "GB Packers vs NY Jets",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20PITNE",
+        "title": "PIT Steelers vs NE Patriots",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20PHITEN",
+        "title": "PHI Eagles vs TEN Titans",
+        "scheduled_start": "2026-09-20T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20JACDEN",
+        "title": "JAC Jaguars vs DEN Broncos",
+        "scheduled_start": "2026-09-20T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20LVLAC",
+        "title": "LV Raiders vs LA Chargers",
+        "scheduled_start": "2026-09-20T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20SEAARI",
+        "title": "SEA Seahawks vs ARI Cardinals",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20WASDAL",
+        "title": "WAS Commanders vs DAL Cowboys",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20MIASF",
+        "title": "MIA Dolphins vs SF 49ers",
+        "scheduled_start": "2026-09-20T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP20INDKC",
+        "title": "IND Colts vs KC Chiefs",
+        "scheduled_start": "2026-09-21T00:20:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP21NYGLAR",
+        "title": "NY Giants vs LA Rams",
+        "scheduled_start": "2026-09-22T00:15:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP24ATLGB",
+        "title": "Atlanta vs Green Bay",
+        "scheduled_start": "2026-09-25T00:15:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LACBUF",
+        "title": "Los Angeles C vs Buffalo",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27CARCLE",
+        "title": "Carolina vs Cleveland",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27CINPIT",
+        "title": "Cincinnati vs Pittsburgh",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27NYJDET",
+        "title": "New York J vs Detroit",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27HOUIND",
+        "title": "Houston vs Indianapolis",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27NEJAC",
+        "title": "New England vs Jacksonville",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27KCMIA",
+        "title": "Kansas City vs Miami",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27TENNYG",
+        "title": "Tennessee vs New York G",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27SEAWAS",
+        "title": "Seattle vs Washington",
+        "scheduled_start": "2026-09-27T17:00:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27ARISF",
+        "title": "Arizona vs San Francisco",
+        "scheduled_start": "2026-09-27T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27MINTB",
+        "title": "Minnesota vs Tampa Bay",
+        "scheduled_start": "2026-09-27T20:05:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27BALDAL",
+        "title": "Baltimore vs Dallas",
+        "scheduled_start": "2026-09-27T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LVNO",
+        "title": "Las Vegas vs New Orleans",
+        "scheduled_start": "2026-09-27T20:25:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP27LARDEN",
+        "title": "Los Angeles R vs Denver",
+        "scheduled_start": "2026-09-28T00:20:00+00:00"
+      },
+      {
+        "event": "KXNFLGAME-26SEP28PHICHI",
+        "title": "Philadelphia vs Chicago",
+        "scheduled_start": "2026-09-29T00:15:00+00:00"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2579 @@
+{
+  "before_stop": {
+    "coverage": {
+      "kalshi": {
+        "discovered_events": 32,
+        "discovered_markets": 64,
+        "generation": 2,
+        "eligible": 64,
+        "selected": 64,
+        "event_discovery": "exhausted",
+        "market_completeness": "exhausted_for_retained_events",
+        "applying_generation": null,
+        "applied_generation": 2,
+        "applied_eligible": 64,
+        "applied_selected": 64,
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64,
+        "ever": {
+          "requested": 64,
+          "acknowledged": 64,
+          "receiving": 64,
+          "usable": 64
+        },
+        "peak_simultaneous": {
+          "requested": 64,
+          "acknowledged": 64,
+          "receiving": 64,
+          "usable": 64
+        },
+        "requests": 68,
+        "connection_attempts": 4,
+        "body_bytes_charged": 16048498,
+        "acknowledgement_basis": "explicit channel acknowledgement",
+        "latest_receipts": {
+          "KXNFLGAME-26SEP17DETBUF-BUF": {
+            "received_at": "2026-09-16 19:48:25.666000+00:00",
+            "exchange_at": "2026-09-16 17:03:30.387000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP17DETBUF-DET": {
+            "received_at": "2026-09-16 19:48:25.974483+00:00",
+            "exchange_at": "2026-09-16 17:03:25.912000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CARATL-ATL": {
+            "received_at": "2026-09-16 19:48:26.051530+00:00",
+            "exchange_at": "2026-09-16 17:03:22.798000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CARATL-CAR": {
+            "received_at": "2026-09-16 19:48:26.127953+00:00",
+            "exchange_at": "2026-09-16 17:03:21.904000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CINHOU-CIN": {
+            "received_at": "2026-09-16 19:48:26.205075+00:00",
+            "exchange_at": "2026-09-16 17:03:17.028000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CINHOU-HOU": {
+            "received_at": "2026-09-16 19:48:26.435323+00:00",
+            "exchange_at": "2026-09-16 17:03:34.028000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CLETB-CLE": {
+            "received_at": "2026-09-16 19:48:26.513021+00:00",
+            "exchange_at": "2026-09-16 17:03:29.360000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CLETB-TB": {
+            "received_at": "2026-09-16 19:48:26.618893+00:00",
+            "exchange_at": "2026-09-16 17:03:29.623000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20GBNYJ-GB": {
+            "received_at": "2026-09-16 19:48:26.667361+00:00",
+            "exchange_at": "2026-09-16 17:03:12.394000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20GBNYJ-NYJ": {
+            "received_at": "2026-09-16 19:48:26.973811+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20INDKC-IND": {
+            "received_at": "2026-09-16 19:48:27.050900+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20INDKC-KC": {
+            "received_at": "2026-09-16 19:48:27.128362+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20JACDEN-DEN": {
+            "received_at": "2026-09-16 19:48:27.204837+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20JACDEN-JAC": {
+            "received_at": "2026-09-16 19:48:27.436054+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20LVLAC-LAC": {
+            "received_at": "2026-09-16 19:48:27.512848+00:00",
+            "exchange_at": "2026-09-16 17:03:16.411000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20LVLAC-LV": {
+            "received_at": "2026-09-16 19:48:27.632997+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20MIASF-MIA": {
+            "received_at": "2026-09-16 19:48:27.669052+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20MIASF-SF": {
+            "received_at": "2026-09-16 19:48:25.435877+00:00",
+            "exchange_at": "2026-09-16 17:03:31.160000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20MINCHI-CHI": {
+            "received_at": "2026-09-16 19:48:25.540501+00:00",
+            "exchange_at": "2026-09-16 17:03:29.737000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20MINCHI-MIN": {
+            "received_at": "2026-09-16 19:48:25.589275+00:00",
+            "exchange_at": "2026-09-16 17:03:19.607000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20NOBAL-BAL": {
+            "received_at": "2026-09-16 19:48:26.223812+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20NOBAL-NO": {
+            "received_at": "2026-09-16 19:48:26.454686+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20PHITEN-PHI": {
+            "received_at": "2026-09-16 19:48:26.580776+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20PHITEN-TEN": {
+            "received_at": "2026-09-16 19:48:26.609790+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20PITNE-NE": {
+            "received_at": "2026-09-16 19:48:26.685483+00:00",
+            "exchange_at": "2026-09-16 17:03:33.909000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20PITNE-PIT": {
+            "received_at": "2026-09-16 19:48:26.916489+00:00",
+            "exchange_at": "2026-09-16 17:03:22.903000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20SEAARI-ARI": {
+            "received_at": "2026-09-16 19:48:26.993924+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20SEAARI-SEA": {
+            "received_at": "2026-09-16 19:48:27.070795+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20WASDAL-DAL": {
+            "received_at": "2026-09-16 19:48:27.150781+00:00",
+            "exchange_at": "2026-09-16 17:03:30.072000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20WASDAL-WAS": {
+            "received_at": "2026-09-16 19:48:27.223700+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP21NYGLAR-LAR": {
+            "received_at": "2026-09-16 19:48:27.454979+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP21NYGLAR-NYG": {
+            "received_at": "2026-09-16 19:48:27.532594+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP24ATLGB-ATL": {
+            "received_at": "2026-09-16 19:48:27.642049+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP24ATLGB-GB": {
+            "received_at": "2026-09-16 19:48:27.688213+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27ARISF-ARI": {
+            "received_at": "2026-09-16 19:48:27.917086+00:00",
+            "exchange_at": "2026-09-16 17:03:22.330000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27ARISF-SF": {
+            "received_at": "2026-09-16 19:48:25.685848+00:00",
+            "exchange_at": "2026-09-16 17:03:31.744000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27BALDAL-BAL": {
+            "received_at": "2026-09-16 19:48:25.916053+00:00",
+            "exchange_at": "2026-09-16 17:03:34.343000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27BALDAL-DAL": {
+            "received_at": "2026-09-16 19:48:25.993182+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27CARCLE-CAR": {
+            "received_at": "2026-09-16 19:48:26.070625+00:00",
+            "exchange_at": "2026-09-16 17:03:14.568000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27CARCLE-CLE": {
+            "received_at": "2026-09-16 19:48:26.147151+00:00",
+            "exchange_at": "2026-09-16 17:03:13.581000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27CINPIT-CIN": {
+            "received_at": "2026-09-16 19:48:25.705603+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27CINPIT-PIT": {
+            "received_at": "2026-09-16 19:48:25.935260+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27HOUIND-HOU": {
+            "received_at": "2026-09-16 19:48:26.013086+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27HOUIND-IND": {
+            "received_at": "2026-09-16 19:48:26.089423+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27KCMIA-KC": {
+            "received_at": "2026-09-16 19:48:26.166193+00:00",
+            "exchange_at": "2026-09-16 17:03:33.408000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27KCMIA-MIA": {
+            "received_at": "2026-09-16 19:48:26.474780+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LACBUF-BUF": {
+            "received_at": "2026-09-16 19:48:26.590606+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LACBUF-LAC": {
+            "received_at": "2026-09-16 19:48:26.636809+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LARDEN-DEN": {
+            "received_at": "2026-09-16 19:48:26.704594+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LARDEN-LAR": {
+            "received_at": "2026-09-16 19:48:26.935547+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LVNO-LV": {
+            "received_at": "2026-09-16 19:48:27.013245+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27LVNO-NO": {
+            "received_at": "2026-09-16 19:48:27.089298+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27MINTB-MIN": {
+            "received_at": "2026-09-16 19:48:27.166552+00:00",
+            "exchange_at": "2026-09-16 17:03:16.201000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27MINTB-TB": {
+            "received_at": "2026-09-16 19:48:27.473557+00:00",
+            "exchange_at": "2026-09-16 17:03:31.920000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27NEJAC-JAC": {
+            "received_at": "2026-09-16 19:48:27.551515+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27NEJAC-NE": {
+            "received_at": "2026-09-16 19:48:27.650854+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27NYJDET-DET": {
+            "received_at": "2026-09-16 19:48:27.705140+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27NYJDET-NYJ": {
+            "received_at": "2026-09-16 19:48:25.521733+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27SEAWAS-SEA": {
+            "received_at": "2026-09-16 19:48:25.567483+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27SEAWAS-WAS": {
+            "received_at": "2026-09-16 19:48:25.627834+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27TENNYG-NYG": {
+            "received_at": "2026-09-16 19:48:27.660399+00:00",
+            "exchange_at": "2026-09-16 17:03:19.349000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27TENNYG-TEN": {
+            "received_at": "2026-09-16 19:48:27.723638+00:00",
+            "exchange_at": "2026-09-16 17:03:19.348000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP28PHICHI-CHI": {
+            "received_at": "2026-09-16 19:48:27.492873+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP28PHICHI-PHI": {
+            "received_at": "2026-09-16 19:48:27.570760+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          }
+        }
+      },
+      "polymarket_us": {
+        "discovered_events": 32,
+        "discovered_markets": 32,
+        "generation": 2,
+        "eligible": 32,
+        "selected": 32,
+        "event_discovery": "exhausted",
+        "market_completeness": "unestablished",
+        "applying_generation": null,
+        "applied_generation": 2,
+        "applied_eligible": 32,
+        "applied_selected": 32,
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32,
+        "ever": {
+          "requested": 32,
+          "acknowledged": 32,
+          "receiving": 32,
+          "usable": 32
+        },
+        "peak_simultaneous": {
+          "requested": 32,
+          "acknowledged": 32,
+          "receiving": 32,
+          "usable": 32
+        },
+        "requests": 78,
+        "connection_attempts": 1,
+        "body_bytes_charged": 15878759,
+        "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+        "latest_receipts": {
+          "657964": {
+            "received_at": "2026-09-16 19:48:27.359437+00:00",
+            "exchange_at": "2026-09-16 17:03:33.244607+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657966": {
+            "received_at": "2026-09-16 19:48:27.378187+00:00",
+            "exchange_at": "2026-09-16 17:03:23.620474+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657969": {
+            "received_at": "2026-09-16 19:48:27.397570+00:00",
+            "exchange_at": "2026-09-16 17:03:23.699189+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657972": {
+            "received_at": "2026-09-16 19:48:27.742577+00:00",
+            "exchange_at": "2026-09-16 17:03:22.711442+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657975": {
+            "received_at": "2026-09-16 19:48:27.762403+00:00",
+            "exchange_at": "2026-09-16 17:03:23.219919+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657978": {
+            "received_at": "2026-09-16 19:48:27.782222+00:00",
+            "exchange_at": "2026-09-16 17:03:32.374521+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657980": {
+            "received_at": "2026-09-16 19:48:27.801448+00:00",
+            "exchange_at": "2026-09-16 17:03:23.649348+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657983": {
+            "received_at": "2026-09-16 19:48:27.821126+00:00",
+            "exchange_at": "2026-09-16 17:03:33.781255+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657986": {
+            "received_at": "2026-09-16 19:48:27.838939+00:00",
+            "exchange_at": "2026-09-16 17:03:23.618375+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657989": {
+            "received_at": "2026-09-16 19:48:27.859098+00:00",
+            "exchange_at": "2026-09-16 17:03:26.939544+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657992": {
+            "received_at": "2026-09-16 19:48:27.878401+00:00",
+            "exchange_at": "2026-09-16 17:03:22.739722+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657994": {
+            "received_at": "2026-09-16 19:48:27.897760+00:00",
+            "exchange_at": "2026-09-16 17:02:17.273298+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657996": {
+            "received_at": "2026-09-16 19:48:26.321216+00:00",
+            "exchange_at": "2026-09-16 17:03:30.855506+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "657999": {
+            "received_at": "2026-09-16 19:48:26.347035+00:00",
+            "exchange_at": "2026-09-16 17:03:19.653842+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "658002": {
+            "received_at": "2026-09-16 19:48:26.358893+00:00",
+            "exchange_at": "2026-09-16 17:03:33.115379+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "658005": {
+            "received_at": "2026-09-16 19:48:26.378055+00:00",
+            "exchange_at": "2026-09-16 17:03:19.657908+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "779756": {
+            "received_at": "2026-09-16 19:48:26.397506+00:00",
+            "exchange_at": "2026-09-16 17:03:16.231958+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825195": {
+            "received_at": "2026-09-16 19:48:26.743721+00:00",
+            "exchange_at": "2026-09-16 17:03:33.577147+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825196": {
+            "received_at": "2026-09-16 19:48:26.763079+00:00",
+            "exchange_at": "2026-09-16 17:03:25.969074+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825198": {
+            "received_at": "2026-09-16 19:48:26.782192+00:00",
+            "exchange_at": "2026-09-16 17:03:34.313346+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825199": {
+            "received_at": "2026-09-16 19:48:26.800773+00:00",
+            "exchange_at": "2026-09-16 17:03:30.474371+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825200": {
+            "received_at": "2026-09-16 19:48:26.821181+00:00",
+            "exchange_at": "2026-09-16 17:03:33.580863+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825201": {
+            "received_at": "2026-09-16 19:48:26.839962+00:00",
+            "exchange_at": "2026-09-16 17:01:48.144842+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825202": {
+            "received_at": "2026-09-16 19:48:26.859298+00:00",
+            "exchange_at": "2026-09-16 17:03:29.189263+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825204": {
+            "received_at": "2026-09-16 19:48:26.878215+00:00",
+            "exchange_at": "2026-09-16 17:03:25.277080+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825205": {
+            "received_at": "2026-09-16 19:48:26.897489+00:00",
+            "exchange_at": "2026-09-16 17:03:33.111281+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825206": {
+            "received_at": "2026-09-16 19:48:27.242507+00:00",
+            "exchange_at": "2026-09-16 17:03:33.511438+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825208": {
+            "received_at": "2026-09-16 19:48:27.262954+00:00",
+            "exchange_at": "2026-09-16 17:03:31.432443+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825209": {
+            "received_at": "2026-09-16 19:48:27.281437+00:00",
+            "exchange_at": "2026-09-16 17:03:03.980931+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825210": {
+            "received_at": "2026-09-16 19:48:27.301514+00:00",
+            "exchange_at": "2026-09-16 17:03:23.544904+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "825211": {
+            "received_at": "2026-09-16 19:48:27.321120+00:00",
+            "exchange_at": "2026-09-16 17:03:33.645045+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "848861": {
+            "received_at": "2026-09-16 19:48:27.340018+00:00",
+            "exchange_at": "2026-09-16 17:03:32.784028+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          }
+        }
+      }
+    },
+    "active_sockets": 5,
+    "elapsed": 240.04648687499866
+  },
+  "stop_issued_at": 240.04648687499866,
+  "outcome": {
+    "status": "complete",
+    "operator_stop": true,
+    "native_verified": true,
+    "replay_seconds": 35.72374704200047,
+    "replay_baseline_rss": 101597184,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 146,
+      "verified_account_budget": 1,
+      "coverage_inventory": 2,
+      "market_selected": 96,
+      "source_health": 11395,
+      "prediction_command": 5,
+      "coverage_applied": 4,
+      "prediction_frame": 11394,
+      "prediction_book": 11390,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1,
+      2
+    ],
+    "applied_generations": {
+      "polymarket_us": 2,
+      "kalshi": 2
+    },
+    "replay_traced_start": 0,
+    "replay_traced_peak": 0,
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 275.87220950000483,
+    "baseline_rss": 65634304,
+    "peak_rss": 118538240,
+    "traced_peak": 0,
+    "traced_current": 0,
+    "profile": "predict-supervised-segmented-5m-v1",
+    "replay_state_samples": [
+      {
+        "rows": 1024,
+        "bytes": 15039146,
+        "rss": 117112832
+      },
+      {
+        "rows": 2048,
+        "bytes": 15099595,
+        "rss": 117293056
+      },
+      {
+        "rows": 3072,
+        "bytes": 15157899,
+        "rss": 117473280
+      },
+      {
+        "rows": 4096,
+        "bytes": 14981415,
+        "rss": 117473280
+      },
+      {
+        "rows": 5120,
+        "bytes": 15040419,
+        "rss": 117473280
+      },
+      {
+        "rows": 6144,
+        "bytes": 15099971,
+        "rss": 117473280
+      },
+      {
+        "rows": 7168,
+        "bytes": 15157955,
+        "rss": 117473280
+      },
+      {
+        "rows": 8192,
+        "bytes": 14981443,
+        "rss": 117473280
+      },
+      {
+        "rows": 9216,
+        "bytes": 15040419,
+        "rss": 117473280
+      },
+      {
+        "rows": 10240,
+        "bytes": 15099971,
+        "rss": 117473280
+      },
+      {
+        "rows": 11264,
+        "bytes": 15157955,
+        "rss": 117473280
+      },
+      {
+        "rows": 12288,
+        "bytes": 14981443,
+        "rss": 117473280
+      },
+      {
+        "rows": 13312,
+        "bytes": 15040419,
+        "rss": 117473280
+      },
+      {
+        "rows": 14336,
+        "bytes": 15099971,
+        "rss": 117473280
+      },
+      {
+        "rows": 15360,
+        "bytes": 15157955,
+        "rss": 117473280
+      },
+      {
+        "rows": 16384,
+        "bytes": 14981443,
+        "rss": 118161408
+      },
+      {
+        "rows": 17408,
+        "bytes": 15040419,
+        "rss": 118259712
+      },
+      {
+        "rows": 18432,
+        "bytes": 15100147,
+        "rss": 118374400
+      },
+      {
+        "rows": 19456,
+        "bytes": 15158175,
+        "rss": 118456320
+      },
+      {
+        "rows": 20480,
+        "bytes": 14981859,
+        "rss": 118456320
+      },
+      {
+        "rows": 21504,
+        "bytes": 15047842,
+        "rss": 118456320
+      },
+      {
+        "rows": 22528,
+        "bytes": 15107394,
+        "rss": 118456320
+      },
+      {
+        "rows": 23552,
+        "bytes": 15165378,
+        "rss": 118521856
+      },
+      {
+        "rows": 24576,
+        "bytes": 14988866,
+        "rss": 118521856
+      },
+      {
+        "rows": 25600,
+        "bytes": 15047842,
+        "rss": 118521856
+      },
+      {
+        "rows": 26624,
+        "bytes": 15107394,
+        "rss": 118521856
+      },
+      {
+        "rows": 27648,
+        "bytes": 15165378,
+        "rss": 118538240
+      },
+      {
+        "rows": 28672,
+        "bytes": 14988866,
+        "rss": 118538240
+      },
+      {
+        "rows": 29696,
+        "bytes": 15047842,
+        "rss": 118538240
+      },
+      {
+        "rows": 30720,
+        "bytes": 15107394,
+        "rss": 118538240
+      },
+      {
+        "rows": 31744,
+        "bytes": 15165378,
+        "rss": 118538240
+      },
+      {
+        "rows": 32768,
+        "bytes": 14988866,
+        "rss": 118538240
+      },
+      {
+        "rows": 33792,
+        "bytes": 15047842,
+        "rss": 118538240
+      }
+    ],
+    "live_state_samples": [
+      {
+        "seconds": 1.005691416998161,
+        "bytes": 77846,
+        "rss": 65863680,
+        "logical": 2,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 11.034802292000677,
+        "bytes": 1108854,
+        "rss": 75202560,
+        "logical": 42,
+        "generation": null,
+        "groups": 0
+      },
+      {
+        "seconds": 21.09084370799974,
+        "bytes": 4474657,
+        "rss": 77496320,
+        "logical": 216,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 31.508977792000223,
+        "bytes": 9612618,
+        "rss": 86867968,
+        "logical": 1821,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 41.97985091699957,
+        "bytes": 9954276,
+        "rss": 87359488,
+        "logical": 3453,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 52.48588191700401,
+        "bytes": 10296786,
+        "rss": 87769088,
+        "logical": 5091,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 63.000979875003395,
+        "bytes": 10639444,
+        "rss": 88227840,
+        "logical": 6732,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 73.55604258300446,
+        "bytes": 10948598,
+        "rss": 92897280,
+        "logical": 8379,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 84.12477645800391,
+        "bytes": 11257438,
+        "rss": 93257728,
+        "logical": 10026,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 94.69652529199811,
+        "bytes": 11304695,
+        "rss": 93339648,
+        "logical": 11676,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 105.33221920800133,
+        "bytes": 11306289,
+        "rss": 95485952,
+        "logical": 13335,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 115.90321620800387,
+        "bytes": 11306607,
+        "rss": 95502336,
+        "logical": 14985,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 126.17555408299813,
+        "bytes": 11091440,
+        "rss": 100270080,
+        "logical": 16559,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 137.25930608300405,
+        "bytes": 11235588,
+        "rss": 101072896,
+        "logical": 18203,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 147.2753169580028,
+        "bytes": 11341563,
+        "rss": 101449728,
+        "logical": 19672,
+        "generation": 1,
+        "groups": 5
+      },
+      {
+        "seconds": 158.17711537500145,
+        "bytes": 13390267,
+        "rss": 101580800,
+        "logical": 21654,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 168.75713216700387,
+        "bytes": 13389319,
+        "rss": 101580800,
+        "logical": 23304,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 179.33154370800185,
+        "bytes": 13389217,
+        "rss": 101580800,
+        "logical": 24954,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 189.96212654199917,
+        "bytes": 13388961,
+        "rss": 101597184,
+        "logical": 26613,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 200.54512245800288,
+        "bytes": 13380317,
+        "rss": 101597184,
+        "logical": 28263,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 211.13381087499874,
+        "bytes": 13374201,
+        "rss": 101597184,
+        "logical": 29913,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 221.71443170800194,
+        "bytes": 13364441,
+        "rss": 101597184,
+        "logical": 31566,
+        "generation": 2,
+        "groups": 5
+      },
+      {
+        "seconds": 232.29209258300398,
+        "bytes": 13364293,
+        "rss": 101597184,
+        "logical": 33216,
+        "generation": 2,
+        "groups": 5
+      }
+    ],
+    "rate_peaks": {
+      "rows": 334,
+      "encoded": 768542,
+      "expanded": 3620338,
+      "frames": 111
+    },
+    "frames_received": 11394,
+    "stop_to_closed_seconds": 0.1051554160003434,
+    "disk_bytes": 85931356
+  },
+  "accounting": {
+    "received": 34449,
+    "accepted": 34434,
+    "write_attempted": 34506,
+    "durably_acknowledged": 34434,
+    "rejected": 15,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 34434,
+    "journal_write_attempted": 34509,
+    "journal_durably_acknowledged": 34509,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 85326883,
+    "confirmed_chain": "ac4dfccba94e5b8c9f8bd4bcd60372aa4c0557da715db70667bd8749538cb049",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 34434,
+      "observations": 34435,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 34435,
+      "encoded_ingress": 79678926,
+      "expanded_ingress": 302509756,
+      "physical_records": 34509,
+      "control_records": 74,
+      "physical_write_attempts": 34509,
+      "journal_encoded_bytes": 85326883,
+      "journal_expanded_payload_bytes": 302526509,
+      "manifest_records": 1,
+      "manifest_bytes": 12597,
+      "manifest_writes": 38,
+      "manifest_publications": 38,
+      "manifest_write_bytes": 260806,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 85931356
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 118538240,
+    "peak_queue_records": 16,
+    "peak_queue_bytes": 973376,
+    "ingress_bytes": 79678926,
+    "journal_bytes": 85326883,
+    "elapsed_seconds": 275.9557680420039
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 32,
+      "discovered_markets": 64,
+      "generation": 2,
+      "eligible": 64,
+      "selected": 64,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 64,
+      "applied_selected": 64,
+      "requested": 64,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "peak_simultaneous": {
+        "requested": 64,
+        "acknowledged": 64,
+        "receiving": 64,
+        "usable": 64
+      },
+      "requests": 68,
+      "connection_attempts": 4,
+      "body_bytes_charged": 11854194,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "KXNFLGAME-26SEP17DETBUF-BUF": {
+          "received_at": "2026-09-16 19:48:25.666000+00:00",
+          "exchange_at": "2026-09-16 17:03:30.387000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP17DETBUF-DET": {
+          "received_at": "2026-09-16 19:48:25.974483+00:00",
+          "exchange_at": "2026-09-16 17:03:25.912000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CARATL-ATL": {
+          "received_at": "2026-09-16 19:48:26.051530+00:00",
+          "exchange_at": "2026-09-16 17:03:22.798000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CARATL-CAR": {
+          "received_at": "2026-09-16 19:48:26.127953+00:00",
+          "exchange_at": "2026-09-16 17:03:21.904000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CINHOU-CIN": {
+          "received_at": "2026-09-16 19:48:26.205075+00:00",
+          "exchange_at": "2026-09-16 17:03:17.028000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CINHOU-HOU": {
+          "received_at": "2026-09-16 19:48:26.435323+00:00",
+          "exchange_at": "2026-09-16 17:03:34.028000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CLETB-CLE": {
+          "received_at": "2026-09-16 19:48:26.513021+00:00",
+          "exchange_at": "2026-09-16 17:03:29.360000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20CLETB-TB": {
+          "received_at": "2026-09-16 19:48:26.618893+00:00",
+          "exchange_at": "2026-09-16 17:03:29.623000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-GB": {
+          "received_at": "2026-09-16 19:48:26.667361+00:00",
+          "exchange_at": "2026-09-16 17:03:12.394000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20GBNYJ-NYJ": {
+          "received_at": "2026-09-16 19:48:26.973811+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20INDKC-IND": {
+          "received_at": "2026-09-16 19:48:27.050900+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20INDKC-KC": {
+          "received_at": "2026-09-16 19:48:27.128362+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20JACDEN-DEN": {
+          "received_at": "2026-09-16 19:48:27.204837+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20JACDEN-JAC": {
+          "received_at": "2026-09-16 19:48:27.436054+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LAC": {
+          "received_at": "2026-09-16 19:48:27.512848+00:00",
+          "exchange_at": "2026-09-16 17:03:16.411000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20LVLAC-LV": {
+          "received_at": "2026-09-16 19:48:27.632997+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-MIA": {
+          "received_at": "2026-09-16 19:48:27.669052+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20MIASF-SF": {
+          "received_at": "2026-09-16 19:48:25.435877+00:00",
+          "exchange_at": "2026-09-16 17:03:31.160000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20MINCHI-CHI": {
+          "received_at": "2026-09-16 19:48:25.540501+00:00",
+          "exchange_at": "2026-09-16 17:03:29.737000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20MINCHI-MIN": {
+          "received_at": "2026-09-16 19:48:25.589275+00:00",
+          "exchange_at": "2026-09-16 17:03:19.607000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20NOBAL-BAL": {
+          "received_at": "2026-09-16 19:48:26.223812+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20NOBAL-NO": {
+          "received_at": "2026-09-16 19:48:26.454686+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-PHI": {
+          "received_at": "2026-09-16 19:48:26.580776+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PHITEN-TEN": {
+          "received_at": "2026-09-16 19:48:26.609790+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20PITNE-NE": {
+          "received_at": "2026-09-16 19:48:26.685483+00:00",
+          "exchange_at": "2026-09-16 17:03:33.909000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20PITNE-PIT": {
+          "received_at": "2026-09-16 19:48:26.916489+00:00",
+          "exchange_at": "2026-09-16 17:03:22.903000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20SEAARI-ARI": {
+          "received_at": "2026-09-16 19:48:26.993924+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20SEAARI-SEA": {
+          "received_at": "2026-09-16 19:48:27.070795+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP20WASDAL-DAL": {
+          "received_at": "2026-09-16 19:48:27.150781+00:00",
+          "exchange_at": "2026-09-16 17:03:30.072000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP20WASDAL-WAS": {
+          "received_at": "2026-09-16 19:48:27.223700+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-LAR": {
+          "received_at": "2026-09-16 19:48:27.454979+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP21NYGLAR-NYG": {
+          "received_at": "2026-09-16 19:48:27.532594+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP24ATLGB-ATL": {
+          "received_at": "2026-09-16 19:48:27.642049+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP24ATLGB-GB": {
+          "received_at": "2026-09-16 19:48:27.688213+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27ARISF-ARI": {
+          "received_at": "2026-09-16 19:48:27.917086+00:00",
+          "exchange_at": "2026-09-16 17:03:22.330000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27ARISF-SF": {
+          "received_at": "2026-09-16 19:48:25.685848+00:00",
+          "exchange_at": "2026-09-16 17:03:31.744000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27BALDAL-BAL": {
+          "received_at": "2026-09-16 19:48:25.916053+00:00",
+          "exchange_at": "2026-09-16 17:03:34.343000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27BALDAL-DAL": {
+          "received_at": "2026-09-16 19:48:25.993182+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CAR": {
+          "received_at": "2026-09-16 19:48:26.070625+00:00",
+          "exchange_at": "2026-09-16 17:03:14.568000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27CARCLE-CLE": {
+          "received_at": "2026-09-16 19:48:26.147151+00:00",
+          "exchange_at": "2026-09-16 17:03:13.581000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27CINPIT-CIN": {
+          "received_at": "2026-09-16 19:48:25.705603+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27CINPIT-PIT": {
+          "received_at": "2026-09-16 19:48:25.935260+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27HOUIND-HOU": {
+          "received_at": "2026-09-16 19:48:26.013086+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27HOUIND-IND": {
+          "received_at": "2026-09-16 19:48:26.089423+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27KCMIA-KC": {
+          "received_at": "2026-09-16 19:48:26.166193+00:00",
+          "exchange_at": "2026-09-16 17:03:33.408000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27KCMIA-MIA": {
+          "received_at": "2026-09-16 19:48:26.474780+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LACBUF-BUF": {
+          "received_at": "2026-09-16 19:48:26.590606+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LACBUF-LAC": {
+          "received_at": "2026-09-16 19:48:26.636809+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LARDEN-DEN": {
+          "received_at": "2026-09-16 19:48:26.704594+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LARDEN-LAR": {
+          "received_at": "2026-09-16 19:48:26.935547+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LVNO-LV": {
+          "received_at": "2026-09-16 19:48:27.013245+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27LVNO-NO": {
+          "received_at": "2026-09-16 19:48:27.089298+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27MINTB-MIN": {
+          "received_at": "2026-09-16 19:48:27.166552+00:00",
+          "exchange_at": "2026-09-16 17:03:16.201000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27MINTB-TB": {
+          "received_at": "2026-09-16 19:48:27.473557+00:00",
+          "exchange_at": "2026-09-16 17:03:31.920000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27NEJAC-JAC": {
+          "received_at": "2026-09-16 19:48:27.551515+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NEJAC-NE": {
+          "received_at": "2026-09-16 19:48:27.650854+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NYJDET-DET": {
+          "received_at": "2026-09-16 19:48:27.705140+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27NYJDET-NYJ": {
+          "received_at": "2026-09-16 19:48:25.521733+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-SEA": {
+          "received_at": "2026-09-16 19:48:25.567483+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27SEAWAS-WAS": {
+          "received_at": "2026-09-16 19:48:25.627834+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP27TENNYG-NYG": {
+          "received_at": "2026-09-16 19:48:27.660399+00:00",
+          "exchange_at": "2026-09-16 17:03:19.349000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP27TENNYG-TEN": {
+          "received_at": "2026-09-16 19:48:27.723638+00:00",
+          "exchange_at": "2026-09-16 17:03:19.348000+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "KXNFLGAME-26SEP28PHICHI-CHI": {
+          "received_at": "2026-09-16 19:48:27.492873+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        },
+        "KXNFLGAME-26SEP28PHICHI-PHI": {
+          "received_at": "2026-09-16 19:48:27.570760+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 32,
+      "discovered_markets": 32,
+      "generation": 2,
+      "eligible": 32,
+      "selected": 32,
+      "event_discovery": "exhausted",
+      "market_completeness": "unestablished",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 32,
+      "applied_selected": 32,
+      "requested": 32,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "peak_simultaneous": {
+        "requested": 32,
+        "acknowledged": 32,
+        "receiving": 32,
+        "usable": 32
+      },
+      "requests": 78,
+      "connection_attempts": 1,
+      "body_bytes_charged": 14830183,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "657964": {
+          "received_at": "2026-09-16 19:48:27.359437+00:00",
+          "exchange_at": "2026-09-16 17:03:33.244607+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657966": {
+          "received_at": "2026-09-16 19:48:27.378187+00:00",
+          "exchange_at": "2026-09-16 17:03:23.620474+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657969": {
+          "received_at": "2026-09-16 19:48:27.397570+00:00",
+          "exchange_at": "2026-09-16 17:03:23.699189+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657972": {
+          "received_at": "2026-09-16 19:48:27.742577+00:00",
+          "exchange_at": "2026-09-16 17:03:22.711442+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657975": {
+          "received_at": "2026-09-16 19:48:27.762403+00:00",
+          "exchange_at": "2026-09-16 17:03:23.219919+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657978": {
+          "received_at": "2026-09-16 19:48:27.782222+00:00",
+          "exchange_at": "2026-09-16 17:03:32.374521+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657980": {
+          "received_at": "2026-09-16 19:48:27.801448+00:00",
+          "exchange_at": "2026-09-16 17:03:23.649348+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657983": {
+          "received_at": "2026-09-16 19:48:27.821126+00:00",
+          "exchange_at": "2026-09-16 17:03:33.781255+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657986": {
+          "received_at": "2026-09-16 19:48:27.838939+00:00",
+          "exchange_at": "2026-09-16 17:03:23.618375+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657989": {
+          "received_at": "2026-09-16 19:48:27.859098+00:00",
+          "exchange_at": "2026-09-16 17:03:26.939544+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657992": {
+          "received_at": "2026-09-16 19:48:27.878401+00:00",
+          "exchange_at": "2026-09-16 17:03:22.739722+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657994": {
+          "received_at": "2026-09-16 19:48:27.897760+00:00",
+          "exchange_at": "2026-09-16 17:02:17.273298+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657996": {
+          "received_at": "2026-09-16 19:48:26.321216+00:00",
+          "exchange_at": "2026-09-16 17:03:30.855506+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "657999": {
+          "received_at": "2026-09-16 19:48:26.347035+00:00",
+          "exchange_at": "2026-09-16 17:03:19.653842+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "658002": {
+          "received_at": "2026-09-16 19:48:26.358893+00:00",
+          "exchange_at": "2026-09-16 17:03:33.115379+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "658005": {
+          "received_at": "2026-09-16 19:48:26.378055+00:00",
+          "exchange_at": "2026-09-16 17:03:19.657908+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "779756": {
+          "received_at": "2026-09-16 19:48:26.397506+00:00",
+          "exchange_at": "2026-09-16 17:03:16.231958+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825195": {
+          "received_at": "2026-09-16 19:48:26.743721+00:00",
+          "exchange_at": "2026-09-16 17:03:33.577147+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825196": {
+          "received_at": "2026-09-16 19:48:26.763079+00:00",
+          "exchange_at": "2026-09-16 17:03:25.969074+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825198": {
+          "received_at": "2026-09-16 19:48:26.782192+00:00",
+          "exchange_at": "2026-09-16 17:03:34.313346+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825199": {
+          "received_at": "2026-09-16 19:48:26.800773+00:00",
+          "exchange_at": "2026-09-16 17:03:30.474371+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825200": {
+          "received_at": "2026-09-16 19:48:26.821181+00:00",
+          "exchange_at": "2026-09-16 17:03:33.580863+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825201": {
+          "received_at": "2026-09-16 19:48:26.839962+00:00",
+          "exchange_at": "2026-09-16 17:01:48.144842+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825202": {
+          "received_at": "2026-09-16 19:48:26.859298+00:00",
+          "exchange_at": "2026-09-16 17:03:29.189263+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825204": {
+          "received_at": "2026-09-16 19:48:26.878215+00:00",
+          "exchange_at": "2026-09-16 17:03:25.277080+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825205": {
+          "received_at": "2026-09-16 19:48:26.897489+00:00",
+          "exchange_at": "2026-09-16 17:03:33.111281+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825206": {
+          "received_at": "2026-09-16 19:48:27.242507+00:00",
+          "exchange_at": "2026-09-16 17:03:33.511438+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825208": {
+          "received_at": "2026-09-16 19:48:27.262954+00:00",
+          "exchange_at": "2026-09-16 17:03:31.432443+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825209": {
+          "received_at": "2026-09-16 19:48:27.281437+00:00",
+          "exchange_at": "2026-09-16 17:03:03.980931+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825210": {
+          "received_at": "2026-09-16 19:48:27.301514+00:00",
+          "exchange_at": "2026-09-16 17:03:23.544904+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "825211": {
+          "received_at": "2026-09-16 19:48:27.321120+00:00",
+          "exchange_at": "2026-09-16 17:03:33.645045+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        },
+        "848861": {
+          "received_at": "2026-09-16 19:48:27.340018+00:00",
+          "exchange_at": "2026-09-16 17:03:32.784028+00:00",
+          "sync": "synchronized",
+          "source_time_progress": "repeated"
+        }
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 2,
+    "published_at": "2026-09-16T19:47:00.601820+00:00",
+    "age_seconds": 123.232499,
+    "refresh": {
+      "state": "completed",
+      "generation": 2,
+      "started_at": "2026-09-16T19:46:27.882692+00:00",
+      "finished_at": "2026-09-16T19:47:00.601820+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 68,
+        "durably_retained": 68,
+        "attempted_requests": 68
+      },
+      "polymarket_us": {
+        "received": 78,
+        "durably_retained": 78,
+        "attempted_requests": 78
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {}
+    }
+  },
+  "source_rows": 34435,
+  "source_frames": 11394,
+  "source_books": 11390,
+  "source_sequence": "344961d4091129c2c3b0ce0472040f344df9e06d99bcfb493b7a0b9393f50495",
+  "fixture_sent_frames": 11390,
+  "fixture_sent_bytes": 22807742,
+  "active_seconds": 217.28970770799788,
+  "rest_requests": 146,
+  "connections": 5,
+  "all_fixture_feeds_closed": true,
+  "fixture": {
+    "sent": 11390,
+    "sent_bytes": 22807742,
+    "connections": 5,
+    "closed": true,
+    "request_timestamps": [
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54358.536428166
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/account/limits",
+        "at": 54359.036450666
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54359.046727041
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54359.554166916
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/account/endpoint_costs",
+        "at": 54360.039829833
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54360.069749
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/events",
+        "at": 54360.550858916
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54360.920749625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54361.422494875
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54361.429017125
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54361.9307405
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54361.940855666
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54362.441711
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54362.448395166
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54362.947158375
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54362.952241166
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54363.453100958
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54363.460652125
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54363.961697791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54363.968609333
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54364.469617083
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54364.478227291
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54364.980024
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54364.991712625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54365.492725166
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54365.499884291
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54366.001493833
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54366.010492791
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54366.511180833
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54366.515152333
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54367.016539166
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54367.021391208
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54367.522752666
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54367.529806666
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54368.030135041
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54368.037081041
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54368.537797666
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54368.546045666
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54369.047654125
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54369.057051
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54369.557901666
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54369.567244625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54370.071459375
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54370.0783605
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54370.579552416
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54370.58485625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54371.085616916
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54371.089179541
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54371.590051541
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54371.596888625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54372.097945875
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54372.106528958
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54372.607494625
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54372.613328208
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54373.113777041
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54373.119659083
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54373.6206285
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54373.627109791
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54374.127649916
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54374.133729041
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54374.63504425
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54374.640274
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54375.141980208
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54375.147509458
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54375.6480685
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54375.655636375
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54376.156758958
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54376.164130791
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54376.664895791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54376.670296125
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54377.171636791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54377.179237208
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54377.684878041
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54378.1933335
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/events",
+        "at": 54478.535562083
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54478.536734625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54479.711498625
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54480.063842708
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54480.534213125
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54480.877452541
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54481.343183333
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54481.735094041
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54482.151635958
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54482.520100833
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54482.981563125
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54483.345460791
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54483.806934625
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/events",
+        "at": 54484.21524375
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54484.634129208
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54484.999821708
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54485.46132575
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54485.825520541
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54486.291518208
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54486.713423833
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54487.127394708
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54487.504504666
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54487.962965708
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54488.326469625
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54488.789775791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54489.20479325
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54489.619200166
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54489.98386875
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54490.450489875
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54490.826012166
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54491.288181666
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54491.703518125
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54492.117040291
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54492.482179708
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54492.946211083
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54493.311552583
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54493.772367833
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54494.194864666
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54494.603789875
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54494.982818291
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54495.444684125
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54495.81176575
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54496.272282333
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54496.68567725
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54497.097971541
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54497.465831333
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54497.933755833
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54498.30745875
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54498.770926375
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54499.208827958
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54499.6167275
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54499.985995375
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54500.448368416
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54500.81609925
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54501.276110083
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54501.699377208
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54502.113136291
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54502.4880675
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54502.950926791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54503.319751875
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54503.793212958
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54504.217557416
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54504.634567708
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54505.003276541
+      },
+      {
+        "venue": "kalshi",
+        "path": "/trade-api/v2/markets",
+        "at": 54505.466223333
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54505.839711875
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54506.555325791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54507.267955791
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54507.950308916
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54508.650619708
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54509.328231166
+      },
+      {
+        "venue": "polymarket_us",
+        "path": "/v1/markets",
+        "at": 54510.034066666
+      }
+    ],
+    "rest_requests": 146,
+    "rss_peak": 72613888,
+    "feed_started": 54380.891946458,
+    "error": null
+  },
+  "output_bytes": 85931356,
+  "pacing": {
+    "kalshi": {
+      "requests": 68,
+      "minimum_interval": 0.5044346249997034
+    },
+    "polymarket_us": {
+      "requests": 78,
+      "minimum_interval": 0.5038459999996121
+    }
+  },
+  "traffic_measurement": {
+    "frames_per_second": 52.43690610192954,
+    "flow_encoded": 78206823,
+    "flow_expanded": 297371444,
+    "required_encoded": 69949689.5513515,
+    "required_expanded": 247602516.8193991
+  },
+  "checks": {
+    "reason": true,
+    "runtime": true,
+    "refresh": true,
+    "closed": true,
+    "pacing": true,
+    "fixture_budget": true,
+    "accounting": true,
+    "replay": true,
+    "busy": true,
+    "real_payload_volume": true,
+    "stop_latency": true,
+    "finalization": true,
+    "headroom": true,
+    "queue": true,
+    "live_state": true,
+    "live_plateau": true,
+    "replay_state": true,
+    "replay_plateau": true,
+    "consumed_attempt": true
+  },
+  "passed": true,
+  "wall_seconds": 276.38983291600016,
+  "rss_peak": 118538240,
+  "combined_process_peak_upper_bound": 191152128,
+  "source_unchanged": true,
+  "connected_addresses": {
+    "127.0.0.1": 9
+  }
+}

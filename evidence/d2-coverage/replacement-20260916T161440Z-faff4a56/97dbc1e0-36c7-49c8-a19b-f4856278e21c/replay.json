@@ -1,0 +1,42 @@
+{
+  "kalshi-1": {
+    "exact_native_books": {
+      "kalshi": 205,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+    "state": "complete"
+  },
+  "kalshi-2": {
+    "exact_native_books": {
+      "kalshi": 150,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+    "state": "complete"
+  },
+  "kalshi-3": {
+    "exact_native_books": {
+      "kalshi": 107,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+    "state": "complete"
+  },
+  "kalshi-4": {
+    "exact_native_books": {
+      "kalshi": 29,
+      "polymarket_us": 0
+    },
+    "exact_packets": true,
+    "gaps": [],
+    "journal_sha256": "db0dca7dcf13b5839f9fc3323e090648f749aa9f664de04fbc1255482341609d",
+    "state": "complete"
+  }
+}

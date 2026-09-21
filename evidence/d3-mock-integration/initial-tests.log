@@ -1,0 +1,32 @@
+======================================================================
+ERROR: test_busy_refresh_active_stop_exact_incremental_finalization (tests.test_segmented_collector.Integration.test_busy_refresh_active_stop_exact_incremental_finalization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_segmented_collector.py", line 17, in test_busy_refresh_active_stop_exact_incremental_finalization
+    f=Fixture();o=await f.start(tmp)
+                  ^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/segmented_collector_fixture.py", line 67, in start
+    await self.owner.start(duration=duration)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/coverage_owner.py", line 91, in start
+    save_json(folder/'aggregate-limits.json',dict(POLICY, per_group_messages=600,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rest_per_venue=100, connection_attempts=12, mode='isolated-mock-segmented'))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/e6_live.py", line 32, in save_json
+    with path.open('xb',buffering=0) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileExistsError: [Errno 17] File exists: '/var/folders/2k/njrlmfj97sv5pjrqxl22hq8w0000gn/T/tmp987werq4/pilot/0ace21c1-0223-45f2-89e4-54951f02ef1e/aggregate-limits.json'
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.008s
+
+FAILED (errors=1)

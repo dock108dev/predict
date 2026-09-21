@@ -1,0 +1,86 @@
+{
+  "at": "2026-09-16T15:57:29.656933+00:00",
+  "browser_tabs": [],
+  "status": {
+    "state": "stopped",
+    "active": false,
+    "operating_mode": "d2-bounded-inventory",
+    "start_available": false,
+    "error": null,
+    "cleanup_errors": [],
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "5accf9ee-94b9-4b09-8130-6849f842155e"
+    ],
+    "session": "8c4da682-f611-4c83-b401-e8a4e6b43a2e",
+    "cleanup_complete": true,
+    "coverage": {
+      "kalshi": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "event_discovery": "unknown",
+        "market_completeness": "unestablished",
+        "eligible": 0,
+        "selected": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "peak_simultaneous": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "requests": 2,
+        "connection_attempts": 0,
+        "body_bytes_charged": 1303,
+        "acknowledgement_basis": "explicit channel acknowledgement",
+        "latest_receipts": {}
+      },
+      "polymarket_us": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "event_discovery": "unknown",
+        "market_completeness": "unestablished",
+        "eligible": 0,
+        "selected": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "peak_simultaneous": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "requests": 0,
+        "connection_attempts": 0,
+        "body_bytes_charged": 0,
+        "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+        "latest_receipts": {}
+      }
+    },
+    "pilot_allowance": "one pilot; idle startup; no autoresume",
+    "resources": {
+      "peak_rss_bytes": 113065984,
+      "peak_queue_records": 1,
+      "ingress_bytes": 8006,
+      "journal_bytes": 9615,
+      "elapsed_seconds": 24.018023665994406
+    }
+  }
+}

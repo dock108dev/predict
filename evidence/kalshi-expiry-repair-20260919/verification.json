@@ -1,0 +1,20 @@
+{
+  "added_test": "tests/test_kalshi_expiry.py",
+  "candidate": "ae6765dd2f7d03544f428338318cc6a6b75eee83c3ad9790bdfa087046104ba5",
+  "candidate_source_files": 230,
+  "changed_evidence": [],
+  "changed_preexisting_workspace_files": [
+    "app/adapters/kalshi_stream.py"
+  ],
+  "diagnosis_preserved": true,
+  "git_head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "historical_stale_timestamps_and_counts": "Exact retained native/packet replay; see retained-replay.json",
+  "no_live_access": true,
+  "preexisting_evidence_bytes": 1854921980,
+  "preexisting_evidence_files": 2671,
+  "preexisting_workspace_files": 324,
+  "preserved_uncommitted_work": "All other preexisting app/test/doc files byte-identical; initial git status and diff retained.",
+  "previous_candidate": "9997a04dce4de0d2292e9d25ee1d4d7ff833d326a93e15284bd439b7524a9974",
+  "retained_bytecode_files_verified_from_prior_baseline": 48,
+  "threshold_and_budgets": "No configuration or resource-budget files changed; strict greater-than comparison retained"
+}

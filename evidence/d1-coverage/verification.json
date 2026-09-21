@@ -1,0 +1,33 @@
+{
+  "boundaries": "No credential reads, fresh market collection, beta restart, database migration, background collection, trading, commit, push or publishing",
+  "hashes": {
+    "../prediction_arb_next_steps.md": "9c47ef11a9c89e19ff1e026f15aebdad7f9225e8da7e0366bbbba2b09c4c11e4",
+    "app/adapters/kalshi.py": "f75948817d64765cc08d63a1739c80011738690a6c8c2c70db2fddf9b2374285",
+    "app/adapters/polymarket_us.py": "c43b7b23a4c3adf53bed9648d482ffe38981ee5aa9866308bd0c8ef90a3bb962",
+    "app/collection/coverage.py": "2a9847465e0ad66ef60d5aadd04baa946857ba6e9e0abb86f0007da60cc16ad2",
+    "app/collection/prediction_discovery.py": "e6b261baa5786933a2b11401e74eb474419c118e4ec0caa7b26e32b60f7d034e",
+    "app/normalization/registry-v1.json": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+    "docs/architecture.md": "b35ef5e7e77d55dc9434ebf5e6559b99ab6d2381aaf415632e724969fe3cf044",
+    "docs/data-coverage-d1-report.md": "40d5713cebc9683347c489e1f05786688ee655d894d4def18fa9c0760607f91e",
+    "docs/data-coverage-plan.md": "141fd2f16c0f991a1b6a53d79b763fb281b806c23818aa0eb9383f72d48a2cf3",
+    "docs/product-roadmap-review.md": "e2a04a8488a69d9cc2c47a7274fdb8f164350a1ea769acf77c238aa1771bb84e",
+    "docs/ssot.md": "7be3b66fe52780d4abd2437f6f7f6ec8eb38ad6fbf41465019b33df107cfd9de",
+    "evidence/d1-coverage/checks.txt": "2b881490c6869d153e2da9b3545c88441f257155bb1b330f9d3dfe4acc16c901",
+    "evidence/d1-coverage/retained/coverage.json": "2e8e2b170b7717be2ad3416e8bebef055d43a101d14e5cc68b427c2f3baf1ce7",
+    "evidence/d1-coverage/retained/coverage.md": "9a8086890a35f49e78fbac93b4e75c8384ec271fd84fbb07d7d2760ab5d5b304",
+    "evidence/d1-coverage/synthetic-pages.json": "9029bc323214fef5d64286879883a8bb18d57b551fd4c0263c9976b1f161fe61",
+    "evidence/d1-coverage/synthetic/coverage.json": "d1ea3aa00a48403132135ab25ed81e17b78968157523dbb74ef45d51600f17f8",
+    "evidence/d1-coverage/synthetic/coverage.md": "1179384304f90c6de2d5d5b86e1e10d51ea266d0ac56490629e6a6c81d4c2047",
+    "evidence/multi-game/sessions/5accf9ee-94b9-4b09-8130-6849f842155e/saved-observations.json": "3c1140c9b82912df9148afd22699dc3fcf047eeb75e6159d5342c4b73e4178d7",
+    "tests/test_coverage.py": "cf4d4ef476c5b01bf5cb5d5d072a6116a0f0dd0f01495c0bc87909af3459808a"
+  },
+  "head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "report_reproduction": "Both JSON and Markdown outputs byte-identical via local CLI",
+  "starting_head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "tests": {
+    "command": ".venv/bin/python -m unittest tests.test_coverage tests.test_kalshi tests.test_polymarket_us tests.test_multi_game tests.test_math_reconciliation -q",
+    "d1_tests": 12,
+    "focused_unique_tests": 64,
+    "result": "PASS"
+  }
+}

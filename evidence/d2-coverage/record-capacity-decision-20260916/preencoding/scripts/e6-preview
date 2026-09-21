@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Manage only an identity-checked E6 synthetic preview and disposable cluster."""
+import argparse,json,os,signal,socket,subprocess,time,sys
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+if sys.executable!=str(root/'.venv/bin/python') and 'VIRTUAL_ENV' not in os.environ:
+    os.execv(str(root/'.venv/bin/python'),[str(root/'.venv/bin/python'),__file__,*sys.argv[1:]])
+sys.path.insert(0,str(root))
+from app.collection.environment import Environment
+runtime=root/'.local/e6-preview';runtime.mkdir(parents=True,exist_ok=True)
+state=runtime/'process.json';environment=runtime/'environment.json'
+p=argparse.ArgumentParser();p.add_argument('action',choices=['start','stop','status','cleanup']);p.add_argument('--port',type=int,default=8786);a=p.parse_args()
+def owned(record):
+    cmd=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','command='],capture_output=True,text=True).stdout.strip()
+    birth=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','lstart='],capture_output=True,text=True).stdout.strip()
+    return cmd==record['command'] and birth==record.get('started')
+record=json.loads(state.read_text()) if state.exists() else None
+if a.action in ('stop','status','cleanup'):
+    if record and owned(record):
+        if a.action=='status':print(json.dumps(record,indent=2));raise SystemExit(0)
+        os.kill(record['pid'],signal.SIGTERM)
+        for _ in range(600):
+            if not owned(record):break
+            time.sleep(.1)
+        if owned(record):raise SystemExit('Preview still stopping; database retained. Check status before cleanup.')
+        state.unlink(missing_ok=True)
+    if a.action=='cleanup' and environment.exists():
+        info=json.loads(environment.read_text());env=Environment(info['root'])
+        env.remove(Path(info['output'])/'cleanup');environment.unlink()
+        print('Stopped isolated services and removed the verified disposable cluster; evidence retained at '+info['output'])
+    else:print('E6 preview is stopped; disposable evidence database retained for restart.')
+    raise SystemExit(0)
+if record and owned(record):print(record['url']);raise SystemExit(0)
+if environment.exists():info=json.loads(environment.read_text());env=Environment(info['root'])
+else:
+    env=Environment.create();output=root/'evidence/e6'/('preview-'+time.strftime('%Y%m%d-%H%M%S'));output.mkdir(parents=True)
+    info=dict(root=str(env.root),output=str(output));environment.write_text(json.dumps(info))
+port=a.port
+while port<65536:
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        try:probe.bind(('127.0.0.1',port));break
+        except OSError:port+=1
+else:raise SystemExit('No free loopback port')
+cmd=[str(root/'.venv/bin/python'),'-m','app.collection.server','--environment',str(env.root),'--output',info['output'],'--port',str(port)]
+with (runtime/'server.log').open('a') as log:
+    proc=subprocess.Popen(cmd,cwd=root,env={'PATH':'/usr/bin:/bin','PYTHONUNBUFFERED':'1','PYTHONDONTWRITEBYTECODE':'1'},stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+time.sleep(1)
+if proc.poll() is not None:raise SystemExit('Preview failed to start; inspect .local/e6-preview/server.log')
+record=dict(pid=proc.pid,command=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','command=']).decode().strip(),
+    started=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','lstart=']).decode().strip(),url=f'http://127.0.0.1:{port}',port=port,**info)
+state.write_text(json.dumps(record,indent=2));print(record['url'])

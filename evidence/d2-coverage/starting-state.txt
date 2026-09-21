@@ -1,0 +1,15 @@
+ M app/adapters/kalshi.py
+ M app/adapters/polymarket_us.py
+ M docs/architecture.md
+ M docs/product-roadmap-review.md
+ M docs/ssot.md
+?? app/collection/coverage.py
+?? docs/data-coverage-d1-prompt.md
+?? docs/data-coverage-d1-report.md
+?? docs/data-coverage-plan.md
+?? evidence/d1-coverage/
+?? evidence/d2-coverage/
+?? evidence/multi-game/sessions/5accf9ee-94b9-4b09-8130-6849f842155e/
+?? evidence/owner-walkthrough/
+?? tests/test_coverage.py
+edad00dd980cc8535d69a815d1199b82dd0e83cb

@@ -1,0 +1,25 @@
+test_deadline_boundaries_unchanged (tests.test_delivery_launcher.Contracts.test_deadline_boundaries_unchanged) ... ok
+test_explicit_approval_binding (tests.test_delivery_launcher.Contracts.test_explicit_approval_binding) ... ok
+test_invalid_spec_has_no_files_or_credential_calls (tests.test_delivery_launcher.Contracts.test_invalid_spec_has_no_files_or_credential_calls) ... ok
+test_kalshi_loader_exact_lookup_and_sanitized_failure (tests.test_delivery_launcher.Contracts.test_kalshi_loader_exact_lookup_and_sanitized_failure) ... ok
+test_lock_consumed_marker_changed_output_and_failure (tests.test_delivery_launcher.Contracts.test_lock_consumed_marker_changed_output_and_failure) ... ERROR
+
+======================================================================
+ERROR: test_lock_consumed_marker_changed_output_and_failure (tests.test_delivery_launcher.Contracts.test_lock_consumed_marker_changed_output_and_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_delivery_launcher.py", line 87, in test_lock_consumed_marker_changed_output_and_failure
+    with self.assertRaises(BlockingIOError):b.acquire()
+                                            ~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/delivery_live.py", line 70, in acquire
+    validate_spec(self.spec)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/delivery_manifest.py", line 61, in validate_spec
+    raise ValueError('canonical_path')
+ValueError: canonical_path
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.452s
+
+FAILED (errors=1)
+{"tests": 5, "passed": false, "wall_seconds": 0.48067312501370907, "cpu_seconds": 0.548379, "peak_rss_bytes": 76644352, "guard": true}

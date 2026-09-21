@@ -1,0 +1,58 @@
+{
+  "old": {
+    "exact_rows": true,
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "48dd0450-79e9-4977-b6ad-5767c2cf26ef",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "137c349488c4ece71dcd26c41f1e6cd23f67d1f5f172f794d18127ac13eca6c4",
+      "state": "interrupted",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    },
+    "device": 16777233,
+    "fresh_index_reopened": true,
+    "torn_suffix_excluded_bytes": 7,
+    "changed_index_source_rejected": true,
+    "status": "interrupted",
+    "records": 42
+  },
+  "new": {
+    "exact_rows": true,
+    "replay": {
+      "exact_native_books": {
+        "kalshi": 4,
+        "polymarket_us": 2
+      },
+      "exact_packets": true,
+      "gaps": [
+        {
+          "source": "kalshi",
+          "ingress_id": "48dd0450-79e9-4977-b6ad-5767c2cf26ef",
+          "reason": "native_frame_rejected"
+        }
+      ],
+      "journal_sha256": "dd06c64275c6e4897dad709b5eaeeb8f9d1700d489faae648819849751169fa9",
+      "state": "interrupted",
+      "derived_health_books": 2,
+      "total_books": 8,
+      "total_packets": 16
+    },
+    "device": 16777233,
+    "fresh_index_reopened": true,
+    "torn_suffix_excluded_bytes": 7,
+    "changed_index_source_rejected": true,
+    "status": "interrupted",
+    "records": 42
+  }
+}

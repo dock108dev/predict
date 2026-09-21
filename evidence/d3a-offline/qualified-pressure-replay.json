@@ -1,0 +1,89 @@
+{
+  "fixture": "qualified-pressure",
+  "observations": 3589,
+  "books": 1071,
+  "packets": 2142,
+  "exact_rows_order": true,
+  "sequence_sha256": "587ad1f3e2789617279073932c9584fe7f5a6883d717177e251882313e07f2df",
+  "native_replay": "not claimed: repeated identities are pressure only",
+  "seconds": 14.082602250004129,
+  "observations_per_second": 254.85346644644088,
+  "baseline_rss": 62029824,
+  "peak_rss": 69320704,
+  "traced_current": 225354,
+  "traced_peak": 3444416,
+  "segment_samples": [
+    {
+      "observations": 776,
+      "rss_peak": 69255168,
+      "traced_current": 496915
+    },
+    {
+      "observations": 1799,
+      "rss_peak": 69271552,
+      "traced_current": 511414
+    },
+    {
+      "observations": 2566,
+      "rss_peak": 69320704,
+      "traced_current": 500908
+    },
+    {
+      "observations": 3589,
+      "rss_peak": 69320704,
+      "traced_current": 500972
+    }
+  ],
+  "implementation": "two sequential verification passes; one row plus native engine state, no whole-run list",
+  "disk_bytes": 9364125,
+  "segments": [
+    {
+      "bytes": 2352971,
+      "chain": "8199e59a6c953585a667a74d09f56e371b647ba4d21105cb78180e91ce2fe78c",
+      "encoded": 2225609,
+      "expanded": 8382453,
+      "expanded_physical": 8382881,
+      "logical": 776,
+      "name": "segment-0000.jsonl",
+      "observations": 776,
+      "physical": 778,
+      "sha256": "6c299144dcd0afa5c80b060540c998fb0359c155b85020e38c652abb8f687083"
+    },
+    {
+      "bytes": 2338044,
+      "chain": "2980f862a132eb40e0fa22fcba9d033703b011ed9a2875b4de55eeefa447e6b8",
+      "encoded": 2170365,
+      "expanded": 7547855,
+      "expanded_physical": 7548288,
+      "logical": 1023,
+      "name": "segment-0001.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "adb8bcb571e1c26e69ecc95a2bb3b2cc48901c3b5c815e5f7e0bb5837dafa2e6"
+    },
+    {
+      "bytes": 2346533,
+      "chain": "60f442679d6ad818737f972ea78fda210f2981d70f41c8ac823b2f56f194c5d2",
+      "encoded": 2220582,
+      "expanded": 8388282,
+      "expanded_physical": 8388714,
+      "logical": 767,
+      "name": "segment-0002.jsonl",
+      "observations": 767,
+      "physical": 769,
+      "sha256": "e52b1c9a081f49c2d2ec0f1890f02b24c94b510cab48f566e4020fa197bd8f35"
+    },
+    {
+      "bytes": 2324756,
+      "chain": "43990526e254904512645f63bb19c57bf35275c4ed0d9180f310c5e057fc1960",
+      "encoded": 2157073,
+      "expanded": 7482158,
+      "expanded_physical": 7482592,
+      "logical": 1023,
+      "name": "segment-0003.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "903eedab419823011a618a1250a8d0e7499297108389f0d079403d2a4107eb48"
+    }
+  ]
+}

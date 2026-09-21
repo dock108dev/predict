@@ -1,0 +1,32 @@
+{
+  "classification": "quiet synthetic local fixture, not future live throughput",
+  "stop_requested_seconds": 90.01948158400046,
+  "duration": 90.06154816700291,
+  "reason": "manual_stop",
+  "resources": {
+    "peak_rss_bytes": 83099648,
+    "peak_queue_records": 9,
+    "peak_queue_bytes": 199650,
+    "ingress_bytes": 285519,
+    "journal_bytes": 331220,
+    "elapsed_seconds": 90.06173737499921
+  },
+  "accounting": {
+    "received": 276,
+    "accepted": 276,
+    "write_attempted": 276,
+    "durably_acknowledged": 276,
+    "rejected": 0,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 276,
+    "journal_write_attempted": 277,
+    "journal_durably_acknowledged": 277,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 331220,
+    "confirmed_chain": "f62be5ac768ad8ffe15da5ba3726671a011a7fd62c28cf6fcf1221a5785e3843",
+    "total_upstream": null,
+    "lost": null
+  },
+  "generation": 2
+}

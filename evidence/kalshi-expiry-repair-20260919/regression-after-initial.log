@@ -1,0 +1,10 @@
+test_boundaries_recovery_unchanged_and_one_emission_per_episode (tests.test_kalshi_expiry.ExpiryTests.test_boundaries_recovery_unchanged_and_one_emission_per_episode) ... ok
+test_busy_sibling_cannot_defer_expiry (tests.test_kalshi_expiry.ExpiryTests.test_busy_sibling_cannot_defer_expiry) ... ok
+test_cancellation_cleans_pending_receive (tests.test_kalshi_expiry.ExpiryTests.test_cancellation_cleans_pending_receive) ... ok
+test_control_traffic_does_not_refresh_receipts (tests.test_kalshi_expiry.ExpiryTests.test_control_traffic_does_not_refresh_receipts) ... ok
+test_simultaneous_expiry_and_receive_are_both_processed_once (tests.test_kalshi_expiry.ExpiryTests.test_simultaneous_expiry_and_receive_are_both_processed_once) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.072s
+
+OK

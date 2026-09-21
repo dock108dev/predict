@@ -1,0 +1,7 @@
+{
+  "markets": 64,
+  "max_market_frames": 62,
+  "max_market_bytes": 18360,
+  "max_single_body": 2310,
+  "basis": "retained 240-second one-market totals; not burst, future market, or sustained-capacity guarantee"
+}

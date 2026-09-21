@@ -1,0 +1,8 @@
+{
+  "evidence/e6/prediction-only/real-20260915-discovery6/run-spec.json": "695e91c1106752c924c51d40f8839bf45fdccbeb4d06bfb49584ea78999de0b7",
+  "evidence/e6/prediction-only/real-20260915-discovery6/capture-summary.json": "63cc69f8b3bf43f44dd43abce5feed45021e7ea268093dbdf92bdc7c28352038",
+  "evidence/e6/prediction-only/real-20260915-discovery6/saved-observations.json": "7811cc0644853935d874d294ae6c4c6329f7d3f0952b0177b1a41d09114b10d0",
+  "evidence/e6/prediction-only/real-20260915-discovery6/session/75ec21c1-5962-48e1-96e2-5f6b5ef07150.jsonl": "e6b18d23583333e0eeaf8e3180fad56f412def9efeccaa8b2aab1e1393cd3669",
+  "evidence/e6/prediction-only/coverage-audit.json": "dcb0307c338b97d782df08dc0c56bae8e12e159dee03fe688da2a01d20fa0131",
+  "evidence/e6/prediction-only/independent-replay.json": "2bc10cdcb38e1efb4af621bd89400d9acd8f97a47bf39345de0fbbb72dadcf76"
+}

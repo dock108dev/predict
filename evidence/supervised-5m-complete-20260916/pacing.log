@@ -1,0 +1,135 @@
+test_timing_retry_stop_deadline (tests.test_supervised_pacing.Pacing.test_timing_retry_stop_deadline) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 9.886s
+
+OK
+{
+  "passed": true,
+  "tests": 1,
+  "failures": 0,
+  "errors": 0,
+  "rss_peak": 66961408,
+  "request_timestamps": [
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/ok",
+      "at": 54310.6193135,
+      "status": 200
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/ok",
+      "at": 54311.32381575,
+      "status": 200
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/retry",
+      "at": 54312.028742666,
+      "status": 429
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/retry",
+      "at": 54313.734854375,
+      "status": 200
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/cancel-retry",
+      "at": 54314.493678958,
+      "status": 429
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/deadline-retry",
+      "at": 54315.249920208,
+      "status": 429
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/ok",
+      "at": 54315.957217416,
+      "status": 200
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/ok",
+      "at": 54316.461500625,
+      "status": 200
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/retry",
+      "at": 54316.966972625,
+      "status": 429
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/retry",
+      "at": 54318.473243416,
+      "status": 200
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/cancel-retry",
+      "at": 54319.029697458,
+      "status": 429
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/deadline-retry",
+      "at": 54319.587817791,
+      "status": 429
+    }
+  ],
+  "retry_events": [
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/retry",
+      "status": 429,
+      "entered_at": 54312.0297115
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/cancel-retry",
+      "status": 429,
+      "entered_at": 54314.494202958,
+      "stop_at": 54314.494643625,
+      "cancelled_at": 54314.494966916
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/deadline-retry",
+      "status": 429,
+      "entered_at": 54315.250577625,
+      "deadline_at": 54315.448353291
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/retry",
+      "status": 429,
+      "entered_at": 54316.96856525
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/cancel-retry",
+      "status": 429,
+      "entered_at": 54319.030510458,
+      "stop_at": 54319.030950208,
+      "cancelled_at": 54319.031192541
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/deadline-retry",
+      "status": 429,
+      "entered_at": 54319.589255583,
+      "deadline_at": 54319.784322791
+    }
+  ],
+  "source_unchanged": true,
+  "connected_addresses": {
+    "127.0.0.1": 2
+  }
+}

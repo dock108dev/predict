@@ -1,0 +1,23 @@
+test_boundaries_recovery_unchanged_and_one_emission_per_episode (tests.test_kalshi_expiry.ExpiryTests.test_boundaries_recovery_unchanged_and_one_emission_per_episode) ... ok
+test_busy_sibling_cannot_defer_expiry (tests.test_kalshi_expiry.ExpiryTests.test_busy_sibling_cannot_defer_expiry) ... ok
+test_cancellation_cleans_pending_receive (tests.test_kalshi_expiry.ExpiryTests.test_cancellation_cleans_pending_receive) ... ok
+test_control_traffic_does_not_refresh_receipts (tests.test_kalshi_expiry.ExpiryTests.test_control_traffic_does_not_refresh_receipts) ... ok
+test_real_timer_expires_while_sibling_keeps_receiving (tests.test_kalshi_expiry.ExpiryTests.test_real_timer_expires_while_sibling_keeps_receiving) ... ok
+test_simultaneous_expiry_and_receive_are_both_processed_once (tests.test_kalshi_expiry.ExpiryTests.test_simultaneous_expiry_and_receive_are_both_processed_once) ... ok
+test_transport_timeout_then_unchanged_snapshot_recovers (tests.test_kalshi_expiry.ExpiryTests.test_transport_timeout_then_unchanged_snapshot_recovers) ... ok
+test_accounting_temporaries_released_without_cyclic_gc (tests.test_supervised.Bounds.test_accounting_temporaries_released_without_cyclic_gc) ... ok
+test_exact_identity_duplicate_across_chunks (tests.test_supervised.Bounds.test_exact_identity_duplicate_across_chunks) ... ok
+test_new_history_and_rate_boundaries (tests.test_supervised.Bounds.test_new_history_and_rate_boundaries) ... ok
+test_policy_opt_in_and_legacy_defaults (tests.test_supervised.Bounds.test_policy_opt_in_and_legacy_defaults) ... ok
+test_samples_and_disk_reserve (tests.test_supervised.Bounds.test_samples_and_disk_reserve) ... ok
+test_segment_rotation_preserves_session_budget (tests.test_supervised.Bounds.test_segment_rotation_preserves_session_budget) ... ok
+test_cumulative_write_limit_prevents_report_write (tests.test_finalization_resources.Receipt.test_cumulative_write_limit_prevents_report_write) ... ok
+test_deadline_and_post_write_memory_failure_retained (tests.test_finalization_resources.Receipt.test_deadline_and_post_write_memory_failure_retained) ... ok
+test_report_write_failure_does_not_publish_success_receipt (tests.test_finalization_resources.Receipt.test_report_write_failure_does_not_publish_success_receipt) ... ok
+test_saved_sized_report_independent_writes_and_post_write_sample (tests.test_finalization_resources.Receipt.test_saved_sized_report_independent_writes_and_post_write_sample) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.547s
+
+OK
+{"suite": "regressions", "tests": 17, "passed": true, "wall_seconds": 0.5573025000048801, "cpu_seconds": 0.707201, "peak_rss_bytes": 86999040, "external_and_keyring_guard": true, "memory_pass": true}

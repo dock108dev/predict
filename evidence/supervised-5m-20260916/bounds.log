@@ -1,0 +1,19 @@
+test_exact_identity_duplicate_across_chunks (tests.test_supervised.Bounds.test_exact_identity_duplicate_across_chunks) ... ok
+test_new_history_and_rate_boundaries (tests.test_supervised.Bounds.test_new_history_and_rate_boundaries) ... ok
+test_policy_opt_in_and_legacy_defaults (tests.test_supervised.Bounds.test_policy_opt_in_and_legacy_defaults) ... ok
+test_samples_and_disk_reserve (tests.test_supervised.Bounds.test_samples_and_disk_reserve) ... ok
+test_segment_rotation_preserves_session_budget (tests.test_supervised.Bounds.test_segment_rotation_preserves_session_budget) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.449s
+
+OK
+{
+  "passed": true,
+  "tests": 5,
+  "failures": 0,
+  "errors": 0,
+  "rss_peak": 68894720,
+  "source_unchanged": true,
+  "connected_addresses": {}
+}

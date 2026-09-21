@@ -1,0 +1,1570 @@
+{
+  "classification": "Streamed distributions and arithmetic sensitivity; no new traffic or capacity qualification",
+  "limits": {
+    "input_bytes": 134217728,
+    "records": 20000,
+    "rss_bytes": 268435456,
+    "cpu_seconds": 60,
+    "wall_seconds": 120,
+    "output_bytes": 8388608
+  },
+  "inputs": {
+    "evidence/d2-coverage/validation-20260916T170132Z-2cbe6460/3b9cf13c-0696-4fcb-b643-bdd545d9bbd3/3b9cf13c-0696-4fcb-b643-bdd545d9bbd3.jsonl": "e293f8d2433bfc3c5d8313358a06636ff881cd864a75f5b8dc42066390fde0d4",
+    "evidence/d3-mock-integration/qualified/busy-refresh-stop/pilot/ce67b977-3fec-40b9-822c-fea9ba56b004/history/segment-0000.jsonl": "d5263e063b66d53ae0e8f7d9a5bce7b35d9c7448c16861a7ea7bdefe2a476518",
+    "evidence/d3-mock-integration/qualified/busy-refresh-stop/pilot/ce67b977-3fec-40b9-822c-fea9ba56b004/history/segment-0001.jsonl": "9dc2ea9fe3001a54ad6507aa763f6d3551b320f80f942ac6192de59f2b16fb8e",
+    "evidence/d3-mock-integration/qualified/busy-refresh-stop/pilot/ce67b977-3fec-40b9-822c-fea9ba56b004/history/segment-0002.jsonl": "2447755e746217a57eceeb49ba867a36770bdd68f61dc1d6d9665f9926005e70",
+    "evidence/d3-mock-integration/qualified/resource-stop/pilot/a83a6d92-31ce-48bc-b9a5-3b99ba1dfc55/history/segment-0000.jsonl": "efe72dc95e9d80cd91a109c640e491f9457c88693ac87fcb8df49a2e16ed42f4",
+    "evidence/d3-mock-integration/qualified/resource-stop/pilot/a83a6d92-31ce-48bc-b9a5-3b99ba1dfc55/history/segment-0001.jsonl": "353c7e93ecbfae25cec0691cfaada306aaf635b2ed04004baa84878880a62de0",
+    "evidence/d3-mock-integration/qualified/resource-stop/pilot/a83a6d92-31ce-48bc-b9a5-3b99ba1dfc55/history/segment-0002.jsonl": "4b7b605bfe30782e1f7374bec8b3bd239063c16e57bba62e5d2440b7d7f36492",
+    "evidence/d3-mock-integration/qualified/resource-stop/pilot/a83a6d92-31ce-48bc-b9a5-3b99ba1dfc55/history/segment-0003.jsonl": "bde7608870333c78c9ac6e2c5ae9abb93d0937f26054bb45a42b7490b74adc46",
+    "evidence/d3-mock-integration/qualified/stop-at-rotation/pilot/5b85c278-85d8-4cdc-b948-0e0cfa5d62d0/history/segment-0000.jsonl": "c3ed77a8e05924787fff0483f60321f03b4d2800e5a6b54aed727c0eff843d7f",
+    "evidence/d3-mock-integration/qualified/stop-at-rotation/pilot/5b85c278-85d8-4cdc-b948-0e0cfa5d62d0/history/segment-0001.jsonl": "6a74f3bbc775e98afcd106711cb765cdf48487a907427366bd22c28d1040fa3d"
+  },
+  "source_hashes": {
+    "app/prophetx_verify.py": "190707b3939707ed270e25557c9c5444884229da0f47717c694c866037938bd1",
+    "app/moneyline.py": "8c6fa81e729a116300a3aec82be3a14ba0df8e5305164e79a91085c03942bfe2",
+    "app/prophetx_example.py": "f2a519a06e57dd15831274c419ea198d5abdea8db80d182d96b6fccd108c2dd9",
+    "app/normalization_example.py": "001cd56a6eec0fc2baca821d1656e799d615754c1180f30761bd526679c03002",
+    "app/moneyline_captures.py": "4e3a90a8d9b3e981818b97fbb5eb32f3fb2f59a7d838daa0d83a82cd233a7f2a",
+    "app/moneyline_example.py": "f6290ad3a08aa6114f531de2803767244b12329be174c2da609c11ebf7e7e526",
+    "app/fee_example.py": "4f42659d9482dec0d434d7c77ae0c21bfe52c1cced1a0c128eb03d58b6b5c4bd",
+    "app/diagnostics.py": "ad526705fb79f2263c03081888ef1fb9f6effdeab197796164c373161dd9fbee",
+    "app/settlement.py": "ee4045476e987e337d60ac466f2537a6aac3fec3b8a84e6c35ab3338075c3ebf",
+    "app/polymarket_us_verify.py": "c6ee103b094fb47a5a325a1f7e15e2f064d64251f76c33fc862b07cfecb787fb",
+    "app/arbitrage.py": "1168fabcbb19dcedeb243cd5e121c227a42f6ab3e13592eba24d26fb96cf5a83",
+    "app/storage_example.py": "41e549d22365b9746b60a72203fa8711f7880ce88933a511edbec13a2d3ae475",
+    "app/__init__.py": "b093ba8083332f3ea35c4e1e5d8320649cb8ab47ce76154c762d12d52700965d",
+    "app/depth_example.py": "5822eab1859b07a356d861f2347221d2596636cb66a72a4190cc6b83a603e353",
+    "app/matching.py": "361035b4bbe05a981b4668d6821c0eadd0bfcbe96598caaa674f77261786faa7",
+    "app/example.py": "bebee75d2ce49c49cb5a706bac0649a6c1be0faaa710d6e518b485c1e91bf628",
+    "app/arbitrage_example.py": "6b753ecbc512c22212c366c304782b423fc624fdcdd03717d05058cb406cd069",
+    "app/polymarket_us_example.py": "725f6d357d88a9db13345c29a395c17b73ac9b427f506c615ae3b8f25629ebe2",
+    "app/depth.py": "ad615a769964722c5cae84c939664ae22119e496d5bb0357a5c8c8b3d74e9b43",
+    "app/kalshi_example.py": "f5c825be333e06b82536ecf40e201afbc13258b7086fc3c19526496b8fc21e82",
+    "app/novig_example.py": "9e295c0624a09d2e7734475a702430e335ea4b76b8c0aabf861ac2bf5db3665d",
+    "app/polymarket_us_qualify.py": "9147c5a801ddbacc87d5ec9969ed817ad6511ac2ae695f669171681e123a18d2",
+    "app/e1_example.py": "67fa9466288189d819c85f2b0f881873abc93caaafcc283cd5c9ba9d10eaff3f",
+    "app/matching_example.py": "cb1df3199dd4370ec12041600332f00ec6e85c165ef8823198f908ee2a4aaf57",
+    "app/edge_contracts.py": "a5199f5356f3f1d7a4bd5c80a457d5dd29cad5edd6fc2a96c574b876238080c2",
+    "app/novig_verify.py": "d26e574a454106743c2ad8d7616f4954dc1d3c43336bb483c62878077b732c1e",
+    "app/capture_benchmark.py": "992cb3a5bfbe3cee1d9d432c78c079407a20ecc1a2186e3623573616c43aa812",
+    "app/kalshi_verify.py": "22229c6f0d56129163fd250ce3cca56f2c56f73d24e59334d614bee631b88412",
+    "app/collection/synthetic.py": "e61d897b0d321190eae6413266c341dfd043622c88decadf276252867622ca51",
+    "app/collection/transport_session.py": "ae897221803803f6da74ac4110ed46c559db979af53e990319d972f2c5213391",
+    "app/collection/prediction_producer.py": "52e5df0efdd6f03e69388a0d7feff20ac08236262a30b13ecac1ccac6cea419a",
+    "app/collection/server.py": "31c151ef82429b82bd869294083de39fbfbf61ea1b88c0d63787f0db1d263f3d",
+    "app/collection/real_capture.py": "5768db44d6ba43c80a101ba0621983b04e3ad96eb536b0e78f24e2cda10d9bae",
+    "app/collection/recovery.py": "153cac1f20d3aa74251ee95c68496f0653e43b5ef3897ab55a87d129c550df7f",
+    "app/collection/multi_game.py": "b7669c8e10b088b52d4c4268f650a7b7bc2372816f73d9d5a52c9bac37e4cd49",
+    "app/collection/venue_access.py": "7efb1096d1d6509e7c8456070a774523aaf32503e29b76add2a31af8134cc2c6",
+    "app/collection/reopen.py": "1d7392814a464d17dce8b49e45d1dd3f99bef6fdbeba2a08dc17f5b5dffc51ca",
+    "app/collection/session.py": "eee7cb8d7ae8e0888e73849e7b3e704e6a0d43c480e8f4728bbfbaf923ec40ee",
+    "app/collection/__init__.py": "df672acff1f0050ccd44185ecae562b3b19b7ad5f4ea752d071a8c5456fd0f5f",
+    "app/collection/coverage.py": "6ac45fcd39390b7e3c5db75e4a595a34156e4984110e42c4f268deb2a947de5e",
+    "app/collection/context.py": "d26f8b29828976c2639f2dc51347197ea48ec2d9dbc9ef9014ebc37500dd5f8b",
+    "app/collection/run_spec.py": "630d8dee25abfa480008709b05fa97bfda403ae3f4f61bc2f60e9bcea3fc3da0",
+    "app/collection/storage.py": "e6bdf8ca5651a04aa3e76ca4ab3c8eb9f6dd03f86fb0115c40c22027500cf77f",
+    "app/collection/native_replay.py": "c297622a3760b7c485a6c3424bca57a277aac7b14cc19fc57462ea77aec5d2d8",
+    "app/collection/environment.py": "0e8d48f3fe58f65dc5b6481fc42d337a1fe8a0fc26297c8caaf7b5b35ceb4144",
+    "app/collection/journal_encoding.py": "4de3b9c2fea2f65276508d2889dbf9f42ebea67e0c5f50380c8f60634c73b53c",
+    "app/collection/continuous.py": "993d66f5984fce43dde209a2f27d88cd6c33127da46103db68adccea3d595af0",
+    "app/collection/verify.py": "b5261516b57bd9cef2602659e5e4cde208b37598725513691fd208495eed9ebd",
+    "app/collection/odds_http.py": "225d9f051edc080e189b4dfc45e908a8c430b974cdff896dc949dede0c3fcfe0",
+    "app/collection/segmented.py": "2844098fa07f668d9553f0911f482141c4f2bd30ad2cbb806e8c1a39e67997c1",
+    "app/collection/mock_history.py": "effb6e962137944acb38f04828ab098901a42e0f4b4d208c72701cd7f805d3e6",
+    "app/collection/prediction_discovery.py": "e6b261baa5786933a2b11401e74eb474419c118e4ec0caa7b26e32b60f7d034e",
+    "app/opportunities/service.py": "289615b9f73483743c48f5048eb830ebaa237f13fa6d219733a16cde6a0380c4",
+    "app/opportunities/board.py": "5219b0c705f41631380738fce3e1a85e934349d3d028580a44e7aa6236f75ecb",
+    "app/opportunities/__init__.py": "432a94a3cd9c881f4fa6c1f878b7ea6144ada9e5039b165040caa20cd06fce78",
+    "app/opportunities/verify_storage.py": "a37f29beebf0ee4faf67a8ceb408872aa0e12536312133dcc2857a829b452b16",
+    "app/opportunities/storage.py": "79b6b1132c2e58b4c4b2988b97cc4162057ffadecb6ddddff84aeb096accdaaf",
+    "app/opportunities/fixtures.py": "ba3323ff28a4ac818c6d6d5aa6a0728fe8716bfa28255b955af13f1d0994d24e",
+    "app/fees/__init__.py": "937df09f44b4ae4c5229c5fd6b4ea8cf244670cf168c8eeba47c29371745ab22",
+    "app/fees/engine.py": "9cc57e002b34fce111e07f4304c2943e3680bbd7067f5374af06ef5bfe425287",
+    "app/normalization/registry.py": "beec05cad46694f9405743fc23b455e276790e4224ec5c3f4410c20fd3b033e1",
+    "app/normalization/observations.py": "f42df00e37d1f3d97a1192464a68be4ffc197271ebd0819b41e1bd90ae5d03eb",
+    "app/normalization/teams.py": "87ab508a790152e81e5a82fab3a4d3a61aae388c45be5209db44534ed88bbaeb",
+    "app/normalization/__init__.py": "b860bd162e11e696cda4f91ef62cd0b7999cdfabcc50f848da3d80a235596def",
+    "app/normalization/names.py": "ed5344c2c36d3dd30bc9782e33c016e077fad8ea276982406c02441b203d2f28",
+    "app/normalization/leagues.py": "b9550c7d0b2fb02f2a92af0c272c2bf036bae0e765362d8529c6674f65d70e06",
+    "app/models/__init__.py": "93cbb785559c254ea2ea1fe3166da849086405b3cdbeaf08401fd290455bdb4b",
+    "app/models/core.py": "c722c35fe273753726323e7c9fd2d40f1bd73c26458066f6ad13e7620115b024",
+    "app/storage/store.py": "76fd353c9b501eb9cc0adde8686bbc2bf544aff9e0b6649143c73cf2b0e1a9e1",
+    "app/storage/__init__.py": "f2f6102c12dbb7d012b61d11a5926e5a8e60241dc4b6e12d1acbce9013068346",
+    "app/storage/replay.py": "1bd416923d7f78b57cc54d220e82b2e6aa1d270e8fded053bc38bc50e1cc6ce5",
+    "app/storage/workflow.py": "09f1a8bd26018693de1dda72bac700fce831c44fe741a80f7e9b20e91bfe55d3",
+    "app/storage/__main__.py": "4535c83abe5b9ec8e85e6f6cbf5cab69312515fbcca0b63fdbbc9a7a7206d389",
+    "app/dashboard/server.py": "df2fa97149d167c5f4fc9904cb9f7e394ea771ba406895da94353c56334b9100",
+    "app/dashboard/controller.py": "24a74340ca76f8d86fc8b15cdf9350b6d2848d963f855be8b0851b756c3db80e",
+    "app/dashboard/e6_recovery.py": "df5bea56402a529c22e9bfcf8dca846cd14a77653ef8a65a4b4962f0a11a7b07",
+    "app/dashboard/multi_game.py": "b74c7e3a8b42497ec0b8b308e3b9a718fa5424aae971e46a45fb07ff289410a2",
+    "app/dashboard/diagnostics.py": "a5fe3aee3682a6faf3f525d1892c333216078c5a70e1108f793e713c2e6b12b4",
+    "app/dashboard/multi_game_server.py": "a93ea6b71ec8103de9a43b3609e3896b8db7659b8aaabce0752baa3afca6fc62",
+    "app/dashboard/__init__.py": "ac4e4237e0161499c7c8c2814708c2cde6cb1ef63d4f237bf7cb2eb2b9839eca",
+    "app/dashboard/local_security.py": "45ebcd3f38805070ce840d3ecc6686bacaadd567fa33c1a2ae4fab4128e971bd",
+    "app/dashboard/e6_live.py": "d7bcab979444bbc110bd168a670a7be4d067c785caf7b9d67330340c6baa8e25",
+    "app/dashboard/coverage_owner.py": "a728596646ca42194fd0755ca6a23db55da74136d4a77585f7b1c5ef8ecf4965",
+    "app/dashboard/pipeline.py": "6dd9e8031f53e201f31a8a3cd72050435dd5ece666f006035f1e36b6da0adb6e",
+    "app/dashboard/e6_real.py": "85cb49e94b5be316276306db1dfe4c1623091035539bb720ca4554dba8071362",
+    "app/dashboard/refresh.py": "f33a9543655588a9dc4d37624bb207dd676aa9a12df1d72a145059a46b6e1157",
+    "app/dashboard/live.py": "d0362bd6aa82a7d9f16177647e1172bf9d4cdb980cd4affeb5dbc0c80b795728",
+    "app/dashboard/session_status.py": "07830f011318eddd4d301bb04491935530e42dbc0229bf3e71b9d1605b46e67c",
+    "app/dashboard/e5_preview.py": "7b83fba55e987c2639c33572aa58163b22bed621d612cf568e78a26c6654bbf2",
+    "app/dashboard/opportunity_board.py": "d88206b66a25b9bac4a1833a044340ecaedada1681bd2b1d7094ec999744a020",
+    "app/dashboard/repository.py": "c8abb711658270eeef4a0fc966e2b205ba0562579a7a86829b91153a0f14e9e7",
+    "app/dashboard/bounds.py": "b04783bc60f8972df340192359a3de99fd1625f4c18ba7ae839f05ae3acf6d45",
+    "app/dashboard/__main__.py": "9fef34e6d4d4d6399a4eefa718fc2a4477d582061fe5c0f7a45e128e84dc5208",
+    "app/dashboard/views.py": "174307617d6e0d5e8854c5ad34e578bbed4460b9c31e24a81a8a815288e93a4e",
+    "app/adapters/synthetic.py": "7027ad9e080ced897b3a19cacf46081959fcf77914f9c983c88eca6e22820985",
+    "app/adapters/novig_stream.py": "cb12ab224d6712e1db237b68453ca120c78f847e16aeb81b4aaf9068ccd83e7f",
+    "app/adapters/kalshi_stream.py": "83bd9f97c50a69581c439eaa8b1fc94160098bb83b4257a03cd3f8eb4a6d2c1a",
+    "app/adapters/prophetx.py": "2859b2d16e7bf690651bf7809579e317ede6689d56a70b4f267f08e4fbc5fe6f",
+    "app/adapters/__init__.py": "4a234bcc33ed132a18fb7c8e5527400ce69eec307137dc20b9be8bf046d84a10",
+    "app/adapters/kalshi.py": "f75948817d64765cc08d63a1739c80011738690a6c8c2c70db2fddf9b2374285",
+    "app/adapters/polymarket_us.py": "c43b7b23a4c3adf53bed9648d482ffe38981ee5aa9866308bd0c8ef90a3bb962",
+    "app/adapters/prophetx_stream.py": "2d15f78541ca90ecae43a70257a6526ed4633143dccf7f5d77fcdd6113195ec8",
+    "app/adapters/novig.py": "e86c2c5204da06dddb147106a5267f9215469e25e0623dc0caa2b80a2bfd6494",
+    "app/adapters/polymarket_us_stream.py": "b907cd4b2cc80d98971319cea04ccdd31687a3db2fdf10f47f13985f3debd19a",
+    "app/adapters/base.py": "d42f8fc3792367882c7d5cedd9520a343cb6a4b6eb4797c9e0b61774aa5c5be2",
+    "app/fixtures/__init__.py": "c579f7106655b9c5d20106d45734dfd674470baad3ff516a62c6756823558ef6",
+    "app/pricing/baseline.py": "ea4b82cb1f886c3ba510ec10015537fea7f87340089f5b6003a0151441653d8a",
+    "app/pricing/__init__.py": "3eff601231cc28f0987b82f6642ed54e1a242f35f06713f8ee59fa77bf987fa8",
+    "app/pricing/verify_storage.py": "d4e5bad10fb8f7f4430f3583f86221f5e77568fd13b48f7d4e2e84cda6bde36f",
+    "app/pricing/storage.py": "727cb516b4f14d2e82108149e2093c85c4a2b54790f7cffc9b4d59228ff8498b",
+    "app/pricing/fixtures.py": "fd17a340f9c963d3353e67f763ecefb838a8e34c53d8d66030bc51e3d7751515",
+    "app/reference/enrichment.py": "26fd08839e37a3a7b178b33fb7f305abe91949af3e838059ab68473cc6ab8558",
+    "app/reference/page_estimate.py": "ba107bfdf8edb27fe2808fc796cca8d804e631d7fdea40b3175efa25ec9a48e5",
+    "app/reference/adapter.py": "69a63b8edc35116bd21667d82b1e97951bf6a1fd087a0a9145291d5efff18582",
+    "app/reference/records.py": "806ed93b5d6890e9db1fce16a34a68411dfd7a404a74facb6ca2fe79a7d605a9",
+    "app/reference/__init__.py": "d89fd10fbc921c0794052d27d5982104b81f55bd97a86baff8ec8c25a76e61b5",
+    "app/reference/multi_page.py": "74e8af9e5d4492e51c8e2bfca35ab16dd6f1e3e46251fbef66044b61c1603d73",
+    "app/reference/verify_storage.py": "3801248400d18d458cdac4828d7f903509dd06ea9a670b4528c0e20c41b40b0e",
+    "app/reference/public_page.py": "f17c362709813459bbe17830b6e4fc6f19e6a36be57504dd2628641afcf66a19",
+    "app/reference/research_loop.py": "dbf2a3735087f70b72b1415c81e72d69eb7a880cecb16608809db686efa4e725",
+    "app/reference/storage.py": "a645b59c7b6f4414c8252dfba565678bcae7acc54edbcc5b7255c88d1f571520",
+    "app/reference/fixtures.py": "0d85cd3f50e74d5000daa4aaf4687143cd6287f0c51619b8e1fa1d89623d3f61"
+  },
+  "datasets": {
+    "real": {
+      "distributions": {
+        "ALL": {
+          "encoded": {
+            "n": 1914,
+            "total": 4635301,
+            "mean": 2421.787356321839,
+            "p50": 858,
+            "p95": 5124,
+            "p99": 6848,
+            "maximum": 271249
+          },
+          "expanded": {
+            "n": 1914,
+            "total": 16770735,
+            "mean": 8762.139498432602,
+            "p50": 1092,
+            "p95": 25753,
+            "p99": 57325,
+            "maximum": 457631
+          },
+          "python_object": {
+            "n": 1914,
+            "total": 53115255,
+            "mean": 27750.916927899685,
+            "p50": 3674,
+            "p95": 90141,
+            "p99": 98546,
+            "maximum": 758515
+          }
+        },
+        "session_started": {
+          "encoded": {
+            "n": 1,
+            "total": 1259,
+            "mean": 1259.0,
+            "p50": 1259,
+            "p95": 1259,
+            "p99": 1259,
+            "maximum": 1259
+          },
+          "expanded": {
+            "n": 1,
+            "total": 1862,
+            "mean": 1862.0,
+            "p50": 1862,
+            "p95": 1862,
+            "p99": 1862,
+            "maximum": 1862
+          },
+          "python_object": {
+            "n": 1,
+            "total": 7378,
+            "mean": 7378.0,
+            "p50": 7378,
+            "p95": 7378,
+            "p99": 7378,
+            "maximum": 7378
+          }
+        },
+        "prediction_discovery_http": {
+          "encoded": {
+            "n": 74,
+            "total": 521542,
+            "mean": 7047.864864864865,
+            "p50": 3555,
+            "p95": 14912,
+            "p99": 271249,
+            "maximum": 271249
+          },
+          "expanded": {
+            "n": 74,
+            "total": 1139597,
+            "mean": 15399.95945945946,
+            "p50": 6592,
+            "p95": 69192,
+            "p99": 457631,
+            "maximum": 457631
+          },
+          "python_object": {
+            "n": 74,
+            "total": 1323233,
+            "mean": 17881.527027027027,
+            "p50": 8892,
+            "p95": 71978,
+            "p99": 460037,
+            "maximum": 460037
+          }
+        },
+        "verified_account_budget": {
+          "encoded": {
+            "n": 1,
+            "total": 779,
+            "mean": 779.0,
+            "p50": 779,
+            "p95": 779,
+            "p99": 779,
+            "maximum": 779
+          },
+          "expanded": {
+            "n": 1,
+            "total": 1594,
+            "mean": 1594.0,
+            "p50": 1594,
+            "p95": 1594,
+            "p99": 1594,
+            "maximum": 1594
+          },
+          "python_object": {
+            "n": 1,
+            "total": 7616,
+            "mean": 7616.0,
+            "p50": 7616,
+            "p95": 7616,
+            "p99": 7616,
+            "maximum": 7616
+          }
+        },
+        "coverage_inventory": {
+          "encoded": {
+            "n": 1,
+            "total": 27585,
+            "mean": 27585.0,
+            "p50": 27585,
+            "p95": 27585,
+            "p99": 27585,
+            "maximum": 27585
+          },
+          "expanded": {
+            "n": 1,
+            "total": 286951,
+            "mean": 286951.0,
+            "p50": 286951,
+            "p95": 286951,
+            "p99": 286951,
+            "maximum": 286951
+          },
+          "python_object": {
+            "n": 1,
+            "total": 758515,
+            "mean": 758515.0,
+            "p50": 758515,
+            "p95": 758515,
+            "p99": 758515,
+            "maximum": 758515
+          }
+        },
+        "market_selected": {
+          "encoded": {
+            "n": 96,
+            "total": 349604,
+            "mean": 3641.7083333333335,
+            "p50": 2147,
+            "p95": 6972,
+            "p99": 7032,
+            "maximum": 7032
+          },
+          "expanded": {
+            "n": 96,
+            "total": 2128673,
+            "mean": 22173.677083333332,
+            "p50": 5657,
+            "p95": 57574,
+            "p99": 57580,
+            "maximum": 57580
+          },
+          "python_object": {
+            "n": 96,
+            "total": 2279687,
+            "mean": 23746.739583333332,
+            "p50": 8750,
+            "p95": 55922,
+            "p99": 55928,
+            "maximum": 55928
+          }
+        },
+        "source_health": {
+          "encoded": {
+            "n": 580,
+            "total": 331508,
+            "mean": 571.5655172413793,
+            "p50": 598,
+            "p95": 606,
+            "p99": 606,
+            "maximum": 650
+          },
+          "expanded": {
+            "n": 580,
+            "total": 490683,
+            "mean": 846.005172413793,
+            "p50": 933,
+            "p95": 939,
+            "p99": 939,
+            "maximum": 991
+          },
+          "python_object": {
+            "n": 580,
+            "total": 2024518,
+            "mean": 3490.5482758620687,
+            "p50": 3432,
+            "p95": 3666,
+            "p99": 3666,
+            "maximum": 3748
+          }
+        },
+        "prediction_command": {
+          "encoded": {
+            "n": 5,
+            "total": 3534,
+            "mean": 706.8,
+            "p50": 703,
+            "p95": 847,
+            "p99": 847,
+            "maximum": 847
+          },
+          "expanded": {
+            "n": 5,
+            "total": 5359,
+            "mean": 1071.8,
+            "p50": 1092,
+            "p95": 1505,
+            "p99": 1505,
+            "maximum": 1505
+          },
+          "python_object": {
+            "n": 5,
+            "total": 11539,
+            "mean": 2307.8,
+            "p50": 2326,
+            "p95": 2717,
+            "p99": 2717,
+            "maximum": 2717
+          }
+        },
+        "prediction_frame": {
+          "encoded": {
+            "n": 581,
+            "total": 764742,
+            "mean": 1316.251290877797,
+            "p50": 854,
+            "p95": 2167,
+            "p99": 2471,
+            "maximum": 2483
+          },
+          "expanded": {
+            "n": 581,
+            "total": 1344716,
+            "mean": 2314.485370051635,
+            "p50": 816,
+            "p95": 5034,
+            "p99": 7358,
+            "maximum": 7374
+          },
+          "python_object": {
+            "n": 581,
+            "total": 2292908,
+            "mean": 3946.485370051635,
+            "p50": 2448,
+            "p95": 6666,
+            "p99": 8990,
+            "maximum": 9006
+          }
+        },
+        "prediction_book": {
+          "encoded": {
+            "n": 575,
+            "total": 2634748,
+            "mean": 4582.170434782609,
+            "p50": 4596,
+            "p95": 5292,
+            "p99": 5828,
+            "maximum": 6144
+          },
+          "expanded": {
+            "n": 575,
+            "total": 11371300,
+            "mean": 19776.17391304348,
+            "p50": 19567,
+            "p95": 27308,
+            "p99": 27816,
+            "maximum": 28297
+          },
+          "python_object": {
+            "n": 575,
+            "total": 44409861,
+            "mean": 77234.54086956521,
+            "p50": 89801,
+            "p95": 97366,
+            "p99": 99024,
+            "maximum": 99606
+          }
+        }
+      },
+      "physical": 1915,
+      "stored_bytes": 17083545,
+      "ingress_span_seconds": 50.70276498794556,
+      "requests": {
+        "polymarket_us / /v1/events": 7,
+        "kalshi / /trade-api/v2/account/limits": 1,
+        "kalshi / /trade-api/v2/account/endpoint_costs": 1,
+        "kalshi / /trade-api/v2/events": 1,
+        "kalshi / /trade-api/v2/markets": 32,
+        "polymarket_us / /v1/markets": 32
+      },
+      "wire_bytes": {
+        "polymarket_us / prediction_discovery_http": 329305,
+        "kalshi / prediction_discovery_http": 488009,
+        "polymarket_us / prediction_frame": 580457,
+        "kalshi / prediction_frame": 225138
+      },
+      "frames": {
+        "polymarket_us": 176,
+        "kalshi": 405
+      },
+      "frames_by_group": {
+        "polymarket_us-1": 176,
+        "kalshi-1": 89,
+        "kalshi-3": 251,
+        "kalshi-4": 5,
+        "kalshi-2": 60
+      },
+      "peak_calendar_second_ingress": 292,
+      "peak_calendar_second_frames": 96,
+      "peak_rolling_second_frames": 97,
+      "active_frame_span_seconds": 23.17973017692566
+    },
+    "busy-refresh-stop": {
+      "distributions": {
+        "ALL": {
+          "encoded": {
+            "n": 2301,
+            "total": 2258966,
+            "mean": 981.7322903085615,
+            "p50": 718,
+            "p95": 1851,
+            "p99": 1851,
+            "maximum": 2699
+          },
+          "expanded": {
+            "n": 2301,
+            "total": 3805352,
+            "mean": 1653.7818339852238,
+            "p50": 692,
+            "p95": 4143,
+            "p99": 4143,
+            "maximum": 8403
+          },
+          "python_object": {
+            "n": 2301,
+            "total": 14649295,
+            "mean": 6366.4906562364185,
+            "p50": 2434,
+            "p95": 15928,
+            "p99": 15928,
+            "maximum": 32958
+          }
+        },
+        "session_started": {
+          "encoded": {
+            "n": 1,
+            "total": 1251,
+            "mean": 1251.0,
+            "p50": 1251,
+            "p95": 1251,
+            "p99": 1251,
+            "maximum": 1251
+          },
+          "expanded": {
+            "n": 1,
+            "total": 1865,
+            "mean": 1865.0,
+            "p50": 1865,
+            "p95": 1865,
+            "p99": 1865,
+            "maximum": 1865
+          },
+          "python_object": {
+            "n": 1,
+            "total": 7381,
+            "mean": 7381.0,
+            "p50": 7381,
+            "p95": 7381,
+            "p99": 7381,
+            "maximum": 7381
+          }
+        },
+        "prediction_discovery_http": {
+          "encoded": {
+            "n": 10,
+            "total": 10102,
+            "mean": 1010.2,
+            "p50": 967,
+            "p95": 1423,
+            "p99": 1423,
+            "maximum": 1423
+          },
+          "expanded": {
+            "n": 10,
+            "total": 11226,
+            "mean": 1122.6,
+            "p50": 1011,
+            "p95": 1725,
+            "p99": 1725,
+            "maximum": 1725
+          },
+          "python_object": {
+            "n": 10,
+            "total": 35370,
+            "mean": 3537.0,
+            "p50": 3417,
+            "p95": 4512,
+            "p99": 4512,
+            "maximum": 4512
+          }
+        },
+        "verified_account_budget": {
+          "encoded": {
+            "n": 1,
+            "total": 438,
+            "mean": 438.0,
+            "p50": 438,
+            "p95": 438,
+            "p99": 438,
+            "maximum": 438
+          },
+          "expanded": {
+            "n": 1,
+            "total": 380,
+            "mean": 380.0,
+            "p50": 380,
+            "p95": 380,
+            "p99": 380,
+            "maximum": 380
+          },
+          "python_object": {
+            "n": 1,
+            "total": 2390,
+            "mean": 2390.0,
+            "p50": 2390,
+            "p95": 2390,
+            "p99": 2390,
+            "maximum": 2390
+          }
+        },
+        "coverage_inventory": {
+          "encoded": {
+            "n": 2,
+            "total": 5382,
+            "mean": 2691.0,
+            "p50": 2683,
+            "p95": 2699,
+            "p99": 2699,
+            "maximum": 2699
+          },
+          "expanded": {
+            "n": 2,
+            "total": 16799,
+            "mean": 8399.5,
+            "p50": 8396,
+            "p95": 8403,
+            "p99": 8403,
+            "maximum": 8403
+          },
+          "python_object": {
+            "n": 2,
+            "total": 65906,
+            "mean": 32953.0,
+            "p50": 32948,
+            "p95": 32958,
+            "p99": 32958,
+            "maximum": 32958
+          }
+        },
+        "market_selected": {
+          "encoded": {
+            "n": 2,
+            "total": 1685,
+            "mean": 842.5,
+            "p50": 714,
+            "p95": 971,
+            "p99": 971,
+            "maximum": 971
+          },
+          "expanded": {
+            "n": 2,
+            "total": 2511,
+            "mean": 1255.5,
+            "p50": 933,
+            "p95": 1578,
+            "p99": 1578,
+            "maximum": 1578
+          },
+          "python_object": {
+            "n": 2,
+            "total": 9271,
+            "mean": 4635.5,
+            "p50": 4355,
+            "p95": 4916,
+            "p99": 4916,
+            "maximum": 4916
+          }
+        },
+        "coverage_applied": {
+          "encoded": {
+            "n": 4,
+            "total": 1652,
+            "mean": 413.0,
+            "p50": 414,
+            "p95": 414,
+            "p99": 414,
+            "maximum": 414
+          },
+          "expanded": {
+            "n": 4,
+            "total": 1416,
+            "mean": 354.0,
+            "p50": 352,
+            "p95": 366,
+            "p99": 366,
+            "maximum": 366
+          },
+          "python_object": {
+            "n": 4,
+            "total": 8280,
+            "mean": 2070.0,
+            "p50": 2068,
+            "p95": 2082,
+            "p99": 2082,
+            "maximum": 2082
+          }
+        },
+        "source_health": {
+          "encoded": {
+            "n": 760,
+            "total": 304168,
+            "mean": 400.22105263157897,
+            "p50": 402,
+            "p95": 402,
+            "p99": 402,
+            "maximum": 438
+          },
+          "expanded": {
+            "n": 760,
+            "total": 275965,
+            "mean": 363.1118421052632,
+            "p50": 364,
+            "p95": 370,
+            "p99": 370,
+            "maximum": 422
+          },
+          "python_object": {
+            "n": 760,
+            "total": 1500411,
+            "mean": 1974.225,
+            "p50": 1975,
+            "p95": 1981,
+            "p99": 1981,
+            "maximum": 2076
+          }
+        },
+        "prediction_command": {
+          "encoded": {
+            "n": 2,
+            "total": 1048,
+            "mean": 524.0,
+            "p50": 490,
+            "p95": 558,
+            "p99": 558,
+            "maximum": 558
+          },
+          "expanded": {
+            "n": 2,
+            "total": 963,
+            "mean": 481.5,
+            "p50": 447,
+            "p95": 516,
+            "p99": 516,
+            "maximum": 516
+          },
+          "python_object": {
+            "n": 2,
+            "total": 3509,
+            "mean": 1754.5,
+            "p50": 1719,
+            "p95": 1790,
+            "p99": 1790,
+            "maximum": 1790
+          }
+        },
+        "prediction_frame": {
+          "encoded": {
+            "n": 761,
+            "total": 579010,
+            "mean": 760.8541392904074,
+            "p50": 718,
+            "p95": 814,
+            "p99": 814,
+            "maximum": 834
+          },
+          "expanded": {
+            "n": 761,
+            "total": 567436,
+            "mean": 745.6452036793693,
+            "p50": 692,
+            "p95": 802,
+            "p99": 802,
+            "maximum": 810
+          },
+          "python_object": {
+            "n": 761,
+            "total": 1809388,
+            "mean": 2377.6452036793694,
+            "p50": 2324,
+            "p95": 2434,
+            "p99": 2434,
+            "maximum": 2442
+          }
+        },
+        "prediction_book": {
+          "encoded": {
+            "n": 758,
+            "total": 1354230,
+            "mean": 1786.5831134564644,
+            "p50": 1815,
+            "p95": 1851,
+            "p99": 1855,
+            "maximum": 1855
+          },
+          "expanded": {
+            "n": 758,
+            "total": 2926791,
+            "mean": 3861.201846965699,
+            "p50": 4139,
+            "p95": 4143,
+            "p99": 4143,
+            "maximum": 4314
+          },
+          "python_object": {
+            "n": 758,
+            "total": 11207389,
+            "mean": 14785.473614775725,
+            "p50": 15924,
+            "p95": 15928,
+            "p99": 15928,
+            "maximum": 16095
+          }
+        }
+      },
+      "physical": 2308,
+      "stored_bytes": 2637476,
+      "ingress_span_seconds": 2.473996162414551,
+      "requests": {
+        "kalshi / /trade-api/v2/account/limits": 1,
+        "polymarket_us / /v1/events": 2,
+        "kalshi / /trade-api/v2/account/endpoint_costs": 1,
+        "polymarket_us / /v1/markets": 2,
+        "kalshi / /trade-api/v2/events": 2,
+        "kalshi / /trade-api/v2/markets": 2
+      },
+      "wire_bytes": {
+        "kalshi / prediction_discovery_http": 950,
+        "polymarket_us / prediction_discovery_http": 2476,
+        "kalshi / prediction_frame": 65471,
+        "polymarket_us / prediction_frame": 92610
+      },
+      "frames": {
+        "kalshi": 383,
+        "polymarket_us": 378
+      },
+      "frames_by_group": {
+        "kalshi-1": 383,
+        "polymarket_us-1": 378
+      },
+      "peak_calendar_second_ingress": 1077,
+      "peak_calendar_second_frames": 359,
+      "peak_rolling_second_frames": 365,
+      "active_frame_span_seconds": 2.431273937225342
+    },
+    "resource-stop": {
+      "distributions": {
+        "ALL": {
+          "encoded": {
+            "n": 4092,
+            "total": 4041875,
+            "mean": 987.7504887585533,
+            "p50": 714,
+            "p95": 1851,
+            "p99": 1855,
+            "maximum": 3188
+          },
+          "expanded": {
+            "n": 4092,
+            "total": 7002162,
+            "mean": 1711.183284457478,
+            "p50": 692,
+            "p95": 4143,
+            "p99": 4285,
+            "maximum": 27801
+          },
+          "python_object": {
+            "n": 4092,
+            "total": 27102394,
+            "mean": 6623.263440860215,
+            "p50": 2434,
+            "p95": 15928,
+            "p99": 15928,
+            "maximum": 92724
+          }
+        },
+        "session_started": {
+          "encoded": {
+            "n": 1,
+            "total": 1251,
+            "mean": 1251.0,
+            "p50": 1251,
+            "p95": 1251,
+            "p99": 1251,
+            "maximum": 1251
+          },
+          "expanded": {
+            "n": 1,
+            "total": 1865,
+            "mean": 1865.0,
+            "p50": 1865,
+            "p95": 1865,
+            "p99": 1865,
+            "maximum": 1865
+          },
+          "python_object": {
+            "n": 1,
+            "total": 7381,
+            "mean": 7381.0,
+            "p50": 7381,
+            "p95": 7381,
+            "p99": 7381,
+            "maximum": 7381
+          }
+        },
+        "prediction_discovery_http": {
+          "encoded": {
+            "n": 6,
+            "total": 6008,
+            "mean": 1001.3333333333334,
+            "p50": 967,
+            "p95": 1415,
+            "p99": 1415,
+            "maximum": 1415
+          },
+          "expanded": {
+            "n": 6,
+            "total": 10072,
+            "mean": 1678.6666666666667,
+            "p50": 1011,
+            "p95": 4674,
+            "p99": 4674,
+            "maximum": 4674
+          },
+          "python_object": {
+            "n": 6,
+            "total": 24087,
+            "mean": 4014.5,
+            "p50": 3417,
+            "p95": 6975,
+            "p99": 6975,
+            "maximum": 6975
+          }
+        },
+        "verified_account_budget": {
+          "encoded": {
+            "n": 1,
+            "total": 438,
+            "mean": 438.0,
+            "p50": 438,
+            "p95": 438,
+            "p99": 438,
+            "maximum": 438
+          },
+          "expanded": {
+            "n": 1,
+            "total": 380,
+            "mean": 380.0,
+            "p50": 380,
+            "p95": 380,
+            "p99": 380,
+            "maximum": 380
+          },
+          "python_object": {
+            "n": 1,
+            "total": 2390,
+            "mean": 2390.0,
+            "p50": 2390,
+            "p95": 2390,
+            "p99": 2390,
+            "maximum": 2390
+          }
+        },
+        "coverage_inventory": {
+          "encoded": {
+            "n": 1,
+            "total": 3188,
+            "mean": 3188.0,
+            "p50": 3188,
+            "p95": 3188,
+            "p99": 3188,
+            "maximum": 3188
+          },
+          "expanded": {
+            "n": 1,
+            "total": 27801,
+            "mean": 27801.0,
+            "p50": 27801,
+            "p95": 27801,
+            "p99": 27801,
+            "maximum": 27801
+          },
+          "python_object": {
+            "n": 1,
+            "total": 92724,
+            "mean": 92724.0,
+            "p50": 92724,
+            "p95": 92724,
+            "p99": 92724,
+            "maximum": 92724
+          }
+        },
+        "market_selected": {
+          "encoded": {
+            "n": 22,
+            "total": 18442,
+            "mean": 838.2727272727273,
+            "p50": 827,
+            "p95": 843,
+            "p99": 975,
+            "maximum": 975
+          },
+          "expanded": {
+            "n": 22,
+            "total": 91670,
+            "mean": 4166.818181818182,
+            "p50": 4285,
+            "p95": 4297,
+            "p99": 4298,
+            "maximum": 4298
+          },
+          "python_object": {
+            "n": 22,
+            "total": 156790,
+            "mean": 7126.818181818182,
+            "p50": 7227,
+            "p95": 7239,
+            "p99": 7240,
+            "maximum": 7240
+          }
+        },
+        "coverage_applied": {
+          "encoded": {
+            "n": 2,
+            "total": 896,
+            "mean": 448.0,
+            "p50": 414,
+            "p95": 482,
+            "p99": 482,
+            "maximum": 482
+          },
+          "expanded": {
+            "n": 2,
+            "total": 833,
+            "mean": 416.5,
+            "p50": 356,
+            "p95": 477,
+            "p99": 477,
+            "maximum": 477
+          },
+          "python_object": {
+            "n": 2,
+            "total": 5223,
+            "mean": 2611.5,
+            "p50": 2072,
+            "p95": 3151,
+            "p99": 3151,
+            "maximum": 3151
+          }
+        },
+        "source_health": {
+          "encoded": {
+            "n": 1353,
+            "total": 564746,
+            "mean": 417.40280857354026,
+            "p50": 402,
+            "p95": 450,
+            "p99": 454,
+            "maximum": 490
+          },
+          "expanded": {
+            "n": 1353,
+            "total": 537233,
+            "mean": 397.0679970436068,
+            "p50": 370,
+            "p95": 462,
+            "p99": 462,
+            "maximum": 514
+          },
+          "python_object": {
+            "n": 1353,
+            "total": 3126293,
+            "mean": 2310.6378418329637,
+            "p50": 1981,
+            "p95": 2955,
+            "p99": 2955,
+            "maximum": 3050
+          }
+        },
+        "prediction_command": {
+          "encoded": {
+            "n": 3,
+            "total": 1598,
+            "mean": 532.6666666666666,
+            "p50": 546,
+            "p95": 562,
+            "p99": 562,
+            "maximum": 562
+          },
+          "expanded": {
+            "n": 3,
+            "total": 1586,
+            "mean": 528.6666666666666,
+            "p50": 503,
+            "p95": 623,
+            "p99": 623,
+            "maximum": 623
+          },
+          "python_object": {
+            "n": 3,
+            "total": 5366,
+            "mean": 1788.6666666666667,
+            "p50": 1777,
+            "p95": 1857,
+            "p99": 1857,
+            "maximum": 1857
+          }
+        },
+        "prediction_frame": {
+          "encoded": {
+            "n": 1353,
+            "total": 1006590,
+            "mean": 743.9689578713969,
+            "p50": 714,
+            "p95": 814,
+            "p99": 814,
+            "maximum": 822
+          },
+          "expanded": {
+            "n": 1353,
+            "total": 985436,
+            "mean": 728.3340724316334,
+            "p50": 692,
+            "p95": 802,
+            "p99": 802,
+            "maximum": 818
+          },
+          "python_object": {
+            "n": 1353,
+            "total": 3193532,
+            "mean": 2360.3340724316336,
+            "p50": 2324,
+            "p95": 2434,
+            "p99": 2434,
+            "maximum": 2450
+          }
+        },
+        "prediction_book": {
+          "encoded": {
+            "n": 1350,
+            "total": 2438718,
+            "mean": 1806.4577777777777,
+            "p50": 1847,
+            "p95": 1855,
+            "p99": 1855,
+            "maximum": 1875
+          },
+          "expanded": {
+            "n": 1350,
+            "total": 5345286,
+            "mean": 3959.471111111111,
+            "p50": 4143,
+            "p95": 4143,
+            "p99": 4300,
+            "maximum": 4315
+          },
+          "python_object": {
+            "n": 1350,
+            "total": 20488608,
+            "mean": 15176.746666666666,
+            "p50": 15928,
+            "p95": 15928,
+            "p99": 16081,
+            "maximum": 16096
+          }
+        }
+      },
+      "physical": 4101,
+      "stored_bytes": 4713272,
+      "ingress_span_seconds": 4.734210968017578,
+      "requests": {
+        "kalshi / /trade-api/v2/account/limits": 1,
+        "polymarket_us / /v1/events": 1,
+        "kalshi / /trade-api/v2/account/endpoint_costs": 1,
+        "polymarket_us / /v1/markets": 1,
+        "kalshi / /trade-api/v2/events": 1,
+        "kalshi / /trade-api/v2/markets": 1
+      },
+      "wire_bytes": {
+        "kalshi / prediction_discovery_http": 3394,
+        "polymarket_us / prediction_discovery_http": 1238,
+        "kalshi / prediction_frame": 156915,
+        "polymarket_us / prediction_frame": 108780
+      },
+      "frames": {
+        "kalshi": 909,
+        "polymarket_us": 444
+      },
+      "frames_by_group": {
+        "kalshi-1": 464,
+        "kalshi-2": 445,
+        "polymarket_us-1": 444
+      },
+      "peak_calendar_second_ingress": 902,
+      "peak_calendar_second_frames": 301,
+      "peak_rolling_second_frames": 304,
+      "active_frame_span_seconds": 4.664609909057617
+    },
+    "stop-at-rotation": {
+      "distributions": {
+        "ALL": {
+          "encoded": {
+            "n": 1024,
+            "total": 1002643,
+            "mean": 979.1435546875,
+            "p50": 718,
+            "p95": 1843,
+            "p99": 1847,
+            "maximum": 2695
+          },
+          "expanded": {
+            "n": 1024,
+            "total": 1691951,
+            "mean": 1652.2958984375,
+            "p50": 764,
+            "p95": 4143,
+            "p99": 4143,
+            "maximum": 8403
+          },
+          "python_object": {
+            "n": 1024,
+            "total": 6511474,
+            "mean": 6358.861328125,
+            "p50": 2434,
+            "p95": 15928,
+            "p99": 15928,
+            "maximum": 32958
+          }
+        },
+        "session_started": {
+          "encoded": {
+            "n": 1,
+            "total": 1251,
+            "mean": 1251.0,
+            "p50": 1251,
+            "p95": 1251,
+            "p99": 1251,
+            "maximum": 1251
+          },
+          "expanded": {
+            "n": 1,
+            "total": 1865,
+            "mean": 1865.0,
+            "p50": 1865,
+            "p95": 1865,
+            "p99": 1865,
+            "maximum": 1865
+          },
+          "python_object": {
+            "n": 1,
+            "total": 7381,
+            "mean": 7381.0,
+            "p50": 7381,
+            "p95": 7381,
+            "p99": 7381,
+            "maximum": 7381
+          }
+        },
+        "prediction_discovery_http": {
+          "encoded": {
+            "n": 10,
+            "total": 10114,
+            "mean": 1011.4,
+            "p50": 971,
+            "p95": 1427,
+            "p99": 1427,
+            "maximum": 1427
+          },
+          "expanded": {
+            "n": 10,
+            "total": 11226,
+            "mean": 1122.6,
+            "p50": 1011,
+            "p95": 1725,
+            "p99": 1725,
+            "maximum": 1725
+          },
+          "python_object": {
+            "n": 10,
+            "total": 35370,
+            "mean": 3537.0,
+            "p50": 3417,
+            "p95": 4512,
+            "p99": 4512,
+            "maximum": 4512
+          }
+        },
+        "verified_account_budget": {
+          "encoded": {
+            "n": 1,
+            "total": 438,
+            "mean": 438.0,
+            "p50": 438,
+            "p95": 438,
+            "p99": 438,
+            "maximum": 438
+          },
+          "expanded": {
+            "n": 1,
+            "total": 380,
+            "mean": 380.0,
+            "p50": 380,
+            "p95": 380,
+            "p99": 380,
+            "maximum": 380
+          },
+          "python_object": {
+            "n": 1,
+            "total": 2390,
+            "mean": 2390.0,
+            "p50": 2390,
+            "p95": 2390,
+            "p99": 2390,
+            "maximum": 2390
+          }
+        },
+        "coverage_inventory": {
+          "encoded": {
+            "n": 2,
+            "total": 5382,
+            "mean": 2691.0,
+            "p50": 2687,
+            "p95": 2695,
+            "p99": 2695,
+            "maximum": 2695
+          },
+          "expanded": {
+            "n": 2,
+            "total": 16799,
+            "mean": 8399.5,
+            "p50": 8396,
+            "p95": 8403,
+            "p99": 8403,
+            "maximum": 8403
+          },
+          "python_object": {
+            "n": 2,
+            "total": 65906,
+            "mean": 32953.0,
+            "p50": 32948,
+            "p95": 32958,
+            "p99": 32958,
+            "maximum": 32958
+          }
+        },
+        "market_selected": {
+          "encoded": {
+            "n": 2,
+            "total": 1689,
+            "mean": 844.5,
+            "p50": 714,
+            "p95": 975,
+            "p99": 975,
+            "maximum": 975
+          },
+          "expanded": {
+            "n": 2,
+            "total": 2511,
+            "mean": 1255.5,
+            "p50": 933,
+            "p95": 1578,
+            "p99": 1578,
+            "maximum": 1578
+          },
+          "python_object": {
+            "n": 2,
+            "total": 9271,
+            "mean": 4635.5,
+            "p50": 4355,
+            "p95": 4916,
+            "p99": 4916,
+            "maximum": 4916
+          }
+        },
+        "coverage_applied": {
+          "encoded": {
+            "n": 2,
+            "total": 824,
+            "mean": 412.0,
+            "p50": 410,
+            "p95": 414,
+            "p99": 414,
+            "maximum": 414
+          },
+          "expanded": {
+            "n": 2,
+            "total": 698,
+            "mean": 349.0,
+            "p50": 342,
+            "p95": 356,
+            "p99": 356,
+            "maximum": 356
+          },
+          "python_object": {
+            "n": 2,
+            "total": 4130,
+            "mean": 2065.0,
+            "p50": 2058,
+            "p95": 2072,
+            "p99": 2072,
+            "maximum": 2072
+          }
+        },
+        "source_health": {
+          "encoded": {
+            "n": 335,
+            "total": 133642,
+            "mean": 398.93134328358207,
+            "p50": 398,
+            "p95": 402,
+            "p99": 402,
+            "maximum": 442
+          },
+          "expanded": {
+            "n": 335,
+            "total": 121697,
+            "mean": 363.2746268656716,
+            "p50": 370,
+            "p95": 370,
+            "p99": 370,
+            "maximum": 422
+          },
+          "python_object": {
+            "n": 335,
+            "total": 661468,
+            "mean": 1974.5313432835821,
+            "p50": 1981,
+            "p95": 1981,
+            "p99": 1981,
+            "maximum": 2076
+          }
+        },
+        "prediction_command": {
+          "encoded": {
+            "n": 2,
+            "total": 1048,
+            "mean": 524.0,
+            "p50": 490,
+            "p95": 558,
+            "p99": 558,
+            "maximum": 558
+          },
+          "expanded": {
+            "n": 2,
+            "total": 963,
+            "mean": 481.5,
+            "p50": 447,
+            "p95": 516,
+            "p99": 516,
+            "maximum": 516
+          },
+          "python_object": {
+            "n": 2,
+            "total": 3509,
+            "mean": 1754.5,
+            "p50": 1719,
+            "p95": 1790,
+            "p99": 1790,
+            "maximum": 1790
+          }
+        },
+        "prediction_frame": {
+          "encoded": {
+            "n": 336,
+            "total": 254432,
+            "mean": 757.2380952380952,
+            "p50": 718,
+            "p95": 814,
+            "p99": 814,
+            "maximum": 830
+          },
+          "expanded": {
+            "n": 336,
+            "total": 250016,
+            "mean": 744.0952380952381,
+            "p50": 692,
+            "p95": 802,
+            "p99": 802,
+            "maximum": 810
+          },
+          "python_object": {
+            "n": 336,
+            "total": 798368,
+            "mean": 2376.095238095238,
+            "p50": 2324,
+            "p95": 2434,
+            "p99": 2434,
+            "maximum": 2442
+          }
+        },
+        "prediction_book": {
+          "encoded": {
+            "n": 333,
+            "total": 593823,
+            "mean": 1783.2522522522522,
+            "p50": 1815,
+            "p95": 1847,
+            "p99": 1851,
+            "maximum": 1855
+          },
+          "expanded": {
+            "n": 333,
+            "total": 1285796,
+            "mean": 3861.2492492492493,
+            "p50": 4139,
+            "p95": 4143,
+            "p99": 4143,
+            "maximum": 4314
+          },
+          "python_object": {
+            "n": 333,
+            "total": 4923681,
+            "mean": 14785.82882882883,
+            "p50": 15924,
+            "p95": 15928,
+            "p99": 15928,
+            "maximum": 16095
+          }
+        }
+      },
+      "physical": 1029,
+      "stored_bytes": 1172068,
+      "ingress_span_seconds": 1.076812982559204,
+      "requests": {
+        "kalshi / /trade-api/v2/account/limits": 1,
+        "polymarket_us / /v1/events": 2,
+        "kalshi / /trade-api/v2/account/endpoint_costs": 1,
+        "polymarket_us / /v1/markets": 2,
+        "kalshi / /trade-api/v2/events": 2,
+        "kalshi / /trade-api/v2/markets": 2
+      },
+      "wire_bytes": {
+        "kalshi / prediction_discovery_http": 950,
+        "polymarket_us / prediction_discovery_http": 2476,
+        "kalshi / prediction_frame": 28835,
+        "polymarket_us / prediction_frame": 40670
+      },
+      "frames": {
+        "kalshi": 170,
+        "polymarket_us": 166
+      },
+      "frames_by_group": {
+        "kalshi-1": 170,
+        "polymarket_us-1": 166
+      },
+      "peak_calendar_second_ingress": 565,
+      "peak_calendar_second_frames": 188,
+      "peak_rolling_second_frames": 336,
+      "active_frame_span_seconds": 0.9938700199127197
+    }
+  },
+  "sensitivity": [
+    {
+      "factor": 1,
+      "logical": 67681,
+      "encoded_MiB": 156.3142684763864,
+      "expanded_MiB": 565.5523068159607,
+      "frames": 20545
+    },
+    {
+      "factor": 2,
+      "logical": 135361,
+      "encoded_MiB": 312.6285369527728,
+      "expanded_MiB": 1131.1046136319214,
+      "frames": 41090
+    },
+    {
+      "factor": 4,
+      "logical": 270722,
+      "encoded_MiB": 625.2570739055456,
+      "expanded_MiB": 2262.209227263843,
+      "frames": 82179
+    },
+    {
+      "factor": 8,
+      "logical": 541443,
+      "encoded_MiB": 1250.514147811091,
+      "expanded_MiB": 4524.418454527686,
+      "frames": 164357
+    }
+  ],
+  "measurements": {
+    "elapsed_seconds": 1.2913855410006363,
+    "peak_rss_bytes": 57982976,
+    "input_bytes": 25606361,
+    "records": 9353
+  },
+  "input_hashes_unchanged": true,
+  "app_source_hashes_unchanged": true
+}

@@ -1,0 +1,104 @@
+[
+  {
+    "source": "evidence/slice-13-owner-review/20260914T002407Z-readiness-and-saved-sessions.json",
+    "session": {
+      "id": "ed06c7d1-ae22-4ed8-8b90-bec4e22e2917",
+      "environment": "production",
+      "evidence_class": "current",
+      "started_at": "2026-09-13T20:20:40.559469-04:00",
+      "state": "complete"
+    },
+    "coverage": [
+      {
+        "original_time": "2026-09-14T00:20:54.565999+00:00",
+        "kind": "shutdown",
+        "detail": {
+          "state": "complete",
+          "reason": "Backpressure: bounded queue filled; capture gap recorded",
+          "censored": true
+        }
+      },
+      {
+        "original_time": "2026-09-14T00:20:54.565565+00:00",
+        "kind": "gap",
+        "detail": {
+          "reason": "Backpressure: bounded queue filled; capture gap recorded",
+          "censored": true,
+          "queued_unprocessed": 32,
+          "continuous_coverage": false
+        }
+      },
+      {
+        "original_time": "2026-09-14T00:20:44.138877+00:00",
+        "kind": "coverage",
+        "detail": {
+          "note": "2 current markets selected",
+          "venue": "polymarket_us",
+          "requests": 3,
+          "selected_events": 2,
+          "selected_markets": 2,
+          "discovered_events": 7,
+          "discovery_truncated": true,
+          "fee_metadata_events": 0
+        }
+      },
+      {
+        "original_time": "2026-09-14T00:20:44.130735+00:00",
+        "kind": "coverage",
+        "detail": {
+          "note": "2 current markets selected",
+          "venue": "kalshi",
+          "requests": 7,
+          "selected_events": 1,
+          "selected_markets": 2,
+          "discovered_events": 9,
+          "discovery_truncated": {
+            "/markets{'event_ticker': 'KXNFLGAME-26SEP14DENKC'}": false,
+            "/events/fee_changes{'event_ticker': 'KXNFLGAME-26SEP14DENKC'}": false,
+            "/events{'series_ticker': 'KXNFLGAME', 'status': 'open', 'with_milestones': 'true'}": true
+          },
+          "fee_metadata_events": 1
+        }
+      },
+      {
+        "original_time": "2026-09-14T00:20:40.560798+00:00",
+        "kind": "coverage",
+        "detail": {
+          "mode": "live",
+          "limits": {
+            "markets": 2,
+            "seconds": 60,
+            "receipts": 1000,
+            "storage_bytes": 134217728
+          },
+          "continuous_survival": false,
+          "stream_reconstruction": false
+        }
+      }
+    ]
+  },
+  {
+    "source": "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md (historical owner review; ID, lifecycle, stop reason and backlog only)",
+    "session": {
+      "id": "c93f79fe-d2c0-4c33-bf97-7ba5fe61a17f",
+      "environment": "production",
+      "evidence_class": "current",
+      "started_at": "2026-09-13T20:20:14-04:00",
+      "state": "complete"
+    },
+    "coverage": [
+      {
+        "kind": "shutdown",
+        "detail": {
+          "reason": "Backpressure: bounded queue filled; capture gap recorded"
+        }
+      },
+      {
+        "kind": "gap",
+        "detail": {
+          "queued_unprocessed": 32
+        }
+      }
+    ]
+  }
+]

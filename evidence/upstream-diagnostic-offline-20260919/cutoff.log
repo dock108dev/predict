@@ -1,0 +1,66 @@
+{
+  "events": [
+    {
+      "event": "started",
+      "mono": 106072.409020916,
+      "clock": {
+        "utc": "2026-09-19T15:03:56.734145+00:00",
+        "mono": 106072.4110419165,
+        "uncertainty": 5.414985935203731e-07,
+        "resolution": 4.166666666666666e-08,
+        "utc_offset": 1789724164.323103
+      }
+    },
+    {
+      "event": "direct_stop_sent",
+      "action": "stop",
+      "intended": 106312.409020916,
+      "clock": {
+        "utc": "2026-09-19T15:07:56.742330+00:00",
+        "mono": 106312.41924608301,
+        "uncertainty": 2.6832996809389442e-05,
+        "resolution": 4.166666666666666e-08,
+        "utc_offset": 1789724164.3230839
+      }
+    },
+    {
+      "event": "stall_entered",
+      "clock": {
+        "utc": "2026-09-19T15:07:56.751903+00:00",
+        "mono": 106312.42880575001,
+        "uncertainty": 2.4999972083605826e-06,
+        "resolution": 4.166666666666666e-08,
+        "utc_offset": 1789724164.3230972
+      }
+    },
+    {
+      "event": "independent_cutoff",
+      "clock": {
+        "utc": "2026-09-19T15:08:56.752034+00:00",
+        "mono": 106372.428937333,
+        "uncertainty": 9.832998330239207e-06,
+        "resolution": 4.166666666666666e-08,
+        "utc_offset": 1789724164.3230965
+      }
+    }
+  ],
+  "exitcode": -15,
+  "cutoff": true,
+  "wall_seconds": 300.256731750007,
+  "clock": {
+    "utc": "2026-09-19T15:08:56.759417+00:00",
+    "mono": 106372.436323,
+    "uncertainty": 8.75000114319846e-06,
+    "resolution": 4.166666666666666e-08,
+    "utc_offset": 1789724164.3230941
+  },
+  "helper_rss": 65961984,
+  "outer_accounting": {
+    "receipt_boundary": "collector receipt excludes later supervisor and shared attempt marker",
+    "helper_payload_bytes": 16384,
+    "attempt_marker_bytes": 117,
+    "retained_bytes_including_helper_and_marker": 8346535,
+    "cumulative_writes_including_helper_and_marker": null,
+    "interrupted_write_accounting": "unknown"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "mode": "isolated-supervised-live",
+  "files": {
+    "run-spec.json": "a44117311ea0c83235bc1498803d05c9045017e6fbe74d2f583903b65d1dc86b",
+    "aggregate-limits.json": "4ec05878925d152b22113eb1858a1bc2ab1947c5f3f7cad2755fb5043502d7d3",
+    "history/manifest.json": "f1e0fce7fdb303ea8d55f6774ed6a7c12b5399315a98f96596d76aff72e4131a",
+    "replay.json": "863c4c79c1705831690f2a00e932d4fd3cce58cb22c29b500763238b1f3df0d3",
+    "report.json": "55c4bf68cfcaba792a723bc716878ab03181886a13cfa17dfec9db49ad96272c"
+  }
+}

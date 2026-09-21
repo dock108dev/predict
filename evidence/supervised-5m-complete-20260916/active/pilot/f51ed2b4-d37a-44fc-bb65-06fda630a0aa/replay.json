@@ -1,0 +1,88 @@
+{
+  "groups": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 1756,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 3947
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    },
+    "kalshi-2": {
+      "exact_native_books": {
+        "kalshi": 1974,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    },
+    "kalshi-3": {
+      "exact_native_books": {
+        "kalshi": 1756,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    },
+    "kalshi-4": {
+      "exact_native_books": {
+        "kalshi": 1957,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "12953859f0ee47833157ae351b32d19240c479896ffc69001b5a15273e85819c",
+      "state": "complete"
+    }
+  },
+  "derived_health_books": 0,
+  "counts": {
+    "session_started": 1,
+    "prediction_discovery_http": 146,
+    "verified_account_budget": 1,
+    "coverage_inventory": 2,
+    "market_selected": 96,
+    "source_health": 11395,
+    "prediction_command": 5,
+    "coverage_applied": 4,
+    "prediction_frame": 11394,
+    "prediction_book": 11390,
+    "session_finished": 1
+  },
+  "sequence_sha256": "344961d4091129c2c3b0ce0472040f344df9e06d99bcfb493b7a0b9393f50495",
+  "published_generations": [
+    1,
+    2
+  ],
+  "applied_generations": {
+    "polymarket_us": 2,
+    "kalshi": 2
+  },
+  "incremental": true
+}

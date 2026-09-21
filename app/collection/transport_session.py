@@ -26,7 +26,10 @@ class StorageFailure(OSError):
 
 class ObservationJournal:
     """Bounded fsynced E6 observations; untouched E2 synthetic schema is not relabeled."""
-    def __init__(self, path):
+    def __init__(self, path, *, encoding=None):
+        from .journal_encoding import VERSION
+        if encoding not in (None, VERSION):raise ValueError('unsupported journal encoding')
+        self.encoding=encoding; self.expanded_bytes=0
         self.path=Path(path); self.previous='0'*64; self.bytes=0; self.count=0
         self.failed=None; self.attempted=0; self.stage='idle'; self.terminal_acknowledged=False
         # No buffered close may silently retry a failed write/flush.
@@ -38,8 +41,14 @@ class ObservationJournal:
             try:self.file.close()
             except OSError as exc:failure(__name__, 'journal_lock_cleanup', exc)
             raise
+    def encoded(self, row):
+        from .journal_encoding import encode
+        return encode(row) if self.encoding else row
+
     def save(self, row):
         if self.failed:raise self.failed
+        original=row
+        row=self.encoded(row)
         payload=packed(row)
         digest=sha256((self.previous+payload).encode()).hexdigest()
         body=(packed(dict(previous=self.previous,sha256=digest,row=row))+'\n').encode()
@@ -56,7 +65,8 @@ class ObservationJournal:
             raise self.failed from None
         self.stage='acknowledged' 
         self.previous=digest; self.bytes+=len(body); self.count+=1
-        self.terminal_acknowledged=row.get('type')=='session_finished'
+        self.expanded_bytes+=len(packed(original).encode())
+        self.terminal_acknowledged=original.get('type')=='session_finished'
     def close(self):
         try:self.file.close()
         except OSError:
@@ -67,14 +77,19 @@ class ObservationJournal:
 def reopen(path):
     path=Path(path)
     if path.stat().st_size>32*1024*1024: raise ValueError('saved byte cap')
-    previous='0'*64; rows=[]
+    from .journal_encoding import decode, MAX_EXPANDED
+    previous='0'*64; rows=[]; expanded=0
     with path.open('rb') as stream:
         for line in stream:
             if len(rows)>=4096 or not line.endswith(b'\n'):raise ValueError('incomplete or overbound journal')
             value=json.loads(line); row=value['row']
             digest=sha256((previous+packed(row)).encode()).hexdigest()
             if value['previous']!=previous or value['sha256']!=digest:raise ValueError('saved hash chain mismatch')
-            previous=digest; rows.append(row)
+            previous=digest
+            row=decode(row)
+            expanded+=len(packed(row).encode())
+            if expanded>MAX_EXPANDED:raise ValueError('saved expanded byte cap')
+            rows.append(row)
     return dict(format='e6-transport-observations-1',rows=rows,sha256=previous,
                 state='complete' if rows and rows[-1]['type']=='session_finished' else 'interrupted',
                 economics=None,qualification='bounded observation journal; no economic qualification')
@@ -171,14 +186,24 @@ class TransportSession:
             return False
         row=dict(record,source=source,session_id=self.sid,ingress_id=str(uuid4()),observed_at=utc(),
                  health=deepcopy(self.health),economics=None)
-        n=len(packed(row).encode())
-        if self.delivered>=2048 or self.ingress_bytes+n>16*1024*1024:
+        n=len(packed(self.journal.encoded(row)).encode()) if getattr(self.journal,'encoding',None) else len(packed(row).encode())
+        if self.delivered>=getattr(self, 'ingress_record_limit', 2048) or self.ingress_bytes+n>getattr(self, 'ingress_byte_limit', 16*1024*1024):
             self.counts['rejected']+=1
             self.request_stop('session_ingress_cap');raise BudgetStop('session_ingress_cap')
+        if getattr(self,'profile',None):
+            try:self.admit_profile(row,n)
+            except BudgetStop as exc:
+                self.counts['rejected']+=1; self.intake_closed=True; self.request_stop(str(exc)); raise
         # Write-ahead before queueing. Queue failures retain the delivered record.
         self.counts['accepted']+=1
         before=self.journal.attempted
         try:self.journal.save(row)
+        except BudgetStop as exc:
+            if getattr(self, 'segmented_history', False):
+                # A segment/control budget rejection precedes this row's write.
+                self.counts['accepted']-=1; self.counts['rejected']+=1
+                self.intake_closed=True; self.request_stop(str(exc))
+            raise
         except OSError as exc:
             self.storage_failed(getattr(exc,'stage','write'))
             raise
@@ -197,9 +222,17 @@ class TransportSession:
 
     def request_stop(self, reason):
         self.reason=self.reason or reason; self.stop_event.set()
+        if getattr(self,'profile',None):
+            import time
+            if not hasattr(self,'stop_requested_at'): self.stop_requested_at=time.monotonic()
+            self.intake_closed=True
+
+    def open_journal(self):
+        options={'encoding':self.journal_encoding} if getattr(self,'journal_encoding',None) else {}
+        return ObservationJournal(self.output/(self.sid+'.jsonl'),**options)
 
     async def start(self):
-        result=preflight(self.spec)
+        result=preflight(self.spec, supervised_live=True) if getattr(self,'supervised_live',False) else preflight(self.spec)
         if not result['valid']:raise ValueError(packed(result['errors']))
         if datetime.now(timezone.utc)<time_value(self.spec['start_after']):raise ValueError('before explicit start window')
         if self.state!='idle':raise ValueError('session already started')
@@ -217,13 +250,16 @@ class TransportSession:
         if self.spec['mode']=='real' and self.credentials is None:
             from .venue_access import load_credentials
             self.credentials=load_credentials()
+        if getattr(self,'supervised_live',False):
+            from .supervised_live import validate_live
+            validate_live(self.spec,self.endpoints,self.credentials,require_credentials=True)
         self.producers={v:PredictionProducer(v,self.spec,self.endpoints[v]['rest'],self.endpoints[v]['ws'],self.emit,self.set_health,
                         credential=(self.credentials or {}).get(v),budget=self.budgets.get(v)) for v in ('kalshi','polymarket_us')}
         self.output.mkdir(parents=True,exist_ok=True)
         try:
-            self.journal=ObservationJournal(self.output/(self.sid+'.jsonl'))
+            self.journal=self.open_journal()
             self.emit('session',dict(type='session_started',spec=self.spec,provenance=('real venue observation; economics unqualified' if self.spec['mode']=='real' else 'local mock; fabricated protocol and identified retained metadata')))
-        except OSError as exc:
+        except (OSError,BudgetStop) as exc:
             self.storage_failed(getattr(exc,'stage','open'))
             await self.close_resources()
             if self.journal:
@@ -302,6 +338,9 @@ class TransportSession:
         try:
             # Deadline includes bounded discovery, connections and backoff.
             seconds=min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
+            if getattr(self, 'started_monotonic', None) is not None:
+                import time
+                seconds=max(0, seconds-(time.monotonic()-self.started_monotonic))
             async with asyncio.timeout(seconds):
                 discovery_tasks=[asyncio.create_task(p.discover()) for p in self.producers.values()]
                 try:
@@ -335,6 +374,8 @@ class TransportSession:
             await asyncio.gather(*tasks,return_exceptions=True)
             await self.close_resources()
             self.closing=True; await consumer
+            if getattr(self,'profile',None) and self.journal:
+                self.journal.history.finalizing=True
             try:
                 if not self.persistence_error:self.journal.save(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
                     delivered=self.delivered,persisted=self.persisted,ingress_accounting=dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged']),health=self.health,accounting=self.reference.budget.snapshot() if self.reference else None,
@@ -344,7 +385,7 @@ class TransportSession:
             finally:
                 self.intake_closed=True
                 try:self.journal.close()
-                except OSError as exc:self.storage_failed(getattr(exc,'stage','close'))
+                except (OSError,BudgetStop) as exc:self.storage_failed(getattr(exc,'stage','close'))
                 self.cleanup_complete=not self.cleanup_errors
                 self.state='failed' if self.persistence_error or self.cleanup_errors else 'stopped'
                 if self.persistence_error:self.report_failure()

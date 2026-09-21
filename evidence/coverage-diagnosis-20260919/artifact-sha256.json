@@ -1,0 +1,23 @@
+{
+  "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "42c1662d2b5d390ccfbd7aef236907616beea2327972a78abf73c2d846fd346a",
+  "catalog-and-depth.json": "a9c84644b976df75a10d720fc1325a535cb2ab4d2a5cbe51065388feae9261bf",
+  "check_diagnosis.py": "c78298e9953a8d543f8e81721fdaefe81a42b6173ae5ef0a115e2ddeeae417d4",
+  "checks-final.log": "2ce7e59aa2a07ff1fb5b4dfd0d15c150a1429c2a088495d92fb85970a6ec3463",
+  "checks.log": "3dbe1d344bd109ec0714a2a1968fb8d2a8cc4ba1323b333e79f4ee2ac8d5130b",
+  "coverage-timeline.json": "b9f09ae594a7425f4be65c4822981e0f61efa369b4c55cc3da07c65f2155780a",
+  "diagnose.py": "d1a189de813674a80efca663ba8743d3292afb1ff092f6935fc1251582b71f2e",
+  "diagnosis.md": "288af1edcc53c837f9bca3dc2bb560cb5ce1feb5d105b9a8b51f9f4514ef100d",
+  "identity-and-replay.json": "9abe30b95056307b762cb420b13ddcea3395ea5477692c9b3f25cd8f92c2dc6e",
+  "per-market.json": "bc437e0054b0bf5a21d4595e4eb260f22cf01c001c1acd639b03df8d95d5d3aa",
+  "preservation-before.json": "d766f649a939d8529ed467d7676d6dc79f422020c61d1e4488218f5e273784fe",
+  "run-2.log": "d370aed93e63e65f99509f05a65d024c45ebf8b59a841d035dc19b6ad54cd2e4",
+  "run-3.log": "1b62b84cf9ebd5c3e8d3c47265b11ece88ea5ff7a2d99541478101535f293e0c",
+  "run-final.log": "1b62b84cf9ebd5c3e8d3c47265b11ece88ea5ff7a2d99541478101535f293e0c",
+  "run.log": "a35d3eb71da6f7fd8535ecc8ce16cffaeeafa61ccbd28864df6b4e6ed498b92c",
+  "summary.json": "6451b3bd9312f104a935d4ccbcfdc8fec449e7b4e4a2c69d86ee8f3fdd82918f",
+  "timer-characterization.json": "7ebe3f308a0a0fb35b68b333df0b1c8e7ab79254783338c6d293a14ebcdede0c",
+  "tracker-before.md": "09ec93b8a8bf31291f8a54f381169ef142e880fe23b5a236e25a3771f73a6324",
+  "verification.json": "9521eec7fe800327b9b4b64733fefdd08aec91123d841e4d716aa46ef7523fb1",
+  "verify_preservation.py": "3ea3ceafa2920c833677f8bb0231dd89aba68219438de148fd3e0a346ddb272c",
+  "workspace-before.json": "42851d11a332e89fd7367031504e24356f2620a556c2a771acebc26ed27ec119"
+}

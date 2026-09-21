@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "timestamps": [
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/ok",
+      "at": 53295.429417083
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/ok",
+      "at": 53296.13444025
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/retry",
+      "at": 53296.840327708
+    },
+    {
+      "venue": "kalshi",
+      "path": "/kalshi/retry",
+      "at": 53298.547425666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/ok",
+      "at": 53299.168138875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/ok",
+      "at": 53299.673529583
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/retry",
+      "at": 53300.179157875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/polymarket_us/retry",
+      "at": 53301.6891375
+    }
+  ]
+}

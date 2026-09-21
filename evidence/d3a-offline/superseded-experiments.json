@@ -1,0 +1,16 @@
+{
+  "superseded": [
+    "retained",
+    "pressure",
+    "final-retained",
+    "final-pressure",
+    "qualified-retained",
+    "qualified-pressure"
+  ],
+  "reason": "Final review found one pressure segment had 8388714 expanded physical payload bytes, 106 over 8 MiB, because controls were not included in the rotation threshold. Corrected threshold reserves 64 KiB control headroom within encoded and expanded segment bounds. All earlier derived artifacts are preserved, but are not final qualification evidence.",
+  "accepted": [
+    "bounded-retained",
+    "bounded-pressure"
+  ],
+  "regression": "test_controls_and_terminal_fit_inside_segment_payload_limits"
+}

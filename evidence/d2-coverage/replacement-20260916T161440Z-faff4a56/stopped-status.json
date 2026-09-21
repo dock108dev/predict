@@ -1,0 +1,474 @@
+{
+  "at": "2026-09-16T16:19:05.072808+00:00",
+  "status": {
+    "state": "stopped",
+    "active": false,
+    "operating_mode": "d2-bounded-inventory",
+    "start_available": false,
+    "error": null,
+    "cleanup_errors": [],
+    "saved": [
+      "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "5accf9ee-94b9-4b09-8130-6849f842155e"
+    ],
+    "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+    "cleanup_complete": true,
+    "coverage": {
+      "kalshi": {
+        "discovered_events": 32,
+        "discovered_markets": 6,
+        "event_discovery": "exhausted",
+        "market_completeness": "unestablished",
+        "eligible": 64,
+        "selected": 64,
+        "requested": 64,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 64,
+          "acknowledged": 64,
+          "receiving": 64,
+          "usable": 64
+        },
+        "peak_simultaneous": {
+          "requested": 64,
+          "acknowledged": 64,
+          "receiving": 64,
+          "usable": 64
+        },
+        "requests": 72,
+        "connection_attempts": 4,
+        "body_bytes_charged": 1579941,
+        "acknowledgement_basis": "explicit channel acknowledgement",
+        "latest_receipts": {
+          "KXNFLGAME-26SEP17DETBUF-BUF": {
+            "received_at": "2026-09-16 16:17:57.075868+00:00",
+            "exchange_at": "2026-09-16 16:17:57.055000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27ARISF-ARI": {
+            "received_at": "2026-09-16 16:17:13.155834+00:00",
+            "exchange_at": "2026-09-16 16:17:13.125000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP17DETBUF-DET": {
+            "received_at": "2026-09-16 16:17:57.026975+00:00",
+            "exchange_at": "2026-09-16 16:17:57+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27ARISF-SF": {
+            "received_at": "2026-09-16 16:17:22.371946+00:00",
+            "exchange_at": "2026-09-16 16:17:22.331000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CARATL-ATL": {
+            "received_at": "2026-09-16 16:17:52.807008+00:00",
+            "exchange_at": "2026-09-16 16:17:52.787000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27LARDEN-DEN": {
+            "received_at": "2026-09-16 16:17:33.267549+00:00",
+            "exchange_at": "2026-09-16 16:17:33.249000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27BALDAL-BAL": {
+            "received_at": "2026-09-16 16:17:13.033362+00:00",
+            "exchange_at": "2026-09-16 16:17:12.992000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CARATL-CAR": {
+            "received_at": "2026-09-16 16:17:19.761841+00:00",
+            "exchange_at": "2026-09-16 16:17:19.734000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27LARDEN-LAR": {
+            "received_at": "2026-09-16 16:17:25.965465+00:00",
+            "exchange_at": "2026-09-16 16:17:25.945000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20INDKC-IND": {
+            "received_at": "2026-09-16 16:17:21.489814+00:00",
+            "exchange_at": "2026-09-16 16:17:21.459000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27BALDAL-DAL": {
+            "received_at": "2026-09-16 16:16:20.132248+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20CINHOU-CIN": {
+            "received_at": "2026-09-16 16:17:49.522956+00:00",
+            "exchange_at": "2026-09-16 16:17:49.506000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP28PHICHI-CHI": {
+            "received_at": "2026-09-16 16:16:20.138149+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20INDKC-KC": {
+            "received_at": "2026-09-16 16:17:12.074929+00:00",
+            "exchange_at": "2026-09-16 16:17:12.049000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27KCMIA-KC": {
+            "received_at": "2026-09-16 16:17:12.895671+00:00",
+            "exchange_at": "2026-09-16 16:17:12.838000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CINHOU-HOU": {
+            "received_at": "2026-09-16 16:17:48.039046+00:00",
+            "exchange_at": "2026-09-16 16:17:48.015000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP28PHICHI-PHI": {
+            "received_at": "2026-09-16 16:17:53.482289+00:00",
+            "exchange_at": "2026-09-16 16:17:53.363000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20LVLAC-LAC": {
+            "received_at": "2026-09-16 16:17:50.595564+00:00",
+            "exchange_at": "2026-09-16 16:17:50.575000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27KCMIA-MIA": {
+            "received_at": "2026-09-16 16:17:13.043873+00:00",
+            "exchange_at": "2026-09-16 16:17:12.995000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20CLETB-CLE": {
+            "received_at": "2026-09-16 16:17:10.082309+00:00",
+            "exchange_at": "2026-09-16 16:17:09.980000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20LVLAC-LV": {
+            "received_at": "2026-09-16 16:17:15.899177+00:00",
+            "exchange_at": "2026-09-16 16:17:15.875000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27LACBUF-BUF": {
+            "received_at": "2026-09-16 16:16:20.161282+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20CLETB-TB": {
+            "received_at": "2026-09-16 16:17:57.294107+00:00",
+            "exchange_at": "2026-09-16 16:17:57.275000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20MIASF-MIA": {
+            "received_at": "2026-09-16 16:17:13.460089+00:00",
+            "exchange_at": "2026-09-16 16:17:13.441000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27LACBUF-LAC": {
+            "received_at": "2026-09-16 16:17:12.864262+00:00",
+            "exchange_at": "2026-09-16 16:17:12.800000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20GBNYJ-GB": {
+            "received_at": "2026-09-16 16:17:39.647486+00:00",
+            "exchange_at": "2026-09-16 16:17:39.627000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20MIASF-SF": {
+            "received_at": "2026-09-16 16:17:58.153532+00:00",
+            "exchange_at": "2026-09-16 16:17:58.135000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27LVNO-LV": {
+            "received_at": "2026-09-16 16:16:20.176914+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20GBNYJ-NYJ": {
+            "received_at": "2026-09-16 16:17:39.826473+00:00",
+            "exchange_at": "2026-09-16 16:17:39.806000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20SEAARI-ARI": {
+            "received_at": "2026-09-16 16:17:21.547401+00:00",
+            "exchange_at": "2026-09-16 16:17:21.469000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27LVNO-NO": {
+            "received_at": "2026-09-16 16:16:20.184521+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20JACDEN-DEN": {
+            "received_at": "2026-09-16 16:17:48.940449+00:00",
+            "exchange_at": "2026-09-16 16:17:48.887000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20SEAARI-SEA": {
+            "received_at": "2026-09-16 16:17:21.531002+00:00",
+            "exchange_at": "2026-09-16 16:17:21.465000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27MINTB-MIN": {
+            "received_at": "2026-09-16 16:17:49.489154+00:00",
+            "exchange_at": "2026-09-16 16:17:49.387000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20JACDEN-JAC": {
+            "received_at": "2026-09-16 16:17:21.597759+00:00",
+            "exchange_at": "2026-09-16 16:17:21.566000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20WASDAL-DAL": {
+            "received_at": "2026-09-16 16:17:30.181189+00:00",
+            "exchange_at": "2026-09-16 16:17:30.163000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27MINTB-TB": {
+            "received_at": "2026-09-16 16:16:20.200477+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20MINCHI-CHI": {
+            "received_at": "2026-09-16 16:17:21.538548+00:00",
+            "exchange_at": "2026-09-16 16:17:21.510000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20WASDAL-WAS": {
+            "received_at": "2026-09-16 16:17:21.551629+00:00",
+            "exchange_at": "2026-09-16 16:17:21.478000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27NEJAC-JAC": {
+            "received_at": "2026-09-16 16:16:20.207922+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20MINCHI-MIN": {
+            "received_at": "2026-09-16 16:17:21.619927+00:00",
+            "exchange_at": "2026-09-16 16:17:21.601000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP21NYGLAR-LAR": {
+            "received_at": "2026-09-16 16:17:12.177106+00:00",
+            "exchange_at": "2026-09-16 16:17:12.157000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27NEJAC-NE": {
+            "received_at": "2026-09-16 16:17:12.887107+00:00",
+            "exchange_at": "2026-09-16 16:17:12.808000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20NOBAL-BAL": {
+            "received_at": "2026-09-16 16:17:24.221688+00:00",
+            "exchange_at": "2026-09-16 16:17:24.149000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP21NYGLAR-NYG": {
+            "received_at": "2026-09-16 16:17:50.494176+00:00",
+            "exchange_at": "2026-09-16 16:17:50.476000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27NYJDET-DET": {
+            "received_at": "2026-09-16 16:16:20.223068+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20NOBAL-NO": {
+            "received_at": "2026-09-16 16:17:01.023654+00:00",
+            "exchange_at": "2026-09-16 16:17:00.997000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP24ATLGB-ATL": {
+            "received_at": "2026-09-16 16:16:20.227967+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27NYJDET-NYJ": {
+            "received_at": "2026-09-16 16:17:12.876349+00:00",
+            "exchange_at": "2026-09-16 16:17:12.802000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20PHITEN-PHI": {
+            "received_at": "2026-09-16 16:17:56.112566+00:00",
+            "exchange_at": "2026-09-16 16:17:56.091000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP24ATLGB-GB": {
+            "received_at": "2026-09-16 16:17:12.856365+00:00",
+            "exchange_at": "2026-09-16 16:17:12.797000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27SEAWAS-SEA": {
+            "received_at": "2026-09-16 16:16:20.237640+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP20PHITEN-TEN": {
+            "received_at": "2026-09-16 16:17:56.503460+00:00",
+            "exchange_at": "2026-09-16 16:17:56.155000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27CARCLE-CAR": {
+            "received_at": "2026-09-16 16:17:43.753992+00:00",
+            "exchange_at": "2026-09-16 16:17:43.637000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27SEAWAS-WAS": {
+            "received_at": "2026-09-16 16:17:13.056671+00:00",
+            "exchange_at": "2026-09-16 16:17:12.997000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP20PITNE-NE": {
+            "received_at": "2026-09-16 16:17:01.235274+00:00",
+            "exchange_at": "2026-09-16 16:17:01.213000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "repeated"
+          },
+          "KXNFLGAME-26SEP27CARCLE-CLE": {
+            "received_at": "2026-09-16 16:16:20.249642+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27TENNYG-NYG": {
+            "received_at": "2026-09-16 16:17:12.835847+00:00",
+            "exchange_at": "2026-09-16 16:17:12.793000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP20PITNE-PIT": {
+            "received_at": "2026-09-16 16:17:10.094514+00:00",
+            "exchange_at": "2026-09-16 16:17:09.981000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27CINPIT-CIN": {
+            "received_at": "2026-09-16 16:17:46.520442+00:00",
+            "exchange_at": "2026-09-16 16:17:46.467000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27TENNYG-TEN": {
+            "received_at": "2026-09-16 16:16:20.259856+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27CINPIT-PIT": {
+            "received_at": "2026-09-16 16:17:10.102848+00:00",
+            "exchange_at": "2026-09-16 16:17:09.981000+00:00",
+            "sync": "synchronized",
+            "source_time_progress": "advanced"
+          },
+          "KXNFLGAME-26SEP27HOUIND-HOU": {
+            "received_at": "2026-09-16 16:16:20.264905+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          },
+          "KXNFLGAME-26SEP27HOUIND-IND": {
+            "received_at": "2026-09-16 16:16:20.267128+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          }
+        }
+      },
+      "polymarket_us": {
+        "discovered_events": 25,
+        "discovered_markets": 25,
+        "event_discovery": "bounded/truncated",
+        "market_completeness": "unestablished",
+        "eligible": 0,
+        "selected": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "peak_simultaneous": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "requests": 83,
+        "connection_attempts": 0,
+        "body_bytes_charged": 915411,
+        "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+        "latest_receipts": {}
+      }
+    },
+    "pilot_allowance": "one pilot; idle startup; no autoresume",
+    "stop_reason": "session_ingress_cap",
+    "previous_pilot": null,
+    "resources": {
+      "peak_rss_bytes": 216121344,
+      "peak_queue_records": 13,
+      "peak_queue_bytes": 464163,
+      "ingress_bytes": 16774233,
+      "journal_bytes": 17079701,
+      "elapsed_seconds": 189.70547404199897
+    }
+  },
+  "shared_collector_lock_unowned": true
+}

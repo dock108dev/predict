@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/coverage-diagnosis-20260919/diagnose.py", line 43, in <module>
+    venue=r['source'];typ=r['type'];at=r['observed_at'];group=r.get('stream_group'); before={k:len(x) for k,x in state.items()}
+          ~^^^^^^^^^^
+KeyError: 'source'

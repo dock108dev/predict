@@ -129,7 +129,8 @@ def validate_rows(rows):
     return spec
 
 def _inspect(path):
-    body,identity=stable_read(path);offset=0;chain='0'*64;rows=[]
+    from .journal_encoding import decode, MAX_EXPANDED
+    body,identity=stable_read(path);offset=0;chain='0'*64;rows=[];expanded=0
     for fragment in body.split(b'\n')[:-1]:
         line=fragment+b'\n'
         if len(rows)>=4096:raise ValueError('record cap')
@@ -137,7 +138,9 @@ def _inspect(path):
         if set(item)!={'row','previous','sha256'}:raise ValueError('invalid journal envelope')
         expected=sha256((chain+packed(item['row'])).encode()).hexdigest()
         if item['previous']!=chain or item['sha256']!=expected:raise ValueError('broken journal chain')
-        chain=expected;rows.append(item['row']);offset+=len(line)
+        chain=expected;row=decode(item['row']);expanded+=len(packed(row).encode())
+        if expanded>MAX_EXPANDED:raise ValueError('saved expanded byte cap')
+        rows.append(row);offset+=len(line)
     spec=validate_rows(rows)
     terminal=rows[-1]['type']=='session_finished'
     if terminal and offset!=len(body):raise ValueError('bytes after terminal record')

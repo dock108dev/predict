@@ -1,0 +1,80 @@
+ M app/adapters/kalshi.py
+ M app/adapters/kalshi_stream.py
+ M app/adapters/polymarket_us.py
+ M app/adapters/polymarket_us_stream.py
+ M app/collection/native_replay.py
+ M app/collection/prediction_producer.py
+ M app/collection/recovery.py
+ M app/collection/run_spec.py
+ M app/collection/transport_session.py
+ M app/dashboard/bounds.py
+ M app/dashboard/multi_game_server.py
+ M app/dashboard/opportunity_static/dashboard.js
+ M docs/architecture.md
+ M docs/product-roadmap-review.md
+ M docs/ssot.md
+?? app/collection/continuous.py
+?? app/collection/coverage.py
+?? app/collection/finalization.py
+?? app/collection/journal_encoding.py
+?? app/collection/mock_history.py
+?? app/collection/segmented.py
+?? app/collection/supervised.py
+?? app/collection/supervised_live.py
+?? app/dashboard/coverage_owner.py
+?? app/dashboard/opportunity_static/coverage.html
+?? app/dashboard/opportunity_static/coverage.js
+?? docs/data-coverage-d1-prompt.md
+?? docs/data-coverage-d1-report.md
+?? docs/data-coverage-d2-capacity-decision.md
+?? docs/data-coverage-d2-journal-efficiency-report.md
+?? docs/data-coverage-d2-offline-repair-report.md
+?? docs/data-coverage-d2-replacement-report.md
+?? docs/data-coverage-d2-report.md
+?? docs/data-coverage-d2-validation-handoff.md
+?? docs/data-coverage-d2-validation-report.md
+?? docs/data-coverage-d3-mock-integration-report.md
+?? docs/data-coverage-d3a-prompt.md
+?? docs/data-coverage-d3a-report.md
+?? docs/data-coverage-finalization-resource-report.md
+?? docs/data-coverage-plan.md
+?? docs/data-coverage-supervised-5m-live-handoff.md
+?? docs/data-coverage-supervised-5m-live-validation-report.md
+?? docs/data-coverage-supervised-5m-qualification-report.md
+?? docs/data-coverage-supervised-5m-repair-report.md
+?? docs/data-coverage-supervised-5m-report.md
+?? docs/data-coverage-sustained-capacity-measurements.md
+?? docs/data-coverage-sustained-capacity-policy.md
+?? docs/data-coverage-sustained-capacity-prompt.md
+?? docs/upstream-delivery-capture-plan.md
+?? evidence/coverage-diagnosis-20260919/
+?? evidence/d1-coverage/
+?? evidence/d2-coverage/
+?? evidence/d3-mock-integration/
+?? evidence/d3a-offline/
+?? evidence/finalization-resources-offline-20260919/
+?? evidence/kalshi-expiry-repair-20260919/
+?? evidence/multi-game/sessions/5accf9ee-94b9-4b09-8130-6849f842155e/
+?? evidence/owner-walkthrough/
+?? evidence/supervised-5m-20260916/
+?? evidence/supervised-5m-complete-20260916/
+?? evidence/supervised-5m-live-20260916/
+?? evidence/supervised-5m-repair-20260916/
+?? evidence/sustained-policy-20260916/
+?? evidence/upstream-diagnostic-offline-20260919/
+?? tests/diagnose_supervised_memory.py
+?? tests/run_supervised_qualification.py
+?? tests/segmented_collector_fixture.py
+?? tests/supervised_fixture.py
+?? tests/supervised_remote_fixture.py
+?? tests/test_continuous.py
+?? tests/test_coverage.py
+?? tests/test_d2_repair.py
+?? tests/test_finalization_resources.py
+?? tests/test_journal_efficiency.py
+?? tests/test_kalshi_expiry.py
+?? tests/test_segmented.py
+?? tests/test_segmented_collector.py
+?? tests/test_supervised.py
+?? tests/test_supervised_live.py
+?? tests/test_supervised_pacing.py

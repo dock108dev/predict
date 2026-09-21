@@ -1,0 +1,4747 @@
+{
+  "events": [
+    {
+      "counts": {
+        "kalshi": 1,
+        "polymarket_us": 0
+      },
+      "ingress_id": "625c558c-4a3e-443f-aa1e-2debec0440ed",
+      "observed_at": "2026-09-16T20:56:50.634799+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 2,
+        "polymarket_us": 0
+      },
+      "ingress_id": "fcb297ca-e6ff-4fb3-8fab-9d23466d3916",
+      "observed_at": "2026-09-16T20:56:50.643907+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 3,
+        "polymarket_us": 0
+      },
+      "ingress_id": "a24c4be7-64f3-4df6-986c-43ab09c37917",
+      "observed_at": "2026-09-16T20:56:50.651318+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 4,
+        "polymarket_us": 0
+      },
+      "ingress_id": "a08aedeb-7d71-4b8a-8cfa-77780f771e7f",
+      "observed_at": "2026-09-16T20:56:50.658274+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 5,
+        "polymarket_us": 0
+      },
+      "ingress_id": "b43f533f-9a5b-4ff2-8fdd-258814960b68",
+      "observed_at": "2026-09-16T20:56:50.667290+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 6,
+        "polymarket_us": 0
+      },
+      "ingress_id": "bf630a55-64e1-469f-a497-05a09c2b2dfd",
+      "observed_at": "2026-09-16T20:56:50.674326+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 7,
+        "polymarket_us": 0
+      },
+      "ingress_id": "8df4aa57-499e-4c84-820d-00d101a3503a",
+      "observed_at": "2026-09-16T20:56:50.681411+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 8,
+        "polymarket_us": 0
+      },
+      "ingress_id": "6b9b5631-8ed9-4767-a6c8-3cc67445f726",
+      "observed_at": "2026-09-16T20:56:50.687767+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 8,
+        "polymarket_us": 1
+      },
+      "ingress_id": "2a0a6445-5d57-4346-b389-2496310e8f76",
+      "observed_at": "2026-09-16T20:56:50.692188+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 9,
+        "polymarket_us": 1
+      },
+      "ingress_id": "251e989c-9e65-4438-ba65-e3d4adf85b32",
+      "observed_at": "2026-09-16T20:56:50.699289+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 10,
+        "polymarket_us": 1
+      },
+      "ingress_id": "5ac38083-a93a-4130-8000-f5c2b5b00ec2",
+      "observed_at": "2026-09-16T20:56:50.706733+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 11,
+        "polymarket_us": 1
+      },
+      "ingress_id": "bb643cbd-6150-4f77-a782-949187169dfd",
+      "observed_at": "2026-09-16T20:56:50.712965+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 12,
+        "polymarket_us": 1
+      },
+      "ingress_id": "ae563236-af71-4f4a-9fbc-958e0afa7675",
+      "observed_at": "2026-09-16T20:56:50.719366+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 13,
+        "polymarket_us": 1
+      },
+      "ingress_id": "b6d6ee0d-4d0b-4ca3-93bf-b3d956a83dd0",
+      "observed_at": "2026-09-16T20:56:50.725609+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 14,
+        "polymarket_us": 1
+      },
+      "ingress_id": "b13f6f36-854e-4bf6-b505-0e77bc5598bc",
+      "observed_at": "2026-09-16T20:56:50.733341+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 1
+      },
+      "ingress_id": "a2767e94-4efc-4e0c-988f-de19137ec2cb",
+      "observed_at": "2026-09-16T20:56:50.739869+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 1
+      },
+      "ingress_id": "a6b7e872-b435-4a94-b9b2-74091b8b7477",
+      "observed_at": "2026-09-16T20:56:50.745991+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 1
+      },
+      "ingress_id": "af58d581-31b9-4d88-86f2-0327eb106a3c",
+      "observed_at": "2026-09-16T20:56:50.752644+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 1
+      },
+      "ingress_id": "10e57b3f-d2f5-4218-9f1b-128c40093f99",
+      "observed_at": "2026-09-16T20:56:50.761242+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 1
+      },
+      "ingress_id": "9b1435f1-6d8c-46f6-9b17-73d434749252",
+      "observed_at": "2026-09-16T20:56:50.767566+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 1
+      },
+      "ingress_id": "7fbae1e5-361b-42f6-80f3-b409c22ce1f6",
+      "observed_at": "2026-09-16T20:56:50.773888+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 1
+      },
+      "ingress_id": "78a9343f-8f96-45c7-a6ee-3043bff5a0f3",
+      "observed_at": "2026-09-16T20:56:50.780410+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 2
+      },
+      "ingress_id": "5360ae61-acad-4e57-84eb-e52dd70ed770",
+      "observed_at": "2026-09-16T20:56:50.784710+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 2
+      },
+      "ingress_id": "bdbf1f4f-fb52-4715-9195-a46abb818c0f",
+      "observed_at": "2026-09-16T20:56:50.796819+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 2
+      },
+      "ingress_id": "ae65ae14-294a-4211-92cf-d5e6013fd499",
+      "observed_at": "2026-09-16T20:56:50.803002+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 2
+      },
+      "ingress_id": "cee1b666-18a0-459a-8557-e5b36d873518",
+      "observed_at": "2026-09-16T20:56:50.808842+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 2
+      },
+      "ingress_id": "5c934633-5b23-4dc0-952b-540ab5ea4dea",
+      "observed_at": "2026-09-16T20:56:50.816783+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 2
+      },
+      "ingress_id": "0ea4c986-fab2-4794-9c0c-3d189740d592",
+      "observed_at": "2026-09-16T20:56:50.823178+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 27,
+        "polymarket_us": 2
+      },
+      "ingress_id": "d967d601-4818-4f26-8e99-49d5978379e8",
+      "observed_at": "2026-09-16T20:56:50.829235+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 28,
+        "polymarket_us": 2
+      },
+      "ingress_id": "c1461591-44d6-4a8e-8bf6-2c26bada4004",
+      "observed_at": "2026-09-16T20:56:50.835322+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 29,
+        "polymarket_us": 2
+      },
+      "ingress_id": "2803b68e-8bc2-46dc-8ffd-269b889122c4",
+      "observed_at": "2026-09-16T20:56:50.841791+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 30,
+        "polymarket_us": 2
+      },
+      "ingress_id": "3c6c1577-b016-4340-a2b5-212597e444cd",
+      "observed_at": "2026-09-16T20:56:50.848021+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 30,
+        "polymarket_us": 3
+      },
+      "ingress_id": "142a9fe8-2d1b-45cb-b8aa-3f16bd2209b7",
+      "observed_at": "2026-09-16T20:56:50.851866+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 31,
+        "polymarket_us": 3
+      },
+      "ingress_id": "62d1f7c0-c167-4aab-a298-66087468a328",
+      "observed_at": "2026-09-16T20:56:50.857255+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 32,
+        "polymarket_us": 3
+      },
+      "ingress_id": "c29bbeda-f715-4b14-98f6-2d95a7b89c5f",
+      "observed_at": "2026-09-16T20:56:50.863689+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 33,
+        "polymarket_us": 3
+      },
+      "ingress_id": "ea62707f-13eb-4cfb-a2a2-5a5dce87212a",
+      "observed_at": "2026-09-16T20:56:50.870108+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 34,
+        "polymarket_us": 3
+      },
+      "ingress_id": "edb01344-dd01-4ed0-b3e1-ac00f3e878b5",
+      "observed_at": "2026-09-16T20:56:50.877504+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 35,
+        "polymarket_us": 3
+      },
+      "ingress_id": "330e3979-68c3-47ef-bd11-0c2360fb57d8",
+      "observed_at": "2026-09-16T20:56:50.883663+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 36,
+        "polymarket_us": 3
+      },
+      "ingress_id": "ae1ecdda-cf8a-4994-8405-9857fbf898b0",
+      "observed_at": "2026-09-16T20:56:50.889972+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 37,
+        "polymarket_us": 3
+      },
+      "ingress_id": "9dbf451a-42cb-4ad3-a463-9df247f851c4",
+      "observed_at": "2026-09-16T20:56:50.896256+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 38,
+        "polymarket_us": 3
+      },
+      "ingress_id": "b9ab0498-045a-46f3-a88d-8ddfd5e3b68d",
+      "observed_at": "2026-09-16T20:56:50.902690+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 39,
+        "polymarket_us": 3
+      },
+      "ingress_id": "ebac84fa-c3dc-4523-b172-8f74519181d7",
+      "observed_at": "2026-09-16T20:56:50.909071+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 39,
+        "polymarket_us": 4
+      },
+      "ingress_id": "5969c44c-e74b-4381-91d1-6d981f973e77",
+      "observed_at": "2026-09-16T20:56:50.913448+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 40,
+        "polymarket_us": 4
+      },
+      "ingress_id": "ecdacb03-2f3d-4ec2-b494-f0171bfb3700",
+      "observed_at": "2026-09-16T20:56:50.918786+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 41,
+        "polymarket_us": 4
+      },
+      "ingress_id": "b7be56d9-7a3a-492f-9a29-e2d3f2b1ddea",
+      "observed_at": "2026-09-16T20:56:50.924981+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 42,
+        "polymarket_us": 4
+      },
+      "ingress_id": "b12d57ed-885d-4de4-850c-876d4659ed04",
+      "observed_at": "2026-09-16T20:56:50.931278+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 43,
+        "polymarket_us": 4
+      },
+      "ingress_id": "9f993679-4914-4787-8ce2-06b60128616e",
+      "observed_at": "2026-09-16T20:56:50.938482+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 44,
+        "polymarket_us": 4
+      },
+      "ingress_id": "71273810-a298-47cf-a1d9-cec1a449a9a7",
+      "observed_at": "2026-09-16T20:56:50.944275+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 45,
+        "polymarket_us": 4
+      },
+      "ingress_id": "9523c04b-ac6b-4ed5-b0bf-9185b762aa6f",
+      "observed_at": "2026-09-16T20:56:50.950625+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 46,
+        "polymarket_us": 4
+      },
+      "ingress_id": "39ffaf56-3eaf-4840-bab5-ec62e3fc214e",
+      "observed_at": "2026-09-16T20:56:50.956972+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 47,
+        "polymarket_us": 4
+      },
+      "ingress_id": "9652ecc1-6fcc-43ac-a2b9-113a68bbd9f2",
+      "observed_at": "2026-09-16T20:56:50.963037+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 4
+      },
+      "ingress_id": "bd500f5c-d0f9-47de-a8e8-a12706c515b7",
+      "observed_at": "2026-09-16T20:56:50.969068+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 5
+      },
+      "ingress_id": "d46cbdc9-e100-43ad-8ad2-93064768e7f5",
+      "observed_at": "2026-09-16T20:56:50.973180+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 49,
+        "polymarket_us": 5
+      },
+      "ingress_id": "782a9744-5b87-4c44-ad89-bcfdb9a63d7d",
+      "observed_at": "2026-09-16T20:56:50.978585+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 50,
+        "polymarket_us": 5
+      },
+      "ingress_id": "2ba225dd-83e8-4912-afc7-df67a0125dcd",
+      "observed_at": "2026-09-16T20:56:50.984680+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 51,
+        "polymarket_us": 5
+      },
+      "ingress_id": "de538bc3-b976-49c8-95c4-60ba430851a0",
+      "observed_at": "2026-09-16T20:56:50.991041+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 52,
+        "polymarket_us": 5
+      },
+      "ingress_id": "9de4709f-8576-4398-8f65-4e59dd97cfb6",
+      "observed_at": "2026-09-16T20:56:50.998362+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 53,
+        "polymarket_us": 5
+      },
+      "ingress_id": "f4dab312-18f0-4674-8671-da12ed76f561",
+      "observed_at": "2026-09-16T20:56:51.004624+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 54,
+        "polymarket_us": 5
+      },
+      "ingress_id": "fc61fef3-6f56-4afe-92c2-5dcf749c06d2",
+      "observed_at": "2026-09-16T20:56:51.010840+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 55,
+        "polymarket_us": 5
+      },
+      "ingress_id": "7867d411-9f60-4e9f-ad60-8079431d93fc",
+      "observed_at": "2026-09-16T20:56:51.018386+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 56,
+        "polymarket_us": 5
+      },
+      "ingress_id": "44f3f001-2647-4748-bdcd-e26e4b9f2211",
+      "observed_at": "2026-09-16T20:56:51.024989+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 57,
+        "polymarket_us": 5
+      },
+      "ingress_id": "3e84eb6f-4e50-4226-a5c2-cc7aac748174",
+      "observed_at": "2026-09-16T20:56:51.031768+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 57,
+        "polymarket_us": 6
+      },
+      "ingress_id": "1739a8b0-c5ea-493e-853a-63b5ae2f4963",
+      "observed_at": "2026-09-16T20:56:51.035979+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 58,
+        "polymarket_us": 6
+      },
+      "ingress_id": "c40232ca-c18d-40d1-acc7-dd6e1f647bc9",
+      "observed_at": "2026-09-16T20:56:51.055302+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 59,
+        "polymarket_us": 6
+      },
+      "ingress_id": "e7edad5e-fa6e-465c-b870-d70350419faa",
+      "observed_at": "2026-09-16T20:56:51.061556+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 60,
+        "polymarket_us": 6
+      },
+      "ingress_id": "b88eb160-af59-4081-922d-1ac7899dd41b",
+      "observed_at": "2026-09-16T20:56:51.067992+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 61,
+        "polymarket_us": 6
+      },
+      "ingress_id": "b8a1a575-27c1-448c-9837-93ef456232ac",
+      "observed_at": "2026-09-16T20:56:51.083151+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 62,
+        "polymarket_us": 6
+      },
+      "ingress_id": "9fe73b20-25a3-4754-977e-04456ac2a51c",
+      "observed_at": "2026-09-16T20:56:51.089664+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 63,
+        "polymarket_us": 6
+      },
+      "ingress_id": "4b3e40f4-5aa7-458e-bbec-0e984bd6aaff",
+      "observed_at": "2026-09-16T20:56:51.096174+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 6
+      },
+      "ingress_id": "3e5282c4-60c4-491b-a2eb-febec8ee7ce6",
+      "observed_at": "2026-09-16T20:56:51.108413+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 7
+      },
+      "ingress_id": "9e1d2d8c-4194-4327-a826-a082b55fd3e1",
+      "observed_at": "2026-09-16T20:56:51.113258+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 8
+      },
+      "ingress_id": "1404a31b-7948-4452-8702-bd6d0ab8ae67",
+      "observed_at": "2026-09-16T20:56:51.118175+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 9
+      },
+      "ingress_id": "e4310fec-f338-4222-bbc2-22f1f15a44f6",
+      "observed_at": "2026-09-16T20:56:51.123271+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 10
+      },
+      "ingress_id": "56efcd82-dc87-47d6-b982-4f4677fa4916",
+      "observed_at": "2026-09-16T20:56:51.128428+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 11
+      },
+      "ingress_id": "d7db61b2-5bcb-4ee5-a811-1b21b19937a5",
+      "observed_at": "2026-09-16T20:56:51.133454+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 12
+      },
+      "ingress_id": "eeeb5560-4265-4ed2-b781-eddef746e00a",
+      "observed_at": "2026-09-16T20:56:51.137937+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 13
+      },
+      "ingress_id": "c8997b01-712b-42b6-8816-52c7686d109b",
+      "observed_at": "2026-09-16T20:56:51.142139+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 14
+      },
+      "ingress_id": "f5d8c6f4-be0b-4f01-95ef-9932883f3580",
+      "observed_at": "2026-09-16T20:56:51.146589+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 15
+      },
+      "ingress_id": "49cb3502-3b5c-47dd-9fdc-0a1b79296e2b",
+      "observed_at": "2026-09-16T20:56:51.150807+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 16
+      },
+      "ingress_id": "4f7328c4-81d3-4014-b3f6-6e2c4be5c212",
+      "observed_at": "2026-09-16T20:56:51.155521+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 17
+      },
+      "ingress_id": "ba754b24-7b53-4bbe-975b-96b7a3cd1638",
+      "observed_at": "2026-09-16T20:56:51.159607+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 18
+      },
+      "ingress_id": "65c5fdbb-8e3a-4910-9bdb-0977d380cf0a",
+      "observed_at": "2026-09-16T20:56:51.163795+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 19
+      },
+      "ingress_id": "e8c14f65-e4c4-412e-95bc-4995cea6fdfd",
+      "observed_at": "2026-09-16T20:56:51.167776+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 20
+      },
+      "ingress_id": "d5e95103-708a-4eaa-874b-0bd82c89406e",
+      "observed_at": "2026-09-16T20:56:51.172169+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 21
+      },
+      "ingress_id": "fd1f102d-eb23-442d-9826-1f07dacbbb75",
+      "observed_at": "2026-09-16T20:56:51.176579+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 22
+      },
+      "ingress_id": "ec1b8df7-9d0f-469f-ae23-b08e77f7a63e",
+      "observed_at": "2026-09-16T20:56:51.180990+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 23
+      },
+      "ingress_id": "0fecd9a1-a7ff-4c6a-8112-7ae155a84f1e",
+      "observed_at": "2026-09-16T20:56:51.185315+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 24
+      },
+      "ingress_id": "72778674-2008-4a3f-aeb4-611507924eb2",
+      "observed_at": "2026-09-16T20:56:51.189835+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 25
+      },
+      "ingress_id": "62347a49-411e-4b42-98dd-c305933e0141",
+      "observed_at": "2026-09-16T20:56:51.194618+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 26
+      },
+      "ingress_id": "19e0fe50-b857-4978-b112-6b695704210d",
+      "observed_at": "2026-09-16T20:56:51.199205+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 27
+      },
+      "ingress_id": "0854ed6b-ff6c-4970-bf4e-ea552d9c8de6",
+      "observed_at": "2026-09-16T20:56:51.203726+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 28
+      },
+      "ingress_id": "ce295c87-3d5e-4e72-93ec-b36f8d4570a2",
+      "observed_at": "2026-09-16T20:56:51.208426+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 29
+      },
+      "ingress_id": "d8f7284a-1ff7-44ea-bfab-f1659cef6070",
+      "observed_at": "2026-09-16T20:56:51.212981+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 30
+      },
+      "ingress_id": "6639e318-b1f6-4234-a10b-fee1fc59728d",
+      "observed_at": "2026-09-16T20:56:51.217099+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 31
+      },
+      "ingress_id": "2c68c53d-c6ad-4cd3-9eb7-1fd2c8d2a230",
+      "observed_at": "2026-09-16T20:56:51.221677+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 32
+      },
+      "ingress_id": "d214f042-f0a9-4ca0-a60f-fb5d3383464a",
+      "observed_at": "2026-09-16T20:56:51.225811+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 63,
+        "polymarket_us": 32
+      },
+      "ingress_id": "0608838a-e19a-4916-83d5-a621cb4f5a65",
+      "observed_at": "2026-09-16T20:57:20.823470+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 62,
+        "polymarket_us": 32
+      },
+      "ingress_id": "132a3b13-06aa-438d-bb4f-ab3a83d51e3f",
+      "observed_at": "2026-09-16T20:57:20.829191+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 61,
+        "polymarket_us": 32
+      },
+      "ingress_id": "86590edb-5d00-4ff7-84c8-842bf1365e27",
+      "observed_at": "2026-09-16T20:57:20.833677+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 60,
+        "polymarket_us": 32
+      },
+      "ingress_id": "cbb3bc58-b4a2-47aa-92af-a8517a772d0f",
+      "observed_at": "2026-09-16T20:57:20.838313+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 59,
+        "polymarket_us": 32
+      },
+      "ingress_id": "50ad5043-64b4-4aa8-81a3-a39260a26746",
+      "observed_at": "2026-09-16T20:57:20.842747+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 58,
+        "polymarket_us": 32
+      },
+      "ingress_id": "809eaf4a-a212-4d98-9aa8-4882b15d346b",
+      "observed_at": "2026-09-16T20:57:20.852696+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 57,
+        "polymarket_us": 32
+      },
+      "ingress_id": "ed2f4211-c244-4e2b-9ad8-bc56921aefaf",
+      "observed_at": "2026-09-16T20:57:20.857713+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 56,
+        "polymarket_us": 32
+      },
+      "ingress_id": "54303a95-1112-4bc9-8ce6-a7bbbc6b7d13",
+      "observed_at": "2026-09-16T20:57:20.862438+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 55,
+        "polymarket_us": 32
+      },
+      "ingress_id": "f90c8e5d-af95-4edc-a86a-d194b81875bc",
+      "observed_at": "2026-09-16T20:57:20.866792+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 54,
+        "polymarket_us": 32
+      },
+      "ingress_id": "e06dcae3-e6dd-4002-9ffb-4c83b0d37842",
+      "observed_at": "2026-09-16T20:57:20.871362+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 53,
+        "polymarket_us": 32
+      },
+      "ingress_id": "9e1a2fbc-d3df-4bdc-9c88-6175178cf2c1",
+      "observed_at": "2026-09-16T20:57:20.876093+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 52,
+        "polymarket_us": 32
+      },
+      "ingress_id": "c79b29d6-48d3-4846-bc1f-69d267cb4d86",
+      "observed_at": "2026-09-16T20:57:20.880696+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 52,
+        "polymarket_us": 31
+      },
+      "ingress_id": "afaa0c85-fea8-475e-a1ca-1bd96ac9cbfb",
+      "observed_at": "2026-09-16T20:57:20.915905+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 51,
+        "polymarket_us": 31
+      },
+      "ingress_id": "a972b3d9-a459-4c4f-9bf5-14ca22a53add",
+      "observed_at": "2026-09-16T20:57:21.090053+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 50,
+        "polymarket_us": 31
+      },
+      "ingress_id": "336d051e-2518-4b03-abcd-d7248b9678c1",
+      "observed_at": "2026-09-16T20:57:21.095442+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 49,
+        "polymarket_us": 31
+      },
+      "ingress_id": "a8e09ac6-f6e6-488b-b32e-fa2ad6569a39",
+      "observed_at": "2026-09-16T20:57:21.099446+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 31
+      },
+      "ingress_id": "4fab3b3a-1f63-465e-ba92-37f624104aa9",
+      "observed_at": "2026-09-16T20:57:21.104005+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 30
+      },
+      "ingress_id": "885eedf9-9454-41f6-ab41-3be0c721d3e4",
+      "observed_at": "2026-09-16T20:57:21.125818+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 29
+      },
+      "ingress_id": "a03bd6bd-0db9-4da1-8c3d-84f5382ef21d",
+      "observed_at": "2026-09-16T20:57:21.149075+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 28
+      },
+      "ingress_id": "41e7d9ff-a242-4b40-84fb-2444015e3552",
+      "observed_at": "2026-09-16T20:57:21.154402+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 27
+      },
+      "ingress_id": "ac1c96cb-830f-4ba6-9710-756cd27acc6f",
+      "observed_at": "2026-09-16T20:57:21.174669+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 26
+      },
+      "ingress_id": "6bfa5a59-d9bf-46f1-9946-5b363537d626",
+      "observed_at": "2026-09-16T20:57:21.180019+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 25
+      },
+      "ingress_id": "76c5a1ec-cbe4-43d5-8e73-07f8712ce785",
+      "observed_at": "2026-09-16T20:57:21.186047+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 24
+      },
+      "ingress_id": "76ac9cd7-6e72-4749-8e41-8a3f54a4f377",
+      "observed_at": "2026-09-16T20:57:21.194902+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 23
+      },
+      "ingress_id": "d65a108c-44a4-4181-ac29-b0c132b26a81",
+      "observed_at": "2026-09-16T20:57:21.213427+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 22
+      },
+      "ingress_id": "79a7566a-c9f6-4fdb-a0aa-213edec94233",
+      "observed_at": "2026-09-16T20:57:21.223019+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 48,
+        "polymarket_us": 21
+      },
+      "ingress_id": "87903975-9bfc-467d-ade9-ca32ed3ac63a",
+      "observed_at": "2026-09-16T20:57:21.228173+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 47,
+        "polymarket_us": 21
+      },
+      "ingress_id": "e57f3046-f37e-4e1e-88ab-ca7194fad990",
+      "observed_at": "2026-09-16T20:57:21.308832+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 46,
+        "polymarket_us": 21
+      },
+      "ingress_id": "ab8ffb40-9280-4b32-a537-2f570d67d386",
+      "observed_at": "2026-09-16T20:57:21.316568+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 45,
+        "polymarket_us": 21
+      },
+      "ingress_id": "f5657301-22db-414e-a72a-62563c55c69d",
+      "observed_at": "2026-09-16T20:57:21.322833+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 44,
+        "polymarket_us": 21
+      },
+      "ingress_id": "77b43b3f-8eb1-41f7-99cb-0035ab99a618",
+      "observed_at": "2026-09-16T20:57:21.328464+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 43,
+        "polymarket_us": 21
+      },
+      "ingress_id": "3b293a86-5fed-4066-b4f5-f79739da99e3",
+      "observed_at": "2026-09-16T20:57:21.333722+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 42,
+        "polymarket_us": 21
+      },
+      "ingress_id": "c6585cb4-0c8d-4e9f-8546-1ff9d00aef35",
+      "observed_at": "2026-09-16T20:57:21.338553+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 41,
+        "polymarket_us": 21
+      },
+      "ingress_id": "4647486a-42f1-4ee9-b42a-cc7403849714",
+      "observed_at": "2026-09-16T20:57:21.343272+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 40,
+        "polymarket_us": 21
+      },
+      "ingress_id": "455437cd-1633-4f52-a6f5-89f0e1efb8d5",
+      "observed_at": "2026-09-16T20:57:21.348479+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 39,
+        "polymarket_us": 21
+      },
+      "ingress_id": "833f2bd4-853e-48b7-b5c1-6aa3ff7ea6a5",
+      "observed_at": "2026-09-16T20:57:21.353043+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 38,
+        "polymarket_us": 21
+      },
+      "ingress_id": "75e43a9b-e2f0-4b10-8ab3-83eb86bd28a7",
+      "observed_at": "2026-09-16T20:57:21.357954+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 37,
+        "polymarket_us": 21
+      },
+      "ingress_id": "6ffa289a-3a42-4d2c-b1ab-05b5b09806cb",
+      "observed_at": "2026-09-16T20:57:21.362864+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 36,
+        "polymarket_us": 21
+      },
+      "ingress_id": "35177723-67b6-4fd8-9699-f4e7424cda46",
+      "observed_at": "2026-09-16T20:57:21.367137+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 35,
+        "polymarket_us": 21
+      },
+      "ingress_id": "7c5c2201-787e-43ef-98f9-72ce2bc34470",
+      "observed_at": "2026-09-16T20:57:21.371797+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 34,
+        "polymarket_us": 21
+      },
+      "ingress_id": "63bb538b-8f86-47eb-b92f-6a63c337e749",
+      "observed_at": "2026-09-16T20:57:21.376448+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 33,
+        "polymarket_us": 21
+      },
+      "ingress_id": "77b2e27e-fc6b-47cc-87b2-45b9b1c86233",
+      "observed_at": "2026-09-16T20:57:21.381110+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 32,
+        "polymarket_us": 21
+      },
+      "ingress_id": "f96657bb-5394-4a1f-8d82-a3ff0a21da04",
+      "observed_at": "2026-09-16T20:57:21.385679+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 31,
+        "polymarket_us": 21
+      },
+      "ingress_id": "71459c10-c3e3-4975-8df7-acf8ee94a732",
+      "observed_at": "2026-09-16T20:57:21.390035+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 30,
+        "polymarket_us": 21
+      },
+      "ingress_id": "18a3a6bf-dcb9-4915-b57b-3430085a3181",
+      "observed_at": "2026-09-16T20:57:21.394293+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 29,
+        "polymarket_us": 21
+      },
+      "ingress_id": "502dd775-7615-4fce-a80c-20823bc4a82b",
+      "observed_at": "2026-09-16T20:57:21.399336+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 28,
+        "polymarket_us": 21
+      },
+      "ingress_id": "7c2f6f3f-239a-4a20-9eb8-9cc0ef74cdc0",
+      "observed_at": "2026-09-16T20:57:21.403812+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 27,
+        "polymarket_us": 21
+      },
+      "ingress_id": "edb6c0e7-7d9d-439f-9b0f-cdee61710ebc",
+      "observed_at": "2026-09-16T20:57:21.408639+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 21
+      },
+      "ingress_id": "db9b5a2b-e7ee-4c22-ab79-ba1d8e9883c2",
+      "observed_at": "2026-09-16T20:57:21.413477+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 21
+      },
+      "ingress_id": "7d6769d0-6e4e-45d5-bf5c-87d73a0b3d34",
+      "observed_at": "2026-09-16T20:57:21.418093+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 21
+      },
+      "ingress_id": "9fc38757-7734-4f2f-aefe-feb3af2ab686",
+      "observed_at": "2026-09-16T20:57:21.422374+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 21
+      },
+      "ingress_id": "e7458eff-43d1-4c2f-94ff-5071289da70b",
+      "observed_at": "2026-09-16T20:57:21.426507+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 21
+      },
+      "ingress_id": "1371decd-9121-4fbc-97d9-46492f580ae6",
+      "observed_at": "2026-09-16T20:57:21.431145+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 21
+      },
+      "ingress_id": "0365f86e-4371-4c03-9770-b14961275c16",
+      "observed_at": "2026-09-16T20:57:21.435089+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 21
+      },
+      "ingress_id": "83a5e47c-bfeb-441c-898f-37ce595b93e4",
+      "observed_at": "2026-09-16T20:57:21.439355+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 21
+      },
+      "ingress_id": "a5bbb2cd-2ec1-4a8c-9edc-d03ac3bf7fbd",
+      "observed_at": "2026-09-16T20:57:21.443538+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 21
+      },
+      "ingress_id": "2a316fa3-b8a7-4b63-9194-f477ec6f5686",
+      "observed_at": "2026-09-16T20:57:21.448092+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 21
+      },
+      "ingress_id": "2be7d8e3-7dc0-4e7c-a7f7-8326c71730c0",
+      "observed_at": "2026-09-16T20:57:21.452337+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 21
+      },
+      "ingress_id": "802b6fd7-52ef-4f47-aed1-722bd7875427",
+      "observed_at": "2026-09-16T20:57:21.456616+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 21
+      },
+      "ingress_id": "7bd49e30-8931-44a2-ba0e-1a0cfd20c1d6",
+      "observed_at": "2026-09-16T20:57:21.460915+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 14,
+        "polymarket_us": 21
+      },
+      "ingress_id": "64d7ecf8-6d46-40db-9e0b-1011fc311a0b",
+      "observed_at": "2026-09-16T20:57:21.465282+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 13,
+        "polymarket_us": 21
+      },
+      "ingress_id": "a9677a03-cbb9-419f-9831-650bea0f4f77",
+      "observed_at": "2026-09-16T20:57:21.469477+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 12,
+        "polymarket_us": 21
+      },
+      "ingress_id": "db7e06e6-f7f0-444d-b048-477a281ab5a6",
+      "observed_at": "2026-09-16T20:57:21.473869+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 11,
+        "polymarket_us": 21
+      },
+      "ingress_id": "9544770c-cedf-4802-a5b2-c0adaf821df7",
+      "observed_at": "2026-09-16T20:57:21.478059+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 12,
+        "polymarket_us": 21
+      },
+      "ingress_id": "fc9b75c1-3a93-42d2-ae1f-b6710540b7f4",
+      "observed_at": "2026-09-16T20:57:21.832247+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 13,
+        "polymarket_us": 21
+      },
+      "ingress_id": "0a10b3ad-b366-4acc-96f9-33a10c118279",
+      "observed_at": "2026-09-16T20:57:21.882238+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 14,
+        "polymarket_us": 21
+      },
+      "ingress_id": "00f331d6-a69e-4f9d-b5d4-7565ec4fc6e4",
+      "observed_at": "2026-09-16T20:57:21.917461+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 21
+      },
+      "ingress_id": "5e0e5cae-d9b5-40fb-81ca-2e79cf236e49",
+      "observed_at": "2026-09-16T20:57:22.954297+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 21
+      },
+      "ingress_id": "309fa6e1-1d79-4421-bc34-3d636319a7f3",
+      "observed_at": "2026-09-16T20:57:23.074861+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 21
+      },
+      "ingress_id": "54429b97-bcc8-4840-b542-9a2635d73897",
+      "observed_at": "2026-09-16T20:57:23.647501+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 21
+      },
+      "ingress_id": "f8b297fa-9509-407c-bc41-672100ecd9ee",
+      "observed_at": "2026-09-16T20:57:24.131689+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 22
+      },
+      "ingress_id": "b9e1e68d-1973-4f96-a03a-2a769b2df329",
+      "observed_at": "2026-09-16T20:57:26.008575+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 23
+      },
+      "ingress_id": "51091408-e9a4-446b-8b12-28e2bc57141e",
+      "observed_at": "2026-09-16T20:57:26.151222+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 24
+      },
+      "ingress_id": "99c4069d-9c83-4406-95ea-ff2c64c06006",
+      "observed_at": "2026-09-16T20:57:26.206041+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 25
+      },
+      "ingress_id": "cbd8167e-20fe-49c1-a6bf-7fe6eac5b080",
+      "observed_at": "2026-09-16T20:57:26.463566+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 26
+      },
+      "ingress_id": "956821a3-08fa-4c5f-860a-f2557fd7b7ef",
+      "observed_at": "2026-09-16T20:57:27.020332+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 26
+      },
+      "ingress_id": "495a700f-3ab4-4ff4-9583-ccfe4c87a223",
+      "observed_at": "2026-09-16T20:57:29.597506+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 26
+      },
+      "ingress_id": "c06730d8-1af1-456e-850b-cebf543c8d84",
+      "observed_at": "2026-09-16T20:57:30.120920+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 26
+      },
+      "ingress_id": "009f0cf0-59b0-46ec-9d86-52b66f7eefe2",
+      "observed_at": "2026-09-16T20:57:31.182856+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 27
+      },
+      "ingress_id": "6eaf0d54-df14-462c-85cf-42d484de10a6",
+      "observed_at": "2026-09-16T20:57:33.883663+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 28
+      },
+      "ingress_id": "c13a89a6-4927-4100-ae46-e341fcd0e474",
+      "observed_at": "2026-09-16T20:57:37.360392+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 28
+      },
+      "ingress_id": "e8d511b1-c486-446f-a698-96b99efa88cc",
+      "observed_at": "2026-09-16T20:57:37.451143+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 28
+      },
+      "ingress_id": "2e9c78be-0262-49d2-959e-7b72a750104f",
+      "observed_at": "2026-09-16T20:57:37.753381+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 29
+      },
+      "ingress_id": "cf7e9bfa-a0ec-4e68-8e65-cea02fde9f49",
+      "observed_at": "2026-09-16T20:57:38.991566+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 30
+      },
+      "ingress_id": "2c3e5543-cfcc-4f62-adce-cd2d789f044b",
+      "observed_at": "2026-09-16T20:57:39.035389+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "f9304c80-a62b-482a-aab4-c2026c00f9e7",
+      "observed_at": "2026-09-16T20:57:39.104139+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "ingress_id": "de8f6b42-8645-4d5d-bf38-7636d3c856c8",
+      "observed_at": "2026-09-16T20:57:41.509450+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "346011e9-0c09-4cf6-b64f-fb450b4640cd",
+      "observed_at": "2026-09-16T20:57:43.114572+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "ad220fe0-7411-4c5a-a16e-9fe73672930e",
+      "observed_at": "2026-09-16T20:57:43.125741+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "f03fe015-44f0-4035-b560-978742435eb8",
+      "observed_at": "2026-09-16T20:57:43.491749+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "98a442c6-52dc-4548-ab83-d054c5581092",
+      "observed_at": "2026-09-16T20:57:49.859340+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "50db7d20-ad99-48c4-b107-cffdefcfbad6",
+      "observed_at": "2026-09-16T20:57:49.869815+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 30
+      },
+      "ingress_id": "6eaa1fb7-d5b0-4cae-8b3a-e776cf698d0d",
+      "observed_at": "2026-09-16T20:57:50.793548+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 30
+      },
+      "ingress_id": "b25c65ad-1d29-417e-a274-b00682f0627d",
+      "observed_at": "2026-09-16T20:57:50.976220+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "9aab9d0d-1186-4134-bd52-7d19922017af",
+      "observed_at": "2026-09-16T20:57:52.008232+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "7022662e-befa-431d-bdd4-6dd144c28043",
+      "observed_at": "2026-09-16T20:57:52.016447+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "16ce77d7-e450-4bf6-b0e5-1552b2d2effb",
+      "observed_at": "2026-09-16T20:57:53.083512+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 29
+      },
+      "ingress_id": "a650cc56-8b1c-441a-a172-d132d40c2b46",
+      "observed_at": "2026-09-16T20:57:53.662193+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "817c1445-ac34-42c3-920b-51efcae201df",
+      "observed_at": "2026-09-16T20:57:53.947924+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 29
+      },
+      "ingress_id": "7d5418c7-81c6-44a9-9114-563649dd4dd8",
+      "observed_at": "2026-09-16T20:57:54.043938+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 29
+      },
+      "ingress_id": "6166a738-6f7c-4961-8066-147ebd9dd823",
+      "observed_at": "2026-09-16T20:57:54.338535+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 30
+      },
+      "ingress_id": "76157728-0b36-4f21-ab6a-825c3a0371c7",
+      "observed_at": "2026-09-16T20:57:54.394582+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 29
+      },
+      "ingress_id": "d1941f50-3a3d-48c7-8cc8-b7aaf35337d7",
+      "observed_at": "2026-09-16T20:57:54.885169+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 29
+      },
+      "ingress_id": "631b5960-f474-4b40-819b-33a4b9261ff2",
+      "observed_at": "2026-09-16T20:57:56.125222+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "bc56c58b-60ad-45d0-bfab-121b8726d679",
+      "observed_at": "2026-09-16T20:57:56.138856+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 29
+      },
+      "ingress_id": "082a0f39-f326-4dac-b563-c5c534b4414a",
+      "observed_at": "2026-09-16T20:57:56.879909+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "f694aa3f-51c9-4a18-be76-f9fe2b2c36ea",
+      "observed_at": "2026-09-16T20:57:58.537727+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 29
+      },
+      "ingress_id": "8307ec82-93c9-46b6-adb2-9c71597ae73c",
+      "observed_at": "2026-09-16T20:57:59.049037+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "d71e8f94-cb1b-4193-88b9-46770a56c7e3",
+      "observed_at": "2026-09-16T20:57:59.590825+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 29
+      },
+      "ingress_id": "442a8f82-c936-4199-b8fe-8f536895653d",
+      "observed_at": "2026-09-16T20:58:01.216689+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "e3c1504c-085d-4199-a6d0-2af9e12aff23",
+      "observed_at": "2026-09-16T20:58:02.018448+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 29
+      },
+      "ingress_id": "ef752ace-3d05-4d1e-85a1-a03e5fb784f5",
+      "observed_at": "2026-09-16T20:58:02.555201+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 28
+      },
+      "ingress_id": "ff9c42b0-d76c-4cb0-b948-8a21195c9f63",
+      "observed_at": "2026-09-16T20:58:04.670682+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 28
+      },
+      "ingress_id": "4f332d12-423a-45b4-84fb-90bdfee14054",
+      "observed_at": "2026-09-16T20:58:05.292586+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 29
+      },
+      "ingress_id": "5bf2a482-6f7e-4a93-b66b-59e9a4f6b74f",
+      "observed_at": "2026-09-16T20:58:07.098901+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 29
+      },
+      "ingress_id": "4b44a7fb-e1a7-4b00-a845-a63ba7a0a83f",
+      "observed_at": "2026-09-16T20:58:07.608279+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "9310b8f6-d967-4444-be0f-5057a36f00d5",
+      "observed_at": "2026-09-16T20:58:08.120003+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 28
+      },
+      "ingress_id": "024052f9-8794-40ef-922c-86ae97d9e384",
+      "observed_at": "2026-09-16T20:58:08.585476+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "512c0159-1cae-466d-ae7c-56cda2d6266d",
+      "observed_at": "2026-09-16T20:58:08.621878+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 28
+      },
+      "ingress_id": "8b4f77c9-7ef9-484e-b8f9-ef9c4c4065dd",
+      "observed_at": "2026-09-16T20:58:08.994867+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 27
+      },
+      "ingress_id": "951f0e97-ddd0-44da-84a3-31d7d47f729c",
+      "observed_at": "2026-09-16T20:58:09.314886+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 27
+      },
+      "ingress_id": "496177ed-104a-421b-aa6f-88ab81530eac",
+      "observed_at": "2026-09-16T20:58:09.981782+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 27
+      },
+      "ingress_id": "e3a2cf7d-17de-4289-91a5-d938e7de9bd4",
+      "observed_at": "2026-09-16T20:58:10.007210+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 27
+      },
+      "ingress_id": "9759376d-7946-4e5a-b5e7-d133cf9a93dc",
+      "observed_at": "2026-09-16T20:58:10.028197+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 27
+      },
+      "ingress_id": "9284bca3-8c68-4bd5-8b21-ec1ae7838d8a",
+      "observed_at": "2026-09-16T20:58:10.034689+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 27
+      },
+      "ingress_id": "f169f0fd-fe23-4ffc-b960-14345cc7b193",
+      "observed_at": "2026-09-16T20:58:10.068257+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 27
+      },
+      "ingress_id": "84d6c537-d962-47c6-9647-1759269c6849",
+      "observed_at": "2026-09-16T20:58:10.085391+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 27
+      },
+      "ingress_id": "c62aada9-3639-4296-b820-6ef3f890ae50",
+      "observed_at": "2026-09-16T20:58:10.586663+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 27
+      },
+      "ingress_id": "583ffd7f-3105-45c2-9b78-950d59b22ed1",
+      "observed_at": "2026-09-16T20:58:11.729526+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 27
+      },
+      "ingress_id": "907ceed1-876e-4c09-927b-28e7fe6f99e9",
+      "observed_at": "2026-09-16T20:58:14.114159+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 27
+      },
+      "ingress_id": "71223a0a-1536-4a9c-936e-f60e15cb1290",
+      "observed_at": "2026-09-16T20:58:14.182605+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 28
+      },
+      "ingress_id": "92b00195-10d8-499d-a5d2-38f6a2c2ffca",
+      "observed_at": "2026-09-16T20:58:15.067504+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 27
+      },
+      "ingress_id": "e54ca7c9-2952-4040-87d8-2215329a0755",
+      "observed_at": "2026-09-16T20:58:19.318764+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 28
+      },
+      "ingress_id": "6977c259-3d3d-443d-9d5b-d4a393ffab1b",
+      "observed_at": "2026-09-16T20:58:21.112303+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 28
+      },
+      "ingress_id": "0e494b76-5195-4801-b1ed-8993771bbbbf",
+      "observed_at": "2026-09-16T20:58:24.666414+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 29
+      },
+      "ingress_id": "3d348bb9-c3d6-4dc4-9546-6d1851c8bc2b",
+      "observed_at": "2026-09-16T20:58:25.410696+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 28
+      },
+      "ingress_id": "2f8ccfde-f9cb-469d-9d21-489d63937aff",
+      "observed_at": "2026-09-16T20:58:25.929556+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 28
+      },
+      "ingress_id": "586037e4-3db4-44a9-af0d-80fb0228194d",
+      "observed_at": "2026-09-16T20:58:26.218744+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 29
+      },
+      "ingress_id": "12a7845b-1bb7-4dbd-b3e3-6783bc73937e",
+      "observed_at": "2026-09-16T20:58:30.330722+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 29
+      },
+      "ingress_id": "52213886-274c-4ae1-8e78-7138fddfe950",
+      "observed_at": "2026-09-16T20:58:39.970905+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 29
+      },
+      "ingress_id": "de921f59-b5c7-42c0-944c-5ac416d9cd1f",
+      "observed_at": "2026-09-16T20:58:40.379478+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 29
+      },
+      "ingress_id": "6d408eef-ff1b-4f61-9e46-979777b356b5",
+      "observed_at": "2026-09-16T20:58:40.392928+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 29
+      },
+      "ingress_id": "bd51e388-4136-4758-913b-04e0097a91c7",
+      "observed_at": "2026-09-16T20:58:40.400679+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 29
+      },
+      "ingress_id": "637bc4f7-e02d-4f80-ad8e-2391d529092d",
+      "observed_at": "2026-09-16T20:58:40.406305+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 29
+      },
+      "ingress_id": "a61763ed-37e1-4cd3-b24c-e95173c42e45",
+      "observed_at": "2026-09-16T20:58:40.410252+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 29
+      },
+      "ingress_id": "cec9ae9b-8601-49af-89f6-29d93026c931",
+      "observed_at": "2026-09-16T20:58:40.612790+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 29
+      },
+      "ingress_id": "312788ce-a984-4705-b68a-e10eaf526be1",
+      "observed_at": "2026-09-16T20:58:40.616796+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 29
+      },
+      "ingress_id": "2bd6eb22-9839-4c42-9f54-5023dc3781af",
+      "observed_at": "2026-09-16T20:58:40.624117+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "29c942c4-ee1f-4125-9671-1c288ab9575a",
+      "observed_at": "2026-09-16T20:58:40.628283+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 29
+      },
+      "ingress_id": "2245d086-676d-4ca7-92dc-6e7b06c8ee84",
+      "observed_at": "2026-09-16T20:58:40.632448+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 30
+      },
+      "ingress_id": "42764aef-4aad-4d8c-b79d-d025aa3797c2",
+      "observed_at": "2026-09-16T20:58:41.326916+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 31
+      },
+      "ingress_id": "d305be23-651e-492a-a769-01ecb4555a0c",
+      "observed_at": "2026-09-16T20:58:42.258525+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "ingress_id": "0571c155-e794-46c5-ab1f-995469f6f3b7",
+      "observed_at": "2026-09-16T20:58:43.342019+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 31
+      },
+      "ingress_id": "24723fc8-af42-46ac-aa1a-9bca97bed0ad",
+      "observed_at": "2026-09-16T20:58:44.835083+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 30
+      },
+      "ingress_id": "47fb7e5e-94d4-4842-aab5-e5c56e392d47",
+      "observed_at": "2026-09-16T20:58:45.067737+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 14,
+        "polymarket_us": 30
+      },
+      "ingress_id": "d317f909-86f8-4b56-bb65-140698cf74de",
+      "observed_at": "2026-09-16T20:58:46.197597+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 30
+      },
+      "ingress_id": "0d86dc67-370c-41fa-ba8d-14bf7c7f6e78",
+      "observed_at": "2026-09-16T20:58:47.464635+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "1e46437d-4fb9-45c6-9b1b-4c80429935ab",
+      "observed_at": "2026-09-16T20:58:47.971032+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "cc318245-cc60-4731-b5b7-37f3ef5b5337",
+      "observed_at": "2026-09-16T20:58:52.153378+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 29
+      },
+      "ingress_id": "fc4214d6-e8e4-4ffe-9c74-829a984f2bb1",
+      "observed_at": "2026-09-16T20:58:53.600639+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "c751ac4e-653c-4f8b-89f9-8c3e98f4712e",
+      "observed_at": "2026-09-16T20:58:53.612679+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 29
+      },
+      "ingress_id": "ff254460-3d4f-4bca-93d6-9e471c5876ae",
+      "observed_at": "2026-09-16T20:58:54.912118+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "ade63310-2bc7-4a46-83a3-f7ccf8a2341c",
+      "observed_at": "2026-09-16T20:58:57.236585+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "99fd29ea-1563-4c2b-b523-c832f49cffe1",
+      "observed_at": "2026-09-16T20:58:57.617683+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "ingress_id": "2dbc28aa-4777-4de9-9933-c9ab257d7692",
+      "observed_at": "2026-09-16T20:58:58.737702+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "f2aff496-80aa-426b-81c4-e2f78bb66b02",
+      "observed_at": "2026-09-16T20:59:00.582970+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "ceb5f17d-19eb-483d-90ed-ca825ba64449",
+      "observed_at": "2026-09-16T20:59:00.871823+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 30
+      },
+      "ingress_id": "42476fce-af5f-4b70-a7f4-cb150baa8409",
+      "observed_at": "2026-09-16T20:59:02.212243+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "791d88ba-a15b-453b-bf31-b67ac34ab774",
+      "observed_at": "2026-09-16T20:59:05.226855+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "03266c10-ee52-489b-b97d-4ba51983e31f",
+      "observed_at": "2026-09-16T20:59:05.701229+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "17cf6923-b8b8-4530-8a7e-e3e5c28dd3cf",
+      "observed_at": "2026-09-16T20:59:08.593735+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "885e2a40-4996-4daf-a294-d1a9caa8d1a2",
+      "observed_at": "2026-09-16T20:59:08.838411+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "647d4af1-f2c5-4b07-ac8c-adb3c4715619",
+      "observed_at": "2026-09-16T20:59:10.143950+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "ef4d79d4-2cee-471d-8e69-8290a7587f65",
+      "observed_at": "2026-09-16T20:59:10.152604+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "c041a0a0-c0d1-4cee-b8a6-08e26de095df",
+      "observed_at": "2026-09-16T20:59:11.228023+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "ingress_id": "f28afee7-74db-4c46-b025-464e6e866b78",
+      "observed_at": "2026-09-16T20:59:11.427829+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "8c9ecfa7-8963-4052-a4f6-49236a07a712",
+      "observed_at": "2026-09-16T20:59:11.588770+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "ingress_id": "2936734c-9cdb-4683-af60-851c158313cb",
+      "observed_at": "2026-09-16T20:59:13.732699+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 32
+      },
+      "ingress_id": "96a13ab4-b132-406e-87d7-fd8575d670b9",
+      "observed_at": "2026-09-16T20:59:14.062285+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "ingress_id": "58c584dc-d5b7-41e5-a782-aa41f87973c0",
+      "observed_at": "2026-09-16T20:59:15.053358+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "90070421-d9ef-4d0b-8bd4-b2a25e049314",
+      "observed_at": "2026-09-16T20:59:17.736004+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 32
+      },
+      "ingress_id": "8e22317c-f06e-46de-8dbf-21049b8ca2c9",
+      "observed_at": "2026-09-16T20:59:18.061380+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "4d959438-e711-4306-bd16-693428787036",
+      "observed_at": "2026-09-16T20:59:22.269143+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "ingress_id": "d80c8cad-927a-4173-bffd-1b95f7ee30a5",
+      "observed_at": "2026-09-16T20:59:22.335868+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "d15ec840-8266-4060-84aa-8145f047073e",
+      "observed_at": "2026-09-16T20:59:23.851625+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "6ff09202-728e-40a8-b6f5-d2c013fc02ec",
+      "observed_at": "2026-09-16T20:59:24.896657+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "cbf9df17-cbc0-4eee-b907-888f657204bd",
+      "observed_at": "2026-09-16T20:59:26.510375+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "87acd9ff-0abb-445c-be13-b85603d0dd40",
+      "observed_at": "2026-09-16T20:59:26.873317+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "ingress_id": "5f57fdf1-a8cb-45d2-90bf-c7e160984362",
+      "observed_at": "2026-09-16T20:59:27.049232+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "9b709d88-7b6f-43c9-970c-aadd4165cb6e",
+      "observed_at": "2026-09-16T20:59:29.259727+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "d3bd1849-dbcb-4cfd-9f66-379cc2c7c737",
+      "observed_at": "2026-09-16T20:59:30.646469+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "f7a1a9b1-8f4e-4283-9814-fa53106a5369",
+      "observed_at": "2026-09-16T20:59:31.157541+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "ingress_id": "ff7f59ae-0104-48ea-bc61-d3d85ed8fc33",
+      "observed_at": "2026-09-16T20:59:32.271648+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "b5ba00e5-e42a-4453-93be-d47492553a73",
+      "observed_at": "2026-09-16T20:59:35.158712+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "6b9e50a2-87bd-4ab4-8d0b-6c5878b6db57",
+      "observed_at": "2026-09-16T20:59:36.387423+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "ingress_id": "20ee4bbf-1a4a-4a0b-b194-d8492e19ba29",
+      "observed_at": "2026-09-16T20:59:38.314268+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "ingress_id": "eb1593b5-aa95-4bf5-a12c-846d07090251",
+      "observed_at": "2026-09-16T20:59:39.328528+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "9d655283-5d15-439e-b633-c23bf8e6bdf6",
+      "observed_at": "2026-09-16T20:59:41.239878+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "ingress_id": "93d60a8e-83e0-4fb3-9966-7f19db0f4b9b",
+      "observed_at": "2026-09-16T20:59:41.639323+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "c98f29f1-976b-465a-9484-29fe5461a5f4",
+      "observed_at": "2026-09-16T20:59:41.801517+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "7033e4bd-da74-4b95-aebd-de6970c137e2",
+      "observed_at": "2026-09-16T20:59:41.811134+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 28
+      },
+      "ingress_id": "7c63a348-0d18-4262-af44-d5163c76b9e3",
+      "observed_at": "2026-09-16T20:59:42.218294+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 28
+      },
+      "ingress_id": "04288141-ead9-4253-a040-1b4126923c37",
+      "observed_at": "2026-09-16T20:59:43.542986+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 14,
+        "polymarket_us": 28
+      },
+      "ingress_id": "46fc0fb6-c5cd-4de4-8fb7-00f0aa1d5195",
+      "observed_at": "2026-09-16T20:59:43.604602+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 28
+      },
+      "ingress_id": "161eb69a-6930-4ab0-a096-9e63d548f905",
+      "observed_at": "2026-09-16T20:59:43.760130+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 29
+      },
+      "ingress_id": "e9411526-1ccf-4afc-a1ba-c7909c47de9f",
+      "observed_at": "2026-09-16T20:59:44.216387+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "3d187768-5666-4a7c-9af7-c64d8a190b63",
+      "observed_at": "2026-09-16T20:59:44.403304+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 29
+      },
+      "ingress_id": "7884c181-b6a1-4d33-b453-0cd04cf196e1",
+      "observed_at": "2026-09-16T20:59:45.249111+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "ingress_id": "a6d8469c-c028-4ad9-b8d5-ebfe6081b417",
+      "observed_at": "2026-09-16T20:59:46.150451+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "ingress_id": "207973d6-468e-4e13-b75b-f0ada379f3c5",
+      "observed_at": "2026-09-16T20:59:46.329985+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "ingress_id": "9a68fc28-b3e8-4d98-bc0c-566475372004",
+      "observed_at": "2026-09-16T20:59:46.375837+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "2c12caf3-9317-4939-b83f-9a748f155f1c",
+      "observed_at": "2026-09-16T20:59:46.841756+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "c1e02346-7010-4d7c-81c1-e8a944e97a98",
+      "observed_at": "2026-09-16T20:59:47.631838+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "ingress_id": "bebf1bfd-f884-40ff-b4ce-9bcafc20f625",
+      "observed_at": "2026-09-16T20:59:47.712774+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 31
+      },
+      "ingress_id": "259c4dcf-835c-42aa-911b-8dd60250257c",
+      "observed_at": "2026-09-16T20:59:48.703935+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "59612c51-507a-4f79-a9dd-9bcfa7286f1f",
+      "observed_at": "2026-09-16T20:59:48.769253+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 30
+      },
+      "ingress_id": "16430890-9fff-48ba-85b9-e0fb9ca016fb",
+      "observed_at": "2026-09-16T20:59:52.513938+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 30
+      },
+      "ingress_id": "1026b727-9148-48ab-ae02-85bad78b68d4",
+      "observed_at": "2026-09-16T20:59:52.746144+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 30
+      },
+      "ingress_id": "69fb7730-4175-44e3-b2cc-ef9d09b479f1",
+      "observed_at": "2026-09-16T20:59:53.153322+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 30
+      },
+      "ingress_id": "e8c30570-37e0-4898-ba32-07185a1706b4",
+      "observed_at": "2026-09-16T20:59:53.424532+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 30
+      },
+      "ingress_id": "e67ec08b-7dd6-4ca4-998b-195e330b4f55",
+      "observed_at": "2026-09-16T20:59:53.721250+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 31
+      },
+      "ingress_id": "fcf05f9b-a911-4b34-a583-e266435eb456",
+      "observed_at": "2026-09-16T20:59:54.337209+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "ingress_id": "d1bb39e7-fb2a-4d8e-acb0-9dba4f4aaa2c",
+      "observed_at": "2026-09-16T20:59:54.855203+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "f5adbbab-0797-4d29-99ee-a8942dfb74fc",
+      "observed_at": "2026-09-16T20:59:55.362869+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "ingress_id": "550b9897-3ddc-4481-ba97-59601b87d016",
+      "observed_at": "2026-09-16T20:59:56.148550+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "ingress_id": "4f1f268d-9a2b-481d-a7db-b276427c6eef",
+      "observed_at": "2026-09-16T21:00:00.837865+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "ingress_id": "c3c97ceb-45d9-410e-9ad0-cf7bc6bba710",
+      "observed_at": "2026-09-16T21:00:00.847960+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 31
+      },
+      "ingress_id": "bba19ab9-07c3-4230-9252-6324a0091661",
+      "observed_at": "2026-09-16T21:00:00.863095+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 31
+      },
+      "ingress_id": "a690bf72-6db4-4ad9-9080-d39eab320b73",
+      "observed_at": "2026-09-16T21:00:01.017621+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "ingress_id": "c726f5f4-4fb7-4992-9b6f-533392840c61",
+      "observed_at": "2026-09-16T21:00:01.112445+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 31
+      },
+      "ingress_id": "dd7020e4-a22b-4d7d-9a46-c395d8b67827",
+      "observed_at": "2026-09-16T21:00:01.347356+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "ingress_id": "3b5ee14a-0a48-4882-bd8f-148b59a3fc63",
+      "observed_at": "2026-09-16T21:00:02.316278+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-4",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "ingress_id": "4900210f-c812-4616-b264-f2c497d503d7",
+      "observed_at": "2026-09-16T21:00:02.350174+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "4686ef70-e80b-4582-9d6b-21f0edb72ac1",
+      "observed_at": "2026-09-16T21:00:02.443840+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "ingress_id": "c9e2fef0-cd57-417b-aa2b-097f7dc17ee2",
+      "observed_at": "2026-09-16T21:00:02.860892+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "a54cc97a-a763-40ca-b7c7-e9b318920030",
+      "observed_at": "2026-09-16T21:00:08.970930+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "ingress_id": "4679b66c-5d7c-4840-86da-fe742765e8a3",
+      "observed_at": "2026-09-16T21:00:09.142816+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "56701198-0c42-4e13-bd95-62c14a952a11",
+      "observed_at": "2026-09-16T21:00:10.669759+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "ingress_id": "617359c7-a550-4814-b716-9f0726e571da",
+      "observed_at": "2026-09-16T21:00:12.632563+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "50ff424d-2066-4db9-8bf3-e60453afcdf5",
+      "observed_at": "2026-09-16T21:00:16.254842+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "ingress_id": "d3f3ed73-8e09-48a2-8d47-4e93a4db68b9",
+      "observed_at": "2026-09-16T21:00:16.373609+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "1813fd62-4158-46bc-ba5d-b367700df9e6",
+      "observed_at": "2026-09-16T21:00:16.411588+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "ingress_id": "b90e09b8-983b-4d97-808c-a942d707e9ab",
+      "observed_at": "2026-09-16T21:00:17.230480+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 32
+      },
+      "ingress_id": "fba197ee-6194-4c96-afe1-53ef3e0aab28",
+      "observed_at": "2026-09-16T21:00:17.364225+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-2",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "ingress_id": "43425d23-277a-497c-aa59-b610b3106127",
+      "observed_at": "2026-09-16T21:00:18.884232+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "ingress_id": "38fc96de-b475-43ed-bc8f-140d8d827114",
+      "observed_at": "2026-09-16T21:00:18.896245+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-3",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "ingress_id": "dd8ec368-cc00-4a2a-b5e2-6dc8dfc4a633",
+      "observed_at": "2026-09-16T21:00:18.931256+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "ingress_id": "2968f5f1-563a-4375-978d-c31abd858c2e",
+      "observed_at": "2026-09-16T21:00:19.032064+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 31
+      },
+      "ingress_id": "512742e3-b52a-4016-a0e9-c77458026282",
+      "observed_at": "2026-09-16T21:00:19.040453+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "ingress_id": "c1b5d557-3809-46af-b32f-a249aadbeb82",
+      "observed_at": "2026-09-16T21:00:19.353022+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "ingress_id": "50b4cd81-c336-4b10-a205-323398bfcef9",
+      "observed_at": "2026-09-16T21:00:20.446884+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "ingress_id": "d6fd6ed0-1f3c-4744-baa9-670764723dae",
+      "observed_at": "2026-09-16T21:00:25.123407+00:00",
+      "received_at": null,
+      "stream_group": "kalshi-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 30
+      },
+      "ingress_id": "948e93c4-3296-4e93-b315-caf99708b33f",
+      "observed_at": "2026-09-16T21:00:25.348872+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 29
+      },
+      "ingress_id": "9557f34e-6783-4a7d-9dbc-513c8b91b9d1",
+      "observed_at": "2026-09-16T21:00:25.649058+00:00",
+      "received_at": null,
+      "stream_group": "polymarket_us-1",
+      "terminal": false,
+      "type": "prediction_book"
+    },
+    {
+      "counts": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "ingress_id": null,
+      "observed_at": "2026-09-16T21:00:25.991523+00:00",
+      "received_at": null,
+      "stream_group": null,
+      "terminal": true,
+      "type": "session_finished"
+    }
+  ],
+  "initial_checkpoint": "2026-09-16T20:56:51.321825+00:00",
+  "matched_checkpoints": [
+    {
+      "at": "2026-09-16T20:59:22.746860+00:00",
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:23.819849+00:00",
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:24.892356+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:25.960667+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:27.047005+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:28.119556+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:29.194022+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:30.267631+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:31.324922+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:32.398150+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:33.472003+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:34.536127+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:35.598750+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:36.664203+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:37.738991+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:38.812369+00:00",
+      "counts": {
+        "kalshi": 18,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:39.884363+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:40.956653+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:42.035952+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:43.100381+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 28
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:44.173727+00:00",
+      "counts": {
+        "kalshi": 15,
+        "polymarket_us": 28
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:45.247498+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:46.303531+00:00",
+      "counts": {
+        "kalshi": 16,
+        "polymarket_us": 29
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:47.369733+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:48.433499+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:49.505314+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:50.570412+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:51.644823+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:52.717945+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:53.780512+00:00",
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 30
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:54.841115+00:00",
+      "counts": {
+        "kalshi": 21,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:55.904365+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:56.969468+00:00",
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:58.042287+00:00",
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:59:59.113195+00:00",
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:00.187246+00:00",
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:01.243667+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:02.310831+00:00",
+      "counts": {
+        "kalshi": 22,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:03.385603+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:04.451450+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:05.523131+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:06.598361+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:07.675350+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:08.735245+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:09.806428+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:10.881528+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:11.956405+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:13.033862+00:00",
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:14.108708+00:00",
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:15.182614+00:00",
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:16.244938+00:00",
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:17.311963+00:00",
+      "counts": {
+        "kalshi": 25,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:18.379992+00:00",
+      "counts": {
+        "kalshi": 26,
+        "polymarket_us": 32
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:19.447285+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:20.516502+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:21.588752+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:22.656756+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:23.733337+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:24.807057+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 31
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T21:00:25.864458+00:00",
+      "counts": {
+        "kalshi": 23,
+        "polymarket_us": 29
+      },
+      "source": "validation.snapshots"
+    },
+    {
+      "at": "2026-09-16T20:56:51.321825+00:00",
+      "counts": {
+        "kalshi": 64,
+        "polymarket_us": 32
+      },
+      "source": "status-initial.json"
+    },
+    {
+      "at": "2026-09-16T20:57:41.568599+00:00",
+      "counts": {
+        "kalshi": 20,
+        "polymarket_us": 31
+      },
+      "source": "status-mid-initial.json"
+    },
+    {
+      "at": "2026-09-16T20:59:55.566618+00:00",
+      "counts": {
+        "kalshi": 19,
+        "polymarket_us": 31
+      },
+      "source": "status-pre-stop.json"
+    },
+    {
+      "at": "2026-09-16T20:58:34.398782+00:00",
+      "counts": {
+        "kalshi": 24,
+        "polymarket_us": 29
+      },
+      "source": "status-refresh.json"
+    },
+    {
+      "at": "2026-09-16T20:59:07.659529+00:00",
+      "counts": {
+        "kalshi": 17,
+        "polymarket_us": 31
+      },
+      "source": "status-refreshed.json"
+    }
+  ],
+  "session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "snapshot_window": [
+    "2026-09-16T20:59:22.746860+00:00",
+    "2026-09-16T21:00:25.864458+00:00"
+  ],
+  "start": "2026-09-16T20:56:25.841648+00:00",
+  "stop": "2026-09-16T21:00:25.905415+00:00",
+  "terminal": "2026-09-16T21:00:25.991523+00:00"
+}

@@ -78,10 +78,12 @@ class StaleSubscriptionFrame(ValueError):
 class MarketStream:
     def __init__(self, markets, factory, *, dialect='camel', max_messages=30,
                  max_connections=2, stale_seconds=10, duration=30,
-                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep):
+                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None):
         self.markets = {next_market_data(m)['slug']: m for m in markets}
         subscription(tuple(self.markets), 'validate', dialect)
-        for value, limit in ((max_messages, 1000), (max_connections, 5)):
+        from app.collection.supervised import profile, bound_native
+        policy = profile(profile_name) if profile_name else None
+        for value, limit in ((max_messages, policy['group_messages'] if policy else 1000), (max_connections, 5)):
             if type(value) is not int or not 1 <= value <= limit:
                 raise ValueError('invalid stream bound')
         if not 0 < stale_seconds <= 60 or not 0 < duration <= 300:
@@ -99,6 +101,7 @@ class MarketStream:
         self.subscription_id = None
         self.generation = 0
         self.source_time_high_water = {}  # Per market, retained across reconnects.
+        if policy: bound_native(self)
 
     def begin_subscription(self, request_id):
         if self.closed or not isinstance(request_id, str) or not request_id:

@@ -1,0 +1,14 @@
+{
+  "rows": 6218,
+  "books": 2034,
+  "native_books": 1885,
+  "derived_stale_books": 149,
+  "packets": 4068,
+  "stale": {
+    "kalshi": 112,
+    "polymarket_us": 37
+  },
+  "all_native_timestamps_exact": true,
+  "wall_seconds": 4.3104484579962445,
+  "peak_rss": 100941824
+}

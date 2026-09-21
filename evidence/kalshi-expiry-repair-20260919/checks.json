@@ -1,0 +1,26 @@
+{
+  "final_affected_tests": 212,
+  "result": "passed",
+  "seconds": 66.947,
+  "modules": {
+    "tests.test_kalshi_expiry": 7,
+    "tests.test_kalshi": 27,
+    "tests.test_kalshi_live_replay": 3,
+    "tests.test_polymarket_us_stream": 12,
+    "tests.test_continuous": 12,
+    "tests.test_d2_repair": 8,
+    "tests.test_segmented_collector": 12,
+    "tests.test_supervised": 7,
+    "tests.test_supervised_live": 6,
+    "tests.test_supervised_pacing": 1,
+    "tests.test_finalization_resources": 5,
+    "tests.test_math_reconciliation": 4,
+    "tests.test_fees": 34,
+    "tests.test_depth": 34,
+    "tests.test_arbitrage": 40
+  },
+  "full_suite_claim": false,
+  "regression_before": "Expected failure proving busy sibling delays expiry on original code",
+  "network": "External connections and keyring access denied by runner; loopback synthetic fixtures only",
+  "test_outputs": "TemporaryDirectory fixtures; no retained diagnosis scripts executed"
+}

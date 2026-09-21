@@ -1,0 +1,62 @@
+{
+  "classification": "exact original admitted workload, synchronous writer replay",
+  "ingress_bytes": 4635301,
+  "ingress_records": 1914,
+  "journal_bytes": 4948000,
+  "journal_records": 1915,
+  "expanded_bytes": 16771400,
+  "wall_seconds": 1.0069192919982015,
+  "cpu_seconds": 0.979349,
+  "peak_rss_bytes": 186400768,
+  "queue_high_records": 1,
+  "queue_high_bytes": 758515,
+  "by_type": {
+    "session_started": {
+      "records": 1,
+      "bytes": 1259
+    },
+    "prediction_discovery_http": {
+      "records": 74,
+      "bytes": 521542
+    },
+    "verified_account_budget": {
+      "records": 1,
+      "bytes": 779
+    },
+    "coverage_inventory": {
+      "records": 1,
+      "bytes": 27585
+    },
+    "market_selected": {
+      "records": 96,
+      "bytes": 349604
+    },
+    "source_health": {
+      "records": 580,
+      "bytes": 331508
+    },
+    "prediction_command": {
+      "records": 5,
+      "bytes": 3534
+    },
+    "prediction_frame": {
+      "records": 581,
+      "bytes": 764742
+    },
+    "prediction_book": {
+      "records": 575,
+      "bytes": 2634748
+    },
+    "session_finished": {
+      "records": 1,
+      "bytes": 554
+    }
+  },
+  "repeated_pressure_fixture": {
+    "accepted_extra_rows": 134,
+    "accepted_records": 2048,
+    "ingress_bytes": 4955774,
+    "stop": "record_cap",
+    "note": "repeated original row values used only for budget pressure; no additional real history or replay validity claimed"
+  }
+}

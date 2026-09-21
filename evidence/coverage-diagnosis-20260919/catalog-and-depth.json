@@ -1,0 +1,576 @@
+{
+  "all_partial_safety_exclusions_empty": true,
+  "both_generation_selections_eligible_at_stop": true,
+  "native_ladders": [
+    {
+      "depth": null,
+      "observations": 555,
+      "outcome_index": 0,
+      "side": "asks",
+      "state": "missing",
+      "venue": "kalshi"
+    },
+    {
+      "depth": "full",
+      "observations": 555,
+      "outcome_index": 0,
+      "side": "bids",
+      "state": "populated",
+      "venue": "kalshi"
+    },
+    {
+      "depth": null,
+      "observations": 555,
+      "outcome_index": 1,
+      "side": "asks",
+      "state": "missing",
+      "venue": "kalshi"
+    },
+    {
+      "depth": "full",
+      "observations": 555,
+      "outcome_index": 1,
+      "side": "bids",
+      "state": "populated",
+      "venue": "kalshi"
+    },
+    {
+      "depth": "partial",
+      "observations": 1330,
+      "outcome_index": 0,
+      "side": "asks",
+      "state": "populated",
+      "venue": "polymarket_us"
+    },
+    {
+      "depth": "partial",
+      "observations": 1330,
+      "outcome_index": 0,
+      "side": "bids",
+      "state": "populated",
+      "venue": "polymarket_us"
+    },
+    {
+      "depth": null,
+      "observations": 1330,
+      "outcome_index": 1,
+      "side": "asks",
+      "state": "missing",
+      "venue": "polymarket_us"
+    },
+    {
+      "depth": null,
+      "observations": 1330,
+      "outcome_index": 1,
+      "side": "bids",
+      "state": "missing",
+      "venue": "polymarket_us"
+    }
+  ],
+  "partial_refresh_safety_checks": [
+    {
+      "ingress_id": "dada1132-871f-4e21-83c9-8cf77fd8bea2",
+      "observed_at": "2026-09-16T20:58:26.372818+00:00",
+      "received_at": "2026-09-16T20:58:26.372568+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b5bf7870-8ce8-4355-8c60-b14bbaf675af",
+      "observed_at": "2026-09-16T20:58:26.628920+00:00",
+      "received_at": "2026-09-16T20:58:26.627712+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "fe422a57-a402-4818-9038-f65e2697454c",
+      "observed_at": "2026-09-16T20:58:27.424160+00:00",
+      "received_at": "2026-09-16T20:58:27.424076+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "1e3437d8-53c1-44e0-8b2d-592a24dcfa5e",
+      "observed_at": "2026-09-16T20:58:27.883379+00:00",
+      "received_at": "2026-09-16T20:58:27.883310+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "1b382cf2-bba8-4532-b70b-956b14fe45cb",
+      "observed_at": "2026-09-16T20:58:28.512538+00:00",
+      "received_at": "2026-09-16T20:58:28.512396+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "0fc1fe88-2fe3-417f-acdb-45a6f38f9345",
+      "observed_at": "2026-09-16T20:58:28.762357+00:00",
+      "received_at": "2026-09-16T20:58:28.762274+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "846b2860-7f37-4422-8887-9ac0517b9a6e",
+      "observed_at": "2026-09-16T20:58:29.180191+00:00",
+      "received_at": "2026-09-16T20:58:29.180032+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "da3cb2be-096e-4142-b403-13785f8ee9fb",
+      "observed_at": "2026-09-16T20:58:29.612229+00:00",
+      "received_at": "2026-09-16T20:58:29.612173+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f8f34bef-aff5-4606-a57c-3628e0466a72",
+      "observed_at": "2026-09-16T20:58:30.016325+00:00",
+      "received_at": "2026-09-16T20:58:30.016173+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "edfe16b5-79dd-4404-a8a6-90ba84e5191a",
+      "observed_at": "2026-09-16T20:58:30.490121+00:00",
+      "received_at": "2026-09-16T20:58:30.490013+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "bd030fd7-433d-4024-a033-d9eaa81768b5",
+      "observed_at": "2026-09-16T20:58:30.941216+00:00",
+      "received_at": "2026-09-16T20:58:30.941086+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "d00bd2f6-b2fc-4941-b51d-54e2773133fc",
+      "observed_at": "2026-09-16T20:58:31.355768+00:00",
+      "received_at": "2026-09-16T20:58:31.355633+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "862903a4-616b-4e9f-97f0-e38a59cccab4",
+      "observed_at": "2026-09-16T20:58:31.757640+00:00",
+      "received_at": "2026-09-16T20:58:31.757528+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "0d3301b1-6ad0-4c9d-95df-5f799f9ddf7b",
+      "observed_at": "2026-09-16T20:58:32.212624+00:00",
+      "received_at": "2026-09-16T20:58:32.212416+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "65b6ac85-0c1d-44ff-9bb8-793b96ac81ee",
+      "observed_at": "2026-09-16T20:58:32.615326+00:00",
+      "received_at": "2026-09-16T20:58:32.615300+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "62fb9736-2fbc-4f94-ab9a-320359947015",
+      "observed_at": "2026-09-16T20:58:33.109907+00:00",
+      "received_at": "2026-09-16T20:58:33.109855+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b7bcd35d-3589-4c27-9a53-0c55ea3ab00a",
+      "observed_at": "2026-09-16T20:58:33.521055+00:00",
+      "received_at": "2026-09-16T20:58:33.521010+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b4c85b8d-a6ba-4aed-bc0c-b19f2724771e",
+      "observed_at": "2026-09-16T20:58:33.985648+00:00",
+      "received_at": "2026-09-16T20:58:33.985609+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "db175d8b-3b6c-4ed7-93ff-3b7f4e252708",
+      "observed_at": "2026-09-16T20:58:34.447736+00:00",
+      "received_at": "2026-09-16T20:58:34.447693+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "c0fc64b0-66f0-4efe-936f-509779294e9f",
+      "observed_at": "2026-09-16T20:58:34.868565+00:00",
+      "received_at": "2026-09-16T20:58:34.868479+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "afdcd8dc-a7df-4abf-8ae4-7822bc7054c6",
+      "observed_at": "2026-09-16T20:58:35.463656+00:00",
+      "received_at": "2026-09-16T20:58:35.463622+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "3bb262b6-a4a1-4dee-b6e8-32c3fcba10e0",
+      "observed_at": "2026-09-16T20:58:35.732076+00:00",
+      "received_at": "2026-09-16T20:58:35.732034+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f5f843d4-2919-4466-930d-195fe128b1a5",
+      "observed_at": "2026-09-16T20:58:36.218764+00:00",
+      "received_at": "2026-09-16T20:58:36.218703+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "a2cc1589-51cd-48bc-bd49-46918501ae51",
+      "observed_at": "2026-09-16T20:58:36.573227+00:00",
+      "received_at": "2026-09-16T20:58:36.573173+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "d60a8a4c-f391-4c32-b9cf-ddefb06fe521",
+      "observed_at": "2026-09-16T20:58:36.996829+00:00",
+      "received_at": "2026-09-16T20:58:36.996768+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "51397a84-2916-4b97-9a5f-2fbfc80addb1",
+      "observed_at": "2026-09-16T20:58:37.427610+00:00",
+      "received_at": "2026-09-16T20:58:37.427508+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "14f49e25-08e0-46e0-9f21-985cc3197570",
+      "observed_at": "2026-09-16T20:58:37.908752+00:00",
+      "received_at": "2026-09-16T20:58:37.908712+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "8b9ff699-962a-4595-bdb1-cc18ece87e31",
+      "observed_at": "2026-09-16T20:58:38.330038+00:00",
+      "received_at": "2026-09-16T20:58:38.329891+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "5392cae4-6a1e-4266-ba3f-8224c62aa1b9",
+      "observed_at": "2026-09-16T20:58:38.732968+00:00",
+      "received_at": "2026-09-16T20:58:38.732924+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "0f244a02-cbc3-42d1-8226-8b29022d91d0",
+      "observed_at": "2026-09-16T20:58:39.196151+00:00",
+      "received_at": "2026-09-16T20:58:39.196072+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "ea464feb-f486-4847-87c5-4f1020394397",
+      "observed_at": "2026-09-16T20:58:39.604876+00:00",
+      "received_at": "2026-09-16T20:58:39.604849+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "35a8eb5a-1b7b-4594-b737-01ba685a8fe0",
+      "observed_at": "2026-09-16T20:58:40.074271+00:00",
+      "received_at": "2026-09-16T20:58:40.074204+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "a7c37f4c-7425-4435-9a5a-985b37af6eda",
+      "observed_at": "2026-09-16T20:58:40.440651+00:00",
+      "received_at": "2026-09-16T20:58:40.440632+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "481176f6-1007-4735-aaa3-65a658476607",
+      "observed_at": "2026-09-16T20:58:40.917887+00:00",
+      "received_at": "2026-09-16T20:58:40.917806+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "8e4f1f02-d9a8-4e8b-acd8-9ae65814b337",
+      "observed_at": "2026-09-16T20:58:41.390417+00:00",
+      "received_at": "2026-09-16T20:58:41.390401+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "cb27a784-8240-4a93-9789-ebd92a66a9b6",
+      "observed_at": "2026-09-16T20:58:41.808527+00:00",
+      "received_at": "2026-09-16T20:58:41.808424+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "5cb37862-b54b-4022-9453-e5d50c757d0c",
+      "observed_at": "2026-09-16T20:58:42.273344+00:00",
+      "received_at": "2026-09-16T20:58:42.273317+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f903fd74-1460-467c-9878-5b0c4f467c7b",
+      "observed_at": "2026-09-16T20:58:42.736671+00:00",
+      "received_at": "2026-09-16T20:58:42.736477+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "04f88920-7f4d-4e12-ae5a-e01cf658d059",
+      "observed_at": "2026-09-16T20:58:43.149733+00:00",
+      "received_at": "2026-09-16T20:58:43.149698+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "cb691ada-8652-456f-9e0f-c6e6a9ea38d5",
+      "observed_at": "2026-09-16T20:58:43.618578+00:00",
+      "received_at": "2026-09-16T20:58:43.618538+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "4075e0bf-5530-4ae4-b092-6f31e5344507",
+      "observed_at": "2026-09-16T20:58:43.988358+00:00",
+      "received_at": "2026-09-16T20:58:43.988317+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "e4ea4375-8e71-400e-a1e1-bf11f90b3287",
+      "observed_at": "2026-09-16T20:58:44.460278+00:00",
+      "received_at": "2026-09-16T20:58:44.460213+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f43a42a0-699e-46fe-92d7-885f10e177fd",
+      "observed_at": "2026-09-16T20:58:44.894236+00:00",
+      "received_at": "2026-09-16T20:58:44.894195+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b3c3c177-1b89-4ea2-a930-44a0a11e675e",
+      "observed_at": "2026-09-16T20:58:45.326629+00:00",
+      "received_at": "2026-09-16T20:58:45.326506+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "718ae815-e256-4727-8342-954a64f22b92",
+      "observed_at": "2026-09-16T20:58:45.780808+00:00",
+      "received_at": "2026-09-16T20:58:45.780767+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "0503ea71-b23b-44fa-ad08-1d0654eaf2d8",
+      "observed_at": "2026-09-16T20:58:46.233183+00:00",
+      "received_at": "2026-09-16T20:58:46.233091+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "6cc7a956-128e-40e4-969a-55715929cfce",
+      "observed_at": "2026-09-16T20:58:46.668298+00:00",
+      "received_at": "2026-09-16T20:58:46.668237+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "406c1b10-9bd2-47a2-b37c-1a072c9628c7",
+      "observed_at": "2026-09-16T20:58:47.124871+00:00",
+      "received_at": "2026-09-16T20:58:47.124830+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "d3e00e16-d8d4-4cda-abb5-b8fb7eaf1e19",
+      "observed_at": "2026-09-16T20:58:47.656774+00:00",
+      "received_at": "2026-09-16T20:58:47.656731+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f7c8276e-f776-4076-9ee1-d313d0f892ef",
+      "observed_at": "2026-09-16T20:58:48.003788+00:00",
+      "received_at": "2026-09-16T20:58:48.003738+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "72b343ed-9922-41f0-bec0-d980fe302efe",
+      "observed_at": "2026-09-16T20:58:48.452429+00:00",
+      "received_at": "2026-09-16T20:58:48.452416+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "ba6810e8-e6d7-40cb-85c2-ba6285035b78",
+      "observed_at": "2026-09-16T20:58:48.851323+00:00",
+      "received_at": "2026-09-16T20:58:48.851263+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "cc83660f-4f2c-4979-8822-fe81e359e306",
+      "observed_at": "2026-09-16T20:58:49.237052+00:00",
+      "received_at": "2026-09-16T20:58:49.237032+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "95550de5-20c2-45f9-bcee-2aea70c2ca45",
+      "observed_at": "2026-09-16T20:58:49.699479+00:00",
+      "received_at": "2026-09-16T20:58:49.699415+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "4a874cd4-624d-4a30-85d5-8718f8f62baf",
+      "observed_at": "2026-09-16T20:58:50.090966+00:00",
+      "received_at": "2026-09-16T20:58:50.090932+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "4960517f-e677-45bc-aa10-7bd8cfaf61fa",
+      "observed_at": "2026-09-16T20:58:50.573995+00:00",
+      "received_at": "2026-09-16T20:58:50.573970+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f547935c-08c4-47fa-a0f3-48303a7d3d0c",
+      "observed_at": "2026-09-16T20:58:50.937985+00:00",
+      "received_at": "2026-09-16T20:58:50.937948+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "8799818f-d559-4d5e-9224-79b9863bd127",
+      "observed_at": "2026-09-16T20:58:51.419442+00:00",
+      "received_at": "2026-09-16T20:58:51.419363+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "0e70e533-7177-4cbb-bf27-3ff191fc64b6",
+      "observed_at": "2026-09-16T20:58:51.887677+00:00",
+      "received_at": "2026-09-16T20:58:51.887648+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "e3033cf5-2ca4-483e-955c-a120a8fe19de",
+      "observed_at": "2026-09-16T20:58:52.317501+00:00",
+      "received_at": "2026-09-16T20:58:52.317329+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b0905e98-f8fa-423d-ac83-19708017e2d5",
+      "observed_at": "2026-09-16T20:58:52.762084+00:00",
+      "received_at": "2026-09-16T20:58:52.762047+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "b3f7fb40-30bd-4173-bc1f-968adf11a10c",
+      "observed_at": "2026-09-16T20:58:53.262670+00:00",
+      "received_at": "2026-09-16T20:58:53.262603+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "abcf51db-d30c-4312-834f-0c0dd843284b",
+      "observed_at": "2026-09-16T20:58:53.681490+00:00",
+      "received_at": "2026-09-16T20:58:53.681451+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f0cc9caf-360f-4033-95f5-41be7e8cac6f",
+      "observed_at": "2026-09-16T20:58:54.144047+00:00",
+      "received_at": "2026-09-16T20:58:54.144011+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "6bf18d26-21c1-44ff-927a-54c013ac4b75",
+      "observed_at": "2026-09-16T20:58:54.541832+00:00",
+      "received_at": "2026-09-16T20:58:54.541788+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "a6b8cfab-22af-4af9-abfc-89f42f0f3d73",
+      "observed_at": "2026-09-16T20:58:55.014250+00:00",
+      "received_at": "2026-09-16T20:58:55.014171+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "76ce5e30-ecf0-48a8-9d8d-b35311981594",
+      "observed_at": "2026-09-16T20:58:55.439429+00:00",
+      "received_at": "2026-09-16T20:58:55.439389+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "96467ac3-4c94-438c-9e2e-5beeef59f2a6",
+      "observed_at": "2026-09-16T20:58:56.190103+00:00",
+      "received_at": "2026-09-16T20:58:56.190017+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "6f0b7c08-459b-4710-8950-ffd07f7695de",
+      "observed_at": "2026-09-16T20:58:57.021297+00:00",
+      "received_at": "2026-09-16T20:58:57.021231+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "f07922be-a6db-43ef-8fd7-f144427b1ee2",
+      "observed_at": "2026-09-16T20:58:57.942092+00:00",
+      "received_at": "2026-09-16T20:58:57.941956+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "9fa4bcbb-6bf3-4ec0-a2d2-91dc5ac0f524",
+      "observed_at": "2026-09-16T20:58:58.745012+00:00",
+      "received_at": "2026-09-16T20:58:58.744988+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    },
+    {
+      "ingress_id": "899b116f-0df9-4dab-b9ea-6776369f61e1",
+      "observed_at": "2026-09-16T20:58:59.504859+00:00",
+      "received_at": "2026-09-16T20:58:59.504807+00:00",
+      "stream_group": null,
+      "type": "prediction_discovery_http"
+    }
+  ]
+}

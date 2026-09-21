@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Manage only the isolated E6 live watch, using a minimal credential-free environment."""
+import argparse,json,os,signal,socket,subprocess,time
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+runtime=root/'.local/e6-live-watch';runtime.mkdir(parents=True,exist_ok=True)
+state=runtime/'process.json'
+p=argparse.ArgumentParser();p.add_argument('action',choices=['start','stop','status']);p.add_argument('--port',type=int,default=8779);a=p.parse_args()
+def owned(record):
+    cmd=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','command='],capture_output=True,text=True).stdout.strip()
+    birth=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','lstart='],capture_output=True,text=True).stdout.strip()
+    return cmd==record['command'] and birth==record.get('started')
+record=json.loads(state.read_text()) if state.exists() else None
+if a.action in ('stop','status'):
+    if not record or not owned(record): print('No matching E6 live watch process. No process changed.');raise SystemExit(0)
+    if a.action=='stop':
+        os.kill(record['pid'],signal.SIGTERM)
+        for _ in range(100):
+            if not owned(record): break
+            time.sleep(0.1)
+        if owned(record): raise SystemExit('E6 live watch is still stopping; no other process changed.')
+        state.unlink(missing_ok=True)
+        print('Stopped only the verified E6 live watch process.')
+    else: print(json.dumps(record,indent=2))
+    raise SystemExit(0)
+if record and owned(record): print(record['url']);raise SystemExit(0)
+port=a.port
+while port<65536:
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        try: probe.bind(('127.0.0.1',port));break
+        except OSError: port+=1
+else: raise SystemExit('No free loopback port')
+cmd=[str(root/'.venv/bin/python'),'-m','app.dashboard.e6_live','--port',str(port)]
+with (runtime/'server.log').open('a') as log:
+    proc=subprocess.Popen(cmd,cwd=root,env={'PATH':'/usr/bin:/bin','PYTHONUNBUFFERED':'1','PYTHONDONTWRITEBYTECODE':'1'},stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+time.sleep(1)
+if proc.poll() is not None: raise SystemExit('Preview failed to start; inspect .local/e6-live-watch/server.log')
+actual=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','command=']).decode().strip()
+started=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','lstart=']).decode().strip()
+record={'pid':proc.pid,'command':actual,'started':started,'url':f'http://127.0.0.1:{port}','port':port}
+state.write_text(json.dumps(record,indent=2));print(record['url'])

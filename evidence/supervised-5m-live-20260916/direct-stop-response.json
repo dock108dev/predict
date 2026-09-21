@@ -1,0 +1,7 @@
+{
+  "invoked_elapsed": 240.0068046660017,
+  "completed_elapsed": 240.20270958300534,
+  "returncode": 0,
+  "stdout": "{\"action\": \"explicit_stop\", \"utc\": \"2026-09-16T21:00:25.905415+00:00\", \"monotonic\": 58719.211311125, \"elapsed\": 240.1779641250032, \"intake_closed\": true}\n",
+  "stderr": ""
+}

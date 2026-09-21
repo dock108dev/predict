@@ -19,7 +19,7 @@ def time_value(value):
     return result
 
 
-def preflight(spec, now=None):
+def preflight(spec, now=None, *, supervised_live=False):
     if not isinstance(spec,dict):
         return dict(valid=False,activation_enabled=False,errors=['spec: object required'],economics='unavailable')
     now = now or datetime.now(timezone.utc)
@@ -32,7 +32,15 @@ def preflight(spec, now=None):
             errors.append(key+': missing')
     if errors:
         return dict(valid=False, activation_enabled=False, errors=errors, economics='unavailable')
-    optional={'reference_enabled','reference_cadence','http'}
+    optional={'reference_enabled','reference_cadence','http','supervised_profile'}
+    policy=None
+    if 'supervised_profile' in spec:
+        from .supervised import profile
+        try: policy=profile(spec['supervised_profile'])
+        except ValueError: errors.append('unknown supervised profile')
+        if supervised_live:
+            if spec.get('mode')!='real' or spec.get('reference_enabled',False): errors.append('supervised live requires prediction-only real mode')
+        elif spec.get('mode')!='mock' or spec.get('reference_enabled',False): errors.append('supervised profile is isolated mock only')
     if reference_enabled(spec):
         for key in ('reference_cadence','http'):
             if key not in spec:errors.append(key+': missing')
@@ -105,7 +113,8 @@ def preflight(spec, now=None):
         except (ValueError, TypeError, KeyError, ArithmeticError):
             errors.append('http: complete explicit HTTPPolicy bounds, quota baseline and plan/cost assumptions required')
     prediction=spec['prediction']
-    for key, cap in (('messages',1000),('connections',5),('frame_bytes',1048576),('session_bytes',16777216),('discovery_requests',64)):
+    for key, cap in (('messages',1000),('connections',5),('frame_bytes',1048576),('session_bytes',16777216),('discovery_requests',100)):
+        if policy: cap={'messages':policy['group_messages'],'session_bytes':policy['body_bytes'],'discovery_requests':policy['requests']}.get(key,cap)
         v=prediction.get(key) if isinstance(prediction,dict) else None
         if type(v) is not int or not 0 < v <= cap:
             errors.append('prediction.'+key+': positive integer <= '+str(cap)+' required')

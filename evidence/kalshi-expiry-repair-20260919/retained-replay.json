@@ -1,0 +1,78 @@
+{
+  "all_2034_historical_emission_and_receipt_times_match": true,
+  "derived_stale_books": 149,
+  "exact_packets": 4068,
+  "historical_stale_times_sha256": "cf8b68777662924452a32a28173af1d851f3bff59fac517955de158c36b3f83e",
+  "history_manifest_sha256": "f1e0fce7fdb303ea8d55f6774ed6a7c12b5399315a98f96596d76aff72e4131a",
+  "native_books": 1885,
+  "note": "Historical observed emissions replayed exactly; no nominal-deadline replacement.",
+  "replay": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 357,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-2": {
+      "exact_native_books": {
+        "kalshi": 123,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-3": {
+      "exact_native_books": {
+        "kalshi": 67,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-4": {
+      "exact_native_books": {
+        "kalshi": 8,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 1330
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    }
+  },
+  "rows": 6218,
+  "segment_hashes_verified": 7,
+  "session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "stale_counts": {
+    "kalshi": 112,
+    "polymarket_us": 37
+  }
+}

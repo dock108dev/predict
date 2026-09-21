@@ -1,0 +1,13 @@
+{
+  "preexisting_evidence_files": 2650,
+  "preexisting_evidence_bytes": 1851488825,
+  "changed_evidence": [],
+  "preexisting_app_tests_docs_files": 324,
+  "changed_app_tests_docs": [],
+  "prior_finalization_baseline_files_verified": 2643,
+  "prior_finalization_baseline_changes": [],
+  "current_finalization_candidate": "9997a04dce4de0d2292e9d25ee1d4d7ff833d326a93e15284bd439b7524a9974",
+  "current_finalization_candidate_changes": [],
+  "network": "diagnostic replay blocks socket connections; no live calls or credentials used",
+  "scope": "Only isolated diagnosis artifacts and Desktop tracker written; no application behavior or proposed repair implemented"
+}

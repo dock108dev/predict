@@ -1,0 +1,206 @@
+{
+  "session": "ce67b977-3fec-40b9-822c-fea9ba56b004",
+  "reason": "manual_stop",
+  "collection_seconds": 2.578321542001504,
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete",
+    "operator_stop": true,
+    "native_verified": true,
+    "replay_seconds": 2.9415207499987446,
+    "replay_baseline_rss": 69091328,
+    "counts": {
+      "session_started": 1,
+      "prediction_discovery_http": 10,
+      "verified_account_budget": 1,
+      "coverage_inventory": 2,
+      "market_selected": 2,
+      "coverage_applied": 4,
+      "source_health": 760,
+      "prediction_command": 2,
+      "prediction_frame": 761,
+      "prediction_book": 758,
+      "session_finished": 1
+    },
+    "published_generations": [
+      1,
+      2
+    ],
+    "applied_generations": {
+      "kalshi": 2,
+      "polymarket_us": 2
+    },
+    "replay_traced_start": 0,
+    "replay_traced_peak": 1319135,
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 5.516285208999761,
+    "baseline_rss": 64143360,
+    "peak_rss": 69861376,
+    "traced_peak": 1319135,
+    "traced_current": 721594
+  },
+  "accounting": {
+    "received": 2307,
+    "accepted": 2301,
+    "write_attempted": 2305,
+    "durably_acknowledged": 2301,
+    "rejected": 6,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 2301,
+    "journal_write_attempted": 2308,
+    "journal_durably_acknowledged": 2308,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 2637476,
+    "confirmed_chain": "093de7e728b28e868ba59714a7dc0007b9796f0657703f58be55d55ab697c977",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 2301,
+      "observations": 2302,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 2302,
+      "encoded_ingress": 2258966,
+      "expanded_ingress": 3805352,
+      "physical_records": 2308,
+      "control_records": 6,
+      "physical_write_attempts": 2308,
+      "journal_encoded_bytes": 2637476,
+      "journal_expanded_payload_bytes": 3807300,
+      "manifest_records": 1,
+      "manifest_bytes": 1514,
+      "manifest_writes": 4,
+      "manifest_publications": 4,
+      "manifest_write_bytes": 4185,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 2642849
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 69861376,
+    "peak_queue_records": 3,
+    "peak_queue_bytes": 28678,
+    "ingress_bytes": 2258966,
+    "journal_bytes": 2637476,
+    "elapsed_seconds": 5.521496000001207
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 2,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 6,
+      "connection_attempts": 1,
+      "body_bytes_charged": 66421,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "k0": {
+          "received_at": "2026-09-16 18:23:59.986158+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 2,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 2,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 4,
+      "connection_attempts": 1,
+      "body_bytes_charged": 95086,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "p0": {
+          "received_at": "2026-09-16 18:23:59.982526+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 2,
+    "published_at": "2026-09-16T18:23:58.590270+00:00",
+    "age_seconds": 4.443312,
+    "refresh": {
+      "state": "completed",
+      "generation": 2,
+      "started_at": "2026-09-16T18:23:58.548430+00:00",
+      "finished_at": "2026-09-16T18:23:58.590270+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 6,
+        "durably_retained": 6,
+        "attempted_requests": 6
+      },
+      "polymarket_us": {
+        "received": 4,
+        "durably_retained": 4,
+        "attempted_requests": 4
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {}
+    }
+  },
+  "producer_tasks_done": true,
+  "streams_closed": true
+}

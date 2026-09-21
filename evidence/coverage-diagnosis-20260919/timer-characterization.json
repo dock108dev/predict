@@ -1,0 +1,33 @@
+{
+  "kind": "synthetic offline characterization; no live measurement",
+  "threshold_seconds": 30,
+  "observed": [
+    [
+      "quiet",
+      "recent",
+      0.0
+    ],
+    [
+      "busy",
+      "recent",
+      0.0
+    ],
+    [
+      "busy",
+      "recent",
+      31.0
+    ],
+    [
+      "busy",
+      "recent",
+      32.0
+    ],
+    [
+      "quiet",
+      "stale",
+      32.5
+    ]
+  ],
+  "quiet_remains_recent_at_31_and_32_seconds": true,
+  "first_timeout_marks_stale_at": 32.5
+}

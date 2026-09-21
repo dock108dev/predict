@@ -1,0 +1,77 @@
+{
+  "format": "coverage-pages-1",
+  "classification": "synthetic",
+  "pages": [
+    {
+      "source": "kalshi",
+      "path": "/events",
+      "params": {
+        "limit": 2,
+        "cursor": "",
+        "series_ticker": "KXNFLGAME"
+      },
+      "received_at": "2026-09-16T14:00:00Z",
+      "status": 200,
+      "complete": true,
+      "body_b64": "eyJldmVudHMiOiBbeyJldmVudF90aWNrZXIiOiAiayIsICJzZXJpZXNfdGlja2VyIjogIktYTkZMR0FNRSIsICJ0aXRsZSI6ICJEZXRyb2l0IHZzIEJ1ZmZhbG8ifV0sICJtaWxlc3RvbmVzIjogW3siY2F0ZWdvcnkiOiAiU3BvcnRzIiwgInR5cGUiOiAiZm9vdGJhbGxfZ2FtZSIsICJzdGFydF9kYXRlIjogIjIwMjYtMDktMjBUMTc6MDA6MDBaIiwgInJlbGF0ZWRfZXZlbnRfdGlja2VycyI6IFsiayJdfV0sICJjdXJzb3IiOiAiIn0=",
+      "body_sha256": "d3f33f6a88c8e7f689d1914171bd8670e916b0ce5ff2fe3ce6138bdfcc7185b2"
+    },
+    {
+      "source": "kalshi",
+      "path": "/markets",
+      "params": {
+        "limit": 2,
+        "cursor": "",
+        "event_ticker": "k"
+      },
+      "received_at": "2026-09-16T14:00:00Z",
+      "status": 200,
+      "complete": true,
+      "body_b64": "eyJtYXJrZXRzIjogW3sidGlja2VyIjogImttIiwgImV2ZW50X3RpY2tlciI6ICJrIiwgInRpdGxlIjogIkRldHJvaXQgd2lucyIsICJ5ZXNfc3ViX3RpdGxlIjogIkRldHJvaXQiLCAibm9fc3ViX3RpdGxlIjogIk5vdCBEZXRyb2l0IiwgInN0YXR1cyI6ICJhY3RpdmUifV0sICJjdXJzb3IiOiAiIn0=",
+      "body_sha256": "fcf7265c73a5833f0a9548d1feb9c2a08cf470f338bc55d2dbc72453622f8557"
+    },
+    {
+      "source": "polymarket_us",
+      "path": "/events",
+      "params": {
+        "limit": 10,
+        "offset": 0,
+        "tagSlug": "nfl"
+      },
+      "received_at": "2026-09-16T14:00:00Z",
+      "status": 200,
+      "complete": true,
+      "body_b64": "eyJldmVudHMiOiBbeyJpZCI6ICJwIiwgInRpdGxlIjogImZpeHR1cmUiLCAic3RhcnRUaW1lIjogIjIwMjYtMDktMjBUMTc6MDA6MDBaIiwgInRlYW1zIjogW3sibmFtZSI6ICJEZXRyb2l0IExpb25zIiwgImxlYWd1ZSI6ICJuZmwifSwgeyJuYW1lIjogIkJ1ZmZhbG8gQmlsbHMiLCAibGVhZ3VlIjogIm5mbCJ9XSwgInBlcmlvZCI6ICJOUyIsICJtYXJrZXRzIjogW3siaWQiOiAicG0iLCAicXVlc3Rpb24iOiAiV2lubmVyIiwgIm1hcmtldFR5cGUiOiAibW9uZXlsaW5lIiwgInNwb3J0c01hcmtldFR5cGUiOiAiZm9vdGJhbGxfdGVhbV9mdWxsX2dhbWVfd2lubmVyIiwgInN0YXR1cyI6ICJPUEVOIiwgImdhbWVTdGFydFRpbWUiOiAiMjAyNi0wOS0yMFQxNzowMDowMFoiLCAibWFya2V0U2lkZXMiOiBbeyJpZCI6ICJwbUwiLCAibG9uZyI6IHRydWUsICJkZXNjcmlwdGlvbiI6ICJEZXRyb2l0In0sIHsiaWQiOiAicG1TIiwgImxvbmciOiBmYWxzZSwgImRlc2NyaXB0aW9uIjogIkJ1ZmZhbG8ifV19XX0sIHsiaWQiOiAidW5rbm93biIsICJ0aXRsZSI6ICJmaXh0dXJlIiwgInN0YXJ0VGltZSI6ICIyMDI2LTA5LTIwVDE3OjAwOjAwWiIsICJ0ZWFtcyI6IFt7Im5hbWUiOiAiTXlzdGVyeSIsICJsZWFndWUiOiAibmZsIn0sIHsibmFtZSI6ICJCdWZmYWxvIEJpbGxzIiwgImxlYWd1ZSI6ICJuZmwifV0sICJwZXJpb2QiOiAiTlMiLCAibWFya2V0cyI6IFt7ImlkIjogInVua25vd25tIiwgInF1ZXN0aW9uIjogIldpbm5lciIsICJtYXJrZXRUeXBlIjogIm1vbmV5bGluZSIsICJzcG9ydHNNYXJrZXRUeXBlIjogImZvb3RiYWxsX3RlYW1fZnVsbF9nYW1lX3dpbm5lciIsICJzdGF0dXMiOiAiT1BFTiIsICJnYW1lU3RhcnRUaW1lIjogIjIwMjYtMDktMjBUMTc6MDA6MDBaIiwgIm1hcmtldFNpZGVzIjogW3siaWQiOiAidW5rbm93bm1MIiwgImxvbmciOiB0cnVlLCAiZGVzY3JpcHRpb24iOiAiRGV0cm9pdCJ9LCB7ImlkIjogInVua25vd25tUyIsICJsb25nIjogZmFsc2UsICJkZXNjcmlwdGlvbiI6ICJCdWZmYWxvIn1dfV19LCB7ImlkIjogInNvbG8iLCAidGl0bGUiOiAiZml4dHVyZSIsICJzdGFydFRpbWUiOiAiMjAyNi0wOS0yMFQxNzowMDowMFoiLCAidGVhbXMiOiBbeyJuYW1lIjogIkF0bGFudGEgRmFsY29ucyIsICJsZWFndWUiOiAibmZsIn0sIHsibmFtZSI6ICJDYXJvbGluYSBQYW50aGVycyIsICJsZWFndWUiOiAibmZsIn1dLCAicGVyaW9kIjogIk5TIiwgIm1hcmtldHMiOiBbeyJpZCI6ICJzb2xvbSIsICJxdWVzdGlvbiI6ICJXaW5uZXIiLCAibWFya2V0VHlwZSI6ICJtb25leWxpbmUiLCAic3BvcnRzTWFya2V0VHlwZSI6ICJmb290YmFsbF90ZWFtX2Z1bGxfZ2FtZV93aW5uZXIiLCAic3RhdHVzIjogIk9QRU4iLCAiZ2FtZVN0YXJ0VGltZSI6ICIyMDI2LTA5LTIwVDE3OjAwOjAwWiIsICJtYXJrZXRTaWRlcyI6IFt7ImlkIjogInNvbG9tTCIsICJsb25nIjogdHJ1ZSwgImRlc2NyaXB0aW9uIjogIkRldHJvaXQifSwgeyJpZCI6ICJzb2xvbVMiLCAibG9uZyI6IGZhbHNlLCAiZGVzY3JpcHRpb24iOiAiQnVmZmFsbyJ9XX1dfV19",
+      "body_sha256": "bd78bcbf8b2bfd1065fdfeb73586355527fd50fe3a69ce65c5647a72938d41f9"
+    },
+    {
+      "source": "kalshi",
+      "path": "/events",
+      "params": {
+        "limit": 10,
+        "cursor": "",
+        "series_ticker": "KXNFLGAME",
+        "status": "unopened"
+      },
+      "received_at": "2026-09-16T14:00:00Z",
+      "status": 200,
+      "complete": true,
+      "body_b64": "eyJldmVudHMiOiBbeyJldmVudF90aWNrZXIiOiAidW5tYXRjaGVkIiwgInNlcmllc190aWNrZXIiOiAiS1hORkxHQU1FIiwgInRpdGxlIjogIkNoaWNhZ28gdnMgTWlubmVzb3RhIn0sIHsiZXZlbnRfdGlja2VyIjogInVubWF0Y2hlZCIsICJzZXJpZXNfdGlja2VyIjogIktYTkZMR0FNRSIsICJ0aXRsZSI6ICJDaGljYWdvIHZzIE1pbm5lc290YSJ9XSwgIm1pbGVzdG9uZXMiOiBbeyJjYXRlZ29yeSI6ICJTcG9ydHMiLCAidHlwZSI6ICJmb290YmFsbF9nYW1lIiwgInN0YXJ0X2RhdGUiOiAiMjAyNi0wOS0yMFQxNzowMDowMFoiLCAicmVsYXRlZF9ldmVudF90aWNrZXJzIjogWyJ1bm1hdGNoZWQiXX1dLCAiY3Vyc29yIjogIiJ9",
+      "body_sha256": "076b40cb82aad77cde74b515bb70a16b2ad1812f33024038d7257ff673729d19"
+    },
+    {
+      "source": "kalshi",
+      "path": "/markets",
+      "params": {
+        "limit": 2,
+        "cursor": "",
+        "event_ticker": "unmatched"
+      },
+      "received_at": "2026-09-16T14:00:00Z",
+      "status": 200,
+      "complete": true,
+      "body_b64": "eyJtYXJrZXRzIjogW3sidGlja2VyIjogIm90aGVyIiwgImV2ZW50X3RpY2tlciI6ICJ1bm1hdGNoZWQiLCAidGl0bGUiOiAiRGV0cm9pdCB3aW5zIiwgInllc19zdWJfdGl0bGUiOiAiRGV0cm9pdCIsICJub19zdWJfdGl0bGUiOiAiTm90IERldHJvaXQiLCAic3RhdHVzIjogImFjdGl2ZSJ9XSwgImN1cnNvciI6ICIifQ==",
+      "body_sha256": "d88f01e72a72d33527cb69766dfd5de4344fd58ffd51f7563771436c2ff0d8d2"
+    }
+  ]
+}

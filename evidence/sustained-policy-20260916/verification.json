@@ -1,0 +1,23 @@
+{
+  "classification": "Documentation and read-only analysis only; no collector qualification run",
+  "input_files_verified": 10,
+  "python_source_files_verified": 122,
+  "changed_inputs": [],
+  "changed_python_sources": [],
+  "artifact_hashes": {
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/data-coverage-sustained-capacity-policy.md": "1fcd455c7545ca68ac3c619404cfe086971f3594041765c50eb6f43a070bc03c",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/data-coverage-sustained-capacity-measurements.md": "f43d8faffc461e49086ef55d5a43d2ae6f15d553d10c51621a7d7aacf440505c",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/data-coverage-sustained-capacity-prompt.md": "0d18b17360d55ecb600af7895b608249774b9b94f72416caecb972fe7af0649f",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/data-coverage-plan.md": "1c568cdf56198994a027e04563b8553ffb949246014d31ee705ed80b16008bfc",
+    "/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md": "df301038639a6671bff5ecbfae7e98e56dbbb7633404ada4d8cec9ef91a5969f",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/sustained-policy-20260916/analysis.log": "59258711c131dd12194ad888930bbc0e18725be3c701b30b8ff70aac6b3ecbc8",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/sustained-policy-20260916/measurements.json": "3f7a5988754d6fd708a27ecbe70bbb93a3b08634eb4209149b1dbc00176dc105",
+    "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/sustained-policy-20260916/analyze.py": "d8f00eca483c9fd4315957065afee5954087a1e424098d94f328df84a1ff0b7f"
+  },
+  "derived_output_bytes": 91393,
+  "document_links_checked": true,
+  "trailing_whitespace_checked": true,
+  "legacy_recovery_tests": "not rerun; two established environmental findings retained separately",
+  "d2_live_complete": false,
+  "full_d3_complete": false
+}

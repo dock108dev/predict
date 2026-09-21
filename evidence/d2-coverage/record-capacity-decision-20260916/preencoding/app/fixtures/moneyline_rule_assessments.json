@@ -1,0 +1,1089 @@
+{
+  "version": "listing-assessments-1",
+  "actor": "Codex (engineering technical assessment)",
+  "reviewed_at": "2026-09-12",
+  "owner_acceptance": null,
+  "pair_approvals": [],
+  "scope": "Exact captured listing-text hashes only; source research in evidence/slice-8/research.",
+  "general_sources": {
+    "kalshi-nfl-rules.pdf": {
+      "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+      "text_sha256": "a421357f7e3d246b1e936cc5f6e251862ed7b24119ddfd76aff3214fcf688731"
+    },
+    "pmus-sports.md": {
+      "sha256": "b3e1ccb06ead7fd3d9ee663ecf6086d9134378a94b60f595d4d7090b04718f3c",
+      "text_sha256": "b3e1ccb06ead7fd3d9ee663ecf6086d9134378a94b60f595d4d7090b04718f3c"
+    },
+    "pmus-market-schema.md": {
+      "sha256": "7c60d0dc99950a2c9e422f307a6f584b74d65d327863b05b5c45688eb2bf5617",
+      "text_sha256": "7c60d0dc99950a2c9e422f307a6f584b74d65d327863b05b5c45688eb2bf5617"
+    }
+  },
+  "listings": {
+    "7e393471fa61d14cc27180a7953ed628ba1b873ff523d1ed55ef1ac27ff3d4a5": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "c06439730b6271713a0797b474c30d50266eeabd6a52a12cb628db0ce44f8567": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "4d8f1ebcc4367ee9388e5e7b7b0bbaae438dd519dcc2866ae651bc794aefcdfe": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "b186ba68f59b1b687ff1f5d8288a8e8b8b922277c1a5f8a675a4a87316c6b548": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "c77b3decaefab78cb4add79e27a7278f6a7bce771bf94992a13ab44eba2351c4": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "53a15fe60cf1d2b3bf9d091d427f0ced3b0a9e9ed4f57c8adac2683b52266eba": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "82e448aff717cc44c48d2dd64abba6c641c50a1987ca9af2fd46ee6d9115ab79": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "5d610d14ed827ffe4d3b4cf6fe19b04a2ab341fb26ef5ab15c056abae62283b0": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "d46a71e0fe511267a738dc5a3f3689e2fd5175e4728185037acb989dec072a0e": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "529711cfe96168cfe1f07477a5f2fd89f758c4e45e8119d92c11ffd002cae49d": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "postponement": {
+          "value": {
+            "trigger": "begins_play",
+            "hours_from_original_start": 48,
+            "outside": "venue_fair_value"
+          },
+          "reason": "Listing explicitly measures commencement from original start instant."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "23a2472cfc9e0309abe3eff437a8f79b64f4ba132ec330174b1f744ef054fef9": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "overtime": {
+          "value": "included",
+          "reason": "Explicit listing statement."
+        },
+        "postponement": {
+          "value": null,
+          "reason": "Listing requires rescheduling to a date within two days; timezone, date boundary and actual commencement requirement are not specified. Do not equate with Kalshi begins-play within 48 hours."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "ce964545465801415cf5f2739a9478c87a7cb9f7e319477776c00fe0860c86ab": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "overtime": {
+          "value": "included",
+          "reason": "Explicit listing statement."
+        },
+        "postponement": {
+          "value": null,
+          "reason": "Listing requires rescheduling to a date within two days; timezone, date boundary and actual commencement requirement are not specified. Do not equate with Kalshi begins-play within 48 hours."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "edf9c5ee666d03b54e73cb03f9f5e995004c70457d8cca5df661976ac1b0e831": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "overtime": {
+          "value": "included",
+          "reason": "Explicit listing statement."
+        },
+        "postponement": {
+          "value": null,
+          "reason": "Listing requires rescheduling to a date within two days; timezone, date boundary and actual commencement requirement are not specified. Do not equate with Kalshi begins-play within 48 hours."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "c4868747cf3dd21cc025260a9b4893c411e8160e0ca32c955875a1faf3b24e6f": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "overtime": {
+          "value": "included",
+          "reason": "Explicit listing statement."
+        },
+        "postponement": {
+          "value": null,
+          "reason": "Listing requires rescheduling to a date within two days; timezone, date boundary and actual commencement requirement are not specified. Do not equate with Kalshi begins-play within 48 hours."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    },
+    "53848a2c96d9afa6f067fe0a03f97eb01dae53657887835bfca5c2fddf0ffa58": {
+      "dimensions": {
+        "tie": {
+          "value": "two-team-fraction-0.50",
+          "reason": "Explicit full-game listing tie clause."
+        },
+        "listed_pitchers": {
+          "value": "not-applicable-NFL",
+          "reason": "Confirmed NFL football event; this dimension concerns baseball pitcher conditions."
+        },
+        "overtime": {
+          "value": "included",
+          "reason": "Explicit listing statement."
+        },
+        "postponement": {
+          "value": null,
+          "reason": "Listing requires rescheduling to a date within two days; timezone, date boundary and actual commencement requirement are not specified. Do not equate with Kalshi begins-play within 48 hours."
+        },
+        "resumption": {
+          "value": null,
+          "reason": "Need reconciled suspension/resumption trigger, completion deadline and official-final exception for these listings; broad expiration guidance is insufficient."
+        },
+        "settlement_sources": {
+          "value": null,
+          "reason": "Listing names governing body; fallback order and correction/review policy equivalence are unestablished."
+        },
+        "deadlines": {
+          "value": null,
+          "reason": "Native expiration metadata retained; reconcile early expiration, result-review extensions and correction cutoff across exact listings."
+        },
+        "fair_value": {
+          "value": null,
+          "reason": "No evidence binds independently determined venue fair values to equal or complementary payouts."
+        },
+        "forfeit": {
+          "value": null,
+          "reason": "Kalshi pre-kickoff forfeit uses fair value; PMUS general forfeit-winner and pre-event-withdrawal clauses need precise applicability to a pre-kickoff NFL forfeit."
+        },
+        "shortened_game": {
+          "value": null,
+          "reason": "Kalshi 55-minute/official-final clauses versus PMUS governing-body threshold; precise exceptional-case equivalence not established."
+        },
+        "cancellation": {
+          "value": null,
+          "reason": "Cancellation versus postponement/resumption exception precedence and fair-value determination remain unaligned."
+        },
+        "abandonment": {
+          "value": null,
+          "reason": "Need official-final, elapsed-play and restart-window branch equivalence."
+        },
+        "venue_change": {
+          "value": null,
+          "reason": "Kalshi home/away reversal and scheduling-week exceptions versus general PMUS venue-change guidance need listing applicability review."
+        },
+        "result_corrections": {
+          "value": null,
+          "reason": "First final result, corrections before expiration and discretionary review are not established equivalent."
+        }
+      },
+      "payouts": {
+        "tie": {
+          "kind": "fraction",
+          "value": "0.50",
+          "reason": "Listing two-team tie settlement"
+        },
+        "postponed_outside_window": {
+          "kind": "discretionary",
+          "reason": "Each listing uses its own window and venue fair value; scenario is outside that venue window."
+        }
+      }
+    }
+  }
+}

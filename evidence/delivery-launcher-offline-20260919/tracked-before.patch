@@ -1,0 +1,947 @@
+diff --git a/app/adapters/kalshi.py b/app/adapters/kalshi.py
+index ad2aa13..4108007 100644
+--- a/app/adapters/kalshi.py
++++ b/app/adapters/kalshi.py
+@@ -76,6 +76,21 @@ def parse_market(response, data, event_id, series_id):
+         state=state(data.get('status')))
+ 
+ 
++def parse_event(response, data, series_id):
++    """Shared native catalog conversion; unknown/ambiguous kickoff stays unknown."""
++    event_id = identity(data.get('event_ticker'))
++    if data.get('series_ticker') != series_id:
++        raise ValueError('series relationship mismatch')
++    sport, league, milestone_type = SPORT_SERIES[series_id]
++    matching = [m for m in decode(response.body).get('milestones', [])
++                if event_id in m.get('related_event_tickers', [])
++                and m.get('category') == 'Sports' and m.get('type') == milestone_type]
++    starts = {timestamp(m['start_date']) for m in matching}
++    start = next(iter(starts)) if len(starts) == 1 else None
++    return Event(raw=response.raw(event_id), title=data['title'], sport=sport,
++                 league=league, scheduled_start=start)
++
++
+ def levels(rows):
+     if rows is None:
+         return None
+@@ -236,8 +251,7 @@ class KalshiAdapter(ReadOnlyAdapter):
+                     self.event_series[event_id] = series
+                     if self.pregame_only and (start is None or start <= self.now()):
+                         continue
+-                    found[event_id] = Event(raw=response.raw(event_id), title=data['title'], sport=sport,
+-                                            league=league, scheduled_start=start)
++                    found[event_id] = parse_event(response, data, series)
+         self.events = found
+         return tuple(found.values())
+ 
+diff --git a/app/adapters/kalshi_stream.py b/app/adapters/kalshi_stream.py
+index cad7a74..76bdae7 100644
+--- a/app/adapters/kalshi_stream.py
++++ b/app/adapters/kalshi_stream.py
+@@ -254,8 +254,10 @@ class BookReconstructor:
+ class MarketStream:
+     def __init__(self, markets, factory, *, duration=30, max_messages=500, max_connections=2,
+                  stale_seconds=10, snapshot_timeout=10, sleep=asyncio.sleep,
+-                 kind=EvidenceKind.OBSERVATION, reconnect_after_messages=None, reconnect_after_seconds=None):
+-        for value, limit in ((max_messages, 5000), (max_connections, 5)):
++                 kind=EvidenceKind.OBSERVATION, reconnect_after_messages=None, reconnect_after_seconds=None, profile_name=None):
++        from app.collection.supervised import profile, bound_native
++        policy = profile(profile_name) if profile_name else None
++        for value, limit in ((max_messages, policy['group_messages'] if policy else 5000), (max_connections, 5)):
+             if type(value) is not int or not 1 <= value <= limit:
+                 raise ValueError('invalid stream bound')
+         if not 0 < duration <= 300 or not 0 < stale_seconds <= 120 or not 0 < snapshot_timeout <= 30:
+@@ -271,9 +273,15 @@ class MarketStream:
+         self.stale_seconds, self.snapshot_timeout = stale_seconds, snapshot_timeout
+         self.reconnect_after_messages = reconnect_after_messages
+         self.connection, self.closed, self.transport_health = None, False, 'not_started'
++        self._receive_task = None
+         self.diagnostics, self.reason, self.message_count = [], 'not_started', 0
++        if policy: bound_native(self)
+ 
+     async def _close_connection(self):
++        receive, self._receive_task = self._receive_task, None
++        if receive is not None:
++            receive.cancel()
++            await asyncio.gather(receive, return_exceptions=True)
+         connection, self.connection = self.connection, None
+         if connection is not None:
+             try:
+@@ -310,17 +318,37 @@ class MarketStream:
+                         if attempt == 0 and self.reconnect_after_seconds and loop.time() - connected_at >= self.reconnect_after_seconds:
+                             self.diagnostics.append({"event": "deliberate_timed_disconnect", "generation": generation})
+                             break
++                        # Expiry is per receipt, independent of shared-socket traffic.
++                        # Keep one receive across timer wakes; wait_for would cancel it.
++                        now = datetime.now(timezone.utc)
++                        timeout = min(0.5, deadline - loop.time())
++                        for mid, book in tuple(self.engine.last.items()):
++                            if book.sync != BookSync.SYNCHRONIZED or book.receipt_freshness == ReceiptFreshness.STALE:
++                                continue
++                            age = (now - book.raw.received_at).total_seconds()
++                            if age > self.stale_seconds:
++                                stale = replace(book, receipt_freshness=ReceiptFreshness.STALE)
++                                self.engine.last[mid] = stale
++                                yield stale
++                            else:
++                                # datetime receipts have microsecond resolution. At
++                                # equality, wake on the next representable age, not
++                                # a zero-timeout spin or an altered >= comparison.
++                                timeout = min(timeout, max(0.000001, self.stale_seconds - age))
++                        if self.closed:
++                            break
++                        if self._receive_task is None:
++                            self._receive_task = asyncio.create_task(self.connection.recv())
++                        if not self._receive_task.done():
++                            await asyncio.wait({self._receive_task}, timeout=timeout)
++                            # Check expiry before processing even a simultaneous
++                            # receive, without discarding the completed frame.
++                            continue
++                        receive, self._receive_task = self._receive_task, None
+                         try:
+-                            body = await asyncio.wait_for(self.connection.recv(), min(0.5, deadline - loop.time()))
++                            body = receive.result()
+                         except TimeoutError:
+-                            now = datetime.now(timezone.utc)
+-                            for mid, book in tuple(self.engine.last.items()):
+-                                if book.sync == BookSync.SYNCHRONIZED and (now - book.raw.received_at).total_seconds() > self.stale_seconds and book.receipt_freshness != ReceiptFreshness.STALE:
+-                                    stale = replace(book, receipt_freshness=ReceiptFreshness.STALE)
+-                                    self.engine.last[mid] = stale
+-                                    yield stale
+-                            if len(self.engine.sides) != len(self.engine.markets) and loop.time() >= initial_deadline:
+-                                raise RecoveryRequired('initial snapshot deadline')
++                            # Preserve transport-provided timeout handling too.
+                             continue
+                         self.message_count += 1
+                         local_count += 1
+diff --git a/app/adapters/polymarket_us.py b/app/adapters/polymarket_us.py
+index d43595f..e336f85 100644
+--- a/app/adapters/polymarket_us.py
++++ b/app/adapters/polymarket_us.py
+@@ -119,6 +119,12 @@ def parse_market(response, data, event_id):
+         state=state(data.get('status', data.get('ep3Status'))))
+ 
+ 
++def parse_event(response, data, league='nfl'):
++    """Shared native event conversion for live adapters and offline inventory."""
++    return Event(raw=response.raw(identifier(data.get('id'))), title=data.get('title'),
++                 league=league, scheduled_start=timestamp(data.get('startTime')))
++
++
+ def price(amount):
+     if not isinstance(amount, dict) or amount.get('currency') != 'USD':
+         raise ValueError('expected explicit USD price')
+@@ -296,8 +302,7 @@ class PolymarketUSAdapter(ReadOnlyAdapter):
+                 if not isinstance(e, dict):
+                     raise ValueError('invalid event')
+                 event_id = identifier(e.get('id'))
+-                event = Event(raw=response.raw(event_id), title=e.get('title'), league=league,
+-                              scheduled_start=timestamp(e.get('startTime')))
++                event = parse_event(response, e, league)
+                 found[event_id] = event
+                 self.events[event_id] = event
+                 embedded = e.get('markets')
+diff --git a/app/adapters/polymarket_us_stream.py b/app/adapters/polymarket_us_stream.py
+index b6bdbc8..f8d9bbb 100644
+--- a/app/adapters/polymarket_us_stream.py
++++ b/app/adapters/polymarket_us_stream.py
+@@ -78,10 +78,12 @@ class StaleSubscriptionFrame(ValueError):
+ class MarketStream:
+     def __init__(self, markets, factory, *, dialect='camel', max_messages=30,
+                  max_connections=2, stale_seconds=10, duration=30,
+-                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep):
++                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None):
+         self.markets = {next_market_data(m)['slug']: m for m in markets}
+         subscription(tuple(self.markets), 'validate', dialect)
+-        for value, limit in ((max_messages, 1000), (max_connections, 5)):
++        from app.collection.supervised import profile, bound_native
++        policy = profile(profile_name) if profile_name else None
++        for value, limit in ((max_messages, policy['group_messages'] if policy else 1000), (max_connections, 5)):
+             if type(value) is not int or not 1 <= value <= limit:
+                 raise ValueError('invalid stream bound')
+         if not 0 < stale_seconds <= 60 or not 0 < duration <= 300:
+@@ -99,6 +101,7 @@ class MarketStream:
+         self.subscription_id = None
+         self.generation = 0
+         self.source_time_high_water = {}  # Per market, retained across reconnects.
++        if policy: bound_native(self)
+ 
+     def begin_subscription(self, request_id):
+         if self.closed or not isinstance(request_id, str) or not request_id:
+diff --git a/app/collection/native_replay.py b/app/collection/native_replay.py
+index 21bd743..118b6cb 100644
+--- a/app/collection/native_replay.py
++++ b/app/collection/native_replay.py
+@@ -14,11 +14,21 @@ from .transport_session import reopen
+ def verify_native(path):
+     return verify_native_saved(reopen(path))
+ 
+-def verify_native_saved(saved):
+-    engines={}; markets={}; last={}; counts={'kalshi':0,'polymarket_us':0}; gaps=[]
+-    kind=EvidenceKind.OBSERVATION if saved['rows'][0].get('spec',{}).get('mode')=='real' else EvidenceKind.SYNTHETIC
+-    def dump(book):return json.loads(json.dumps(asdict(book),default=str))
+-    for row in saved['rows']:
++class NativeVerifier:
++    """One stream group's native state; no retained observation list."""
++    def __init__(self, first, profile_name=None):
++        self.profile_name=profile_name
++        self.engines = {}; self.markets = {}; self.last = {}
++        self.counts = {'kalshi': 0, 'polymarket_us': 0}; self.gaps = []
++        if profile_name:
++            from .supervised import Samples
++            self.gaps=Samples()
++        self.kind = EvidenceKind.OBSERVATION if first.get('spec', {}).get('mode') == 'real' else EvidenceKind.SYNTHETIC
++
++    def feed(self, row):
++        engines, markets, last = self.engines, self.markets, self.last
++        counts, gaps, kind = self.counts, self.gaps, self.kind
++        def dump(book): return json.loads(json.dumps(asdict(book), default=str))
+         venue=row.get('source')
+         if row['type']=='market_selected' and venue not in engines:
+             m=row['market'];raw=m['raw'];r=(KR if venue=='kalshi' else PR)(raw['json_text'],raw['source'],datetime.fromisoformat(raw['received_at']),kind)
+@@ -27,13 +37,17 @@ def verify_native_saved(saved):
+                 market=km(r,next(x for x in payload['markets'] if x['ticker']==mid),eid,'KXNFLGAME')
+                 markets.setdefault(venue,{})[mid]=market
+             else:
+-                market=pm(r,next(x for e in payload['events'] for x in e.get('markets',[]) if str(x['id'])==mid),eid)
++                native = payload.get('markets') if 'markets' in payload else [x for e in payload['events'] for x in e.get('markets',[])]
++                market=pm(r,next(x for x in native if str(x['id'])==mid),eid)
+                 markets.setdefault(venue,{})[mid]=market
+         elif row['type']=='prediction_command':
+             command=json.loads(row['body'])
+             if venue not in engines:
+                 engines[venue]=(BookReconstructor(list(markets[venue].values()),kind=kind) if venue=='kalshi' else MarketStream(list(markets[venue].values()),None,kind=kind))
+             e=engines[venue]
++            if self.profile_name:
++                from .supervised import bound_native
++                if not getattr(e,'history_bounded',False): bound_native(e); e.history_bounded=True
+             if venue=='kalshi':e.begin(command['id'])
+             else:e.begin_subscription(command['subscribe']['requestId'])
+             last.pop(venue,None)
+@@ -48,7 +62,7 @@ def verify_native_saved(saved):
+                 last.pop(venue,None)
+         elif row['type']=='prediction_book':
+             expected=row['book']
+-            if expected['sync']!='synchronized' or expected['receipt_freshness']!='recent':continue
++            if expected['sync']!='synchronized' or expected['receipt_freshness']!='recent':return
+             if venue not in last:raise ValueError('saved book has no replayable native image')
+             book=last[venue]
+             # Native parsers sample wall time after recv; that exact saved clock is replay input.
+@@ -62,4 +76,78 @@ def verify_native_saved(saved):
+             for observation in book_observations(book,environment='production' if kind==EvidenceKind.OBSERVATION else 'synthetic',evidence_class='current' if kind==EvidenceKind.OBSERVATION else 'synthetic',source_time_semantics='unknown'):
+                 p=packet(observation);p['raw_b64']=base64.b64encode(p.pop('raw')).decode();packets.append(p)
+             if packets!=row['packets']:raise ValueError('native quote packet replay mismatch')
+-    return dict(exact_native_books=counts,exact_packets=True,gaps=gaps,journal_sha256=saved['sha256'],state=saved['state'])
++
++    def result(self, sha256=None, state='interrupted'):
++        return dict(exact_native_books=self.counts, exact_packets=True, gaps=self.gaps,
++                    journal_sha256=sha256, state=state)
++
++
++def verify_native_saved(saved):
++    verifier = NativeVerifier(saved['rows'][0])
++    for row in saved['rows']:
++        verifier.feed(row)
++    return verifier.result(saved['sha256'], saved['state'])
++
++
++class GroupedNativeVerifier:
++    """Sequential cross-segment replay: engines never start at an arbitrary segment.
++
++    Group metadata, subscription and native snapshot dependencies must precede use.
++    The finite offline policy caps total rows; no checkpoints or hidden sidecars.
++    """
++    def __init__(self, profile_name=None):
++        from .supervised import profile
++        self.profile=profile(profile_name) if profile_name else None
++        self.retired=set()
++        self.first = None
++        self.groups = {}
++        self.previous_books = {}
++        self.derived_health_books = 0
++
++    def feed(self, row):
++        if row['type'] == 'session_started':
++            if self.first is not None:
++                raise ValueError('new source session requires explicit replay boundary')
++            self.first = row
++        group = row.get('stream_group')
++        if group is None and row.get('source') in ('kalshi', 'polymarket_us'):
++            group = '_legacy'
++        if group is not None:
++            if self.first is None:
++                raise ValueError('missing session dependency')
++            if group not in self.groups:
++                if len(self.groups) >= (self.profile['groups'] if self.profile else 24):
++                    raise ValueError('offline replay group cap')
++                self.groups[group] = NativeVerifier(self.first,self.profile['name'] if self.profile else None)
++            verifier = self.groups[group]
++            if self.profile and group in self.retired and row['type'] in ('prediction_command','prediction_frame','prediction_book','market_selected'):
++                raise ValueError('observation after retired stream group')
++            if self.profile and row['type']=='subscription_departure':
++                verifier.engines.clear();verifier.markets.clear();verifier.last.clear()
++                self.previous_books={k:v for k,v in self.previous_books.items() if k[0]!=group}
++                self.retired.add(group)
++            if row['type'] == 'source_health' and row.get('state') in ('awaiting_snapshot', 'disconnected', 'ineligible'):
++                verifier.last.pop(row['source'], None)
++            verifier.feed(row)
++            if row['type'] == 'prediction_book':
++                from copy import deepcopy
++                book = row['book']
++                key = (group, row['source'], book['raw']['ref']['market_id'])
++                if book['sync'] == 'synchronized' and book['receipt_freshness'] == 'recent':
++                    self.previous_books[key] = row
++                else:
++                    if key not in self.previous_books:
++                        raise ValueError('health book lacks prior native image')
++                    old = self.previous_books[key]
++                    expected = deepcopy(old['book'])
++                    if book['sync'] not in ('synchronized', 'unsynchronized') or book['receipt_freshness'] not in ('recent', 'stale'):
++                        raise ValueError('unsupported health derivation')
++                    expected.update(sync=book['sync'], receipt_freshness=book['receipt_freshness'])
++                    packets = deepcopy(old['packets'])
++                    for packet in packets: packet['normalized']['sync'] = book['sync']
++                    if expected != book or packets != row['packets']:
++                        raise ValueError('health book or packets changed native input')
++                    self.derived_health_books += 1
++
++    def result(self, state='interrupted', sha256=None):
++        return {group: verifier.result(sha256, state) for group, verifier in self.groups.items()}
+diff --git a/app/collection/prediction_producer.py b/app/collection/prediction_producer.py
+index 6a294df..f495bff 100644
+--- a/app/collection/prediction_producer.py
++++ b/app/collection/prediction_producer.py
+@@ -44,10 +44,13 @@ class MockREST:
+         self.limits=limits; self.sink=sink; self.timeout=timeout
+         self.requests=0; self.bytes=0; self.client=None;self.budget=budget
+ 
++    async def pace(self):
++        if self.venue:await asyncio.sleep(getattr(self, 'request_interval', 1))
++
+     async def get(self, url, params=None, **kwargs):
+         if self.budget.requests >= self.limits['discovery_requests']:
+             raise BudgetStop('prediction_discovery_request_cap')
+-        if self.venue:await asyncio.sleep(1)  # <=1 sequential request/second/source
++        await self.pace()
+         self.budget.reserve('discovery_request')
+         self.requests+=1
+         if self.client is None:
+@@ -75,7 +78,7 @@ class MockREST:
+                 if response.headers.get('Content-Encoding','identity')!='identity':raise ValueError('compressed discovery refused')
+                 if self.credential:self.credential.check(bytes(body),headers)
+                 complete=True
+-                return httpx.Response(status,content=bytes(body),request=httpx.Request('GET',self.endpoint+path))
++                return httpx.Response(status,content=bytes(body),headers={k:response.headers[k] for k in ('Retry-After',) if k in response.headers},request=httpx.Request('GET',self.endpoint+path))
+         finally:
+             if complete:self.budget.bytes-=reserved-len(body)
+             raw=bytes(body)
+@@ -176,13 +179,26 @@ class PredictionProducer:
+             self.budget.reserve('connection')
+             self.handshake_headers=self.credential.headers() if self.credential else {}
+             wire_limit=min(limits['frame_bytes'],self.budget.remaining_bytes())
+-            socket=await connect(self.ws_endpoint,max_size=wire_limit,max_queue=1,
++            connector=connect
++            if getattr(self, 'mock_segmented', False):
++                if self.real or self.credential: raise ValueError('mock credential boundary')
++                mock_endpoint(self.ws_endpoint)
++                class NoRedirect(connect):
++                    def process_redirect(self, exc): return exc
++                connector=NoRedirect
++            if self.real and self.spec.get('supervised_profile'):
++                # The isolated real profile never follows a credentialed redirect.
++                class NoLiveRedirect(connect):
++                    def process_redirect(self, exc): return exc
++                connector=NoLiveRedirect
++            socket=await connector(self.ws_endpoint,max_size=wire_limit,max_queue=1,
+                                  compression=None,open_timeout=3,close_timeout=1,proxy=None,additional_headers=self.handshake_headers)
+             self.health(self.venue,'awaiting_snapshot')
+             return Socket(socket,wire_limit)
+         self.stream=(KStream if self.venue=='kalshi' else PStream)(market if isinstance(market,list) else [market],factory,
+             duration=self.spec['duration'],max_messages=limits['messages'],max_connections=limits['connections'],
+-            stale_seconds=self.spec['stale_seconds'],kind=self.kind)
++            stale_seconds=self.spec['stale_seconds'],kind=self.kind,
++            **({'profile_name':self.spec['supervised_profile']} if self.spec.get('supervised_profile') else {}))
+         try:
+             async for book in self.stream.run():
+                 # Preserve native book/receipt semantics; health updates aren't new wire arrivals.
+@@ -197,6 +213,8 @@ class PredictionProducer:
+                 self.emit(self.venue,dict(type='prediction_book',book=data,packets=packets,
+                     receipt_semantics='derived native book state; wire arrivals separately retained'))
+                 self.health(self.venue,'connected' if book.sync.value=='synchronized' else ('disconnected' if self.stream.connection is None else 'ineligible'))
++                if getattr(self, 'after_book', None):
++                    await self.after_book()
+         finally:
+             await self.stream.aclose()
+             self.health(self.venue,'disconnected')
+diff --git a/app/collection/recovery.py b/app/collection/recovery.py
+index 5a19bbd..ee54b6a 100644
+--- a/app/collection/recovery.py
++++ b/app/collection/recovery.py
+@@ -129,7 +129,8 @@ def validate_rows(rows):
+     return spec
+ 
+ def _inspect(path):
+-    body,identity=stable_read(path);offset=0;chain='0'*64;rows=[]
++    from .journal_encoding import decode, MAX_EXPANDED
++    body,identity=stable_read(path);offset=0;chain='0'*64;rows=[];expanded=0
+     for fragment in body.split(b'\n')[:-1]:
+         line=fragment+b'\n'
+         if len(rows)>=4096:raise ValueError('record cap')
+@@ -137,7 +138,9 @@ def _inspect(path):
+         if set(item)!={'row','previous','sha256'}:raise ValueError('invalid journal envelope')
+         expected=sha256((chain+packed(item['row'])).encode()).hexdigest()
+         if item['previous']!=chain or item['sha256']!=expected:raise ValueError('broken journal chain')
+-        chain=expected;rows.append(item['row']);offset+=len(line)
++        chain=expected;row=decode(item['row']);expanded+=len(packed(row).encode())
++        if expanded>MAX_EXPANDED:raise ValueError('saved expanded byte cap')
++        rows.append(row);offset+=len(line)
+     spec=validate_rows(rows)
+     terminal=rows[-1]['type']=='session_finished'
+     if terminal and offset!=len(body):raise ValueError('bytes after terminal record')
+diff --git a/app/collection/run_spec.py b/app/collection/run_spec.py
+index 4afa1c5..208a390 100644
+--- a/app/collection/run_spec.py
++++ b/app/collection/run_spec.py
+@@ -19,7 +19,7 @@ def time_value(value):
+     return result
+ 
+ 
+-def preflight(spec, now=None):
++def preflight(spec, now=None, *, supervised_live=False):
+     if not isinstance(spec,dict):
+         return dict(valid=False,activation_enabled=False,errors=['spec: object required'],economics='unavailable')
+     now = now or datetime.now(timezone.utc)
+@@ -32,7 +32,15 @@ def preflight(spec, now=None):
+             errors.append(key+': missing')
+     if errors:
+         return dict(valid=False, activation_enabled=False, errors=errors, economics='unavailable')
+-    optional={'reference_enabled','reference_cadence','http'}
++    optional={'reference_enabled','reference_cadence','http','supervised_profile'}
++    policy=None
++    if 'supervised_profile' in spec:
++        from .supervised import profile
++        try: policy=profile(spec['supervised_profile'])
++        except ValueError: errors.append('unknown supervised profile')
++        if supervised_live:
++            if spec.get('mode')!='real' or spec.get('reference_enabled',False): errors.append('supervised live requires prediction-only real mode')
++        elif spec.get('mode')!='mock' or spec.get('reference_enabled',False): errors.append('supervised profile is isolated mock only')
+     if reference_enabled(spec):
+         for key in ('reference_cadence','http'):
+             if key not in spec:errors.append(key+': missing')
+@@ -105,7 +113,8 @@ def preflight(spec, now=None):
+         except (ValueError, TypeError, KeyError, ArithmeticError):
+             errors.append('http: complete explicit HTTPPolicy bounds, quota baseline and plan/cost assumptions required')
+     prediction=spec['prediction']
+-    for key, cap in (('messages',1000),('connections',5),('frame_bytes',1048576),('session_bytes',16777216),('discovery_requests',64)):
++    for key, cap in (('messages',1000),('connections',5),('frame_bytes',1048576),('session_bytes',16777216),('discovery_requests',100)):
++        if policy: cap={'messages':policy['group_messages'],'session_bytes':policy['body_bytes'],'discovery_requests':policy['requests']}.get(key,cap)
+         v=prediction.get(key) if isinstance(prediction,dict) else None
+         if type(v) is not int or not 0 < v <= cap:
+             errors.append('prediction.'+key+': positive integer <= '+str(cap)+' required')
+diff --git a/app/collection/transport_session.py b/app/collection/transport_session.py
+index e226ea8..678c39d 100644
+--- a/app/collection/transport_session.py
++++ b/app/collection/transport_session.py
+@@ -26,7 +26,10 @@ class StorageFailure(OSError):
+ 
+ class ObservationJournal:
+     """Bounded fsynced E6 observations; untouched E2 synthetic schema is not relabeled."""
+-    def __init__(self, path):
++    def __init__(self, path, *, encoding=None):
++        from .journal_encoding import VERSION
++        if encoding not in (None, VERSION):raise ValueError('unsupported journal encoding')
++        self.encoding=encoding; self.expanded_bytes=0
+         self.path=Path(path); self.previous='0'*64; self.bytes=0; self.count=0
+         self.failed=None; self.attempted=0; self.stage='idle'; self.terminal_acknowledged=False
+         # No buffered close may silently retry a failed write/flush.
+@@ -38,8 +41,14 @@ class ObservationJournal:
+             try:self.file.close()
+             except OSError as exc:failure(__name__, 'journal_lock_cleanup', exc)
+             raise
++    def encoded(self, row):
++        from .journal_encoding import encode
++        return encode(row) if self.encoding else row
++
+     def save(self, row):
+         if self.failed:raise self.failed
++        original=row
++        row=self.encoded(row)
+         payload=packed(row)
+         digest=sha256((self.previous+payload).encode()).hexdigest()
+         body=(packed(dict(previous=self.previous,sha256=digest,row=row))+'\n').encode()
+@@ -56,7 +65,8 @@ class ObservationJournal:
+             raise self.failed from None
+         self.stage='acknowledged' 
+         self.previous=digest; self.bytes+=len(body); self.count+=1
+-        self.terminal_acknowledged=row.get('type')=='session_finished'
++        self.expanded_bytes+=len(packed(original).encode())
++        self.terminal_acknowledged=original.get('type')=='session_finished'
+     def close(self):
+         try:self.file.close()
+         except OSError:
+@@ -67,14 +77,19 @@ class ObservationJournal:
+ def reopen(path):
+     path=Path(path)
+     if path.stat().st_size>32*1024*1024: raise ValueError('saved byte cap')
+-    previous='0'*64; rows=[]
++    from .journal_encoding import decode, MAX_EXPANDED
++    previous='0'*64; rows=[]; expanded=0
+     with path.open('rb') as stream:
+         for line in stream:
+             if len(rows)>=4096 or not line.endswith(b'\n'):raise ValueError('incomplete or overbound journal')
+             value=json.loads(line); row=value['row']
+             digest=sha256((previous+packed(row)).encode()).hexdigest()
+             if value['previous']!=previous or value['sha256']!=digest:raise ValueError('saved hash chain mismatch')
+-            previous=digest; rows.append(row)
++            previous=digest
++            row=decode(row)
++            expanded+=len(packed(row).encode())
++            if expanded>MAX_EXPANDED:raise ValueError('saved expanded byte cap')
++            rows.append(row)
+     return dict(format='e6-transport-observations-1',rows=rows,sha256=previous,
+                 state='complete' if rows and rows[-1]['type']=='session_finished' else 'interrupted',
+                 economics=None,qualification='bounded observation journal; no economic qualification')
+@@ -171,14 +186,24 @@ class TransportSession:
+             return False
+         row=dict(record,source=source,session_id=self.sid,ingress_id=str(uuid4()),observed_at=utc(),
+                  health=deepcopy(self.health),economics=None)
+-        n=len(packed(row).encode())
+-        if self.delivered>=2048 or self.ingress_bytes+n>16*1024*1024:
++        n=len(packed(self.journal.encoded(row)).encode()) if getattr(self.journal,'encoding',None) else len(packed(row).encode())
++        if self.delivered>=getattr(self, 'ingress_record_limit', 2048) or self.ingress_bytes+n>getattr(self, 'ingress_byte_limit', 16*1024*1024):
+             self.counts['rejected']+=1
+             self.request_stop('session_ingress_cap');raise BudgetStop('session_ingress_cap')
++        if getattr(self,'profile',None):
++            try:self.admit_profile(row,n)
++            except BudgetStop as exc:
++                self.counts['rejected']+=1; self.intake_closed=True; self.request_stop(str(exc)); raise
+         # Write-ahead before queueing. Queue failures retain the delivered record.
+         self.counts['accepted']+=1
+         before=self.journal.attempted
+         try:self.journal.save(row)
++        except BudgetStop as exc:
++            if getattr(self, 'segmented_history', False):
++                # A segment/control budget rejection precedes this row's write.
++                self.counts['accepted']-=1; self.counts['rejected']+=1
++                self.intake_closed=True; self.request_stop(str(exc))
++            raise
+         except OSError as exc:
+             self.storage_failed(getattr(exc,'stage','write'))
+             raise
+@@ -197,9 +222,17 @@ class TransportSession:
+ 
+     def request_stop(self, reason):
+         self.reason=self.reason or reason; self.stop_event.set()
++        if getattr(self,'profile',None):
++            import time
++            if not hasattr(self,'stop_requested_at'): self.stop_requested_at=time.monotonic()
++            self.intake_closed=True
++
++    def open_journal(self):
++        options={'encoding':self.journal_encoding} if getattr(self,'journal_encoding',None) else {}
++        return ObservationJournal(self.output/(self.sid+'.jsonl'),**options)
+ 
+     async def start(self):
+-        result=preflight(self.spec)
++        result=preflight(self.spec, supervised_live=True) if getattr(self,'supervised_live',False) else preflight(self.spec)
+         if not result['valid']:raise ValueError(packed(result['errors']))
+         if datetime.now(timezone.utc)<time_value(self.spec['start_after']):raise ValueError('before explicit start window')
+         if self.state!='idle':raise ValueError('session already started')
+@@ -217,13 +250,16 @@ class TransportSession:
+         if self.spec['mode']=='real' and self.credentials is None:
+             from .venue_access import load_credentials
+             self.credentials=load_credentials()
++        if getattr(self,'supervised_live',False):
++            from .supervised_live import validate_live
++            validate_live(self.spec,self.endpoints,self.credentials,require_credentials=True)
+         self.producers={v:PredictionProducer(v,self.spec,self.endpoints[v]['rest'],self.endpoints[v]['ws'],self.emit,self.set_health,
+                         credential=(self.credentials or {}).get(v),budget=self.budgets.get(v)) for v in ('kalshi','polymarket_us')}
+         self.output.mkdir(parents=True,exist_ok=True)
+         try:
+-            self.journal=ObservationJournal(self.output/(self.sid+'.jsonl'))
++            self.journal=self.open_journal()
+             self.emit('session',dict(type='session_started',spec=self.spec,provenance=('real venue observation; economics unqualified' if self.spec['mode']=='real' else 'local mock; fabricated protocol and identified retained metadata')))
+-        except OSError as exc:
++        except (OSError,BudgetStop) as exc:
+             self.storage_failed(getattr(exc,'stage','open'))
+             await self.close_resources()
+             if self.journal:
+@@ -302,6 +338,9 @@ class TransportSession:
+         try:
+             # Deadline includes bounded discovery, connections and backoff.
+             seconds=min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
++            if getattr(self, 'started_monotonic', None) is not None:
++                import time
++                seconds=max(0, seconds-(time.monotonic()-self.started_monotonic))
+             async with asyncio.timeout(seconds):
+                 discovery_tasks=[asyncio.create_task(p.discover()) for p in self.producers.values()]
+                 try:
+@@ -335,6 +374,8 @@ class TransportSession:
+             await asyncio.gather(*tasks,return_exceptions=True)
+             await self.close_resources()
+             self.closing=True; await consumer
++            if getattr(self,'profile',None) and self.journal:
++                self.journal.history.finalizing=True
+             try:
+                 if not self.persistence_error:self.journal.save(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
+                     delivered=self.delivered,persisted=self.persisted,ingress_accounting=dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged']),health=self.health,accounting=self.reference.budget.snapshot() if self.reference else None,
+@@ -344,7 +385,7 @@ class TransportSession:
+             finally:
+                 self.intake_closed=True
+                 try:self.journal.close()
+-                except OSError as exc:self.storage_failed(getattr(exc,'stage','close'))
++                except (OSError,BudgetStop) as exc:self.storage_failed(getattr(exc,'stage','close'))
+                 self.cleanup_complete=not self.cleanup_errors
+                 self.state='failed' if self.persistence_error or self.cleanup_errors else 'stopped'
+                 if self.persistence_error:self.report_failure()
+diff --git a/app/dashboard/bounds.py b/app/dashboard/bounds.py
+index e2e7437..fe08d14 100644
+--- a/app/dashboard/bounds.py
++++ b/app/dashboard/bounds.py
+@@ -23,7 +23,12 @@ def retained_bytes(value):
+             if hasattr(v,'__dict__'):n+=visit(vars(v))
+             else:n+=sum(visit(getattr(v,f.name)) for f in fields(v))
+         return n
+-    return visit(value)
++    try:
++        return visit(value)
++    finally:
++        # The recursive closure forms a cycle. Do not leave its potentially
++        # large set of object identities waiting for cyclic garbage collection.
++        seen.clear()
+ 
+ 
+ class CaptureQueue(asyncio.Queue):
+diff --git a/app/dashboard/multi_game_server.py b/app/dashboard/multi_game_server.py
+index 43fe6e7..ca5cc6e 100644
+--- a/app/dashboard/multi_game_server.py
++++ b/app/dashboard/multi_game_server.py
+@@ -12,7 +12,9 @@ from app.reference.multi_page import research_row, rank_research
+ 
+ 
+ def create_app(output=OUTPUT,owner=None,sessions=None):
+-    owner=owner or MultiOwner(output,spec_factory=configuration,personal_beta=True)
++    if owner is None:
++        from app.dashboard.coverage_owner import CoverageOwner
++        owner=CoverageOwner(output,spec_factory=configuration)
+     retained_sessions=load_sessions() if sessions is None else sessions
+     def datasets():
+         values={}
+@@ -25,7 +27,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
+             select=next(r for r in saved['rows'] if r['type']=='multi_game_selection')
+             values[sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=False,label=('Local test' if saved['rows'][0]['spec']['mode']=='mock' else 'Saved')+' · '+saved['rows'][0]['observed_at']+' · '+str(len(select['games']))+' games · Completed')
+         s=owner.session
+-        if owner.active() and s and s.journal:
++        if owner.active() and s and s.journal and not hasattr(s,'status_coverage'):
+             saved=reopen(s.journal.path);select=next((r for r in saved['rows'] if r['type']=='multi_game_selection'),None)
+             if select:values[s.sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=True,label='Current multi-game scan')
+         return values
+@@ -57,6 +59,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
+         return r
+     app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+     async def state(req):return web.json_response(owner.status())
++    async def coverage_page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/coverage.html')
++    app.router.add_get('/coverage',coverage_page)
+     async def start(req):
+         options=await req.json()
+         if not isinstance(options,dict) or set(options)-{'max_games','duration'}:raise ValueError('Unknown scan controls')
+diff --git a/app/dashboard/opportunity_static/dashboard.js b/app/dashboard/opportunity_static/dashboard.js
+index b560e80..f9707c7 100644
+--- a/app/dashboard/opportunity_static/dashboard.js
++++ b/app/dashboard/opportunity_static/dashboard.js
+@@ -6,7 +6,7 @@ for(const key of fields)if(query.has(key)){if(key==='positive')$(key).checked=qu
+ function inputs(){const q=new URLSearchParams({view});for(const key of fields)q.set(key,key==='positive'?String($(key).checked):$(key).value);if($('capture').value)q.set('capture',$('capture').value);return q;}
+ function fmt(n,suffix=''){return n===null||n===undefined?'Unavailable':Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+suffix;}
+ function link(r){const q=new URLSearchParams({session:r.session,hash:r.hash,cutoff:r.cutoff,quantity:$('quantity').value,scenario:$('scenario').value,candidate:r.candidate,view:view==='ev'?'ev':'arb'});q.set('contract',r.contract||r.legs[0].id);if(view==='research')q.set('research','true');if(view==='ev'&&r.probability!=null){q.set('probability',r.probability);q.set('basis',r.assumption);}return '/game?'+q;}
+-function render(r,stable=false){r.rows=r.rows.filter(x=>view!=='arb'||BoardView.crossVenue(x));if(stable&&last?.capture===r.capture){const order=new Map(last.rows.map((x,i)=>[x.id,i]));r.rows.sort((a,b)=>(order.get(a.id)??1e9)-(order.get(b.id)??1e9));}last=r;const s=r.status;if(s.active&&!pollTimer)pollTimer=setTimeout(poll,1500);$('max-games').disabled=s.active;$('duration').disabled=s.active;$('start').disabled=!s.start_available;$('stop').disabled=!s.active;$('mode').textContent=r.live?'Current scan':(s.active?'Previous saved · not current':r.data_mode==='mock'?'Saved · local test':'Saved · real · not current');$('scan-state').textContent=s.active?'Scan '+s.state+' · order held until Refresh':(s.cleanup_errors?.length?'Cleanup failed · resource closure unconfirmed':s.start_available?'Idle · feeds stopped':s.state==='failed'?'Scan failed':'Idle · feeds stopped · verification allowance consumed');if(s.error)$('scan-state').textContent+=' · '+s.error;
++function render(r,stable=false){r.rows=r.rows.filter(x=>view!=='arb'||BoardView.crossVenue(x));if(stable&&last?.capture===r.capture){const order=new Map(last.rows.map((x,i)=>[x.id,i]));r.rows.sort((a,b)=>(order.get(a.id)??1e9)-(order.get(b.id)??1e9));}last=r;const s=r.status;if(s.active&&!pollTimer)pollTimer=setTimeout(poll,1500);$('max-games').disabled=s.active;$('max-games').parentElement.hidden=s.operating_mode==='d2-bounded-inventory';$('start').textContent=s.operating_mode==='d2-bounded-inventory'?'Coverage pilot':'Start scan';$('duration').disabled=s.active;$('start').disabled=!s.start_available;$('stop').disabled=!s.active;$('mode').textContent=r.live?'Current scan':(s.active?'Previous saved · not current':r.data_mode==='mock'?'Saved · local test':'Saved · real · not current');$('scan-state').textContent=s.active?'Scan '+s.state+' · order held until Refresh':(s.cleanup_errors?.length?'Cleanup failed · resource closure unconfirmed':s.start_available?'Idle · feeds stopped':s.state==='failed'?'Scan failed':'Idle · feeds stopped · verification allowance consumed');if(s.error)$('scan-state').textContent+=' · '+s.error;
+  const chosen=r.capture;$('capture').innerHTML=r.captures.map(c=>`<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('');$('capture').value=chosen||'';
+  const c=r.coverage;$('coverage').textContent=c?`${c.selected} games · ${c.excluded.length} excluded · ${c.truncated_by_limit} beyond limit`:'Discovery pending';$('coverage-detail').textContent=JSON.stringify(c,null,2);$('updated').textContent='Captured '+(r.capture_time?new Date(r.capture_time).toLocaleString(undefined,{timeZoneName:'short'}):'—');$('last-observation').textContent='Last observation: '+(r.last_update||'—');
+  $('arb').setAttribute('aria-pressed',view==='arb');$('ev').setAttribute('aria-pressed',view==='ev');$('research').setAttribute('aria-pressed',view==='research');for(const id of ['positive','venue','freshness'])$(id).disabled=view==='research';$('explanation').textContent=view==='research'?'Retrospective, time-mismatched research · saved DraftKings probabilities and Kalshi YES asks. Conditional ordinary winners only; unconditional EV unavailable.':view==='arb'?'Conditional net: normal winners, modeled fees. Exceptional settlement and account fees unresolved.':'What-if EV · enter your own probability and basis in a game. No estimated fair probability.';
+@@ -28,7 +28,7 @@ async function refresh(stable=false){if(busy){if(stable!==true)pendingRefresh=tr
+ for(const key of fields)$(key).onchange=refresh;
+ $('capture').onchange=()=>{followSession=null;refresh();};$('refresh').onclick=refresh;for(const v of ['arb','ev','research'])$(v).onclick=()=>{view=v;refresh();};
+ $('rows').onclick=e=>{const row=e.target.closest('tr');if(!row)return;sessionStorage.setItem('predict-selected-row',row.dataset.id);sessionStorage.setItem('predict-dashboard-query','?'+inputs());if(!e.target.closest('a,details'))location.href=row.querySelector('a').href;};
+-async function command(path){$('scan-state').textContent=path==='stop'?'Stopping feeds and saving observations…':'Starting bounded discovery…';if(path==='stop')$('mode').textContent='Stopping · observations frozen';$('start').disabled=true;$('stop').disabled=true;try{const response=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(path==='start'?{max_games:Number($('max-games').value),duration:Number($('duration').value)}:{})});const r=await response.json();if(!response.ok)throw Error(r.error);if(path==='start'){followSession=r.session;}await refresh();}catch(e){$('error').textContent=e.message;}}
++async function command(path){if(path==='start'&&last?.status.operating_mode==='d2-bounded-inventory'){location.href='/coverage';return;}$('scan-state').textContent=path==='stop'?'Stopping feeds and saving observations…':'Starting bounded discovery…';if(path==='stop')$('mode').textContent='Stopping · observations frozen';$('start').disabled=true;$('stop').disabled=true;try{const response=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(path==='start'?{max_games:Number($('max-games').value),duration:Number($('duration').value)}:{})});const r=await response.json();if(!response.ok)throw Error(r.error);if(path==='start'){followSession=r.session;}await refresh();}catch(e){$('error').textContent=e.message;}}
+ $('start').onclick=()=>command('start');$('stop').onclick=()=>command('stop');
+ // Status polling exists only while an explicitly started scan is active.
+ async function poll(){pollTimer=null;try{const s=await(await fetch('/api/status')).json();
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 0924ca1..ab5b2c4 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -13,11 +13,12 @@ and retention decisions; this guide describes how those pieces connect.
+    `GET /api/status`, `/api/dashboard`, `/api/sessions` and `/api/calculate`
+    expose status, projections, cutoffs and calculations. Same-origin JSON
+    `POST /api/start` and `/api/stop` control the owner.
+-3. `MultiOwner` owns one scan and its finalizer. `MultiSession` extends
+-   `TransportSession`; discovery uses shared normalization and native venue
+-   adapters, then binds event/market/purchase sides before subscribing.
+-   Async producer tasks collect bounded REST/WebSocket observations; there is
+-   no separate worker service or job scheduler.
++3. Production uses `CoverageOwner`, the D2 mode of `MultiOwner`, with one
++   collector/finalizer and a persistent one-attempt guard. `ContinuousSession`
++   extends `TransportSession`; D1 inventory builds each venue independently
++   before subscriptions. `/coverage` supplies bounded pilot Start/Stop and health.
++   Historical `MultiSession` remains for retained sample-mode workflows/tests.
++   No separate worker service or job scheduler is introduced.
+ 4. The journal retains native inputs and health changes. Finalization reopens the
+    journal, verifies native replay and publishes a manifest. Saved reads validate
+    recorded file hashes and the journal chain. See [recovery](error-handling.md)
+@@ -76,3 +77,67 @@ retirement prerequisites are recorded in [SSOT](ssot.md#conflicts-removed-and-re
+ Use [configuration](configuration.md) for paths and credentials and
+ [development](development.md) for targeted tests. Historical test counts and
+ owner-review artifacts describe their original candidate, not the current checkout.
++
++## Offline coverage inventory
++
++`python -m app.collection.coverage` reads retained native discovery HTTP envelopes
++or explicitly synthetic page fixtures. Independent venue catalogs preserve all
++observed events/markets, including unresolved identities and unsupported sides,
++then annotate event overlap and retained counterpart market presence. Page-chain
++completeness and count partitions are explicit and independent of the beta's six
++game cap. Reports do not authorize subscriptions or prove contract equivalence.
++See [D1 report and command](data-coverage-d1-report.md). D2 will connect this
++foundation to collection; the running beta is unchanged by D1.
++
++
++## D2 bounded collector — current implementation
++
++`collection/continuous.py` owns live discovery/reconciliation, reusing D1 catalogs,
++native stream engines and the existing journal. `dashboard/coverage_owner.py`
++owns the one-pilot guard, process lock, grouped native replay and finalization.
++The production factory selects this owner. Startup is idle; the consumed attempt
++prevents another Start, including after restart. Collection belongs to the server,
++not a browser request. The 60-second refresh and five-minute cutoff remain inside
++the same finite Start deadline and budgets.
++
++D2 evidence is separate under `evidence/d2-coverage/<session>/`: immutable journal,
++run spec, limits, replay, report and manifest. It is not added to saved calculation
++catalogs or live opportunity ranking. Existing saved math/history remains unchanged.
++The one live pilot failed before catalogs/subscriptions; the repaired code has only
++offline validation. See [D2 outcome and gaps](data-coverage-d2-report.md). D3 segments,
++outcomes, settlement and D4 dashboard integration remain deferred.
++
++D2 offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
++
++
++## D3a offline segmented history — September 16, 2026
++
++`collection/segmented.py` extends `ObservationJournal` with the separately versioned
++`d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
++read-only interrupted-prefix indexes. `NativeVerifier` shares the legacy native
++parsers/converter; `GroupedNativeVerifier` keeps sequential stream state across
++segments without a whole-run list. Metadata, command and native image dependencies
++must precede a usable book. No checkpoints or external payload store are used.
++
++`dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
++expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
++completed histories. The production factory still selects legacy `CoverageOwner`.
++D2 transport, 2,048 lifetime ingress allowance and original recovery identity checks
++are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
++live segmented route or daily collection authorization. See [D3a results, storage
++format and recovery limits](data-coverage-d3a-report.md). D2 and full D3 are incomplete.
++
++
++## Mock-only segmented collector integration — September 16, 2026
++
++`CoverageOwner(mock_segmented=True)` requires an isolated output root and explicit
++numeric-loopback fixture endpoints. It runs the existing `ContinuousSession`,
++discovery and native producers, using `SegmentedTransportJournal` and sequential
++finalization. Production construction does not select this option. No credential
++resolution, reference feed or external redirect is permitted in the mock path.
++Published catalog generations, producer-applied generations and usable books are
++separate; shared lifecycle cleanup creates the terminal only after producer joins
++and queue accounting. Failure cannot manufacture completion. D3a policy and D2
++limits/attempt protection remain unchanged. Busy local Stop passes; resource
++pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
++Next is an offline sustained-capacity policy/experiment, not a live pilot.
+diff --git a/docs/product-roadmap-review.md b/docs/product-roadmap-review.md
+index 5255901..235a04d 100644
+--- a/docs/product-roadmap-review.md
++++ b/docs/product-roadmap-review.md
+@@ -1,14 +1,22 @@
+ # Prediction Market Edge — product direction and implementation outline
+ 
++## Current delivery order — September 16 correction
++
++**D1 complete → D2 partial → D3a offline foundation delivered → mock collector integration / remaining D2 controls → remaining D3 → D4 → D5.** The [data-coverage plan](data-coverage-plan.md) owns current tasks and boundaries. [D3a results](data-coverage-d3a-report.md) preserve exact observations across bounded segments with incremental replay; they do not establish sustained capacity or complete D2/D3.
++
++D2 retains historical 64 Kalshi/32 US usable-subscription evidence and unknown US completeness. Coherent refresh and active manual Stop on the repaired candidate remain separate live control checks. Mock-only segmented integration is delivered with busy refresh/Stop and exact replay; production selection and D2 limits are unchanged. Four segments still exhaust at 4,092 synthetic observations. The next task is an explicit finite sustained-capacity policy and offline experiment, before another live pilot. See [integration report](data-coverage-d3-mock-integration-report.md). No live handoff is ready.
++
++Remaining D3 covers outcomes, actual contract settlement, backfill assessment and disk policy; D4 integrates coverage/history into the existing dashboard; D5 expands based on measured gaps. Initial universe remains supported Kalshi and Polymarket US NFL pregame full-game winners. POC/beta/research deliveries and the historical E1–E10 design below keep their original identities. No live collection or unattended operation is enabled by this documentation.
++
+ ## Completed — multi-game saved-page research ranking
+ 
+-September 16: all six saved games now have a separate Page-derived research view, exact same-column DraftKings probabilities, per-event ordinary-winner assessments, conditional net/ROI sorting and same-basis game detail/return. [Report](multi-page-research-report.md). Original observations and the 18-candidate/96-scenario baseline remain intact. Every result is retrospective/time-mismatched; unknown exceptional mass leaves unconditional EV unavailable. No new collection, credentials or prospective scoring was added. The completed list is ready for inspection; further collection and implementation are outside this slice.
++September 16: all six saved games now have a separate Page-derived research view, exact same-column DraftKings probabilities, per-event ordinary-winner assessments, conditional net/ROI sorting and same-basis game detail/return. [Report](multi-page-research-report.md). Original observations and the 18-candidate/96-scenario baseline remain intact. Every result is retrospective/time-mismatched; unknown exceptional mass leaves unconditional EV unavailable. No new collection, credentials or prospective scoring was added. The September 16 owner walkthrough is recorded in the Desktop tracker; this completed slice does not authorize further collection.
+ 
+-## Current implementation clarification — public-page POC
++## Completed implementation — public-page POC
+ 
+-September 16: the VegasInsider same-column DraftKings parser is implemented; see [report](public-nfl-reference-report.md) and the current Desktop tracker. The next slice uses the saved page, not a mandatory Odds API/Pinnacle feed. Missing bookmaker timing, disclosed delay or independence assessment does not prevent implied-probability and de-vig arithmetic. Label the result “page-derived estimate; bookmaker update time and delay unknown”; retain stronger live/qualified eligibility separately. Do not infer a 15-minute delay or independent true fair value.
++September 16: the VegasInsider same-column DraftKings parser is implemented; see [report](public-nfl-reference-report.md) and the current Desktop tracker. The delivered research slice uses the saved page without a mandatory Odds API/Pinnacle feed. Missing bookmaker timing, disclosed delay or independence assessment does not prevent implied-probability and de-vig arithmetic. Label the result “page-derived estimate; bookmaker update time and delay unknown”; retain stronger live/qualified eligibility separately. Do not infer a 15-minute delay or independent true fair value.
+ 
+-Reuse the calculation and prospective-record/evaluation design below. The old source-specific eligibility and final implementation prompt are superseded where they would suppress this labeled arithmetic. Preserve identity/odds checks, exact math, conditional-vs-unconditional EV, actual save/receipt times and no future-data leakage. Earlier target captures can support only explicitly retrospective time-mismatched comparisons. The next package is file-only, using saved real source data and synthetic outcomes for workflow checks; no provider requests or new target capture.
++Reuse the calculation and prospective-record/evaluation design below. The old source-specific eligibility and final implementation prompt are superseded where they would suppress this labeled arithmetic. Preserve identity/odds checks, exact math, conditional-vs-unconditional EV, actual save/receipt times and no future-data leakage. Earlier target captures can support only explicitly retrospective time-mismatched comparisons. That completed package was file-only, using saved real source data and synthetic outcomes for workflow checks; no provider requests or new target capture were part of it.
+ 
+ 
+ Updated September 15, 2026. Proposed working name; the project directory remains prediction-arb. This document replaces the earlier P1–P8 roadmap with the owner’s expanded scope. Planning only: no implementation, provider subscription, live collection or trading is performed by this review.
+@@ -23,13 +31,11 @@ Keep what-if EV inputs separate from the unmodified observed-data baseline. No d
+ 
+ Future calculation changes require focused regression checks for the affected math. Use saved data for an independent baseline reconciliation; do not turn this into another infrastructure qualification exercise or claim absolute correctness solely from passing tests. UI polish and production hardening remain secondary.
+ 
+-## Current owner direction — POC before hardening
+-
+-September 15 correction: this is a personal app. Prioritize seeing potential arbitrage and positive expected-value opportunities, not production-grade reliability. The [Desktop tracker](/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md) now orders work as **POC opportunity board → personal beta → later hardening**. This takes precedence over historical E-package ordering below.
++## Standing product constraint — useful personal app
+ 
+-The next slice reuses real saved prediction books, existing matching/fee/depth/Arb engines and the accepted interface. Show candidate opportunities, supported net calculations, sizes and concise assumptions. Add explicit positive-EV what-if scenarios and break-even values where supported. Preserve the distinction between diagnostics, assumption-dependent potential and qualified net results. No fabricated fair probabilities, fees or profits.
++This is a personal app. The delivered POC established the viewing/calculation loop. D1–D4 now address coverage, ongoing collection, history and visibility. Preserve correct original-input math, concise presentation, explicit Stop and truthful unknowns. Positive results are not required.
+ 
+-Further storage-failure presentation, repeated crash/fault matrices, continuous-operation certification and production packaging are deferred until after POC/beta. Retain completed work. Keep focused calculation/mapping checks, visible freshness/unknowns, secret protection, explicit Stop and no trading. No exhaustive owner-review checklist or full E6 completion gate.
++Recovery, finite resource limits and persistence needed for this daily-use scope belong in D2/D3. Broad fault matrices, production packaging and blanket latency qualification remain deferred. No additional owner-review checklist is a prerequisite for D1.
+ 
+ ## Personal-beta priority — multi-game quick-look dashboard
+ 
+@@ -171,13 +177,13 @@ E1–E10 are expansion work packages. Existing completed slices retain their his
+ 
+ **Completion check:** one usable event-level walkthrough, including stale inputs, unknown net value and saved reopening. Avoid one combined ranking that treats expected profit and worst-case profit as equivalent.
+ 
+-### E6 — delivered collection foundation; remaining hardening deferred
++### E6 — delivered collection foundation; continued through D1–D4
+ 
+ **Depends on:** existing collector and prediction adapters. Reference integration uses E2 only when separately enabled; its absence is not a collection or Arb gate.
+ 
+ **Tasks:** finish the prepared owner Start/Stop/reopen try; expand to explicitly chosen session durations; refresh discovery/subscriptions; recover and resynchronize after disconnects; keep per-source health and capture-gap records. Bound queues, memory and disk; segment sessions and define retention. Collection can outlive a browser tab. Process failure must leave an interrupted record. Specify startup/autoresume policy before enabling unattended operation.
+ 
+-**Result:** durable prediction-market timelines, with ancillary reference timelines only when enabled. Next slice: prediction-only Kalshi/Polymarket US capture under E6 ownership, explicit Start/Stop, maximum five minutes and verified no-additional-cost access.
++**Result:** durable prediction-market timelines, with ancillary reference timelines only when enabled. D1 inventory is delivered. Next work is missing D2 live validation under a new finite pilot authorization; the earlier five-minute handoff is historical.
+ 
+ **Current boundary:** bounded real capture/live viewing, manual Stop, saved replay, interrupted recovery and storage-failure accounting are already implemented within reported limits. Full continuous reliability remains unclaimed and is not a POC/beta gate. Further failure-count UI and broader qualification are deferred until after POC/beta. No blanket 250 ms gate.
+ 
+@@ -215,16 +221,14 @@ E1–E10 are expansion work packages. Existing completed slices retain their his
+ 
+ **Depends on:** a useful E2–E6 loop; execution expansion additionally depends on E9.
+ 
+-**Tasks:** add reference sources based on marginal information value; prediction venues based on access, overlapping markets and independent usable liquidity. Extend sports/spreads/totals with dedicated identity and settlement treatment. Add local unattended operation or hosting with explicit recovery, observability and access requirements. Actual prediction-market orders are a separate authorized project stage.
++**Tasks:** add reference sources based on marginal information value; prediction venues based on access, overlapping markets and independent usable liquidity. Extend sports/spreads/totals with dedicated identity and settlement treatment. Local background collection now belongs to D2/D3; hosting and broader unattended deployment remain later work with explicit recovery, observability and access requirements. Actual prediction-market orders are a separate authorized project stage.
+ 
+ **Result:** targeted breadth and operation driven by demonstrated needs.
+ 
+ ## 6. Delivery order and success
+ 
+-**Now: connect the existing pieces into a personal opportunity POC.** Real books and the viewing loop exist; the next user benefit is candidate Arb and positive-EV potential on screen. Begin with saved real observations and clearly labeled assumptions, then improve useful real scanning under explicit scope.
+-
+-**Next: personal beta.** Repeated owner-started use, a small useful set of events, ranking/filtering and saved results; fix concrete feedback. Reuse completed engineering without making full E6 reliability a prerequisite.
++D1 is complete offline; continue with D2–D5 as specified in [Data coverage and history](data-coverage-plan.md). The POC, repeated bounded beta operation and page-derived research are delivered; do not rebuild or re-review them as the next milestone.
+ 
+-**Later:** stronger model calibration, ancillary data, lead/lag, maker research, broader venues and production hardening as justified. Keep their recorded unknowns, but do not turn them into blanket blocks on the POC.
++Success for the next milestone means the owner can open Predict and see useful ongoing coverage of the declared universe, understand which venues/markets are missing and why, and reopen retained observations with unchanged calculations. Outcomes and venue settlement must be linked for later research. No positive opportunity or profitability claim is required.
+ 
+-Success means the owner can quickly inspect potential opportunities and understand their price, size, fees and assumptions. It does not require a positive candidate, proven profitability or production-grade operation. This planning update changes no app, credential, database, provider or running service state.
++D1 is delivered. Follow [the incomplete D2 report](data-coverage-d2-report.md) for the next validation task. No second pilot, paid access, unattended startup or trading is enabled by this update.
+diff --git a/docs/ssot.md b/docs/ssot.md
+index 48aac89..2cd4a48 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -29,23 +29,25 @@ Known callers: `app/dashboard/opportunity_board.py` (both factory and CLI),
+ 
+ Domain: Configuration and scan lifecycle
+ 
+-SSOT module/file: `app/dashboard/multi_game.py` (`configuration`, `MultiOwner`)
++SSOT module/file: `app/dashboard/coverage_owner.py` (`CoverageOwner`, D2 production mode), extending `app/dashboard/multi_game.py:MultiOwner`
+ 
+-Why this is authoritative: constructs bounded multi-game configuration and owns
+-Start, overlap rejection, Stop/finalization and saved-scan status. Production
+-factory explicitly selects personal-beta operation. No scheduled collection.
++Why this is authoritative: production selects the bounded D2 inventory collector,
++with one Start/Stop owner, finalizer, process lock and persistent consumed-attempt
++guard. Startup is idle, with no scheduled collection or autoresume. Historical
++MultiOwner configuration/sample tests and saved calculations remain supported.
+ 
+ Known callers: multi-game server; local-only beta test producer.
+ 
+ Domain: Ingestion and event identity
+ 
+-SSOT module/file: `app/collection/multi_game.py`, using `app/normalization/registry.py`
+-and existing venue adapters
++SSOT module/file: `app/collection/continuous.py` with `app/collection/coverage.py`,
++using `app/normalization/registry.py` and existing venue adapters
+ 
+-Why this is authoritative: `MultiSession` discovers common pregame events and
+-binds actual native purchase sides before subscriptions; normalization remains
+-in the shared registry. It extends `TransportSession` rather than creating a
+-second transport lifecycle.
++Why this is authoritative: `ContinuousSession` builds each venue catalog before
++matching and subscriptions, retaining unmatched/excluded markets, refreshing every
++60 seconds and enforcing the kickoff margin. It extends `TransportSession` and
++reuses native producers/stream parsers. `MultiSession` retains historical sample
++compatibility; its six-game selection no longer controls production collection.
+ 
+ Known callers: `MultiOwner`; `PredictionProducer`; native replay checks.
+ 
+@@ -169,3 +171,62 @@ lines during this pass; it was not edited or reverted by this work. No provider
+ credential lookup, database work, application restart, packaging, full CI matrix,
+ commit or publishing was performed. Browser/live checks were not run; this pass
+ claims focused source validation only.
++
++## D1 independent coverage projection — September 16, 2026
++
++`app/collection/coverage.py` owns offline catalog completeness/accounting and report
++projection, before intersection or scan selection. It shares native adapter
++`parse_event`/`parse_market` conversion and `prediction_discovery.participant_mapping`
++with the existing normalization registry. It never replaces the collection owner,
++matching/settlement qualification or calculation engines. Retained market absence
++is unknown coverage, not a zero venue denominator. See [D1](data-coverage-d1-report.md).
++
++D3's chosen persistence direction is to extend `ObservationJournal`/native replay
++with bounded segments and manifests; the historical SQL API remains separate.
++This decision performs no migration or new collection.
++
++
++## D2 evidence boundary — September 16, 2026
++
++The sole authorized pilot failed in local discovery after 2.434 seconds. Its
++immutable journal/manifest and frozen pilot source are under `evidence/d2-coverage/`.
++The repaired candidate has 67 focused offline checks; no replacement live run
++occurred. Current denominators, wider subscriptions and live browser/Stop evidence
++are unestablished. [D2 report](data-coverage-d2-report.md) owns those observations;
++the Desktop tracker/coverage plan retain incomplete status. This does not authorize
++D3, another pilot, indefinite collection or migration.
++
++D2 offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
++
++
++## D3a offline segmented history — September 16, 2026
++
++`collection/segmented.py` extends `ObservationJournal` with the separately versioned
++`d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
++read-only interrupted-prefix indexes. `NativeVerifier` shares the legacy native
++parsers/converter; `GroupedNativeVerifier` keeps sequential stream state across
++segments without a whole-run list. Metadata, command and native image dependencies
++must precede a usable book. No checkpoints or external payload store are used.
++
++`dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
++expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
++completed histories. The production factory still selects legacy `CoverageOwner`.
++D2 transport, 2,048 lifetime ingress allowance and original recovery identity checks
++are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
++live segmented route or daily collection authorization. See [D3a results, storage
++format and recovery limits](data-coverage-d3a-report.md). D2 and full D3 are incomplete.
++
++
++## Mock-only segmented collector integration — September 16, 2026
++
++`CoverageOwner(mock_segmented=True)` requires an isolated output root and explicit
++numeric-loopback fixture endpoints. It runs the existing `ContinuousSession`,
++discovery and native producers, using `SegmentedTransportJournal` and sequential
++finalization. Production construction does not select this option. No credential
++resolution, reference feed or external redirect is permitted in the mock path.
++Published catalog generations, producer-applied generations and usable books are
++separate; shared lifecycle cleanup creates the terminal only after producer joins
++and queue accounting. Failure cannot manufacture completion. D3a policy and D2
++limits/attempt protection remain unchanged. Busy local Stop passes; resource
++pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
++Next is an offline sustained-capacity policy/experiment, not a live pilot.

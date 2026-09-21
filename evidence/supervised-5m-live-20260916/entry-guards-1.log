@@ -1,0 +1,41 @@
+test_endpoint_and_credential_boundary (tests.test_supervised_live.Boundary.test_endpoint_and_credential_boundary) ... ok
+test_explicit_selection_and_real_journal (tests.test_supervised_live.Boundary.test_explicit_selection_and_real_journal) ... ERROR
+test_mock_cannot_receive_live_destinations_or_credentials (tests.test_supervised_live.Boundary.test_mock_cannot_receive_live_destinations_or_credentials) ... ok
+test_consumed_attempt_and_start_validation (tests.test_supervised_live.Controls.test_consumed_attempt_and_start_validation) ... ok
+test_explicit_stop_closes_intake_synchronously (tests.test_supervised_live.Controls.test_explicit_stop_closes_intake_synchronously) ... ok
+test_shared_owner_lock_precedes_credentials_and_attempt (tests.test_supervised_live.Controls.test_shared_owner_lock_precedes_credentials_and_attempt) ... ok
+test_accounting_temporaries_released_without_cyclic_gc (tests.test_supervised.Bounds.test_accounting_temporaries_released_without_cyclic_gc) ... ok
+test_exact_identity_duplicate_across_chunks (tests.test_supervised.Bounds.test_exact_identity_duplicate_across_chunks) ... ok
+test_new_history_and_rate_boundaries (tests.test_supervised.Bounds.test_new_history_and_rate_boundaries) ... ok
+test_policy_opt_in_and_legacy_defaults (tests.test_supervised.Bounds.test_policy_opt_in_and_legacy_defaults) ... ok
+test_samples_and_disk_reserve (tests.test_supervised.Bounds.test_samples_and_disk_reserve) ... ok
+test_segment_rotation_preserves_session_budget (tests.test_supervised.Bounds.test_segment_rotation_preserves_session_budget) ... ok
+
+======================================================================
+ERROR: test_explicit_selection_and_real_journal (tests.test_supervised_live.Boundary.test_explicit_selection_and_real_journal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_supervised_live.py", line 33, in test_explicit_selection_and_real_journal
+    s.journal=s.open_journal()
+              ~~~~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/continuous.py", line 647, in open_journal
+    return SegmentedTransportJournal(self.output, self.profile['name'] if self.profile else None,
+        label='real supervised venue observations' if self.supervised_live else None)
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/mock_history.py", line 37, in __init__
+    self.history = SegmentedJournal(Path(output)/'history',
+                   ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+        label=label or 'synthetic local collector; new mock observations, no venue collection',
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        output_root=Path(output).parent, profile_name=profile_name)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/segmented.py", line 89, in __init__
+    self._guard(); self._publish(False); self._open()
+    ~~~~~~~~~~~^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/segmented.py", line 104, in _guard
+    raise BudgetStop('offline_output_reservation')
+app.collection.odds_http.BudgetStop: offline_output_reservation
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.614s
+
+FAILED (errors=1)

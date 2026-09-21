@@ -1,0 +1,79 @@
+[
+  {
+    "team": "Buffalo Bills",
+    "requested": "4000000",
+    "available": "27741763.45",
+    "net": "-151027.095217578628000000000000",
+    "roi": "-5.430816447516031626852618981865046488078799594955353033232072171591641351376231243671177391144251128",
+    "fills": [
+      {
+        "price": "0.6800",
+        "quantity": "4000000",
+        "provenance": "22e4cd98-7081-4a27-bd89-00c60e35b313",
+        "available": "11574336.49"
+      }
+    ],
+    "reasons": [],
+    "match": true
+  },
+  {
+    "team": "Atlanta Falcons",
+    "requested": "4000000",
+    "available": "3871156.56",
+    "net": null,
+    "roi": null,
+    "fills": null,
+    "reasons": [
+      "quantity exceeds supplied depth"
+    ],
+    "match": true
+  },
+  {
+    "team": "Cincinnati Bengals",
+    "requested": "4000000",
+    "available": "3432656.1",
+    "net": null,
+    "roi": null,
+    "fills": null,
+    "reasons": [
+      "quantity exceeds supplied depth"
+    ],
+    "match": true
+  },
+  {
+    "team": "Cleveland Browns",
+    "requested": "4000000",
+    "available": "3667992.66",
+    "net": null,
+    "roi": null,
+    "fills": null,
+    "reasons": [
+      "quantity exceeds supplied depth"
+    ],
+    "match": true
+  },
+  {
+    "team": "Chicago Bears",
+    "requested": "4000000",
+    "available": "3075582.53",
+    "net": null,
+    "roi": null,
+    "fills": null,
+    "reasons": [
+      "quantity exceeds supplied depth"
+    ],
+    "match": true
+  },
+  {
+    "team": "Baltimore Ravens",
+    "requested": "4000000",
+    "available": "3039993.74",
+    "net": null,
+    "roi": null,
+    "fills": null,
+    "reasons": [
+      "quantity exceeds supplied depth"
+    ],
+    "match": true
+  }
+]

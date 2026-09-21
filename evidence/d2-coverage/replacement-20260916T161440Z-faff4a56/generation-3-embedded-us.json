@@ -1,0 +1,2304 @@
+{
+  "event_discovery": "bounded/truncated",
+  "market_completeness": "unestablished",
+  "events": [
+    {
+      "id": "101466",
+      "title": "DET Lions vs BUF Bills",
+      "scheduled_start": "2026-09-18T00:15:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-det-buf-2026-09-17",
+        "slug": "nfl-det-buf-2026-09-17",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Detroit Lions": "NFL:DET",
+        "Buffalo Bills": "NFL:BUF"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-18T00:15:00+00:00",
+        [
+          "NFL:BUF",
+          "NFL:DET"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 1,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657964"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101467",
+      "title": "PHI Eagles vs TEN Titans",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-phi-ten-2026-09-20",
+        "slug": "nfl-phi-ten-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Philadelphia Eagles": "NFL:PHI",
+        "Tennessee Titans": "NFL:TEN"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:PHI",
+          "NFL:TEN"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 3,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657966"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101468",
+      "title": "PIT Steelers vs NE Patriots",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-pit-ne-2026-09-20",
+        "slug": "nfl-pit-ne-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Pittsburgh Steelers": "NFL:PIT",
+        "New England Patriots": "NFL:NE"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:NE",
+          "NFL:PIT"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 5,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657969"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101469",
+      "title": "MIN Vikings vs CHI Bears",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-min-chi-2026-09-20",
+        "slug": "nfl-min-chi-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Minnesota Vikings": "NFL:MIN",
+        "Chicago Bears": "NFL:CHI"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:CHI",
+          "NFL:MIN"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 7,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657972"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101470",
+      "title": "CAR Panthers vs ATL Falcons",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-car-atl-2026-09-20",
+        "slug": "nfl-car-atl-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Carolina Panthers": "NFL:CAR",
+        "Atlanta Falcons": "NFL:ATL"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:ATL",
+          "NFL:CAR"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 9,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657975"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101471",
+      "title": "GB Packers vs NY Jets",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-gb-nyj-2026-09-20",
+        "slug": "nfl-gb-nyj-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Green Bay Packers": "NFL:GB",
+        "New York Jets": "NFL:NYJ"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:GB",
+          "NFL:NYJ"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 11,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657978"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101472",
+      "title": "NO Saints vs BAL Ravens",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-no-bal-2026-09-20",
+        "slug": "nfl-no-bal-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "New Orleans Saints": "NFL:NO",
+        "Baltimore Ravens": "NFL:BAL"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:BAL",
+          "NFL:NO"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 13,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657980"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101473",
+      "title": "CIN Bengals vs HOU Texans",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-cin-hou-2026-09-20",
+        "slug": "nfl-cin-hou-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Cincinnati Bengals": "NFL:CIN",
+        "Houston Texans": "NFL:HOU"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:CIN",
+          "NFL:HOU"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 15,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657983"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101474",
+      "title": "CLE Browns vs TB Buccaneers",
+      "scheduled_start": "2026-09-20T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-cle-tb-2026-09-20",
+        "slug": "nfl-cle-tb-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Cleveland Browns": "NFL:CLE",
+        "Tampa Bay Buccaneers": "NFL:TB"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T17:00:00+00:00",
+        [
+          "NFL:CLE",
+          "NFL:TB"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 17,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657986"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101475",
+      "title": "JAC Jaguars vs DEN Broncos",
+      "scheduled_start": "2026-09-20T20:05:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-jax-den-2026-09-20",
+        "slug": "nfl-jax-den-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Jacksonville Jaguars": "NFL:JAX",
+        "Denver Broncos": "NFL:DEN"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T20:05:00+00:00",
+        [
+          "NFL:DEN",
+          "NFL:JAX"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 19,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657989"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101476",
+      "title": "LV Raiders vs LA Chargers",
+      "scheduled_start": "2026-09-20T20:05:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-lv-lac-2026-09-20",
+        "slug": "nfl-lv-lac-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Las Vegas Raiders": "NFL:LV",
+        "Los Angeles Chargers": "NFL:LAC"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T20:05:00+00:00",
+        [
+          "NFL:LAC",
+          "NFL:LV"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 21,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657992"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101477",
+      "title": "SEA Seahawks vs ARI Cardinals",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-sea-ari-2026-09-20",
+        "slug": "nfl-sea-ari-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Seattle Seahawks": "NFL:SEA",
+        "Arizona Cardinals": "NFL:ARI"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T20:25:00+00:00",
+        [
+          "NFL:ARI",
+          "NFL:SEA"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 23,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657994"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101478",
+      "title": "MIA Dolphins vs SF 49ers",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-mia-sf-2026-09-20",
+        "slug": "nfl-mia-sf-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Miami Dolphins": "NFL:MIA",
+        "San Francisco 49ers": "NFL:SF"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T20:25:00+00:00",
+        [
+          "NFL:MIA",
+          "NFL:SF"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 25,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657996"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101479",
+      "title": "WAS Commanders vs DAL Cowboys",
+      "scheduled_start": "2026-09-20T20:25:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-was-dal-2026-09-20",
+        "slug": "nfl-was-dal-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Washington Commanders": "NFL:WAS",
+        "Dallas Cowboys": "NFL:DAL"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-20T20:25:00+00:00",
+        [
+          "NFL:DAL",
+          "NFL:WAS"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 27,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "657999"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101480",
+      "title": "IND Colts vs KC Chiefs",
+      "scheduled_start": "2026-09-21T00:20:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-ind-kc-2026-09-20",
+        "slug": "nfl-ind-kc-2026-09-20",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Indianapolis Colts": "NFL:IND",
+        "Kansas City Chiefs": "NFL:KC"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-21T00:20:00+00:00",
+        [
+          "NFL:IND",
+          "NFL:KC"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 29,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "658002"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "101481",
+      "title": "NY Giants vs LA Rams",
+      "scheduled_start": "2026-09-22T00:15:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-nyg-lar-2026-09-21",
+        "slug": "nfl-nyg-lar-2026-09-21",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "New York Giants": "NFL:NYG",
+        "Los Angeles Rams": "NFL:LAR"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-22T00:15:00+00:00",
+        [
+          "NFL:LAR",
+          "NFL:NYG"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 31,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "658005"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "108683",
+      "title": "ATL Falcons vs GB Packers",
+      "scheduled_start": "2026-09-25T00:15:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-atl-gb-2026-09-24",
+        "slug": "nfl-atl-gb-2026-09-24",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Atlanta Falcons": "NFL:ATL",
+        "Green Bay Packers": "NFL:GB"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-25T00:15:00+00:00",
+        [
+          "NFL:ATL",
+          "NFL:GB"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 33,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "779756"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "111297",
+      "title": "KC Chiefs vs MIA Dolphins",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-kc-mia-2026-09-27",
+        "slug": "nfl-kc-mia-2026-09-27",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Kansas City Chiefs": "NFL:KC",
+        "Miami Dolphins": "NFL:MIA"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-27T17:00:00+00:00",
+        [
+          "NFL:KC",
+          "NFL:MIA"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 35,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "825195"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "111298",
+      "title": "CAR Panthers vs CLE Browns",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-car-cle-2026-09-27",
+        "slug": "nfl-car-cle-2026-09-27",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Carolina Panthers": "NFL:CAR",
+        "Cleveland Browns": "NFL:CLE"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-27T17:00:00+00:00",
+        [
+          "NFL:CAR",
+          "NFL:CLE"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 37,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "825196"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    },
+    {
+      "id": "111299",
+      "title": "TEN Titans vs NY Giants",
+      "scheduled_start": "2026-09-27T17:00:00+00:00",
+      "native_aliases": {
+        "ticker": "nfl-ten-nyg-2026-09-27",
+        "slug": "nfl-ten-nyg-2026-09-27",
+        "seriesSlug": "nfl-2025"
+      },
+      "terms_references": {},
+      "participants": {
+        "Tennessee Titans": "NFL:TEN",
+        "New York Giants": "NFL:NYG"
+      },
+      "identity": "resolved",
+      "canonical_key": [
+        "2026-09-27T17:00:00+00:00",
+        [
+          "NFL:NYG",
+          "NFL:TEN"
+        ]
+      ],
+      "exclusion": null,
+      "status": {
+        "status": null,
+        "active": true,
+        "closed": false,
+        "live": null,
+        "ended": null,
+        "period": "NS"
+      },
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 39,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "market_discovery": "embedded_only",
+      "market_ids": [
+        "825198"
+      ],
+      "matching_status": "unmatched",
+      "counterpart_event_ids": []
+    }
+  ],
+  "markets": [
+    {
+      "id": "657964",
+      "event_id": "101466",
+      "native_slug": "aec-nfl-det-buf-2026-09-17",
+      "title": "DET Lions vs BUF Bills",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Detroit Lions vs Buffalo Bills professional football game scheduled for Sep 17, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315440",
+          "label": "Lions",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315441",
+          "label": "Bills",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 2,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657966",
+      "event_id": "101467",
+      "native_slug": "aec-nfl-phi-ten-2026-09-20",
+      "title": "PHI Eagles vs TEN Titans",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Philadelphia Eagles vs Tennessee Titans professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315444",
+          "label": "Eagles",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315445",
+          "label": "Titans",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 4,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657969",
+      "event_id": "101468",
+      "native_slug": "aec-nfl-pit-ne-2026-09-20",
+      "title": "PIT Steelers vs NE Patriots",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Pittsburgh Steelers vs New England Patriots professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315450",
+          "label": "Steelers",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315451",
+          "label": "Patriots",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 6,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657972",
+      "event_id": "101469",
+      "native_slug": "aec-nfl-min-chi-2026-09-20",
+      "title": "MIN Vikings vs CHI Bears",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Minnesota Vikings vs Chicago Bears professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315456",
+          "label": "Vikings",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315457",
+          "label": "Bears",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 8,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657975",
+      "event_id": "101470",
+      "native_slug": "aec-nfl-car-atl-2026-09-20",
+      "title": "CAR Panthers vs ATL Falcons",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Carolina Panthers vs Atlanta Falcons professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315462",
+          "label": "Panthers",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315463",
+          "label": "Falcons",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 10,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657978",
+      "event_id": "101471",
+      "native_slug": "aec-nfl-gb-nyj-2026-09-20",
+      "title": "GB Packers vs NY Jets",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Green Bay Packers vs New York Jets professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315468",
+          "label": "Packers",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315469",
+          "label": "Jets",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 12,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657980",
+      "event_id": "101472",
+      "native_slug": "aec-nfl-no-bal-2026-09-20",
+      "title": "NO Saints vs BAL Ravens",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the New Orleans Saints vs Baltimore Ravens professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315472",
+          "label": "Saints",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315473",
+          "label": "Ravens",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 14,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657983",
+      "event_id": "101473",
+      "native_slug": "aec-nfl-cin-hou-2026-09-20",
+      "title": "CIN Bengals vs HOU Texans",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Cincinnati Bengals vs Houston Texans professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315478",
+          "label": "Bengals",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315479",
+          "label": "Texans",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 16,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657986",
+      "event_id": "101474",
+      "native_slug": "aec-nfl-cle-tb-2026-09-20",
+      "title": "CLE Browns vs TB Buccaneers",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Cleveland Browns vs Tampa Bay Buccaneers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315484",
+          "label": "Browns",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315485",
+          "label": "Buccaneers",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 18,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657989",
+      "event_id": "101475",
+      "native_slug": "aec-nfl-jax-den-2026-09-20",
+      "title": "JAC Jaguars vs DEN Broncos",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Jacksonville Jaguars vs Denver Broncos professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315490",
+          "label": "Jaguars",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315491",
+          "label": "Broncos",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 20,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 5,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657992",
+      "event_id": "101476",
+      "native_slug": "aec-nfl-lv-lac-2026-09-20",
+      "title": "LV Raiders vs LA Chargers",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Las Vegas Raiders vs Los Angeles Chargers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315496",
+          "label": "Raiders",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315497",
+          "label": "Chargers",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 22,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657994",
+      "event_id": "101477",
+      "native_slug": "aec-nfl-sea-ari-2026-09-20",
+      "title": "SEA Seahawks vs ARI Cardinals",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Seattle Seahawks vs Arizona Cardinals professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315500",
+          "label": "Seahawks",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315501",
+          "label": "Cardinals",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 24,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657996",
+      "event_id": "101478",
+      "native_slug": "aec-nfl-mia-sf-2026-09-20",
+      "title": "MIA Dolphins vs SF 49ers",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Miami Dolphins vs San Francisco 49ers professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315504",
+          "label": "Dolphins",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315505",
+          "label": "49ers",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 26,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "657999",
+      "event_id": "101479",
+      "native_slug": "aec-nfl-was-dal-2026-09-20",
+      "title": "WAS Commanders vs DAL Cowboys",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Washington Commanders vs Dallas Cowboys professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315510",
+          "label": "Commanders",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315511",
+          "label": "Cowboys",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 28,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "658002",
+      "event_id": "101480",
+      "native_slug": "aec-nfl-ind-kc-2026-09-20",
+      "title": "IND Colts vs KC Chiefs",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Indianapolis Colts vs Kansas City Chiefs professional football game scheduled for Sep 20, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315516",
+          "label": "Colts",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315517",
+          "label": "Chiefs",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 30,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 10,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "658005",
+      "event_id": "101481",
+      "native_slug": "aec-nfl-nyg-lar-2026-09-21",
+      "title": "NY Giants vs LA Rams",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the New York Giants vs Los Angeles Rams professional football game scheduled for Sep 21, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1315522",
+          "label": "Giants",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1315523",
+          "label": "Rams",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 32,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "779756",
+      "event_id": "108683",
+      "native_slug": "aec-nfl-atl-gb-2026-09-24",
+      "title": "ATL Falcons vs GB Packers",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Atlanta Falcons vs Green Bay Packers professional football game scheduled for Sep 24, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body."
+      },
+      "sides": [
+        {
+          "id": "1559000",
+          "label": "Falcons",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1559001",
+          "label": "Packers",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 34,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "825195",
+      "event_id": "111297",
+      "native_slug": "aec-nfl-kc-mia-2026-09-27",
+      "title": "KC Chiefs vs MIA Dolphins",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Kansas City Chiefs vs Miami Dolphins NFL game scheduled for Sep 27, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+      },
+      "sides": [
+        {
+          "id": "1649878",
+          "label": "Chiefs",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1649879",
+          "label": "Dolphins",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 36,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "825196",
+      "event_id": "111298",
+      "native_slug": "aec-nfl-car-cle-2026-09-27",
+      "title": "CAR Panthers vs CLE Browns",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Carolina Panthers vs Cleveland Browns NFL game scheduled for Sep 27, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+      },
+      "sides": [
+        {
+          "id": "1649880",
+          "label": "Panthers",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1649881",
+          "label": "Browns",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 38,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    },
+    {
+      "id": "825198",
+      "event_id": "111299",
+      "native_slug": "aec-nfl-ten-nyg-2026-09-27",
+      "title": "TEN Titans vs NY Giants",
+      "market_type": "moneyline",
+      "period": "full_game",
+      "status": "active",
+      "exclusion": null,
+      "terms": {
+        "description": "This market will settle to the winner of the Tennessee Titans vs New York Giants NFL game scheduled for Sep 27, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+      },
+      "sides": [
+        {
+          "id": "1649884",
+          "label": "Titans",
+          "role": "Long",
+          "purchase_support": "supported",
+          "basis": "native Long offers in existing adapter"
+        },
+        {
+          "id": "1649885",
+          "label": "Giants",
+          "role": "Short",
+          "purchase_support": "unsupported",
+          "basis": "Short purchase ladder not reconstructed by existing adapter"
+        }
+      ],
+      "occurrences": 1,
+      "provenance": [
+        {
+          "inventory_row": 40,
+          "path": "/v1/events",
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 15,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "tagSlug": "nfl"
+          },
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ],
+      "conflicting_duplicate": false,
+      "matching_status": "unmatched",
+      "counterpart_market_ids": [],
+      "matching_basis": "event identity and retained in-scope market presence only; outcome/terms equivalence not established"
+    }
+  ],
+  "discovery": [
+    {
+      "state": "bounded/truncated",
+      "reason": "continuation not retained",
+      "retained_pages": 4,
+      "used_pages": 4,
+      "unused_pages": 0,
+      "next_position": 20,
+      "query": {
+        "active": "true",
+        "closed": "false",
+        "limit": 5,
+        "offset": 0,
+        "orderBy": "startTime",
+        "orderDirection": "asc",
+        "sportsMarketTypes": "football_team_full_game_winner",
+        "tagSlug": "nfl"
+      },
+      "path": "/v1/events",
+      "filters": {
+        "active": "true",
+        "closed": "false",
+        "orderBy": "startTime",
+        "orderDirection": "asc",
+        "sportsMarketTypes": "football_team_full_game_winner",
+        "tagSlug": "nfl"
+      },
+      "page_evidence": [
+        {
+          "received_at": "2026-09-16T16:17:55.979150+00:00",
+          "status": 200,
+          "complete": true,
+          "body_sha256": "57d1ff72e3c6dbd604ec56578c1d351794f337662df26477cc0d2b2afcae6631"
+        },
+        {
+          "received_at": "2026-09-16T16:17:56.583960+00:00",
+          "status": 200,
+          "complete": true,
+          "body_sha256": "e3de236d4ef9396e0702818f567c5faf8788775aa3a47c830a0a73802ff6da6d"
+        },
+        {
+          "received_at": "2026-09-16T16:17:57.158332+00:00",
+          "status": 200,
+          "complete": true,
+          "body_sha256": "2129ec9e1a0591d0a1735722b83abe15d6bd6566312d8464ce1be9663aedae2a"
+        },
+        {
+          "received_at": "2026-09-16T16:17:57.738058+00:00",
+          "status": 200,
+          "complete": true,
+          "body_sha256": "6721cadd209dd33d6b5a74437837ef4466b0663d50757b66fe7ab458920e1c92"
+        }
+      ]
+    }
+  ],
+  "active_subscriptions": null,
+  "subscription_basis": "offline inventory; no live subscription state queried",
+  "historical_collection": null,
+  "counts": {
+    "events": {
+      "discovered": 20,
+      "in_scope": 20,
+      "excluded": 0,
+      "raw_occurrences": 20,
+      "duplicates": 0,
+      "matching": {
+        "unmatched": 20
+      },
+      "exclusions": {}
+    },
+    "markets": {
+      "discovered": 20,
+      "in_scope": 20,
+      "excluded": 0,
+      "raw_occurrences": 20,
+      "duplicates": 0,
+      "matching": {
+        "unmatched": 20
+      },
+      "exclusions": {}
+    },
+    "sides": {
+      "supported": 20,
+      "unsupported": 20,
+      "unknown": 0,
+      "total": 40
+    },
+    "in_scope_sides": {
+      "supported": 20,
+      "unsupported": 20
+    },
+    "events_without_retained_markets": 0,
+    "market_discovery": {
+      "embedded_only": 20
+    }
+  }
+}

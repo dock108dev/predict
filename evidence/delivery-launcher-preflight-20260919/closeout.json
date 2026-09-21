@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "new_artifact_bytes_before_this_record": 9495911,
+  "new_artifact_files": 52,
+  "artifact_limit_bytes": 1073741824,
+  "candidate_verified": "8aae112d9af82cf30662eb4030c52998c50ac60783f544b3aec725289da0802f",
+  "existing_evidence_preservation": "preservation-result.json; no subsequent writes to original evidence",
+  "no_additional_attempt": true,
+  "closeout_note": "Initial closeout metadata read incorrectly used the executable-manifest 256 KiB reader for the larger preservation index; rejected before writes. Corrected to ordinary JSON file read; no qualification rerun or candidate change."
+}

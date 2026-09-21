@@ -1,0 +1,80 @@
+{
+  "candidate_identity_sha256": "9b2cfe4de38e0a1157ca4f7281449a1a0363c42dd9bcdbccbe59ab8651ccb3ba",
+  "candidate_source_count": 219,
+  "candidate_source_mismatches": [],
+  "original_evidence_files": 2269,
+  "original_evidence_changed": [],
+  "changed_existing_app_sources": [
+    "app/collection/transport_session.py",
+    "app/collection/prediction_producer.py",
+    "app/collection/continuous.py",
+    "app/collection/segmented.py",
+    "app/dashboard/coverage_owner.py"
+  ],
+  "environmental_recovery": [
+    {
+      "index": "evidence/e6/interrupted-recovery/catalog/32258feb-b734-4e7f-8c1e-0741809bd236/recovery.json",
+      "differences": {
+        "device": {
+          "saved": 16777234,
+          "current": 16777233
+        }
+      }
+    },
+    {
+      "index": "evidence/e6/interrupted-recovery/catalog/affd42c4-204e-430e-840e-d55ce992130c/recovery.json",
+      "differences": {
+        "device": {
+          "saved": 16777234,
+          "current": 16777233
+        }
+      }
+    },
+    {
+      "index": "evidence/e6/interrupted-recovery/catalog/a5bed671-fa55-4f48-9a91-4b6db4031a86/recovery.json",
+      "differences": {
+        "device": {
+          "saved": 16777234,
+          "current": 16777233
+        }
+      }
+    },
+    {
+      "index": "evidence/e6/interrupted-recovery/catalog/eee030dc-1932-4559-a18e-0a8ed9440095/recovery.json",
+      "differences": {
+        "device": {
+          "saved": 16777234,
+          "current": 16777233
+        }
+      }
+    },
+    {
+      "index": "evidence/e6/interrupted-recovery/catalog/5c52619a-3455-4c74-974d-a7ed0780433a/recovery.json",
+      "differences": {
+        "device": {
+          "saved": 16777234,
+          "current": 16777233
+        }
+      }
+    }
+  ],
+  "focused_tests": {
+    "integration": 12,
+    "legacy_collector": 70,
+    "segmented_history": 19,
+    "saved_math": 45,
+    "total_passing": 146,
+    "established_environmental_failure": 1,
+    "established_environmental_error": 1
+  },
+  "test_scope": "Selected suites run separately in fresh processes; combined saved-math/history attempt exceeded unchanged process-peak RSS guard and is preserved, not a full-suite pass.",
+  "git_head": "edad00dd980cc8535d69a815d1199b82dd0e83cb",
+  "git_diff_check": "passed",
+  "final_logs": [
+    "focused-tests-final.log",
+    "legacy-collector-tests-final.log",
+    "history-tests.log",
+    "saved-math-tests.log",
+    "environmental-recovery-tests.log"
+  ]
+}

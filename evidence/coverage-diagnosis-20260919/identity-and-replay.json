@@ -1,0 +1,200 @@
+{
+  "candidate": "7f41489d2c52c5331cacbd076d406c3ab0786291a5feebb5c55cf2fff02e9961",
+  "derived_health_books": 149,
+  "history_manifest_sha256": "f1e0fce7fdb303ea8d55f6774ed6a7c12b5399315a98f96596d76aff72e4131a",
+  "replay": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 357,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-2": {
+      "exact_native_books": {
+        "kalshi": 123,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-3": {
+      "exact_native_books": {
+        "kalshi": 67,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "kalshi-4": {
+      "exact_native_books": {
+        "kalshi": 8,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 1330
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": null,
+      "state": "interrupted"
+    }
+  },
+  "segments": [
+    {
+      "bytes": 2319747,
+      "chain": "614aad5db56ea99931347745e0eac3a9bf8603de8a9c780e1f81c93b1dc3e990",
+      "encoded": 2199394,
+      "expanded": 8306741,
+      "expanded_physical": 8307169,
+      "logical": 733,
+      "name": "segment-0000.jsonl",
+      "observations": 733,
+      "physical": 735,
+      "sha256": "d9fdf803a11211a725887d1ffbd47d2546a50b2a4f02950dfd31618a9deed12d"
+    },
+    {
+      "bytes": 2456724,
+      "chain": "a6b3af58680c11a0a244e0c868ab57eef3ce9907c0d1be7abfd8454723978aed",
+      "encoded": 2292794,
+      "expanded": 8307065,
+      "expanded_physical": 8307498,
+      "logical": 1000,
+      "name": "segment-0001.jsonl",
+      "observations": 1000,
+      "physical": 1002,
+      "sha256": "3e762ccf2224ad0787ede972b9cf43d66e81e8b8b82dfe8388fd178ef43c0bdb"
+    },
+    {
+      "bytes": 2469736,
+      "chain": "9036da94fdeed3c35a97d9d4ac38d0fe2132a52a5580d6bd67cdb78f1299ac5e",
+      "encoded": 2302049,
+      "expanded": 7961778,
+      "expanded_physical": 7962212,
+      "logical": 1023,
+      "name": "segment-0002.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "7569a1c3e07e8f7805e28848774de6fe7de94f529005f37cd1504c7c3fb96e0d"
+    },
+    {
+      "bytes": 2705947,
+      "chain": "0650036370521b9ac4467f01822da980e12f30b9f5b93f1768fa43c1d36e0f55",
+      "encoded": 2547555,
+      "expanded": 8321089,
+      "expanded_physical": 8321521,
+      "logical": 966,
+      "name": "segment-0003.jsonl",
+      "observations": 966,
+      "physical": 968,
+      "sha256": "f7da314e2d5b1ed8d5c9e9975c55612ce20bbfc46c216f401d1f6738c5119016"
+    },
+    {
+      "bytes": 2473106,
+      "chain": "d75a51dc23e2f8edf4d1a2ba3c8173b7d9ee2af715957b1bed7b8a436306c5f1",
+      "encoded": 2305423,
+      "expanded": 8137148,
+      "expanded_physical": 8137582,
+      "logical": 1023,
+      "name": "segment-0004.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "169415f09baab7a505293324d27014a02ae552ee89d91ce002c2d24ed276b78f"
+    },
+    {
+      "bytes": 2448517,
+      "chain": "fea3c6dc6fa00ab78f4ef830598f108295ef86ab5c56116b970a7f19853a670e",
+      "encoded": 2280834,
+      "expanded": 7890664,
+      "expanded_physical": 7891098,
+      "logical": 1023,
+      "name": "segment-0005.jsonl",
+      "observations": 1023,
+      "physical": 1025,
+      "sha256": "15440cc46316e94b86d149c4b4b15c9540bcf17766a848cc114549f5a51019db"
+    },
+    {
+      "bytes": 1067058,
+      "chain": "527de69c9604b12f953930c61172fcff119ed41289c9eefc093c097d315435c0",
+      "encoded": 992216,
+      "expanded": 3412240,
+      "expanded_physical": 3413331,
+      "logical": 449,
+      "name": "segment-0006.jsonl",
+      "observations": 450,
+      "physical": 452,
+      "sha256": "2e2a219e5e5cbda703a76c031031169f264de0d2d5fe90fcaf2632a7de687c9d"
+    }
+  ],
+  "session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "source_files": 227,
+  "subsequent_changed_files": [
+    "app/collection/supervised_live.py",
+    "tests/segmented_collector_fixture.py"
+  ],
+  "unchanged_behavior_files": [
+    "app/adapters/__init__.py",
+    "app/adapters/base.py",
+    "app/adapters/kalshi.py",
+    "app/adapters/kalshi_stream.py",
+    "app/adapters/novig.py",
+    "app/adapters/novig_stream.py",
+    "app/adapters/polymarket_us.py",
+    "app/adapters/polymarket_us_stream.py",
+    "app/adapters/prophetx.py",
+    "app/adapters/prophetx_stream.py",
+    "app/adapters/synthetic.py",
+    "app/collection/__init__.py",
+    "app/collection/context.py",
+    "app/collection/continuous.py",
+    "app/collection/coverage.py",
+    "app/collection/environment.py",
+    "app/collection/journal_encoding.py",
+    "app/collection/mock_history.py",
+    "app/collection/multi_game.py",
+    "app/collection/native_replay.py",
+    "app/collection/odds_http.py",
+    "app/collection/prediction_discovery.py",
+    "app/collection/prediction_producer.py",
+    "app/collection/real_capture.py",
+    "app/collection/recovery.py",
+    "app/collection/reopen.py",
+    "app/collection/run_spec.py",
+    "app/collection/segmented.py",
+    "app/collection/server.py",
+    "app/collection/session.py",
+    "app/collection/static/index.html",
+    "app/collection/static/watch.css",
+    "app/collection/static/watch.js",
+    "app/collection/storage.py",
+    "app/collection/supervised.py",
+    "app/collection/synthetic.py",
+    "app/collection/transport_session.py",
+    "app/collection/venue_access.py",
+    "app/collection/verify.py"
+  ]
+}

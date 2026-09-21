@@ -1,0 +1,96 @@
+{
+  "closed_tab": "2",
+  "closed_while_UI_showed": "running",
+  "closed_tab_inventory": [],
+  "independent_first": {
+    "at": "2026-09-16T16:16:13.761934+00:00",
+    "status": {
+      "state": "running",
+      "active": true,
+      "operating_mode": "d2-bounded-inventory",
+      "start_available": false,
+      "error": null,
+      "cleanup_errors": [],
+      "saved": [
+        "5c9b7dca-a813-4d77-80f5-0691d06068eb",
+        "5accf9ee-94b9-4b09-8130-6849f842155e"
+      ],
+      "session": "97dbc1e0-36c7-49c8-a19b-f4856278e21c",
+      "cleanup_complete": false,
+      "coverage": {
+        "kalshi": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "event_discovery": "pending",
+          "market_completeness": "pending",
+          "eligible": 0,
+          "selected": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0,
+          "ever": {
+            "requested": 0,
+            "acknowledged": 0,
+            "receiving": 0,
+            "usable": 0
+          },
+          "peak_simultaneous": {
+            "requested": 0,
+            "acknowledged": 0,
+            "receiving": 0,
+            "usable": 0
+          },
+          "requests": 30,
+          "connection_attempts": 0,
+          "body_bytes_charged": 465551,
+          "acknowledgement_basis": "explicit channel acknowledgement",
+          "latest_receipts": {}
+        },
+        "polymarket_us": {
+          "discovered_events": 0,
+          "discovered_markets": 0,
+          "event_discovery": "pending",
+          "market_completeness": "pending",
+          "eligible": 0,
+          "selected": 0,
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0,
+          "ever": {
+            "requested": 0,
+            "acknowledged": 0,
+            "receiving": 0,
+            "usable": 0
+          },
+          "peak_simultaneous": {
+            "requested": 0,
+            "acknowledged": 0,
+            "receiving": 0,
+            "usable": 0
+          },
+          "requests": 30,
+          "connection_attempts": 0,
+          "body_bytes_charged": 329181,
+          "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+          "latest_receipts": {}
+        }
+      },
+      "pilot_allowance": "one pilot; idle startup; no autoresume",
+      "stop_reason": null,
+      "previous_pilot": null,
+      "resources": {
+        "peak_rss_bytes": 118587392,
+        "peak_queue_records": 2,
+        "peak_queue_bytes": 459945,
+        "ingress_bytes": 1103474,
+        "journal_bytes": 1113580,
+        "elapsed_seconds": 18.394304084002215
+      }
+    }
+  },
+  "reopened_tab": "3",
+  "reopened_UI": "running; Kalshi 64 requested/acknowledged/receiving/usable; US 0 market rows",
+  "recorded_at": "2026-09-16T16:16:41.577255+00:00"
+}

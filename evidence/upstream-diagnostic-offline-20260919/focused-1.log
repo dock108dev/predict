@@ -1,0 +1,23 @@
+test_body_joint_pending_partial_and_oversize (tests.test_delivery_capture.Bounds.test_body_joint_pending_partial_and_oversize) ... ok
+test_exclusive_owner_and_consumed_attempt_across_outputs (tests.test_delivery_capture.Bounds.test_exclusive_owner_and_consumed_attempt_across_outputs) ... ok
+test_external_and_keyring_guard (tests.test_delivery_capture.Bounds.test_external_and_keyring_guard) ... ok
+test_failed_start_consumes_attempt (tests.test_delivery_capture.Bounds.test_failed_start_consumes_attempt) ... ok
+test_incomplete_discovery_and_unknown_start (tests.test_delivery_capture.Bounds.test_incomplete_discovery_and_unknown_start) ... ok
+test_no_eligible_and_many_sorted (tests.test_delivery_capture.Bounds.test_no_eligible_and_many_sorted) ... ERROR
+
+======================================================================
+ERROR: test_no_eligible_and_many_sorted (tests.test_delivery_capture.Bounds.test_no_eligible_and_many_sorted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_delivery_capture.py", line 238, in test_no_eligible_and_many_sorted
+    self.assertEqual(choose(p,FakeClock().utc())[0].raw.ref.market_id,'AAA')
+                     ~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/delivery_capture.py", line 55, in choose
+    if not ids: raise ValueError('no_eligible_market')
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: no_eligible_market
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.022s
+
+FAILED (errors=1)

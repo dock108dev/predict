@@ -1,0 +1,15 @@
+{
+  "preexisting_files": 2643,
+  "preexisting_bytes": 1851012805,
+  "changed": [],
+  "python": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "regression_tests": 73,
+  "final_focused_tests": 5,
+  "distinct_tests": 74,
+  "full_suite_run": false,
+  "device_identity_findings": "Not rerun; retained separately as historical failure/error",
+  "historical_session": "aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+  "historical_candidate": "7f41489d2c52c5331cacbd076d406c3ab0786291a5feebb5c55cf2fff02e9961",
+  "historical_peak_recoverable": false,
+  "packaging_command_failure": "Initial evidence packaging used system python3 without aiohttp; failed before writes. Repeated with project .venv Python successfully; no application repair or assertion change."
+}

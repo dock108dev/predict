@@ -1,0 +1,55 @@
+{
+  "classification": "exact original admitted workload, synchronous writer replay",
+  "ingress_bytes": 16770735,
+  "ingress_records": 1914,
+  "journal_bytes": 17083545,
+  "journal_records": 1915,
+  "expanded_bytes": 16771400,
+  "wall_seconds": 0.8053678750002291,
+  "cpu_seconds": 0.780032,
+  "peak_rss_bytes": 185909248,
+  "queue_high_records": 1,
+  "queue_high_bytes": 758515,
+  "by_type": {
+    "session_started": {
+      "records": 1,
+      "bytes": 1862
+    },
+    "prediction_discovery_http": {
+      "records": 74,
+      "bytes": 1139597
+    },
+    "verified_account_budget": {
+      "records": 1,
+      "bytes": 1594
+    },
+    "coverage_inventory": {
+      "records": 1,
+      "bytes": 286951
+    },
+    "market_selected": {
+      "records": 96,
+      "bytes": 2128673
+    },
+    "source_health": {
+      "records": 580,
+      "bytes": 490683
+    },
+    "prediction_command": {
+      "records": 5,
+      "bytes": 5359
+    },
+    "prediction_frame": {
+      "records": 581,
+      "bytes": 1344716
+    },
+    "prediction_book": {
+      "records": 575,
+      "bytes": 11371300
+    },
+    "session_finished": {
+      "records": 1,
+      "bytes": 665
+    }
+  }
+}

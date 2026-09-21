@@ -1,0 +1,742 @@
+{
+  "sent": 11390,
+  "sent_bytes": 22807742,
+  "connections": 5,
+  "closed": true,
+  "request_timestamps": [
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54358.536428166
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/account/limits",
+      "at": 54359.036450666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54359.046727041
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54359.554166916
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/account/endpoint_costs",
+      "at": 54360.039829833
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54360.069749
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/events",
+      "at": 54360.550858916
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54360.920749625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54361.422494875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54361.429017125
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54361.9307405
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54361.940855666
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54362.441711
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54362.448395166
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54362.947158375
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54362.952241166
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54363.453100958
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54363.460652125
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54363.961697791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54363.968609333
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54364.469617083
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54364.478227291
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54364.980024
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54364.991712625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54365.492725166
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54365.499884291
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54366.001493833
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54366.010492791
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54366.511180833
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54366.515152333
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54367.016539166
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54367.021391208
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54367.522752666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54367.529806666
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54368.030135041
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54368.037081041
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54368.537797666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54368.546045666
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54369.047654125
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54369.057051
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54369.557901666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54369.567244625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54370.071459375
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54370.0783605
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54370.579552416
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54370.58485625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54371.085616916
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54371.089179541
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54371.590051541
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54371.596888625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54372.097945875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54372.106528958
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54372.607494625
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54372.613328208
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54373.113777041
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54373.119659083
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54373.6206285
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54373.627109791
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54374.127649916
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54374.133729041
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54374.63504425
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54374.640274
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54375.141980208
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54375.147509458
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54375.6480685
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54375.655636375
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54376.156758958
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54376.164130791
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54376.664895791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54376.670296125
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54377.171636791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54377.179237208
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54377.684878041
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54378.1933335
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/events",
+      "at": 54478.535562083
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54478.536734625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54479.711498625
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54480.063842708
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54480.534213125
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54480.877452541
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54481.343183333
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54481.735094041
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54482.151635958
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54482.520100833
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54482.981563125
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54483.345460791
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54483.806934625
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/events",
+      "at": 54484.21524375
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54484.634129208
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54484.999821708
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54485.46132575
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54485.825520541
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54486.291518208
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54486.713423833
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54487.127394708
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54487.504504666
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54487.962965708
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54488.326469625
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54488.789775791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54489.20479325
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54489.619200166
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54489.98386875
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54490.450489875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54490.826012166
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54491.288181666
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54491.703518125
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54492.117040291
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54492.482179708
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54492.946211083
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54493.311552583
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54493.772367833
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54494.194864666
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54494.603789875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54494.982818291
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54495.444684125
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54495.81176575
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54496.272282333
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54496.68567725
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54497.097971541
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54497.465831333
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54497.933755833
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54498.30745875
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54498.770926375
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54499.208827958
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54499.6167275
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54499.985995375
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54500.448368416
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54500.81609925
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54501.276110083
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54501.699377208
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54502.113136291
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54502.4880675
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54502.950926791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54503.319751875
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54503.793212958
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54504.217557416
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54504.634567708
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54505.003276541
+    },
+    {
+      "venue": "kalshi",
+      "path": "/trade-api/v2/markets",
+      "at": 54505.466223333
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54505.839711875
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54506.555325791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54507.267955791
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54507.950308916
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54508.650619708
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54509.328231166
+    },
+    {
+      "venue": "polymarket_us",
+      "path": "/v1/markets",
+      "at": 54510.034066666
+    }
+  ],
+  "rest_requests": 146,
+  "rss_peak": 72613888,
+  "feed_started": 54380.891946458,
+  "error": null
+}

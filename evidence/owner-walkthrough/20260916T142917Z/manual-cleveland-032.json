@@ -1,0 +1,15 @@
+{
+  "manual_probability": ".32",
+  "owner_basis": "bounce back",
+  "purchase": "Cleveland Browns YES \u00b7 Kalshi",
+  "quantity": 100,
+  "entry_cash": "23.21",
+  "independent_expected_payout": "32.00",
+  "independent_net": "8.79",
+  "actual_net": "8.79000000",
+  "page_probability": "0.234097895483565855",
+  "page_net": "0.199789548356585500000000",
+  "page_economics_unchanged": true,
+  "arb_economics_unchanged": true,
+  "browser_persistence": "Pending owner navigation"
+}

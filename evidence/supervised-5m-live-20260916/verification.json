@@ -1,0 +1,13 @@
+{
+  "original_files": 2589,
+  "original_bytes": 1830778050,
+  "changed_originals": [],
+  "source_unchanged": true,
+  "candidate": "7f41489d2c52c5331cacbd076d406c3ab0786291a5feebb5c55cf2fff02e9961",
+  "consumed_attempt_rejected": true,
+  "shared_lock_released": true,
+  "control_socket_removed": true,
+  "beta_inactive": true,
+  "beta_session_unchanged": true,
+  "new_artifact_bytes": 20234360
+}

@@ -1,0 +1,8 @@
+test_original_exact_with_bounded_native_state (tests.test_supervised.Retained.test_original_exact_with_bounded_native_state) ... ok
+test_fresh_old_new_recovery_and_health_books (tests.test_segmented.SavedCalculations.test_fresh_old_new_recovery_and_health_books) ... ok
+test_saved_calculations_exact_after_segmented_reopening (tests.test_segmented.SavedCalculations.test_saved_calculations_exact_after_segmented_reopening) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 8.996s
+
+OK
