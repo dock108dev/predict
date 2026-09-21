@@ -1,0 +1,325 @@
+[
+  {
+    "schema_version": "b4-reference-1",
+    "role": "model_reference",
+    "provider_id": "espn_fpi",
+    "origin_id": "espn_fpi",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "2026-09-24T15:34:19.039966+00:00",
+        [
+          "NFL:BUF",
+          "NFL:DET"
+        ]
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "normal-winner-legacy",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Detroit Lions",
+    "source_event_id": "synthetic-event",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "2026-09-24T15:34:19.039966+00:00",
+          [
+            "NFL:BUF",
+            "NFL:DET"
+          ]
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "normal-winner-legacy",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Detroit Lions",
+      "source_event_id": "synthetic-event",
+      "source_participants": [
+        "Buffalo Bills",
+        "Detroit Lions"
+      ],
+      "event_literal": "Synthetic game",
+      "outcome_literal": "Detroit Lions",
+      "date_literal": "2026-09-24T15:34:19.039966+00:00"
+    },
+    "source_at": "2026-09-15T12:00:00+00:00",
+    "model_as_of": "2026-09-15T12:00:00+00:00",
+    "model_version": "synthetic-fpi-shape",
+    "received_at": "2026-09-21T15:34:59.107984+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Unknown; receipt age is not publication delay",
+    "dependency": "Market-informed NFL preseason model; not an independent betting-market signal",
+    "independence": "not_established",
+    "receipt": {
+      "body": "Synthetic game Detroit Lions 2026-09-24T15:34:19.039966+00:00 predictor 60.0% rating 12",
+      "provider_id": "espn_fpi",
+      "url": "https://www.espn.com/synthetic-fixture",
+      "received_at": "2026-09-21T15:34:59.107984+00:00",
+      "evidence_mode": "synthetic",
+      "status": 200,
+      "headers": {},
+      "id": "f8cac068ab6490a9a3bdf8c24a4814cd95a9b9b0a2abd6ece984ceec7213b502"
+    },
+    "provenance": "https://www.espn.com/synthetic-fixture",
+    "evidence_mode": "synthetic",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 86400,
+    "original_value": "60.0%",
+    "source_value_kind": "game_probability",
+    "extraction": {
+      "method": "annotated published text literal",
+      "start": 72,
+      "end": 77
+    },
+    "value_kind": "probability",
+    "convention": "percent",
+    "value": "0.6",
+    "conversion_method": "percent / 100",
+    "state": "available",
+    "reason": null,
+    "id": "9bce1f5159ca07811c06c82a5138d713366619181e02ba9dcc5cd993e30f2496"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "2026-09-24T15:34:19.039966+00:00",
+        [
+          "NFL:BUF",
+          "NFL:DET"
+        ]
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "normal-winner-legacy",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Detroit Lions",
+    "source_event_id": "synthetic-event",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "2026-09-24T15:34:19.039966+00:00",
+          [
+            "NFL:BUF",
+            "NFL:DET"
+          ]
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "normal-winner-legacy",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Detroit Lions",
+      "source_event_id": "synthetic-event",
+      "source_participants": [
+        "Buffalo Bills",
+        "Detroit Lions"
+      ],
+      "event_literal": "Synthetic game",
+      "outcome_literal": "Detroit Lions",
+      "date_literal": "2026-09-24T15:34:19.039966+00:00"
+    },
+    "source_at": "2026-09-15T12:00:00+00:00",
+    "model_as_of": "2026-09-15T12:00:00+00:00",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T15:34:59.107984+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\": \"synthetic-event\", \"sport_key\": \"americanfootball_nfl\", \"commence_time\": \"2026-09-24T15:34:19.039966+00:00\", \"home_team\": \"Buffalo Bills\", \"away_team\": \"Detroit Lions\", \"bookmakers\": [{\"key\": \"pinnacle\", \"last_update\": \"2026-09-15T12:00:00+00:00\", \"markets\": [{\"key\": \"h2h\", \"outcomes\": [{\"name\": \"Buffalo Bills\", \"price\": \"2.0\"}, {\"name\": \"Detroit Lions\", \"price\": \"2.0\"}]}]}]}]",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T15:34:59.107984+00:00",
+      "evidence_mode": "synthetic",
+      "status": 200,
+      "headers": {},
+      "id": "e76485c699c7a9496ea88403318b2ae4bc4609238f53759c3b517ec31850d156"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "synthetic",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.5",
+    "original_value": [
+      {
+        "name": "Buffalo Bills",
+        "price": "2.0"
+      },
+      {
+        "name": "Detroit Lions",
+        "price": "2.0"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.0",
+    "native_market": {
+      "key": "h2h",
+      "outcomes": [
+        {
+          "name": "Buffalo Bills",
+          "price": "2.0"
+        },
+        {
+          "name": "Detroit Lions",
+          "price": "2.0"
+        }
+      ]
+    },
+    "id": "2a4ab62b2dc568fa71b2cad2584bcce61b48add39b173d5a229ab48ab855e3b8"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "model_reference",
+    "provider_id": "espn_fpi",
+    "origin_id": "espn_fpi",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "2026-09-24T15:34:19.039966+00:00",
+        [
+          "NFL:BUF",
+          "NFL:DET"
+        ]
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "normal-winner-legacy",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Detroit Lions",
+    "source_event_id": "synthetic-event",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "2026-09-24T15:34:19.039966+00:00",
+          [
+            "NFL:BUF",
+            "NFL:DET"
+          ]
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-24T15:34:19.039966+00:00",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "normal-winner-legacy",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Detroit Lions",
+      "source_event_id": "synthetic-event",
+      "source_participants": [
+        "Buffalo Bills",
+        "Detroit Lions"
+      ],
+      "event_literal": "Synthetic game",
+      "outcome_literal": "Detroit Lions",
+      "date_literal": "2026-09-24T15:34:19.039966+00:00"
+    },
+    "source_at": "2026-09-15T12:00:00+00:00",
+    "model_as_of": "2026-09-15T12:00:00+00:00",
+    "model_version": "unknown",
+    "received_at": "2026-09-21T15:34:59.107984+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Unknown; receipt age is not publication delay",
+    "dependency": "Market-informed NFL preseason model; not an independent betting-market signal",
+    "independence": "not_established",
+    "receipt": {
+      "body": "Synthetic game Detroit Lions 2026-09-24T15:34:19.039966+00:00 predictor 60.0% rating 12",
+      "provider_id": "espn_fpi",
+      "url": "https://www.espn.com/synthetic-fixture",
+      "received_at": "2026-09-21T15:34:59.107984+00:00",
+      "evidence_mode": "synthetic",
+      "status": 200,
+      "headers": {},
+      "id": "f8cac068ab6490a9a3bdf8c24a4814cd95a9b9b0a2abd6ece984ceec7213b502"
+    },
+    "provenance": "https://www.espn.com/synthetic-fixture",
+    "evidence_mode": "synthetic",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 86400,
+    "original_value": "12",
+    "source_value_kind": "rating",
+    "extraction": {
+      "method": "annotated published text literal",
+      "start": 85,
+      "end": 87
+    },
+    "value_kind": "rating",
+    "convention": "rating",
+    "value": "12",
+    "conversion_method": null,
+    "state": "unsupported",
+    "reason": "Only explicit full-game winner probabilities support conditional EV",
+    "id": "de3ee1d6041190a4534f9dbe64dd6b2112a64f8fe6d0478cf4b91a584340f55f"
+  }
+]

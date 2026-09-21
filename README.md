@@ -4,7 +4,7 @@ A local, read-only dashboard for cross-venue sports prediction prices, condition
 arbitrage calculations, explicit what-if EV, and saved-page research. The existing prototype supports saved multi-game views; trading is not implemented.
 
 **September 20: not ready for beta signoff.** The required beta is Kalshi, Novig,
-Polymarket US and a fourth venue, plus a power-index/model reference and free
+Polymarket US and ProphetX, plus a power-index/model reference and free
 delayed Pinnacle data; NFL, NBA, MLB, NHL, NCAAF and NCAAB; winners, spreads,
 totals, halftime and futures. Live/in-play is a stretch goal. See the
 [current beta definition](docs/product-roadmap-review.md),
@@ -69,3 +69,7 @@ Their lifecycle and authorization boundaries remain in the linked handoffs.
 [PLAN.md](PLAN.md) routes to the current definition and delivery order. Previous
 planning versions and their historical reuse notes are preserved in
 [planning history](docs/history/beta-reset-20260920/README.md).
+
+## Shared UI design
+
+See [UI design and templates](docs/ui-design.md) before changing this interface. The shared Desktop `UI Templates` folder defines the glass design baseline for future contributors; this repository keeps its own runtime styles and a portable copy of the requirements.

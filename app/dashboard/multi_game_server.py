@@ -60,6 +60,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def guard(request,handler):
         try:
             check_browser(request)
+            if request.method=='POST' and request.path!='/api/references' and (request.content_length or 0)>4096:raise web.HTTPRequestEntityTooLarge(max_size=4096,actual_size=request.content_length)
             if request.path in ('/api/dashboard','/api/calculate'):
                 q=request.query
                 calculation_inputs(q)
@@ -82,7 +83,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             r=web.json_response({'error':'Local data unavailable'},status=503)
         r.headers.update(HEADERS)
         return r
-    app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+    app=web.Application(middlewares=[guard],client_max_size=1024*1024);app['owner']=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/coverage.html')
     app.router.add_get('/coverage',coverage_page)
@@ -94,6 +95,13 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         if await req.json()!={}:raise ValueError('Stop does not accept options')
         await owner.stop()
         return web.json_response(owner.status())
+    async def import_references(req):
+        from app.reference.product import emit_references
+        if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained references')
+        refs=await req.json()
+        emit_references(owner.session,refs)
+        await owner.session.queue.join()
+        return web.json_response(dict(imported=len(refs),session=owner.session.sid))
     async def catalog(req):
         items=[]
         for sid,d in datasets().items():
@@ -166,7 +174,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def game(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/index.html')
     async def style(req):return web.FileResponse(ROOT/'app/dashboard/static/style.css')
     async def shared(req):return web.FileResponse(ROOT/'app/dashboard/e5_static/state.js')
-    app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
+    app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
     app.router.add_static('/view/',ROOT/'app/dashboard/opportunity_static')
     async def cleanup(app):await owner.close()
     app.on_cleanup.append(cleanup)

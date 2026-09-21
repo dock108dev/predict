@@ -1,0 +1,18 @@
+{
+  "requests_attempted": 1,
+  "started_at": "2026-09-21T16:01:44.830204+00:00",
+  "status": 200,
+  "headers": {
+    "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+    "x-requests-remaining": "499",
+    "x-requests-last": "1",
+    "x-requests-used": "1"
+  },
+  "outcome": "received",
+  "body_complete": true,
+  "received_at": "2026-09-21T16:01:45.028502+00:00",
+  "body_bytes": 7163,
+  "body_sha256": "dc7c8df770bd9bfb38eb9865aabce0152e556dab36aeccbfcd1d4bd482e56192",
+  "reserved_credits": 1,
+  "body_retained": true
+}

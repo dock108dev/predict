@@ -1,0 +1,16 @@
+{
+  "path": "evidence/e6/prediction-only/real-20260915-discovery6/saved-observations.json",
+  "sha256": "7811cc0644853935d874d294ae6c4c6329f7d3f0952b0177b1a41d09114b10d0",
+  "format_keys": [
+    "format",
+    "rows",
+    "sha256",
+    "state",
+    "economics",
+    "qualification"
+  ],
+  "rows": 140,
+  "first": "2026-09-15T20:29:08.643713+00:00",
+  "last": "2026-09-15T20:31:08.783868+00:00",
+  "limitation": "Legacy exported observations, not a coverage package; time-mismatched with September 21 reference; not imported into new package"
+}

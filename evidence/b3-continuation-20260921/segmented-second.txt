@@ -1,0 +1,60 @@
+native_snapshot failed (ConnectionError); frames=native_product.py:221:run > test_b3_native.py:156:get_snapshot
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+FAIL: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.Runtime.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 125, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    self.assertEqual(snap[key],reopened[key])
+AssertionError: Lists differ: [{'so[690 chars]': {'id': 'k0', 'event_id': 'k', 'native_slug'[7618 chars]lse}] != [{'so[690 chars]': {'conflicting_duplicate': False, 'counterpa[7617 chars]lse}]
+
+First differing element 0:
+{'sou[689 chars]': {'id': 'k0', 'event_id': 'k', 'native_slug'[1544 chars]alse}
+{'sou[689 chars]': {'conflicting_duplicate': False, 'counterpa[1544 chars]alse}
+
+Diff is 20468 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.RuntimeSegmented.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 125, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    self.assertEqual(snap[key],reopened[key])
+AssertionError: Lists differ: [{'so[690 chars]': {'id': 'k0', 'event_id': 'k', 'native_slug'[7618 chars]lse}] != [{'so[690 chars]': {'conflicting_duplicate': False, 'counterpa[7617 chars]lse}]
+
+First differing element 0:
+{'sou[689 chars]': {'id': 'k0', 'event_id': 'k', 'native_slug'[1544 chars]alse}
+{'sou[689 chars]': {'conflicting_duplicate': False, 'counterpa[1544 chars]alse}
+
+Diff is 20470 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.901s
+
+FAILED (failures=2)

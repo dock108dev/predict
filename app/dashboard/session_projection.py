@@ -55,6 +55,8 @@ class SessionProjection:
         self.coverage_status={}; self.refresh=None; self.legacy=None; self.last_row_hash=None; self.sizes={}; self.safety={}
 
     def apply(self,row,cursor=None):
+        # Match journal JSON types at the acknowledged live boundary.
+        row=json.loads(json.dumps(row,default=str))
         cursor=self.cursor+1 if cursor is None else cursor
         if cursor==self.cursor:
             if stable(row)!=self.last_row_hash:raise ValueError('conflicting cursor')
@@ -98,7 +100,7 @@ class SessionProjection:
                 if key[0]!=source: continue
                 if row.get('market_ids') is not None and key[2] not in row['market_ids']: continue
                 if row.get('stream_group') and row.get('market_ids') is None and self.books.get(key,{}).get('stream_group')!=row['stream_group']: continue
-                self.health[key]=deepcopy(row)
+                self.health[key]={k:deepcopy(row.get(k)) for k in ('source','state','gap_reason','market_ids','observed_at','stream_group')}
                 if row['state']!='connected': self.invalid.add(key)
         elif typ=='product_coverage_status':
             self.coverage_status=deepcopy(row['coverage']); self.refresh=deepcopy(row.get('refresh'));self.safety=deepcopy(row.get('safety_exclusions',{}))
@@ -106,14 +108,20 @@ class SessionProjection:
             ref=deepcopy(row['reference'])
             if ref['role'] not in ('model_reference','bookmaker_reference'): raise ValueError('invalid reference role')
             if len(self.references)>=128 and ref['id'] not in self.references: raise ValueError('reference bound')
-            ref.update(observation_id=row.get('ingress_id'),received_at=at)
-            self.references[ref['id']]=ref
+            if ref.get('schema_version')=='b4-reference-1':
+                from app.reference.product import validate
+                validate(ref)
+                if self.spec.get('mode')!='mock' and ref['evidence_mode']=='synthetic':raise ValueError('Synthetic reference in real session')
+                if ref['id'] in self.references and {k:v for k,v in self.references[ref['id']].items() if k not in ('observation_id','observed_at')}!=ref:raise ValueError('Reference revision changed')
+                ref.update(observation_id=row.get('ingress_id'),observed_at=at)
+            else:ref.update(observation_id=row.get('ingress_id'),received_at=at)
+            if ref.get('schema_version')!='b4-reference-1' or ref['id'] not in self.references:self.references[ref['id']]=ref
         elif typ=='session_finished': self.finished=at;self.stop_reason=row.get('reason')
         self.cursor=cursor; self.chain=stable([self.chain,row]); self.last=at;self.last_row_hash=stable(row)
 
     def memberships(self):
         result={}
-        for source,cat in self.inventory.items():
+        for source,cat in sorted(self.inventory.items()):
             if cat.get('role','prediction')!='prediction':continue
             events={e['id']:e for e in cat['events']}
             for m in cat['markets']:
@@ -126,7 +134,9 @@ class SessionProjection:
         if cutoff is not None and cutoff!=token: raise ValueError('cutoff requires verified prefix replay')
         at=(now or datetime.now(timezone.utc).isoformat()) if mode=='current' else self.last
         groups={}; catalog=[]; metadata=[]
-        for source,cat in self.inventory.items():
+        from app.normalization.nhl import inventory_gaps, winner_review, event_key
+        nhl_gaps=inventory_gaps(self.inventory)
+        for source,cat in sorted(self.inventory.items()):
             if cat.get('role','prediction')!='prediction':continue
             events={e['id']:e for e in cat['events']}
             for m in cat['markets']:
@@ -135,10 +145,13 @@ class SessionProjection:
                 reason=m.get('exclusion') or (e or {}).get('exclusion') or self.safety.get(source,{}).get(m['id'])
                 if e and e.get('scheduled_start') and stamp(at)>=stamp(e['scheduled_start']):reason=reason or 'scheduled start reached'
                 if not e or e.get('identity')!='resolved': reason=reason or 'unresolved event'
-                if ident and (ident['competition']!='NFL' or ident['sport'] not in ('american_football','football')):reason=reason or 'unsupported sport or competition (B5)'
+                if ident and not ((ident['competition']=='NFL' and ident['sport'] in ('american_football','football')) or (ident['competition']=='NHL' and ident['sport'] in ('hockey','ice_hockey'))):reason=reason or 'unsupported sport or competition (B5)'
+                if e and ident['competition']=='NHL':reason=reason or nhl_gaps.get((source,e['id']))
                 if ident and (ident['family']!='moneyline' or ident['period']!='full_game'): reason=reason or 'unsupported family or period (B5)'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
                 record=dict(source_id=source,event_id=m['event_id'],market_id=m['id'],identity=ident,title=(e or {}).get('title'),reason=reason,health=deepcopy(self.health.get(key)),native=deepcopy(m))
+                if 'display_prices' in m:
+                    record.update(received_at=m.get('received_at'),update_path=cat.get('update_path'))
                 retained=self.books.get(key)
                 if retained:
                     record.update(received_at=retained['book']['raw']['received_at'],update_path=retained.get('update_path','native stream'),
@@ -147,6 +160,15 @@ class SessionProjection:
                 if reason: continue
                 meta=self.metadata.get(key)
                 if not meta: record['reason']='awaiting metadata'; continue
+                review=None
+                if ident['competition']=='NHL':
+                    try:
+                        review=winner_review(e,m,meta,source,self.spec.get('mode'))
+                        # Additive projection only: retained event/native IDs are untouched.
+                        ident=dict(ident,event=event_key(e),sport='ice_hockey')
+                        record['identity']=ident
+                    except (ValueError,KeyError,TypeError,AttributeError,StopIteration) as exc:
+                        record['reason']=str(exc);continue
                 try: sides=self.sides(source,e,m,meta)
                 except (KeyError,ValueError,StopIteration,TypeError): record['reason']='unsupported outcome identity'; continue
                 if len(sides)!=2: record['reason']='unsupported outcome set'; continue
@@ -160,7 +182,7 @@ class SessionProjection:
                     connection=connection,age_seconds=age,receipt_stale=age is not None and Decimal(age)>30)
                 if card['book'] and card['book']['market_state']=='unknown' and not self.spec.get('native_sources'): card['book']['market_state']=meta['market']['state']
                 record.update(age_seconds=age,usable=bool(book and connection=='connected' and not card['receipt_stale'] and card['book']['sync']=='synchronized' and card['book']['market_state']=='active'))
-                groups.setdefault(stable(ident),[]).append((source,e,m,sides,card,meta,ident))
+                groups.setdefault(stable([ident,review['terms']]) if review else stable(ident),[]).append((source,e,m,sides,card,meta,ident))
         games=[]; points={}; rows_by_game={}; truncated=0
         for group,values in sorted(groups.items()):
             values.sort(key=lambda x:(x[0],x[1]["id"],x[2]["id"]))
@@ -176,14 +198,22 @@ class SessionProjection:
                 if len(games)>=64:
                     truncated+=1;continue
                 gid=stable([group,sorted([list((x[0],x[1]['id'],x[2]['id'])) for x in (a,b)])])
-                game=dict(id=gid,title=a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period'],scheduled_start=a[1]['scheduled_start'],teams=teams,sides=sides,
+                game=dict(id=gid,title=a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period']+(' · including OT/shootout' if a[6]['competition']=='NHL' and a[6]['stage']=='regular_season' else ' · including playoff OT' if a[6]['competition']=='NHL' else ''),scheduled_start=a[1]['scheduled_start'],teams=teams,sides=sides,
                     sources={x[0]:dict(event_id=x[1]['id'],market_id=x[2]['id']) for x in (a,b)},candidates=candidates,product_identity=a[6])
                 games.append(game); points[gid]=dict(id=token,at=at,cards=[a[4],b[4]],label='Durable cutoff')
+                if a[6]['competition']=='NHL':
+                    game['nhl_reviews']={x[0]:deepcopy(x[2]['nhl_review']) for x in (a,b)}
                 rows_by_game[gid]=[a[5],b[5]]
-        refs=[deepcopy(r) for r in self.references.values() if stamp(r['received_at'])<=stamp(at) and all(not r.get(t) or stamp(r[t])<=stamp(at) for t in ('model_as_of','source_at'))]
+        paired={(v,ids['market_id']) for g in games for v,ids in g['sources'].items()}
+        for record in catalog:
+            if (record.get('identity') or {}).get('competition')=='NHL' and not record['reason'] and (record['source_id'],record['market_id']) not in paired:
+                record['reason']='No other source has matching reviewed NHL event and settlement terms'
+        from app.reference.product import at_cutoff
+        refs=at_cutoff(self.references.values(),at)
         sources=[dict(source_id=s,venue_id=s,provider_id=self.inventory.get(s,{}).get('provider_id',s),origin_id=self.inventory.get(s,{}).get('origin_id',s),label=LABELS.get(s,s),role='prediction',state=self.inventory.get(s,{}).get('state','configured' if s in self.inventory else 'not_configured'),coverage=deepcopy(self.coverage_status.get(s)),catalog=deepcopy(self.inventory.get(s))) for s in dict.fromkeys([*LABELS,*self.inventory])]
         for source in sources:
             config=self.spec.get('native_sources',{}).get(source['source_id'],{})
+            source['selected']=config.get('selected')
             source['environment']='synthetic ('+config.get('environment','unspecified')+' shape)' if self.spec.get('mode')=='mock' and config.get('environment') else config.get('environment')
             source['update_path']=self.inventory.get(source['source_id'],{}).get('update_path')
             if self.finished and source.get('coverage') and source['coverage'].get('state') in ('connected','awaiting_snapshot'):

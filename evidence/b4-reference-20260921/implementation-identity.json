@@ -1,0 +1,28 @@
+{
+  "at": "2026-09-21T15:45:40.414999+00:00",
+  "files": {
+    "app/reference/product.py": "5926675f1a710040fa4c09a514e72f18b4fd550c0e88259dc2bf0c2a63a6f3c9",
+    "app/reference/refresh.py": "c64674bedfc42609b50b8d5edaed29519096a7527a536f27fd09a45969953b66",
+    "app/dashboard/product_view.py": "f46d00bd9f6517ea2923317d35244db308c0b48b5bba509e57dfe5081a44562c",
+    "app/dashboard/session_projection.py": "ed7ce4b880d4d6b43b37ab3c2b6f0ccfd71ec1858963a84aed3fd2976d91adda",
+    "app/dashboard/multi_game_server.py": "c36366912961ecaad43e46c008c34c9f178c306edb1c681c8dbd0b67b2240565",
+    "app/opportunities/board.py": "156478e4086a4f5a0342f99f342087d56d9053995c881ab74cafff56e67b3ec2",
+    "app/dashboard/opportunity_static/dashboard.html": "6ae8a37c8f385c3035c0fc93e38c5c88337dcec81db4b1a5adf6037bba668cf3",
+    "app/dashboard/opportunity_static/dashboard.js": "498ae497e570cc6cc94d3ce2d7500106ec434a346feb557c47261af97aeb9d25",
+    "app/dashboard/opportunity_static/board.js": "6dd14d83e494e4991b4ae79589329711376742cd8cde8cf5c1631f13601de672",
+    "tests/test_b4_reference.py": "18e18a741ea8cdfc89d4a62c887faf3ce0ef368072bffa75970df4fd8b6e900f",
+    "tests/b4_reference_preview.py": "40528ecb9f6329a6be692711beab448ee35ba72778a66708c91c373c9cc8fe58",
+    "scripts/check-ci": "125d9e273544e3c5342f5f87120b6de46e26b0351ecf1010af49ce85343c2973"
+  },
+  "preserved_b3_runtime_and_tests": {
+    "app/collection/native_credentials.py": true,
+    "app/collection/native_rest_replay.py": true,
+    "app/collection/novig_graphql.py": true,
+    "app/collection/native_replay.py": true,
+    "app/collection/continuous.py": true,
+    "app/collection/native_product.py": true,
+    "tests/test_b3_continuation.py": true,
+    "tests/test_b3_native.py": true,
+    "tests/b3_graphql_preview.py": true
+  }
+}

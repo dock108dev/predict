@@ -1,0 +1,537 @@
+[
+  {
+    "package": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb",
+    "event_count": 6,
+    "start_matches": [],
+    "events": [
+      {
+        "id": "KXNFLGAME-26SEP17DETBUF__101466",
+        "start": "2026-09-18T00:15:00+00:00",
+        "title": "DET Lions vs BUF Bills"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CARATL__101470",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CAR Panthers vs ATL Falcons"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20NOBAL__101472",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "NO Saints vs BAL Ravens"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20MINCHI__101469",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "MIN Vikings vs CHI Bears"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CINHOU__101473",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CIN Bengals vs HOU Texans"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CLETB__101474",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CLE Browns vs TB Buccaneers"
+      }
+    ]
+  },
+  {
+    "package": "evidence/supervised-5m-live-20260916/attempt/aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+    "event_count": 64,
+    "start_matches": [
+      {
+        "id": "KXNFLGAME-26SEP21NYGLAR",
+        "start": "2026-09-22T00:15:00+00:00",
+        "title": "NY Giants vs LA Rams"
+      },
+      {
+        "id": "KXNFLGAME-26SEP24ATLGB",
+        "start": "2026-09-25T00:15:00+00:00",
+        "title": "Atlanta vs Green Bay"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27ARISF",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "Arizona vs San Francisco"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27BALDAL",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "Baltimore vs Dallas"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27CARCLE",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Carolina vs Cleveland"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27CINPIT",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Cincinnati vs Pittsburgh"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27HOUIND",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Houston vs Indianapolis"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27KCMIA",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Kansas City vs Miami"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LACBUF",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Los Angeles C vs Buffalo"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LARDEN",
+        "start": "2026-09-28T00:20:00+00:00",
+        "title": "Los Angeles R vs Denver"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LVNO",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "Las Vegas vs New Orleans"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27MINTB",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "Minnesota vs Tampa Bay"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27NEJAC",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "New England vs Jacksonville"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27NYJDET",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "New York J vs Detroit"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27SEAWAS",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Seattle vs Washington"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27TENNYG",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Tennessee vs New York G"
+      },
+      {
+        "id": "KXNFLGAME-26SEP28PHICHI",
+        "start": "2026-09-29T00:15:00+00:00",
+        "title": "Philadelphia vs Chicago"
+      },
+      {
+        "id": "101481",
+        "start": "2026-09-22T00:15:00+00:00",
+        "title": "NY Giants vs LA Rams"
+      },
+      {
+        "id": "108683",
+        "start": "2026-09-25T00:15:00+00:00",
+        "title": "ATL Falcons vs GB Packers"
+      },
+      {
+        "id": "111297",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "KC Chiefs vs MIA Dolphins"
+      },
+      {
+        "id": "111298",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "CAR Panthers vs CLE Browns"
+      },
+      {
+        "id": "111299",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "TEN Titans vs NY Giants"
+      },
+      {
+        "id": "111300",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "NE Patriots vs JAC Jaguars"
+      },
+      {
+        "id": "111301",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "LA Chargers vs BUF Bills"
+      },
+      {
+        "id": "111302",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "NY Jets vs DET Lions"
+      },
+      {
+        "id": "111303",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "HOU Texans vs IND Colts"
+      },
+      {
+        "id": "111305",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "SEA Seahawks vs WAS Commanders"
+      },
+      {
+        "id": "111306",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "CIN Bengals vs PIT Steelers"
+      },
+      {
+        "id": "111307",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "ARI Cardinals vs SF 49ers"
+      },
+      {
+        "id": "111309",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "MIN Vikings vs TB Buccaneers"
+      },
+      {
+        "id": "111310",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "LV Raiders vs NO Saints"
+      },
+      {
+        "id": "111311",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "BAL Ravens vs DAL Cowboys"
+      },
+      {
+        "id": "111312",
+        "start": "2026-09-28T00:20:00+00:00",
+        "title": "LA Rams vs DEN Broncos"
+      },
+      {
+        "id": "112325",
+        "start": "2026-09-29T00:15:00+00:00",
+        "title": "PHI Eagles vs. CHI Bears"
+      }
+    ],
+    "events": [
+      {
+        "id": "KXNFLGAME-26SEP17DETBUF",
+        "start": "2026-09-18T00:15:00+00:00",
+        "title": "DET Lions vs BUF Bills"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CARATL",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CAR Panthers vs ATL Falcons"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CINHOU",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CIN Bengals vs HOU Texans"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20CLETB",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CLE Browns vs TB Buccaneers"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20GBNYJ",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "GB Packers vs NY Jets"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20INDKC",
+        "start": "2026-09-21T00:20:00+00:00",
+        "title": "IND Colts vs KC Chiefs"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20JACDEN",
+        "start": "2026-09-20T20:05:00+00:00",
+        "title": "JAC Jaguars vs DEN Broncos"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20LVLAC",
+        "start": "2026-09-20T20:05:00+00:00",
+        "title": "LV Raiders vs LA Chargers"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20MIASF",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "MIA Dolphins vs SF 49ers"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20MINCHI",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "MIN Vikings vs CHI Bears"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20NOBAL",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "NO Saints vs BAL Ravens"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20PHITEN",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "PHI Eagles vs TEN Titans"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20PITNE",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "PIT Steelers vs NE Patriots"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20SEAARI",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "SEA Seahawks vs ARI Cardinals"
+      },
+      {
+        "id": "KXNFLGAME-26SEP20WASDAL",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "WAS Commanders vs DAL Cowboys"
+      },
+      {
+        "id": "KXNFLGAME-26SEP21NYGLAR",
+        "start": "2026-09-22T00:15:00+00:00",
+        "title": "NY Giants vs LA Rams"
+      },
+      {
+        "id": "KXNFLGAME-26SEP24ATLGB",
+        "start": "2026-09-25T00:15:00+00:00",
+        "title": "Atlanta vs Green Bay"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27ARISF",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "Arizona vs San Francisco"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27BALDAL",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "Baltimore vs Dallas"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27CARCLE",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Carolina vs Cleveland"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27CINPIT",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Cincinnati vs Pittsburgh"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27HOUIND",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Houston vs Indianapolis"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27KCMIA",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Kansas City vs Miami"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LACBUF",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Los Angeles C vs Buffalo"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LARDEN",
+        "start": "2026-09-28T00:20:00+00:00",
+        "title": "Los Angeles R vs Denver"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27LVNO",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "Las Vegas vs New Orleans"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27MINTB",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "Minnesota vs Tampa Bay"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27NEJAC",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "New England vs Jacksonville"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27NYJDET",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "New York J vs Detroit"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27SEAWAS",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Seattle vs Washington"
+      },
+      {
+        "id": "KXNFLGAME-26SEP27TENNYG",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "Tennessee vs New York G"
+      },
+      {
+        "id": "KXNFLGAME-26SEP28PHICHI",
+        "start": "2026-09-29T00:15:00+00:00",
+        "title": "Philadelphia vs Chicago"
+      },
+      {
+        "id": "101466",
+        "start": "2026-09-18T00:15:00+00:00",
+        "title": "DET Lions vs BUF Bills"
+      },
+      {
+        "id": "101467",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "PHI Eagles vs TEN Titans"
+      },
+      {
+        "id": "101468",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "PIT Steelers vs NE Patriots"
+      },
+      {
+        "id": "101469",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "MIN Vikings vs CHI Bears"
+      },
+      {
+        "id": "101470",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CAR Panthers vs ATL Falcons"
+      },
+      {
+        "id": "101471",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "GB Packers vs NY Jets"
+      },
+      {
+        "id": "101472",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "NO Saints vs BAL Ravens"
+      },
+      {
+        "id": "101473",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CIN Bengals vs HOU Texans"
+      },
+      {
+        "id": "101474",
+        "start": "2026-09-20T17:00:00+00:00",
+        "title": "CLE Browns vs TB Buccaneers"
+      },
+      {
+        "id": "101475",
+        "start": "2026-09-20T20:05:00+00:00",
+        "title": "JAC Jaguars vs DEN Broncos"
+      },
+      {
+        "id": "101476",
+        "start": "2026-09-20T20:05:00+00:00",
+        "title": "LV Raiders vs LA Chargers"
+      },
+      {
+        "id": "101477",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "SEA Seahawks vs ARI Cardinals"
+      },
+      {
+        "id": "101478",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "MIA Dolphins vs SF 49ers"
+      },
+      {
+        "id": "101479",
+        "start": "2026-09-20T20:25:00+00:00",
+        "title": "WAS Commanders vs DAL Cowboys"
+      },
+      {
+        "id": "101480",
+        "start": "2026-09-21T00:20:00+00:00",
+        "title": "IND Colts vs KC Chiefs"
+      },
+      {
+        "id": "101481",
+        "start": "2026-09-22T00:15:00+00:00",
+        "title": "NY Giants vs LA Rams"
+      },
+      {
+        "id": "108683",
+        "start": "2026-09-25T00:15:00+00:00",
+        "title": "ATL Falcons vs GB Packers"
+      },
+      {
+        "id": "111297",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "KC Chiefs vs MIA Dolphins"
+      },
+      {
+        "id": "111298",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "CAR Panthers vs CLE Browns"
+      },
+      {
+        "id": "111299",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "TEN Titans vs NY Giants"
+      },
+      {
+        "id": "111300",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "NE Patriots vs JAC Jaguars"
+      },
+      {
+        "id": "111301",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "LA Chargers vs BUF Bills"
+      },
+      {
+        "id": "111302",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "NY Jets vs DET Lions"
+      },
+      {
+        "id": "111303",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "HOU Texans vs IND Colts"
+      },
+      {
+        "id": "111305",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "SEA Seahawks vs WAS Commanders"
+      },
+      {
+        "id": "111306",
+        "start": "2026-09-27T17:00:00+00:00",
+        "title": "CIN Bengals vs PIT Steelers"
+      },
+      {
+        "id": "111307",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "ARI Cardinals vs SF 49ers"
+      },
+      {
+        "id": "111309",
+        "start": "2026-09-27T20:05:00+00:00",
+        "title": "MIN Vikings vs TB Buccaneers"
+      },
+      {
+        "id": "111310",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "LV Raiders vs NO Saints"
+      },
+      {
+        "id": "111311",
+        "start": "2026-09-27T20:25:00+00:00",
+        "title": "BAL Ravens vs DAL Cowboys"
+      },
+      {
+        "id": "111312",
+        "start": "2026-09-28T00:20:00+00:00",
+        "title": "LA Rams vs DEN Broncos"
+      },
+      {
+        "id": "112325",
+        "start": "2026-09-29T00:15:00+00:00",
+        "title": "PHI Eagles vs. CHI Bears"
+      }
+    ]
+  }
+]

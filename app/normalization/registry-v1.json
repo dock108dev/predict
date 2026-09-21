@@ -3214,6 +3214,950 @@
       ],
       "text": "Bucs",
       "venue": null
+    },
+    {
+      "kind": "league",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL"
+      ],
+      "text": "NHL"
+    },
+    {
+      "kind": "league",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL"
+      ],
+      "text": "National Hockey League"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:ANA"
+      ],
+      "text": "Anaheim Ducks"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:ANA"
+      ],
+      "text": "ANA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:ANA"
+      ],
+      "text": "NHL:ANA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BOS"
+      ],
+      "text": "Boston Bruins"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BOS"
+      ],
+      "text": "BOS"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BOS"
+      ],
+      "text": "NHL:BOS"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BUF"
+      ],
+      "text": "Buffalo Sabres"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BUF"
+      ],
+      "text": "BUF"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:BUF"
+      ],
+      "text": "NHL:BUF"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CAR"
+      ],
+      "text": "Carolina Hurricanes"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CAR"
+      ],
+      "text": "CAR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CAR"
+      ],
+      "text": "NHL:CAR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CBJ"
+      ],
+      "text": "Columbus Blue Jackets"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CBJ"
+      ],
+      "text": "CBJ"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CBJ"
+      ],
+      "text": "NHL:CBJ"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CGY"
+      ],
+      "text": "Calgary Flames"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CGY"
+      ],
+      "text": "CGY"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CGY"
+      ],
+      "text": "NHL:CGY"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CHI"
+      ],
+      "text": "Chicago Blackhawks"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CHI"
+      ],
+      "text": "CHI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:CHI"
+      ],
+      "text": "NHL:CHI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:COL"
+      ],
+      "text": "Colorado Avalanche"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:COL"
+      ],
+      "text": "COL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:COL"
+      ],
+      "text": "NHL:COL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DAL"
+      ],
+      "text": "Dallas Stars"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DAL"
+      ],
+      "text": "DAL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DAL"
+      ],
+      "text": "NHL:DAL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DET"
+      ],
+      "text": "Detroit Red Wings"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DET"
+      ],
+      "text": "DET"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:DET"
+      ],
+      "text": "NHL:DET"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:EDM"
+      ],
+      "text": "Edmonton Oilers"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:EDM"
+      ],
+      "text": "EDM"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:EDM"
+      ],
+      "text": "NHL:EDM"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:FLA"
+      ],
+      "text": "Florida Panthers"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:FLA"
+      ],
+      "text": "FLA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:FLA"
+      ],
+      "text": "NHL:FLA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:LAK"
+      ],
+      "text": "Los Angeles Kings"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:LAK"
+      ],
+      "text": "LAK"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:LAK"
+      ],
+      "text": "NHL:LAK"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:LAK"
+      ],
+      "text": "LA Kings"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MIN"
+      ],
+      "text": "Minnesota Wild"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MIN"
+      ],
+      "text": "MIN"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MIN"
+      ],
+      "text": "NHL:MIN"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MTL"
+      ],
+      "text": "Montr\u00e9al Canadiens"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MTL"
+      ],
+      "text": "MTL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MTL"
+      ],
+      "text": "NHL:MTL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:MTL"
+      ],
+      "text": "Montreal Canadiens"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NJD"
+      ],
+      "text": "New Jersey Devils"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NJD"
+      ],
+      "text": "NJD"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NJD"
+      ],
+      "text": "NHL:NJD"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NJD"
+      ],
+      "text": "NJ Devils"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NSH"
+      ],
+      "text": "Nashville Predators"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NSH"
+      ],
+      "text": "NSH"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NSH"
+      ],
+      "text": "NHL:NSH"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYI"
+      ],
+      "text": "New York Islanders"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYI"
+      ],
+      "text": "NYI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYI"
+      ],
+      "text": "NHL:NYI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYR"
+      ],
+      "text": "New York Rangers"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYR"
+      ],
+      "text": "NYR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYR"
+      ],
+      "text": "NHL:NYR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:OTT"
+      ],
+      "text": "Ottawa Senators"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:OTT"
+      ],
+      "text": "OTT"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:OTT"
+      ],
+      "text": "NHL:OTT"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PHI"
+      ],
+      "text": "Philadelphia Flyers"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PHI"
+      ],
+      "text": "PHI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PHI"
+      ],
+      "text": "NHL:PHI"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PIT"
+      ],
+      "text": "Pittsburgh Penguins"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PIT"
+      ],
+      "text": "PIT"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:PIT"
+      ],
+      "text": "NHL:PIT"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SEA"
+      ],
+      "text": "Seattle Kraken"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SEA"
+      ],
+      "text": "SEA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SEA"
+      ],
+      "text": "NHL:SEA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SJS"
+      ],
+      "text": "San Jose Sharks"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SJS"
+      ],
+      "text": "SJS"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SJS"
+      ],
+      "text": "NHL:SJS"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:SJS"
+      ],
+      "text": "SJ Sharks"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:STL"
+      ],
+      "text": "St. Louis Blues"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:STL"
+      ],
+      "text": "STL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:STL"
+      ],
+      "text": "NHL:STL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TBL"
+      ],
+      "text": "Tampa Bay Lightning"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TBL"
+      ],
+      "text": "TBL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TBL"
+      ],
+      "text": "NHL:TBL"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TBL"
+      ],
+      "text": "TB Lightning"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TOR"
+      ],
+      "text": "Toronto Maple Leafs"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TOR"
+      ],
+      "text": "TOR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:TOR"
+      ],
+      "text": "NHL:TOR"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:UTA"
+      ],
+      "text": "Utah Mammoth"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:UTA"
+      ],
+      "text": "UTA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:UTA"
+      ],
+      "text": "NHL:UTA"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:UTA"
+      ],
+      "text": "Utah Hockey Club"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VAN"
+      ],
+      "text": "Vancouver Canucks"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VAN"
+      ],
+      "text": "VAN"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VAN"
+      ],
+      "text": "NHL:VAN"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VGK"
+      ],
+      "text": "Vegas Golden Knights"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VGK"
+      ],
+      "text": "VGK"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:VGK"
+      ],
+      "text": "NHL:VGK"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WPG"
+      ],
+      "text": "Winnipeg Jets"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WPG"
+      ],
+      "text": "WPG"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WPG"
+      ],
+      "text": "NHL:WPG"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WSH"
+      ],
+      "text": "Washington Capitals"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WSH"
+      ],
+      "text": "WSH"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:WSH"
+      ],
+      "text": "NHL:WSH"
+    },
+    {
+      "kind": "team",
+      "league": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID",
+      "targets": [
+        "NHL:NYI",
+        "NHL:NYR"
+      ],
+      "text": "New York"
     }
   ],
   "entities": [
@@ -3662,6 +4606,236 @@
       "league": "MLB",
       "name": "Washington Nationals",
       "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "NHL",
+      "kind": "league",
+      "name": "NHL",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:ANA",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Anaheim Ducks",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:BOS",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Boston Bruins",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:BUF",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Buffalo Sabres",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:CAR",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Carolina Hurricanes",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:CBJ",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Columbus Blue Jackets",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:CGY",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Calgary Flames",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:CHI",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Chicago Blackhawks",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:COL",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Colorado Avalanche",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:DAL",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Dallas Stars",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:DET",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Detroit Red Wings",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:EDM",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Edmonton Oilers",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:FLA",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Florida Panthers",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:LAK",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Los Angeles Kings",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:MIN",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Minnesota Wild",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:MTL",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Montr\u00e9al Canadiens",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:NJD",
+      "kind": "team",
+      "league": "NHL",
+      "name": "New Jersey Devils",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:NSH",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Nashville Predators",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:NYI",
+      "kind": "team",
+      "league": "NHL",
+      "name": "New York Islanders",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:NYR",
+      "kind": "team",
+      "league": "NHL",
+      "name": "New York Rangers",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:OTT",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Ottawa Senators",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:PHI",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Philadelphia Flyers",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:PIT",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Pittsburgh Penguins",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:SEA",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Seattle Kraken",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:SJS",
+      "kind": "team",
+      "league": "NHL",
+      "name": "San Jose Sharks",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:STL",
+      "kind": "team",
+      "league": "NHL",
+      "name": "St. Louis Blues",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:TBL",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Tampa Bay Lightning",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:TOR",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Toronto Maple Leafs",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:UTA",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Utah Mammoth",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:VAN",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Vancouver Canucks",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:VGK",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Vegas Golden Knights",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:WPG",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Winnipeg Jets",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NHL:WSH",
+      "kind": "team",
+      "league": "NHL",
+      "name": "Washington Capitals",
+      "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
     }
   ],
   "native_mappings": [
@@ -4357,6 +5531,15 @@
       "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/28/competitors/1",
       "target": "NFL:DET",
       "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "league",
+      "league": null,
+      "native_id": "234",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/catalog/sandbox-20260912T005709Z/market-001.json#/data/tournaments/185",
+      "target": "NHL",
+      "venue": "prophetx"
     }
   ],
   "planned_leagues": [
@@ -4367,6 +5550,6 @@
     "NHL"
   ],
   "schema_version": 1,
-  "verified_at": "2026-09-12",
-  "version": "2026-09-12.1"
+  "verified_at": "2026-09-21",
+  "version": "2026-09-21.nhl-1"
 }

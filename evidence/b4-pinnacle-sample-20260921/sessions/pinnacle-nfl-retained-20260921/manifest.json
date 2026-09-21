@@ -1,0 +1,10 @@
+{
+  "files": {
+    "run-spec.json": "fcb43d5f77313b3647a2438a5cb7867124021f3d94f06672a5dee83ff0ced04b",
+    "report.json": "9d06dd67bf3000e10f61e4dfa6b9e4ae5aa4d223f0b2b00f44d2a98511e2c289",
+    "replay.json": "8eb565c4c8fe4fd2430846c8e9257b9ba1105738c251ca28de71504781cb0626",
+    "aggregate-limits.json": "a4572e7413b97e4edffd363fa9a036e33cdcc35ddb4ece96cac8fdeecaef822d",
+    "pinnacle-nfl-retained-20260921.jsonl": "c0e9e33d0cdc13c0f055e1edce94c5952ede2550cfd7c9315dd06822cc06a2c1"
+  },
+  "journal_chain": "baa1885bfa843848e49494c76dc7f4d372e4c0ce3134cfbe88d680334a50d257"
+}

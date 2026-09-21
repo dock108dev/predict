@@ -10,7 +10,7 @@ A personal read-only sports prediction-market dashboard: compare real purchasabl
 
 | Dimension | Required scope |
 |---|---|
-| Prediction venues | At least four: Kalshi, Novig, Polymarket US, plus one venue to select |
+| Prediction venues | At least four: Kalshi, Novig, Polymarket US and ProphetX (owner-selected September 21) |
 | Independent reference | Power-index/model-derived line or probability, in the style of 538; provider(s) to select for adequate coverage |
 | Bookmaker reference | Free delayed Pinnacle data; actual access route, delay and coverage to verify |
 | Sports | NFL, NBA, MLB, NHL, NCAAF, NCAAB |
@@ -18,7 +18,7 @@ A personal read-only sports prediction-market dashboard: compare real purchasabl
 | Core timing | Current pregame prediction prices; explicitly delayed Pinnacle reference; dated model outputs |
 | Stretch | Live/in-play markets; not a core beta signoff requirement |
 
-Polymarket means Polymarket US in the existing product; international Polymarket is not interchangeable. ProphetX is an existing integration candidate for slot four, not a confirmed selection. Alternatives must be assessed on access, usable coverage, economics and data effort.
+Polymarket means Polymarket US in the existing product; international Polymarket is not interchangeable. ProphetX is owner-selected for slot four as of September 21; selection does not qualify its production access. Alternatives must be assessed on access, usable coverage, economics and data effort.
 
 The model reference and Pinnacle have different roles. A strength rating alone is not a moneyline probability, spread distribution, total or futures probability. Where conversion is needed, specify and validate the method, input dates and limitations. Do not invent model support for a market. Sport-specific model providers may be necessary; expose their identity separately.
 
@@ -53,3 +53,7 @@ Live/in-play is the explicit stretch goal. Calibrated predictive claims, lead/la
 See [gap assessment](beta-gap-assessment-20260920.md), [delivery plan](data-coverage-plan.md), [math report](math-reconciliation-report.md), [ProphetX](slice-3.md), [Novig](slice-5.md), and [offline diagnostic PASS](../evidence/delivery-launcher-preflight-20260919/final-report.md).
 
 The previous roadmap is retained in [planning history](history/beta-reset-20260920/README.md). Its optional-reference, NFL-only and deferred-venue instructions do not govern this beta.
+
+## September 21 B4 implementation status
+
+[B4 independent engineering](b4-independent-handoff.md) is offline verified through the ordinary product: distinct model/Pinnacle inputs, conditional EV, original-source replay, explicit local imports and bounded refresh accounting. The authorized NFL Pinnacle sample now supplies 16 actual saved side references (one credit, 499 remaining). Actual reference EV still needs compatible prediction observations and reviewed settlement binding. Model acquisition/independence remain open; KenPom is deferred. [Evidence](../evidence/b4-pinnacle-sample-20260921/final-report.md). All non-NFL comparable market breadth and spread/total/period/futures economics remain B5. B1/B2 and B3 independent engineering are preserved; Novig/ProphetX production access requests are pending. Beta remains NOT READY FOR SIGNOFF.

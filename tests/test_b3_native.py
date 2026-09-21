@@ -21,7 +21,7 @@ def configuration():
     s=spec();s.update(mode='mock',reference_enabled=False)
     s['native_sources']={v:dict(state='enabled',environment='production',poll_seconds=10,event_cap=1,market_cap=2) for v in ('kalshi','polymarket_us')}
     s['native_sources']['novig']=dict(state='enabled',environment='qa',credential_reference=REFERENCES['novig']['qa'],leagues=['NFL'],poll_seconds=10,event_cap=1,market_cap=2)
-    s['native_sources']['prophetx']=dict(state='unselected')
+    s['native_sources']['prophetx']=dict(state='not_configured',selected=True)
     return s
 
 class Semantics(unittest.TestCase):
@@ -52,6 +52,7 @@ class Semantics(unittest.TestCase):
         with self.assertRaises(ValueError):validate_sources(s)
 
 class Runtime(unittest.IsolatedAsyncioTestCase):
+    segmented=False
     async def test_native_rest_into_ordinary_product_and_saved_cutoff(self):
         from aiohttp import web
         from aiohttp.test_utils import TestServer,TestClient
@@ -89,7 +90,7 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
         f.server=TestServer(feeds);await f.server.start_server();url=str(f.server.make_url('/')).rstrip('/')
         f.endpoints={v:dict(rest=url,ws=url.replace('http:','ws:')+'/ws') for v in ('kalshi','polymarket_us')}
         with tempfile.TemporaryDirectory() as t,patch('app.collection.native_product.load_native_secret',side_effect=AssertionError('secret lookup forbidden')):
-            o=CoverageOwner(Path(t)/'old',pilot_output=Path(t)/'new',endpoints=f.endpoints,product_mode=True,spec_factory=configuration,session_factory=Session);f.owner=o
+            o=CoverageOwner(Path(t)/'old',pilot_output=Path(t)/'new',endpoints=f.endpoints,product_mode=True,mock_segmented=self.segmented,spec_factory=configuration,session_factory=Session);f.owner=o
             client=TestClient(TestServer(create_app(owner=o,sessions={})));await client.start_server()
             try:
                 await o.start(duration=30)
@@ -104,31 +105,49 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(o.session.producers['novig'].ever['receiving'], {'catalog':o.session.discovery.inventory,'health':o.session.health,'calls':calls})
                 result=await (await client.get('/api/dashboard')).json()
                 self.assertTrue(any('novig' in r['venues'] for r in result['rows']),result)
-                self.assertEqual(next(s for s in result['sources'] if s['source_id']=='prophetx')['state'],'unselected')
-                snap=o.current_snapshot();cutoff=snap['durable_cursor'];sid=snap['session_id']
-                self.assertTrue(any('native_rest_observation'==r['type'] for r in __import__('app.collection.transport_session',fromlist=['reopen']).reopen(o.session.journal.path)['rows']))
+                self.assertEqual(next(s for s in result['sources'] if s['source_id']=='prophetx')['state'],'not_configured')
+                snap=o.current_snapshot();cutoff=snap['durable_cursor'];sid=snap['session_id'];snap=o.cutoffs[cutoff]
+                if not self.segmented:
+                    self.assertTrue(any('native_rest_observation'==r['type'] for r in __import__('app.collection.transport_session',fromlist=['reopen']).reopen(o.session.journal.path)['rows']))
                 await o.stop();await o.finalizer
                 from app.collection.native_rest_replay import verify
                 from app.collection.transport_session import reopen
-                verify(reopen(o.session.journal.path)['rows'])
+                if self.segmented:
+                    from app.collection.segmented import SegmentedReader
+                    verify(SegmentedReader(o.session.output/'history').rows())
+                    from app.dashboard.coverage_owner import replay_segmented
+                    self.assertGreater(replay_segmented(o.session.output/'history')['native_rest']['exact_native_rest_books']['novig'],0)
+                else:verify(reopen(o.session.journal.path)['rows'])
                 self.assertIsNone(o.error);self.assertTrue(adapters[0].closed)
                 self.assertEqual(o.session.health['novig'],'disconnected')
-                self.assertEqual(snap['games'],load(Path(t)/'new'/sid,cutoff)['games'])
+                reopened=load(Path(t)/'new'/sid,cutoff)
+                for key in ('games','market_catalog','sources'):
+                    if snap[key]!=reopened[key]:
+                        def differences(a,b,path=''):
+                            if type(a)!=type(b):return [(path,type(a).__name__,type(b).__name__)]
+                            if isinstance(a,dict):return sum((differences(a.get(k),b.get(k),path+'/'+k) for k in a.keys()|b.keys()),[])
+                            if isinstance(a,list):return sum((differences(x,y,path+'/'+str(i)) for i,(x,y) in enumerate(zip(a,b))),[])
+                            return [] if a==b else [(path,a,b)]
+                        self.fail(str(differences(snap[key],reopened[key]))[:2000])
                 self.assertFalse(o.session.emit('novig',dict(type='late')))
                 self.assertTrue(calls);self.assertFalse(f.active())
             finally:await client.close();await f.close()
 
 
+class RuntimeSegmented(Runtime):
+    segmented=True
+
+
 class Boundaries(unittest.IsolatedAsyncioTestCase):
-    async def test_unselected_slot_never_calls_factory_or_secret_store(self):
+    async def test_selected_unconfigured_slot_never_calls_factory_or_secret_store(self):
         from types import SimpleNamespace
         from app.collection.native_product import NativeVenue
         stop=asyncio.Event();stop.set();rows=[]
         session=SimpleNamespace(spec=configuration(),intake_closed=False,stop_event=stop,health={'prophetx':'idle'},emit=lambda v,r:rows.append((v,r)))
-        p=NativeVenue(session,'prophetx',dict(state='unselected'))
+        p=NativeVenue(session,'prophetx',dict(state='not_configured',selected=True))
         with patch('app.collection.native_product.load_native_secret',side_effect=AssertionError('forbidden')):
             cat,_=await p.native_discover();await p.run({});await p.aclose()
-        self.assertEqual(cat['state'],'unselected');self.assertEqual(p.adapters,[]);self.assertEqual(p.budget.requests,0)
+        self.assertEqual(cat['state'],'not_configured');self.assertEqual(p.adapters,[]);self.assertEqual(p.budget.requests,0)
 
     async def test_failed_market_does_not_stop_other_market_or_session(self):
         from types import SimpleNamespace

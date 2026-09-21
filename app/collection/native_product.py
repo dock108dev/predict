@@ -27,10 +27,15 @@ def validate_sources(spec):
     if not isinstance(sources,dict) or set(sources)!=set(SOURCES): raise ValueError('four explicit source slots required')
     for venue,c in sources.items():
         if not isinstance(c,dict):raise ValueError('source object required')
-        if set(c)-{'state','environment','credential_reference','leagues','tournament_ids','poll_seconds','event_cap','market_cap','series','tags'}:
+        if set(c)-{'transport','selected','state','environment','credential_reference','leagues','tournament_ids','poll_seconds','event_cap','market_cap','series','tags'}:
             raise ValueError('unexpected source configuration; secrets prohibited')
+        if 'selected' in c and type(c['selected']) is not bool:raise ValueError('invalid selection')
         if c.get('state') not in ('enabled','disabled','not_configured','unselected'): raise ValueError('invalid source state')
+        if c.get('transport','nbx' if venue=='novig' else 'native') not in (('nbx','graphql') if venue=='novig' else ('native',)):raise ValueError('invalid source transport')
         if c['state']!='enabled': continue
+        if venue=='novig' and c.get('transport')=='graphql':
+            if c.get('environment')!='public' or 'credential_reference' in c:raise ValueError('public GraphQL needs no credentials')
+            continue
         for field in ('series','tags'):
             if field in c and (not isinstance(c[field],list) or not 1<=len(c[field])<=6 or any(not isinstance(x,str) or not x or not all(ch.isalnum() or ch in '_-' for ch in x) for x in c[field])):raise ValueError('invalid discovery scope')
         if c.get('environment') not in (('production',) if venue in SOURCES[:2] else tuple(REFERENCES[venue])): raise ValueError('environment required')
@@ -55,10 +60,30 @@ def load_native_secret(venue,config):
     service,account=reference.removeprefix('keychain:').split('/')
     try:
         value=json.loads(Keyring().get_password(service,account) or '{}')
+        if 'environment' in value and value.pop('environment')!=config['environment']:raise ValueError('credential environment mismatch')
         keys=('client_id','client_secret') if venue=='novig' else ('access_key','secret_key')
         if set(value)!=set(keys) or any(not isinstance(value[k],str) or not value[k] for k in keys):raise ValueError()
         return value
     except Exception: raise ValueError('dedicated source credentials unavailable') from None
+
+
+def listing_association(m):
+    """Bind only observed native semantics; descriptions are not settlement rules."""
+    native=json.loads(m.raw.json_text,parse_float=Decimal);venue=m.raw.ref.venue.value
+    evidence=dict(event_id=m.raw.ref.event_id,market_id=m.raw.ref.market_id,
+        source=m.raw.source,received_at=m.raw.received_at.isoformat(),sha256=sha256(m.raw.json_text.encode()).hexdigest())
+    row=None
+    if venue=='prophetx':
+        from app.adapters.prophetx import market_key
+        def leaves(items):
+            for x in items:
+                if x.get('market_strikes'):yield from leaves(x['market_strikes'])
+                else:yield x
+        row=next((x for x in leaves(native.get('data',{}).get(m.raw.ref.event_id,[])) if market_key(m.raw.ref.event_id,x)==m.raw.ref.market_id),None)
+    return dict(**evidence,period=m.period or 'unknown',
+        period_basis='native sub_type='+str(row.get('sub_type')) if row and m.period else 'native period not established',
+        native_description=row.get('description') if row else None,
+        settlement_rules=None,settlement_status='listing-specific settlement rules unverified')
 
 
 def catalog_from(events,markets,environment,*,at=None):
@@ -95,7 +120,7 @@ def catalog_from(events,markets,environment,*,at=None):
         period=m.period or 'unknown'
         row=dict(id=m.raw.ref.market_id,event_id=er['id'],title=m.title,market_type=m.market_type.value,period=period,
                  status=m.state.value,exclusion=None,product_outcomes=outcomes,terms={},
-                 native_metadata=json.loads(m.raw.json_text),provenance=dict(source=m.raw.source,received_at=m.raw.received_at.isoformat(),sha256=sha256(m.raw.json_text.encode()).hexdigest()),
+                 listing_association=listing_association(m),native_metadata=json.loads(m.raw.json_text),provenance=dict(source=m.raw.source,received_at=m.raw.received_at.isoformat(),sha256=sha256(m.raw.json_text.encode()).hexdigest()),
                  sides=[dict(id=o.native_id,label=o.label,purchase_support='supported' if outcomes else 'unknown') for o in m.outcomes])
         if m.market_type.value!='moneyline' or period!='full_game':row['exclusion']='unsupported family or period (B5)'
         elif not outcomes:row['exclusion']='unresolved native participants'

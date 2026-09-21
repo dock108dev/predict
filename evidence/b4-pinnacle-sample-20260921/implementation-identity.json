@@ -1,0 +1,38 @@
+{
+  "at": "2026-09-21T16:10:43.418416+00:00",
+  "files": {
+    "app/reference/product.py": "5926675f1a710040fa4c09a514e72f18b4fd550c0e88259dc2bf0c2a63a6f3c9",
+    "app/reference/refresh.py": "c64674bedfc42609b50b8d5edaed29519096a7527a536f27fd09a45969953b66",
+    "app/dashboard/product_view.py": "f46d00bd9f6517ea2923317d35244db308c0b48b5bba509e57dfe5081a44562c",
+    "app/dashboard/session_projection.py": "ed7ce4b880d4d6b43b37ab3c2b6f0ccfd71ec1858963a84aed3fd2976d91adda",
+    "app/dashboard/multi_game_server.py": "c36366912961ecaad43e46c008c34c9f178c306edb1c681c8dbd0b67b2240565",
+    "app/opportunities/board.py": "156478e4086a4f5a0342f99f342087d56d9053995c881ab74cafff56e67b3ec2",
+    "app/dashboard/opportunity_static/dashboard.html": "6ae8a37c8f385c3035c0fc93e38c5c88337dcec81db4b1a5adf6037bba668cf3",
+    "app/dashboard/opportunity_static/dashboard.js": "13f3fe09c4b795e3c6f512f908480216d0077cd4609ead85f37bd7db53afa931",
+    "app/dashboard/opportunity_static/board.js": "6dd14d83e494e4991b4ae79589329711376742cd8cde8cf5c1631f13601de672",
+    "tests/test_b4_reference.py": "18e18a741ea8cdfc89d4a62c887faf3ce0ef368072bffa75970df4fd8b6e900f",
+    "tests/b4_reference_preview.py": "40528ecb9f6329a6be692711beab448ee35ba72778a66708c91c373c9cc8fe58",
+    "scripts/check-ci": "56d981aadecd6bf4eac0d0df7f35423891312a8ac6dc9b120e8ee0e35786f8bc",
+    "app/reference/odds_credentials.py": "59974cbe73ac5877d768d854e7584e286ce8f9c05a208a0f04ba822156a19b24",
+    "app/reference/pinnacle_sample.py": "ce4722334bc8e8ed9899370b90a3dd80f45c79e3225b8c3d185fcc9839695f2d",
+    "app/reference/retained_sample.py": "1795a51d40b3721121de8cbeec5d785cb69907a312414abd248fa0697bd2bf0f",
+    "app/reference/mapping.py": "7b1b54201c1057dfbeb917cb6250b527e0964f407781d7eaede1b8b605438dbe",
+    "tests/test_pinnacle_sample.py": "2b19569b93dbe6eb00d2ba206a43dc35ef68b18c290172659b27974d3240c1e4",
+    "tests/test_b4_actual.py": "9d76e02ca4a338065f82eff3d5ebd2af9ce435747ba2f9432184ccbbb619e793"
+  },
+  "prior_b4_code_changes": [
+    "app/dashboard/opportunity_static/dashboard.js",
+    "scripts/check-ci"
+  ],
+  "preserved_b3_runtime_and_tests": {
+    "app/collection/native_credentials.py": true,
+    "app/collection/native_rest_replay.py": true,
+    "app/collection/novig_graphql.py": true,
+    "app/collection/native_replay.py": true,
+    "app/collection/continuous.py": true,
+    "app/collection/native_product.py": true,
+    "tests/test_b3_continuation.py": true,
+    "tests/test_b3_native.py": true,
+    "tests/b3_graphql_preview.py": true
+  }
+}

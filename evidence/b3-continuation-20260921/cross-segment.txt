@@ -1,0 +1,5 @@
+Executing <Task finished name='Task-6' coro=<Bridge.test_no_secrets_exact_catalog_no_executable_quotes() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_continuation.py:22> result=None created at /opt/anaconda3/lib/python3.11/asyncio/runners.py:100> took 0.133 seconds
+----------------------------------------------------------------------
+Ran 4 tests in 0.525s
+
+OK

@@ -1,0 +1,46 @@
+{
+  "inspected_packages": [
+    {
+      "path": "evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb",
+      "rows": 562,
+      "first": "2026-09-16T01:05:46.374209+00:00",
+      "last": "2026-09-16T01:07:43.627849+00:00",
+      "state": "complete"
+    },
+    {
+      "path": "evidence/e6/prediction-only/real-20260915-discovery6",
+      "load_error": "FileNotFoundError"
+    },
+    {
+      "path": "evidence/supervised-5m-live-20260916/attempt/aa1a5562-5a5f-4b8c-aee2-6f00eaeabe62",
+      "rows": 6218,
+      "first": "2026-09-16T20:56:25.841648+00:00",
+      "last": "2026-09-16T21:00:25.991523+00:00",
+      "state": "complete"
+    }
+  ],
+  "scope": "Three established real retained packages; no new prediction collection or exhaustive archive claim",
+  "reference_receipt": "2026-09-21T16:01:45.028502+00:00",
+  "team_registry_version": "2026-09-12.1",
+  "team_registry_fingerprint": "c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf",
+  "team_candidates": {
+    "Los Angeles Rams": "NFL:LAR",
+    "New York Giants": "NFL:NYG",
+    "Green Bay Packers": "NFL:GB",
+    "Atlanta Falcons": "NFL:ATL",
+    "Miami Dolphins": "NFL:MIA",
+    "Kansas City Chiefs": "NFL:KC",
+    "Detroit Lions": "NFL:DET",
+    "New York Jets": "NFL:NYJ",
+    "Indianapolis Colts": "NFL:IND",
+    "Houston Texans": "NFL:HOU",
+    "Jacksonville Jaguars": "NFL:JAX",
+    "New England Patriots": "NFL:NE",
+    "Washington Commanders": "NFL:WAS",
+    "Seattle Seahawks": "NFL:SEA",
+    "Cleveland Browns": "NFL:CLE",
+    "Carolina Panthers": "NFL:CAR"
+  },
+  "decision": "Older prediction observations are time-mismatched. No reviewed event and settlement join; retained sample stays reference-only. Team-name resolution alone does not establish a game mapping.",
+  "verification_note": "Initial eager in-memory audit hit existing offline_replay_rss_cap. Repaired audit streams existing verified rows; no cap changed or retained data edited."
+}

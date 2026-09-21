@@ -1,0 +1,27 @@
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+FAIL: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.Runtime.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 131, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    self.fail(str(differences(snap[key],reopened[key]))[:2000])
+AssertionError: [('/0/age_seconds', '0.144287', '0.000999'), ('/1/market_id', 'p0', 'n-market'), ('/1/event_id', 'p', 'n-event'), ('/1/update_path', 'native stream', 'dated REST snapshot'), ('/1/source_id', 'polymarket_us', 'novig'), ('/1/quotes/0/side', 'p0L', 'home'), ('/1/quotes/0/ask', 'str', 'NoneType'), ('/1/quotes/0/ask_size', 'str', 'NoneType'), ('/1/quotes/0/unit', 'str', 'NoneType'), ('/1/quotes/0/bid', 'NoneType', 'str'), ('/1/quotes/0/bid_size', 'NoneType', 'str'), ('/1/quotes/1/side', 'p0S', 'away'), ('/1/quotes/1/ask', 'NoneType', 'str'), ('/1/quotes/1/ask_size', 'NoneType', 'str'), ('/1/quotes/1/unit', 'NoneType', 'str'), ('/1/title', 'fixture', 'Detroit Lions vs Buffalo Bills'), ('/1/received_at', '2026-09-21 14:59:13.823287+00:00', '2026-09-21 14:59:13.805031+00:00'), ('/1/native/event_id', 'p', 'n-event'), ('/1/native/counterpart_market_ids/1', 'n-market', 'p0'), ('/1/native/product_outcomes', 'NoneType', 'list'), ('/1/native/occurrences', 'int', 'NoneType'), ('/1/native/provenance', 'list', 'dict'), ('/1/native/native_slug', 'str', 'NoneType'), ('/1/native/native_metadata', 'dict', 'list'), ('/1/native/id', 'p0', 'n-market'), ('/1/native/listing_association', 'NoneType', 'dict'), ('/1/native/title', 'Winner', 'Synthetic away at home'), ('/1/native/conflicting_duplicate', 'bool', 'NoneType'), ('/1/native/terms/description', 'str', 'NoneType'), ('/1/native/subscription_evidence_basis', 'str', 'NoneType'), ('/1/native/sides/0/label', 'Detroit', 'Buffalo Bills'), ('/1/native/sides/0/id', 'p0L', 'home'), ('/1/native/sides/0/basis', 'str', 'NoneType'), ('/1/native/sides/0/role', 'str', 'NoneType'), ('/1/native/sides/1/label', 'Buffalo', 'Detroit Lions'), ('/1/native/sides/1/id', 'p0S', 'away'), ('/1/native/sides/1/basis', 'str', 'NoneType'), ('/1/native/sides/1/role', 'str', 'NoneType'), ('/1/health/observed_at', '2026-09-21T14:59:13.824184+00:00', '2026-09-21T14:59:13.809167+00:00'), ('/1/health/source', 'polymarket_us', 'novig'), ('/1/health/market_ids/0', 'p0', 'n-m
+
+----------------------------------------------------------------------
+Ran 1 test in 0.414s
+
+FAILED (failures=1)

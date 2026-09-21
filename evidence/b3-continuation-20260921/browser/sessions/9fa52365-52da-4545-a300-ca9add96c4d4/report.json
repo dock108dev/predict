@@ -1,0 +1,244 @@
+{
+  "session": "9fa52365-52da-4545-a300-ca9add96c4d4",
+  "reason": "manual_stop",
+  "collection_seconds": 22.685652667016257,
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "failed",
+    "operator_stop": false,
+    "native_verified": false,
+    "error": "ValueError",
+    "reason": "manual_stop",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "persistence_error": null,
+    "seconds": 22.799553666001884,
+    "baseline_rss": 63766528,
+    "peak_rss": 71892992,
+    "traced_peak": 420426,
+    "traced_current": 77333
+  },
+  "accounting": {
+    "received": 182,
+    "accepted": 175,
+    "write_attempted": 175,
+    "durably_acknowledged": 175,
+    "rejected": 7,
+    "unresolved": 0,
+    "queue_pending": 0,
+    "queue_drained": 175,
+    "journal_write_attempted": 178,
+    "journal_durably_acknowledged": 178,
+    "journal_unresolved": 0,
+    "confirmed_byte_offset": 214332,
+    "confirmed_chain": "010ab9f100fbde1a6cd646646675f8c46f4307fb7bf192ece73e55a7ed55a52f",
+    "total_upstream": null,
+    "lost": null,
+    "segmented": {
+      "logical": 175,
+      "observations": 176,
+      "original_terminal_records": 1,
+      "observation_write_attempts": 176,
+      "encoded_ingress": 184164,
+      "expanded_ingress": 325883,
+      "physical_records": 178,
+      "control_records": 2,
+      "physical_write_attempts": 178,
+      "journal_encoded_bytes": 214332,
+      "journal_expanded_payload_bytes": 327180,
+      "manifest_records": 1,
+      "manifest_bytes": 884,
+      "manifest_writes": 2,
+      "manifest_publications": 2,
+      "manifest_write_bytes": 1450,
+      "checkpoint_records": 0,
+      "checkpoint_bytes": 0,
+      "disk_bytes": 218170
+    },
+    "durable_not_queued": 0
+  },
+  "resources": {
+    "peak_rss_bytes": 71892992,
+    "peak_queue_records": 4,
+    "peak_queue_bytes": 43681,
+    "ingress_bytes": 184164,
+    "journal_bytes": 214332,
+    "elapsed_seconds": 22.804181625018828
+  },
+  "coverage": {
+    "kalshi": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 4,
+      "connection_attempts": 1,
+      "body_bytes_charged": 4401,
+      "acknowledgement_basis": "explicit channel acknowledgement",
+      "latest_receipts": {
+        "k0": {
+          "received_at": "2026-09-21 15:02:20.398353+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "polymarket_us": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 1,
+      "selected": 1,
+      "event_discovery": "exhausted",
+      "market_completeness": "exhausted_for_retained_events",
+      "applying_generation": null,
+      "applied_generation": 1,
+      "applied_eligible": 1,
+      "applied_selected": 1,
+      "requested": 1,
+      "acknowledged": 0,
+      "receiving": 0,
+      "usable": 0,
+      "ever": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "peak_simultaneous": {
+        "requested": 1,
+        "acknowledged": 1,
+        "receiving": 1,
+        "usable": 1
+      },
+      "requests": 2,
+      "connection_attempts": 1,
+      "body_bytes_charged": 6628,
+      "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+      "latest_receipts": {
+        "p0": {
+          "received_at": "2026-09-21 15:02:20.394777+00:00",
+          "exchange_at": null,
+          "sync": "synchronized",
+          "source_time_progress": "missing"
+        }
+      }
+    },
+    "novig": {
+      "discovered_events": 1,
+      "discovered_markets": 1,
+      "generation": 1,
+      "eligible": 0,
+      "selected": 0,
+      "event_discovery": "bounded; pagination undocumented",
+      "market_completeness": "unknown",
+      "state": "disconnected",
+      "reason": "source stopped",
+      "requests": 1,
+      "body_bytes_charged": 235,
+      "connection_attempts": 0,
+      "update_path": "dated GraphQL display",
+      "usable": 0,
+      "receiving": 0,
+      "requested": 0,
+      "acknowledged": 0,
+      "semantics": {
+        "prices": "displayed available and last; not normalized purchase asks",
+        "quantity": "not queried; unknown",
+        "fees": "unverified",
+        "settlement": "unknown"
+      }
+    },
+    "prophetx": {
+      "discovered_events": 0,
+      "discovered_markets": 0,
+      "generation": 1,
+      "eligible": 0,
+      "selected": 0,
+      "event_discovery": "not_configured",
+      "market_completeness": "unestablished",
+      "state": "not_configured",
+      "reason": null,
+      "requests": 0,
+      "body_bytes_charged": 0,
+      "connection_attempts": 0,
+      "update_path": "dated REST snapshot",
+      "usable": 0,
+      "receiving": 0,
+      "requested": 0,
+      "acknowledged": 0,
+      "semantics": {
+        "price": "American odds converted to payout probability",
+        "quantity": "unknown; neither quantity nor value used for sizing",
+        "fees": "ProphetX applicability unverified",
+        "settlement": "listing-specific terms unverified"
+      }
+    }
+  },
+  "discovery": {
+    "published_generation": 1,
+    "published_at": "2026-09-21T15:01:58.758373+00:00",
+    "age_seconds": 22.758408,
+    "refresh": {
+      "state": "completed",
+      "generation": 1,
+      "started_at": "2026-09-21T15:01:58.715745+00:00",
+      "finished_at": "2026-09-21T15:01:58.758373+00:00"
+    },
+    "partial": null,
+    "responses": {
+      "kalshi": {
+        "received": 4,
+        "durably_retained": 4,
+        "attempted_requests": 4
+      },
+      "polymarket_us": {
+        "received": 2,
+        "durably_retained": 2,
+        "attempted_requests": 2
+      },
+      "novig": {
+        "received": 0,
+        "durably_retained": 0,
+        "attempted_requests": 1
+      },
+      "prophetx": {
+        "received": 0,
+        "durably_retained": 0,
+        "attempted_requests": 0
+      }
+    },
+    "safety_exclusions": {
+      "kalshi": {},
+      "polymarket_us": {},
+      "novig": {},
+      "prophetx": {}
+    }
+  },
+  "producer_tasks_done": true,
+  "streams_closed": true
+}

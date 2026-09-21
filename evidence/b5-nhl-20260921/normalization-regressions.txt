@@ -1,0 +1,44 @@
+Executing <Task finished name='Task-1' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.248 seconds
+Executing <Task finished name='Task-2' coro=<ObservationTests.test_actual_capture_coverage_order_and_preservation() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:126> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.699 seconds
+Executing <Task finished name='Task-6' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.205 seconds
+Executing <Task finished name='Task-7' coro=<ObservationTests.test_example_labels_and_coverage_are_separate() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:175> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.821 seconds
+Executing <Task finished name='Task-11' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.187 seconds
+Executing <Task finished name='Task-12' coro=<ObservationTests.test_synthetic_mutation_native_name_and_league_conflicts() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:153> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.323 seconds
+Executing <Task finished name='Task-16' coro=<ObservationTests.asyncSetUp() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py:120> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 1.188 seconds
+======================================================================
+FAIL: test_missing_unknown_and_unsupported_context (tests.test_normalization.RegistryTests.test_missing_unknown_and_unsupported_context) (name='DAL')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py", line 43, in test_missing_unknown_and_unsupported_context
+    with self.subTest(name=name):self.assertEqual(self.r.resolve('team',name,**context).status,'unknown')
+                                 ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ambiguous' != 'unknown'
+- ambiguous
++ unknown
+
+
+======================================================================
+FAIL: test_missing_unknown_and_unsupported_context (tests.test_normalization.RegistryTests.test_missing_unknown_and_unsupported_context)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py", line 46, in test_missing_unknown_and_unsupported_context
+    self.assertEqual(self.r.resolve('league',league).status,'unknown')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'resolved' != 'unknown'
+- resolved
++ unknown
+
+
+======================================================================
+FAIL: test_native_scoping_conflict_and_provenance (tests.test_normalization.RegistryTests.test_native_scoping_conflict_and_provenance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_normalization.py", line 65, in test_native_scoping_conflict_and_provenance
+    self.assertEqual(len(self.r.native),77)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 78 != 77
+
+----------------------------------------------------------------------
+Ran 50 tests in 16.646s
+
+FAILED (failures=3)

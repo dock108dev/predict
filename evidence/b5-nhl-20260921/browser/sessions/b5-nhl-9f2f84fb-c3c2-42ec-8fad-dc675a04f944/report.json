@@ -1,0 +1,9 @@
+{
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete"
+  },
+  "session": "b5-nhl-9f2f84fb-c3c2-42ec-8fad-dc675a04f944",
+  "reason": "manual_stop",
+  "fixture": true
+}

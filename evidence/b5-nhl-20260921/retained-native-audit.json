@@ -1,0 +1,29 @@
+{
+  "mode": "read-only retained discovery evidence; not NHL game qualification",
+  "sources": [
+    {
+      "path": "evidence/phase-0/kalshi-series.json",
+      "sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+      "native_id": "KXNHLGAME",
+      "fee_type": "quadratic_with_maker_fees",
+      "fee_multiplier": 1,
+      "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+      "gap": "Series only: no exact NHL game, native side, season, current event override or OT/shootout market-specific terms"
+    },
+    {
+      "path": "evidence/slice-3/sandbox-qualification-20260912/catalog/sandbox-20260912T005709Z/market-001.json",
+      "sha256": "1c927184897e77fe055576ad6d398c4f72be30f854ffc7052a248fbb2a9972fc",
+      "pointer": "/data/tournaments/185",
+      "native_id": 234,
+      "name": "NHL",
+      "environment": "sandbox",
+      "gap": "Tournament catalog only; no production or full-game settlement evidence"
+    }
+  ],
+  "other_gaps": {
+    "polymarket_us": "Retained football winner vocabulary cannot establish NHL winner terms; public hockey totals filing is not a winner contract",
+    "novig": "No retained reviewed NHL full-game native listing and rule binding",
+    "moneypuck": "No page capture or actual model receipt authorized or executed",
+    "pinnacle": "Retained actual sample NFL; no NHL request authorized"
+  }
+}

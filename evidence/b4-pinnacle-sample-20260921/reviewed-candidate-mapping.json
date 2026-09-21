@@ -1,0 +1,1250 @@
+[
+  {
+    "reference_id": "f3a68e2406186263124191b14222fe31ea1be7eefb154931d697a5e9f4b8082d",
+    "participant": "Los Angeles Rams",
+    "candidates": [
+      {
+        "game_id": "c6281f760c57c65ac30325c4dc024198a19cb9e022bafd6a066bde0f6508a8db",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-22T00:15:00+00:00",
+            [
+              "NFL:LAR",
+              "NFL:NYG"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-22T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "ca11198945d9ee868828b9be1121cde26c5e3e2e9fccc93d3165f39f9da24f97",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-22T00:15:00+00:00",
+            [
+              "NFL:LAR",
+              "NFL:NYG"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-22T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "0ffb151f69cce5463291494d60ad7ba3ed4e44a2652457acf4859a80809a517b",
+    "participant": "New York Giants",
+    "candidates": [
+      {
+        "game_id": "c6281f760c57c65ac30325c4dc024198a19cb9e022bafd6a066bde0f6508a8db",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-22T00:15:00+00:00",
+            [
+              "NFL:LAR",
+              "NFL:NYG"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-22T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "ca11198945d9ee868828b9be1121cde26c5e3e2e9fccc93d3165f39f9da24f97",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-22T00:15:00+00:00",
+            [
+              "NFL:LAR",
+              "NFL:NYG"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-22T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "15043040a820cf4eb3f1de28b4fe62ce29d7db55888ae65f67f0a760f921f3c6",
+    "participant": "Green Bay Packers",
+    "candidates": [
+      {
+        "game_id": "6a7d8fc33667aab197ec40ecf68a3d394c48705914f26b01ac808f1b0f3b20f7",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-25T00:15:00+00:00",
+            [
+              "NFL:ATL",
+              "NFL:GB"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-25T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "df945043f4751e48e127d424daa815e092c3293e710c08ec63c29d56ddbc922d",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-25T00:15:00+00:00",
+            [
+              "NFL:ATL",
+              "NFL:GB"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-25T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "2c068361c63227cbfa2d0cb3691c0242e73927f65300075a189b3ec3dce3739a",
+    "participant": "Atlanta Falcons",
+    "candidates": [
+      {
+        "game_id": "6a7d8fc33667aab197ec40ecf68a3d394c48705914f26b01ac808f1b0f3b20f7",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-25T00:15:00+00:00",
+            [
+              "NFL:ATL",
+              "NFL:GB"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-25T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "df945043f4751e48e127d424daa815e092c3293e710c08ec63c29d56ddbc922d",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-25T00:15:00+00:00",
+            [
+              "NFL:ATL",
+              "NFL:GB"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-25T00:15:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "79fc32b6a0aaa9358ef7f1586d30a71051ae01fbd64e2a593e8a1debe4a14cac",
+    "participant": "Miami Dolphins",
+    "candidates": [
+      {
+        "game_id": "20cec8cf5b7356df62272ebc467563d59e4c55c15fbc7541d58b4472a704e5df",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:KC",
+              "NFL:MIA"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "ec702ac6ac455974e5707b3182677716ad79d64b49695136cd1401dd52893ef5",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:KC",
+              "NFL:MIA"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "c969b20bd9842be68733e9257f221fb68ea7b1dc678b246d4900423cd94a6240",
+    "participant": "Kansas City Chiefs",
+    "candidates": [
+      {
+        "game_id": "20cec8cf5b7356df62272ebc467563d59e4c55c15fbc7541d58b4472a704e5df",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:KC",
+              "NFL:MIA"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "ec702ac6ac455974e5707b3182677716ad79d64b49695136cd1401dd52893ef5",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:KC",
+              "NFL:MIA"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "690616633037efed072fc6f1be2804e5e1e8027e2d3963c1332d47ad0418885a",
+    "participant": "Detroit Lions",
+    "candidates": [
+      {
+        "game_id": "52d9150ad3417d60d7d8bacdad976084600fffc04572b42cf5907b72ca84f4a0",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:DET",
+              "NFL:NYJ"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "446b81f553774c46ba63f67273c5d36a9acad046f0e8c38e5e777bf0f5d16e27",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:DET",
+              "NFL:NYJ"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "5a0374dd432469b04084fbe052c784075aea235083591c640e1d47f2d952b163",
+    "participant": "New York Jets",
+    "candidates": [
+      {
+        "game_id": "52d9150ad3417d60d7d8bacdad976084600fffc04572b42cf5907b72ca84f4a0",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:DET",
+              "NFL:NYJ"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "446b81f553774c46ba63f67273c5d36a9acad046f0e8c38e5e777bf0f5d16e27",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:DET",
+              "NFL:NYJ"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "f1b2ae717a93642a6a80edaa2c255ef7ee308e5901df6513efd640eb39c8fad5",
+    "participant": "Indianapolis Colts",
+    "candidates": [
+      {
+        "game_id": "1796df70f6aaff9ff5dcb0c5682c02319a1e798ffcb3836cafe059b7255d784a",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:HOU",
+              "NFL:IND"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "98d0232514955743a96472de2bd748a030448ade7f30c15e3be5f348838b287b",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:HOU",
+              "NFL:IND"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "d42700893a294cbc64aee1482d9ca406d8e0840bbebf3966ef5325e57b74200b",
+    "participant": "Houston Texans",
+    "candidates": [
+      {
+        "game_id": "1796df70f6aaff9ff5dcb0c5682c02319a1e798ffcb3836cafe059b7255d784a",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:HOU",
+              "NFL:IND"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "98d0232514955743a96472de2bd748a030448ade7f30c15e3be5f348838b287b",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:HOU",
+              "NFL:IND"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "e2adfa8ca57d73fbff7489fd480050143e1e155a40b032e1833388f588c8438e",
+    "participant": "Jacksonville Jaguars",
+    "candidates": [
+      {
+        "game_id": "2dba43d6a18771702f9cc64f207d9c485ad239945214f1aa269448078e8ef4a7",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:JAX",
+              "NFL:NE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "e3797786c600b0568a351be0dd79d6bc4b817c8ff126fb2989506c72a45335a8",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:JAX",
+              "NFL:NE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "12f01cd67c949a2e176bc980560aa37db03d4b73e04a4d9c4e8980e196ee9b56",
+    "participant": "New England Patriots",
+    "candidates": [
+      {
+        "game_id": "2dba43d6a18771702f9cc64f207d9c485ad239945214f1aa269448078e8ef4a7",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:JAX",
+              "NFL:NE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "e3797786c600b0568a351be0dd79d6bc4b817c8ff126fb2989506c72a45335a8",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:JAX",
+              "NFL:NE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "3bc07bacb632c285467f32aba9ed6aa32c079972d4011aeeda66fa404c436310",
+    "participant": "Washington Commanders",
+    "candidates": [
+      {
+        "game_id": "1add6710d1bdef02f360b2ef5bdc0b62782e0ae14c29a3f6fb6ba7121421e233",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:SEA",
+              "NFL:WAS"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "c4567af85c50a82e3333b1b35e93a9492430eff3c97a2f808d596ba969a6cbcf",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:SEA",
+              "NFL:WAS"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "18d2939c715cfed5e9bf05fb4c1c66d59dd810f0c8a42ac9d1f7c1df4165bb99",
+    "participant": "Seattle Seahawks",
+    "candidates": [
+      {
+        "game_id": "1add6710d1bdef02f360b2ef5bdc0b62782e0ae14c29a3f6fb6ba7121421e233",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:SEA",
+              "NFL:WAS"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "c4567af85c50a82e3333b1b35e93a9492430eff3c97a2f808d596ba969a6cbcf",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:SEA",
+              "NFL:WAS"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "42ed6b2c7321e2244edf741247bc2d43ba63c8d8dcf9e54063adee612a3c7faf",
+    "participant": "Cleveland Browns",
+    "candidates": [
+      {
+        "game_id": "353e8d2354f288ade8b4568ab057ae10c24c21605323d5078f1b83f04cb1ac12",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:CAR",
+              "NFL:CLE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "06bb2d3b5164a6c29b7363b58004f94d60b54e2de9e6ffb7c3f135971ec7cc33",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:CAR",
+              "NFL:CLE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  },
+  {
+    "reference_id": "8d622ee92988d5442bb6383d798412af50dcb9974360a9fb3a5df544539205b6",
+    "participant": "Carolina Panthers",
+    "candidates": [
+      {
+        "game_id": "353e8d2354f288ade8b4568ab057ae10c24c21605323d5078f1b83f04cb1ac12",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:CAR",
+              "NFL:CLE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      },
+      {
+        "game_id": "06bb2d3b5164a6c29b7363b58004f94d60b54e2de9e6ffb7c3f135971ec7cc33",
+        "identity": {
+          "version": 1,
+          "event": [
+            "2026-09-27T17:00:00+00:00",
+            [
+              "NFL:CAR",
+              "NFL:CLE"
+            ]
+          ],
+          "sport": "american_football",
+          "competition": "NFL",
+          "season": "2026",
+          "stage": null,
+          "scheduled_start": "2026-09-27T17:00:00+00:00",
+          "family": "moneyline",
+          "period": "full_game",
+          "line": null,
+          "subject": null,
+          "outcome_set": null,
+          "rules": "normal-winner-legacy",
+          "category": null,
+          "horizon": null
+        },
+        "scope_gate": {
+          "compatible": false,
+          "reasons": [
+            "reviewed settlement equivalence"
+          ],
+          "ordinary_ev_supported": false,
+          "limitation": "Scope gate only; explicit event binding, reference rederivation, source terms, fees/depth and exceptional outcomes still required"
+        }
+      }
+    ],
+    "old_prediction_cutoff": "2026-09-16T21:00:25.991523+00:00",
+    "reference_received_at": "2026-09-21T16:01:45.028502+00:00",
+    "timing": "time-mismatched September 16 prediction observations versus September 21 reference",
+    "decision": "No join admitted: settlement equivalence unreviewed and prediction books are not current. No historical calculation amended."
+  }
+]

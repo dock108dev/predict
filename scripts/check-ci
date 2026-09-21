@@ -10,6 +10,9 @@ python -m unittest \
     tests.test_personal_beta tests.test_failure_handling \
     tests.test_page_estimate tests.test_multi_page tests.test_math_reconciliation -q
 # A fresh process keeps collector RSS gates independent of retained-data oracle peak memory.
-python -m unittest tests.test_session_projection tests.test_b2_product tests.test_b3_native -q
+python -m unittest tests.test_session_projection tests.test_b2_product tests.test_b3_native tests.test_b3_continuation tests.test_b4_reference tests.test_pinnacle_sample tests.test_b4_actual tests.test_b5_nhl -q
 node tests/test_dashboard_failures.cjs
 node tests/test_concise_dashboard.cjs
+
+# Registry expansion keeps historical identities and captured matching intact.
+python -m unittest tests.test_normalization tests.test_matching tests.test_coverage -q

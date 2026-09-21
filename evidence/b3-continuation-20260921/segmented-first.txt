@@ -1,0 +1,95 @@
+native_snapshot failed (ConnectionError); frames=native_product.py:221:run > test_b3_native.py:156:get_snapshot
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+======================================================================
+ERROR: test_actual_sandbox_prices_enter_product_as_unsized_dated_quotes (tests.test_b3_native.RetainedProphet.test_actual_sandbox_prices_enter_product_as_unsized_dated_quotes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 193, in test_actual_sandbox_prices_enter_product_as_unsized_dated_quotes
+    cat,_=catalog_from([e],[m],'sandbox',at=datetime(2026,9,12,tzinfo=timezone.utc))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/native_product.py", line 122, in catalog_from
+    listing_association=listing_association(m),native_metadata=json.loads(m.raw.json_text),provenance=dict(source=m.raw.source,received_at=m.raw.received_at.isoformat(),sha256=sha256(m.raw.json_text.encode()).hexdigest()),
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/native_product.py", line 81, in listing_association
+    row=next((x for x in leaves(native.get('data',{}).get(m.raw.ref.event_id,[])) if market_key(m.raw.ref.event_id,x)==m.raw.ref.market_id),None)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/collection/native_product.py", line 81, in <genexpr>
+    row=next((x for x in leaves(native.get('data',{}).get(m.raw.ref.event_id,[])) if market_key(m.raw.ref.event_id,x)==m.raw.ref.market_id),None)
+                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/adapters/prophetx.py", line 169, in market_key
+    value = parse_decimal(strike)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/app/models/core.py", line 39, in parse_decimal
+    raise ValueError("expected decimal text, int or Decimal; floats are unsafe")
+ValueError: expected decimal text, int or Decimal; floats are unsafe
+
+======================================================================
+FAIL: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.Runtime.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 125, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    self.assertEqual(snap[key],reopened[key])
+AssertionError: Lists differ: [{'so[515 chars]': {'type': 'source_health', 'state': 'connect[8576 chars]lse}] != [{'so[515 chars]': {'economics': None, 'gap_reason': None, 'he[8576 chars]lse}]
+
+First differing element 0:
+{'sou[514 chars]': {'type': 'source_health', 'state': 'connect[1988 chars]alse}
+{'sou[514 chars]': {'economics': None, 'gap_reason': None, 'he[1988 chars]alse}
+
+Diff is 22072 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_native_rest_into_ordinary_product_and_saved_cutoff (tests.test_b3_native.RuntimeSegmented.test_native_rest_into_ordinary_product_and_saved_cutoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_native.py", line 125, in test_native_rest_into_ordinary_product_and_saved_cutoff
+    self.assertEqual(snap[key],reopened[key])
+AssertionError: Lists differ: [{'so[515 chars]': {'type': 'source_health', 'state': 'connect[8576 chars]lse}] != [{'so[515 chars]': {'economics': None, 'gap_reason': None, 'he[8576 chars]lse}]
+
+First differing element 0:
+{'sou[514 chars]': {'type': 'source_health', 'state': 'connect[1988 chars]alse}
+{'sou[514 chars]': {'economics': None, 'gap_reason': None, 'he[1988 chars]alse}
+
+Diff is 22074 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.787s
+
+FAILED (failures=2, errors=1)

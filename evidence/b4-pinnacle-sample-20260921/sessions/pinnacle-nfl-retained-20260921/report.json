@@ -1,0 +1,9 @@
+{
+  "cleanup_complete": true,
+  "outcome": {
+    "status": "complete"
+  },
+  "session": "pinnacle-nfl-retained-20260921",
+  "reason": "retained import complete",
+  "prediction_collection": false
+}

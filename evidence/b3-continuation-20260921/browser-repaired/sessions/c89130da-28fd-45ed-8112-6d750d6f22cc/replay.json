@@ -1,0 +1,68 @@
+{
+  "groups": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "e38ed9b3ac6d1f5de1e797b5bc69b20c6fd0e7bd43ee3825285d24cf9a19c848",
+      "state": "complete"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 29,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "e38ed9b3ac6d1f5de1e797b5bc69b20c6fd0e7bd43ee3825285d24cf9a19c848",
+      "state": "complete"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 29
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "e38ed9b3ac6d1f5de1e797b5bc69b20c6fd0e7bd43ee3825285d24cf9a19c848",
+      "state": "complete"
+    },
+    "native_rest": {
+      "exact_native_rest_books": {
+        "novig": 0,
+        "prophetx": 0
+      },
+      "exact_graphql_observations": 1,
+      "price_quantity_packets_verified": true,
+      "limitations": "Source-time, stream handoff, fee applicability and settlement are not qualified by replay"
+    }
+  },
+  "derived_health_books": 0,
+  "counts": {
+    "session_started": 1,
+    "native_graphql_observation": 1,
+    "source_health": 62,
+    "prediction_discovery_http": 6,
+    "verified_account_budget": 1,
+    "coverage_inventory": 1,
+    "market_selected": 2,
+    "coverage_applied": 2,
+    "prediction_command": 2,
+    "prediction_frame": 59,
+    "prediction_book": 58,
+    "product_coverage_status": 29,
+    "session_finished": 1
+  },
+  "sequence_sha256": "06ae07fa4c682ebf03aeb18307fc3f09ba729e74241c438cafe151820702c858",
+  "published_generations": [
+    1
+  ],
+  "applied_generations": {
+    "kalshi": 1,
+    "polymarket_us": 1
+  },
+  "incremental": true
+}

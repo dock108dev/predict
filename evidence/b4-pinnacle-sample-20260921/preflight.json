@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-21T16:01:44.829302+00:00",
+  "credential_reference": "keychain:prediction-arb.the-odds-api.free/nfl-pinnacle-readonly",
+  "plan": "free",
+  "monthly_credits": 500,
+  "plan_evidence": "owner-local confirmation; not independently inferred from API",
+  "kenpom": "deferred",
+  "prediction_collection": false
+}

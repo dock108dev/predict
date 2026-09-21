@@ -1,0 +1,332 @@
+{
+  "returned_events": 17,
+  "missing_pinnacle_event_ids": [
+    "555afd4a27aaa392662881cffa8f2eef",
+    "3bfd8bfb4b8e9a365a0877879b73b16b"
+  ],
+  "extracted_references": 16,
+  "oracle": [
+    {
+      "reference_id": "f3a68e2406186263124191b14222fe31ea1be7eefb154931d697a5e9f4b8082d",
+      "event": "32367f882fac1a0c20a6335619922025",
+      "participant": "Los Angeles Rams",
+      "original_odds": [
+        {
+          "name": "Los Angeles Rams",
+          "price": "1.31"
+        },
+        {
+          "name": "New York Giants",
+          "price": "3.76"
+        }
+      ],
+      "exact_fraction": "376/507",
+      "probability": "0.7416173570019723865877712031558185404339",
+      "absolute_error": "2.504930966E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "0ffb151f69cce5463291494d60ad7ba3ed4e44a2652457acf4859a80809a517b",
+      "event": "32367f882fac1a0c20a6335619922025",
+      "participant": "New York Giants",
+      "original_odds": [
+        {
+          "name": "Los Angeles Rams",
+          "price": "1.31"
+        },
+        {
+          "name": "New York Giants",
+          "price": "3.76"
+        }
+      ],
+      "exact_fraction": "131/507",
+      "probability": "0.2583826429980276134122287968441814595661",
+      "absolute_error": "2.504930966E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "15043040a820cf4eb3f1de28b4fe62ce29d7db55888ae65f67f0a760f921f3c6",
+      "event": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+      "participant": "Green Bay Packers",
+      "original_odds": [
+        {
+          "name": "Atlanta Falcons",
+          "price": "3.52"
+        },
+        {
+          "name": "Green Bay Packers",
+          "price": "1.33"
+        }
+      ],
+      "exact_fraction": "352/485",
+      "probability": "0.7257731958762886597938144329896907216495",
+      "absolute_error": "1.546391753E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "2c068361c63227cbfa2d0cb3691c0242e73927f65300075a189b3ec3dce3739a",
+      "event": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+      "participant": "Atlanta Falcons",
+      "original_odds": [
+        {
+          "name": "Atlanta Falcons",
+          "price": "3.52"
+        },
+        {
+          "name": "Green Bay Packers",
+          "price": "1.33"
+        }
+      ],
+      "exact_fraction": "133/485",
+      "probability": "0.2742268041237113402061855670103092783505",
+      "absolute_error": "1.546391753E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "79fc32b6a0aaa9358ef7f1586d30a71051ae01fbd64e2a593e8a1debe4a14cac",
+      "event": "0339a0e41bcee12820eb3e64bb5fadb4",
+      "participant": "Miami Dolphins",
+      "original_odds": [
+        {
+          "name": "Kansas City Chiefs",
+          "price": "1.15"
+        },
+        {
+          "name": "Miami Dolphins",
+          "price": "5.83"
+        }
+      ],
+      "exact_fraction": "115/698",
+      "probability": "0.1647564469914040114613180515759312320917",
+      "absolute_error": "9.45558739E-42",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "c969b20bd9842be68733e9257f221fb68ea7b1dc678b246d4900423cd94a6240",
+      "event": "0339a0e41bcee12820eb3e64bb5fadb4",
+      "participant": "Kansas City Chiefs",
+      "original_odds": [
+        {
+          "name": "Kansas City Chiefs",
+          "price": "1.15"
+        },
+        {
+          "name": "Miami Dolphins",
+          "price": "5.83"
+        }
+      ],
+      "exact_fraction": "583/698",
+      "probability": "0.8352435530085959885386819484240687679084",
+      "absolute_error": "9.054441261E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "690616633037efed072fc6f1be2804e5e1e8027e2d3963c1332d47ad0418885a",
+      "event": "07f552badfa8a565d1be22123713e4da",
+      "participant": "Detroit Lions",
+      "original_odds": [
+        {
+          "name": "Detroit Lions",
+          "price": "1.34"
+        },
+        {
+          "name": "New York Jets",
+          "price": "3.43"
+        }
+      ],
+      "exact_fraction": "343/477",
+      "probability": "0.7190775681341719077568134171907756813415",
+      "absolute_error": "2.1907756813E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "5a0374dd432469b04084fbe052c784075aea235083591c640e1d47f2d952b163",
+      "event": "07f552badfa8a565d1be22123713e4da",
+      "participant": "New York Jets",
+      "original_odds": [
+        {
+          "name": "Detroit Lions",
+          "price": "1.34"
+        },
+        {
+          "name": "New York Jets",
+          "price": "3.43"
+        }
+      ],
+      "exact_fraction": "134/477",
+      "probability": "0.2809224318658280922431865828092243186582",
+      "absolute_error": "8.092243187E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "f1b2ae717a93642a6a80edaa2c255ef7ee308e5901df6513efd640eb39c8fad5",
+      "event": "17a730b7d399feeab6a78c30767c29d2",
+      "participant": "Indianapolis Colts",
+      "original_odds": [
+        {
+          "name": "Houston Texans",
+          "price": "1.64"
+        },
+        {
+          "name": "Indianapolis Colts",
+          "price": "2.38"
+        }
+      ],
+      "exact_fraction": "82/201",
+      "probability": "0.4079601990049751243781094527363184079603",
+      "absolute_error": "1.0099502488E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "d42700893a294cbc64aee1482d9ca406d8e0840bbebf3966ef5325e57b74200b",
+      "event": "17a730b7d399feeab6a78c30767c29d2",
+      "participant": "Houston Texans",
+      "original_odds": [
+        {
+          "name": "Houston Texans",
+          "price": "1.64"
+        },
+        {
+          "name": "Indianapolis Colts",
+          "price": "2.38"
+        }
+      ],
+      "exact_fraction": "119/201",
+      "probability": "0.5920398009950248756218905472636815920401",
+      "absolute_error": "2.9900497512E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "e2adfa8ca57d73fbff7489fd480050143e1e155a40b032e1833388f588c8438e",
+      "event": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+      "participant": "Jacksonville Jaguars",
+      "original_odds": [
+        {
+          "name": "Jacksonville Jaguars",
+          "price": "1.64"
+        },
+        {
+          "name": "New England Patriots",
+          "price": "2.38"
+        }
+      ],
+      "exact_fraction": "119/201",
+      "probability": "0.5920398009950248756218905472636815920401",
+      "absolute_error": "2.9900497512E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "12f01cd67c949a2e176bc980560aa37db03d4b73e04a4d9c4e8980e196ee9b56",
+      "event": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+      "participant": "New England Patriots",
+      "original_odds": [
+        {
+          "name": "Jacksonville Jaguars",
+          "price": "1.64"
+        },
+        {
+          "name": "New England Patriots",
+          "price": "2.38"
+        }
+      ],
+      "exact_fraction": "82/201",
+      "probability": "0.4079601990049751243781094527363184079603",
+      "absolute_error": "1.0099502488E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "3bc07bacb632c285467f32aba9ed6aa32c079972d4011aeeda66fa404c436310",
+      "event": "2a529c108305ffa049d8b6cfdbaa4d36",
+      "participant": "Washington Commanders",
+      "original_odds": [
+        {
+          "name": "Seattle Seahawks",
+          "price": "1.35"
+        },
+        {
+          "name": "Washington Commanders",
+          "price": "3.38"
+        }
+      ],
+      "exact_fraction": "135/473",
+      "probability": "0.2854122621564482029598308668076109936576",
+      "absolute_error": "9.471458774E-41",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "18d2939c715cfed5e9bf05fb4c1c66d59dd810f0c8a42ac9d1f7c1df4165bb99",
+      "event": "2a529c108305ffa049d8b6cfdbaa4d36",
+      "participant": "Seattle Seahawks",
+      "original_odds": [
+        {
+          "name": "Seattle Seahawks",
+          "price": "1.35"
+        },
+        {
+          "name": "Washington Commanders",
+          "price": "3.38"
+        }
+      ],
+      "exact_fraction": "338/473",
+      "probability": "0.7145877378435517970401691331923890063428",
+      "absolute_error": "3.0528541226E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "42ed6b2c7321e2244edf741247bc2d43ba63c8d8dcf9e54063adee612a3c7faf",
+      "event": "613b8cd3a5fab58f7be4e3fd6f76223e",
+      "participant": "Cleveland Browns",
+      "original_odds": [
+        {
+          "name": "Carolina Panthers",
+          "price": "1.67"
+        },
+        {
+          "name": "Cleveland Browns",
+          "price": "2.32"
+        }
+      ],
+      "exact_fraction": "167/399",
+      "probability": "0.4185463659147869674185463659147869674188",
+      "absolute_error": "2.5363408521E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    },
+    {
+      "reference_id": "8d622ee92988d5442bb6383d798412af50dcb9974360a9fb3a5df544539205b6",
+      "event": "613b8cd3a5fab58f7be4e3fd6f76223e",
+      "participant": "Carolina Panthers",
+      "original_odds": [
+        {
+          "name": "Carolina Panthers",
+          "price": "1.67"
+        },
+        {
+          "name": "Cleveland Browns",
+          "price": "2.32"
+        }
+      ],
+      "exact_fraction": "232/399",
+      "probability": "0.5814536340852130325814536340852130325817",
+      "absolute_error": "2.4636591479E-40",
+      "source_at": "2026-09-21T16:01:17Z",
+      "received_at": "2026-09-21T16:01:45.028502+00:00"
+    }
+  ],
+  "mapping": "Provider-local identity; prediction-venue event and settlement binding outstanding; no compatible books imported",
+  "selection": "First eight populated events ordered by commence_time then id; two sides each; maximum 16"
+}

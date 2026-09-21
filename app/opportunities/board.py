@@ -24,6 +24,9 @@ def display(n, places=2): return 'Unavailable' if n is None else format(Decimal(
 
 def assess(rows, cutoff, identity=None):
     """Later analysis of only listing metadata already retained at this cutoff."""
+    if identity and identity.get('product_identity',{}).get('competition')=='NHL':
+        from app.normalization.nhl import assessment
+        return assessment(rows,cutoff,identity)
     profiles={};sources={};coefficient=None
     for venue in ('kalshi','polymarket_us'):
         eligible=[r for r in rows if r['type']=='market_selected' and r['source']==venue and exact_time(r['observed_at'])<=exact_time(cutoff)]
@@ -46,7 +49,7 @@ def assess(rows, cutoff, identity=None):
             payouts={'tie':dict(kind='fraction',value='0.5',evidence=h),
                      'postponed_outside_window':dict(kind='discretionary',evidence=h,reason='venue-specific fair value; not a stake refund')})
         sources[venue]=dict(source=source,known_at=row['observed_at'],market_id=raw['ref']['market_id'])
-    return dict(assessed_at=(__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat() if identity else ASSESSMENT_AT),observation_cutoff=cutoff,profiles=profiles,sources=sources,pmus_coefficient=coefficient,
+    return dict(assessed_at=(identity.get('assessment_at') or __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat() if identity else ASSESSMENT_AT),observation_cutoff=cutoff,profiles=profiles,sources=sources,pmus_coefficient=coefficient,
                 note='Retrospective assessment, not knowledge asserted available at the historical cutoff.')
 
 def contracts(point, identity=None):
@@ -105,11 +108,17 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
     c=dict(venue=v,environment='production',market_id=assessment['sources'][v]['market_id'],product='event_contract',
            trade_time=at,calculation_time=assessment['assessed_at'],complete_order_history=True,settlement_status='UNKNOWN',
            fills=[dict(fill_id=str(i),order_id='hypothetical-new-order',role='taker',price=f['price'],quantity=f['quantity'],unit='contracts') for i,f in enumerate(fills)],outcomes=outcomes)
+    nhl=identity and identity.get('product_identity',{}).get('competition')=='NHL'
+    basis=assessment.get('nhl_fee_bases',{}).get(v) if nhl else None
+    if nhl and not basis:
+        result['reasons'].append('NHL source fee basis missing');return result
+    if nhl and v=='kalshi' and (basis.get('series_id')!='KXNHLGAME' or basis.get('fee_type')!='quadratic_with_maker_fees' or basis.get('multiplier')!='1'):
+        result['reasons'].append('Unsupported NHL fee basis');return result
     if v=='kalshi':
         c.update(schedule_version='kalshi-july7-observed-sep12')
         if scenario!='unknown':
-            c.update(series_id='KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',balance_precision='0.0001' if scenario=='direct' else '0.01',
-                kalshi_metadata=dict(source='Explicit what-if: retained series type, multiplier 1; no event override',series_id='KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',event_history_complete=False,
+            c.update(series_id='KXNHLGAME' if nhl else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',balance_precision='0.0001' if scenario=='direct' else '0.01',
+                kalshi_metadata=dict(source='Explicit what-if: retained series type, multiplier 1; no event override',series_id='KXNHLGAME' if nhl else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',event_history_complete=False,
                     series_changes=[dict(scheduled_ts=at,fee_type='quadratic_with_maker_fees',fee_multiplier='1')],event_changes=[]))
     elif v=='polymarket_us':
         if assessment['pmus_coefficient']!='0.06':result['reasons'].append('Retained coefficient not supported by pinned schedule');return result
@@ -159,6 +168,7 @@ def evaluate(point, rows, quantity='100', scenario='cent', probability=None, sel
                 try: partial=assess([row],point['at'],identity)
                 except (ValueError,KeyError,StopIteration): continue
                 assessment['profiles'].update(partial['profiles']);assessment['sources'].update(partial['sources'])
+                if 'nhl_fee_bases' in partial:assessment.setdefault('nhl_fee_bases',{}).update(partial['nhl_fee_bases'])
                 if partial['pmus_coefficient'] is not None: assessment['pmus_coefficient']=partial['pmus_coefficient']
         else: assessment=assess(rows,point['at'],identity)
         cs=contracts(point,identity)

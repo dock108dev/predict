@@ -107,12 +107,17 @@ class GroupedNativeVerifier:
         self.groups = {}
         self.previous_books = {}
         self.derived_health_books = 0
+        self.rest = None
 
     def feed(self, row):
         if row['type'] == 'session_started':
             if self.first is not None:
                 raise ValueError('new source session requires explicit replay boundary')
             self.first = row
+            if row.get('spec',{}).get('native_sources'):
+                from .native_rest_replay import NativeRestVerifier
+                self.rest=NativeRestVerifier()
+        if self.rest:self.rest.feed(row)
         group = row.get('stream_group')
         if group is None and row.get('source') in ('kalshi', 'polymarket_us'):
             group = '_legacy'
@@ -154,4 +159,6 @@ class GroupedNativeVerifier:
                     self.derived_health_books += 1
 
     def result(self, state='interrupted', sha256=None):
-        return {group: verifier.result(sha256, state) for group, verifier in self.groups.items()}
+        result={group: verifier.result(sha256, state) for group, verifier in self.groups.items()}
+        if self.rest:result['native_rest']=self.rest.result()
+        return result

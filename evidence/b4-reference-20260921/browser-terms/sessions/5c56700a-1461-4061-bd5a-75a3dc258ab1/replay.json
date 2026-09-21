@@ -1,0 +1,61 @@
+{
+  "groups": {
+    "_legacy": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "c5a19a14b30c10f32920599984a6befa9f72fe733a48f486687ae1aa047909e0",
+      "state": "complete"
+    },
+    "kalshi-1": {
+      "exact_native_books": {
+        "kalshi": 121,
+        "polymarket_us": 0
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "c5a19a14b30c10f32920599984a6befa9f72fe733a48f486687ae1aa047909e0",
+      "state": "complete"
+    },
+    "polymarket_us-1": {
+      "exact_native_books": {
+        "kalshi": 0,
+        "polymarket_us": 121
+      },
+      "exact_packets": true,
+      "gaps": [],
+      "journal_sha256": "c5a19a14b30c10f32920599984a6befa9f72fe733a48f486687ae1aa047909e0",
+      "state": "complete"
+    }
+  },
+  "derived_health_books": 0,
+  "counts": {
+    "session_started": 1,
+    "prediction_discovery_http": 14,
+    "verified_account_budget": 1,
+    "coverage_inventory": 3,
+    "market_selected": 2,
+    "coverage_applied": 6,
+    "source_health": 244,
+    "prediction_command": 2,
+    "prediction_frame": 243,
+    "product_coverage_status": 123,
+    "prediction_book": 242,
+    "product_reference": 3,
+    "session_finished": 1
+  },
+  "sequence_sha256": "0baf888e409c64be0d762c3ff34a40ce7b96301197b035981172c6317f4393dd",
+  "published_generations": [
+    1,
+    2,
+    3
+  ],
+  "applied_generations": {
+    "kalshi": 3,
+    "polymarket_us": 3
+  },
+  "incremental": true
+}

@@ -1,12 +1,12 @@
 # Predict — expanded beta delivery plan
 
-Updated September 20, 2026. This plan implements the owner's [current beta scope](product-roadmap-review.md). **Beta not ready.** No B1–B7 package is complete merely because an earlier D/E/slice component passed.
+Updated September 21, 2026. This plan implements the owner's [current beta scope](product-roadmap-review.md). **Beta not ready.** No B1–B7 package is complete merely because an earlier D/E/slice component passed.
 
 ## B1 — working coverage map and integration scope — COMPLETE
 
 Delivered September 20, 2026: [source × sport × market/period matrix](b1-coverage-matrix.md) and [concrete B2 implementation handoff](b2-product-integration-handoff.md). The assessment covers all six sports, four prediction-source slots and both reference types, with production/sandbox/fixture/documentation evidence separated, explicit unknowns, source recommendations and an owning-slice dependency ledger.
 
-Recommend ProphetX for the fourth venue; owner selection and production access remain B3 dependencies. The Odds API's documented free tier and website-sourced Pinnacle listing are a promising B4 route, not verified account entitlement or known delay. Sport-specific model candidates and their output/independence gaps are recorded. B5 owns final halftime/period, futures and NCAAB definitions. These unresolved data questions do not make B1 incomplete or block B2.
+ProphetX is selected as the fourth venue; production access remains a B3 dependency. The Odds API's documented free tier and website-sourced Pinnacle listing are a promising B4 route, not verified account entitlement or known delay. Sport-specific model candidates and their output/independence gaps are recorded. B5 owns final halftime/period, futures and NCAAB definitions. These unresolved data questions do not make B1 incomplete or block B2.
 
 B1 included code-path inspection, retained-evidence review, targeted official public research and document reconciliation. No B2 implementation, beta launch, credential/account access or new authenticated collection occurred.
 
@@ -14,7 +14,7 @@ B1 included code-path inspection, retained-evidence review, targeted official pu
 
 | Slice | Unresolved data/information to address during that slice | If unavailable |
 |---|---|---|
-| B3: prediction venues | Novig provisioning and wire samples; fourth-venue selection/access; ProphetX size/update semantics if chosen; US Short depth and source-specific discovery/fees/terms | Mark the affected source/side incomplete, request precise owner/provider help, continue other integration work |
+| B3: prediction venues | Novig provisioning and wire samples; selected ProphetX production access; ProphetX size/update semantics; US Short depth and source-specific discovery/fees/terms | Mark the affected source/side incomplete, request precise owner/provider help, continue other integration work |
 | B4: references | Free delayed Pinnacle route and actual delay/coverage; current power-index provider(s), sport coverage and usable probability/line outputs | Keep missing inputs explicit; continue reference plumbing and independently supported calculations; do not silently substitute paid data or another reference type |
 | B5: sport/market breadth | Native IDs/listings, half/period definitions, futures categories, NCAAB competition scope, result/settlement sources and seasonal samples | Resolve the relevant definition before implementing that mapping; continue independent sports/families; label unavailable samples and seek an explicit exclusion only if needed for beta signoff |
 | B6: integrated use | Actual joint coverage/cadence, session length, provider limits and resource measurements | Scope the run from available evidence; leave unmet beta criteria open rather than pretending all data problems were solved |
@@ -25,22 +25,26 @@ The [B1 dependency ledger](b1-coverage-matrix.md#owning-slice-dependency-ledger-
 
 Delivered the [shared session projection, ordinary dashboard integration and verified history readers](b2-product-integration-handoff.md). Explicit fixture sessions now update comparisons, expose source/market gaps and dated references, freeze during saving, and reopen immutable cutoffs. Three source identities and two events include a non-Kalshi pair; unknown third-source economics remain unsupported. Existing 18-Arb/96-EV math reconciliation and focused collector/history/browser checks passed. [Exact identity and evidence](../evidence/b2-product-integration-20260920/final-report.md).
 
-This is fixture-backed integration, not production-source qualification. Real product Start remains unavailable without a new allowance. Existing D2/supervised consumed-attempt protections remain intact. B3 is in progress; real qualification is blocked on selection/access and approval.
+This is fixture-backed integration, not production-source qualification. Real product Start remains unavailable without a new allowance. Existing D2/supervised consumed-attempt protections remain intact. B3 is in progress; real qualification is pending provider access and approval.
 
 ## B3 — four prediction venues — IN PROGRESS; real qualification blocked
 
-[B3 engineering](b3-native-integration.md) connects Novig and a provisional unselected ProphetX REST branch through the existing collector, native observation journal, ordinary projection, source health and Stop. Source-specific purchase conversion, failure isolation, retained replay and shared-history ordering are offline verified. Kalshi series/US tag scopes are configurable; unsupported discovered native metadata remains visible. Native REST currently uses shared flat history; B2 segmented behavior is preserved.
+[B3 engineering](b3-native-integration.md) connects Novig and a provisional ProphetX (owner-selected September 21; activation pending) REST branch through the existing collector, native observation journal, ordinary projection, source health and Stop. Source-specific purchase conversion, failure isolation, retained replay and shared-history ordering are offline verified. Kalshi series/US tag scopes are configurable; unsupported discovered native metadata remains visible. Native REST supports shared flat and segmented replay; B2 behavior is preserved.
 
-Fourth-venue selection and Novig provisioning are unanswered. No B3 QA/production collection or four-venue production comparison is qualified. Finalize the [single bounded proposal](b3-native-qualification-proposal.md) with the selected venue/access references before requesting approval and any new authenticated access. Unknown Novig listing period/rules and ProphetX sizes remain explicit prerequisites/limitations.
+ProphetX selection is resolved. The owner sent Novig and ProphetX access requests; both are pending provider responses. Production provisioning remains unverified; see [Novig access review](novig-access-review-20260921.md) for the documented public GraphQL alternative and its sunset limitation. No B3 QA/production collection or four-venue production comparison is qualified. Finalize the [single bounded proposal](b3-native-qualification-proposal.md) with the selected venue/access references before requesting approval and any new authenticated access. Unknown Novig listing period/rules and ProphetX sizes remain explicit prerequisites/limitations.
 Exit: each of four venues has observed production input, integrated health/history and useful comparison participation; source-specific gaps are visible. Offline adapters do not count. No inference of full exchange delivery from short samples.
 
-## B4 — model reference and free delayed Pinnacle
+## B4 — independent engineering COMPLETE; actual Pinnacle sample integrated, model outstanding
+
+[B4 implementation and offline verification](b4-independent-handoff.md) now supplies separate model/Pinnacle Details, reference EV, original-input replay and explicit local imports through the existing collector/history. [Source contracts](b4-source-contracts.md) and [bounded acquisition proposal](b4-acquisition-proposal.md) separate documentation from actual access. KenPom is deferred by owner; no login or entitlement work. The single authorized NFL Pinnacle sample succeeded (one credit, 499 remaining), with 16 actual side references in ordinary saved Details. Compatible prediction observations and settlement binding remain required for actual EV. [Evidence](../evidence/b4-pinnacle-sample-20260921/final-report.md). Full B4 remains IN PROGRESS until both actual-source roles are integrated and reproducible. No Novig or ProphetX key is required.
 
 Implement repeatable acquisition for the selected power-index/model provider(s) and the verified free Pinnacle path. Retain model version/as-of time, source time where available, receipt time, actual delay evidence, native prices, source family and market identity. Derive supported estimates transparently and show unresolved mappings. Preserve delayed estimates as delayed; no live-quality timing prerequisite merely to display correct labeled arithmetic.
 
 Exit: both requested reference types appear in game/market details and supported EV calculations with reproducible original inputs. No forced win-probability conversion from raw team ranks; no invented spread/total/futures forecasts. Unsupported model-market cells stay explicit beta gaps for decision.
 
-## B5 — six-sport market coverage and usable history
+## B5 — six-sport market coverage and usable history — IN PROGRESS
+
+**Bounded NHL full-game winner engineering COMPLETE, offline verified September 21.** [Handoff and actual data gaps](b5-nhl-handoff.md) · [acceptance evidence](../evidence/b5-nhl-20260921/final-report.md). Ordinary NHL Details and conditional EV now require reviewed two-way overtime/shootout semantics, season/event/native orientation and source fees/depth. Regulation/three-way and missing terms remain visible. Stop, exact saved reopening and prior math regressions pass. Actual venue/model qualification is still open; this completes neither all B5 nor full B4. MoneyPuck single-page acquisition remains proposed, not authorized.
 
 Build sport/competition/season/team identities and family-specific normalization/matching for moneyline, spread, total, agreed halftime/period scope and futures. Handle line changes, pushes, ties, overtime rules, postponed events and multi-outcome settlement where relevant. Preserve raw data and exact calculation basis. Complete result/settlement linkage, pending futures handling, storage bounds and saved-session operation needed for actual use.
 
@@ -63,3 +67,7 @@ The B2 request authorized implementation, focused tests, read-only retained obse
 ## Retained foundation
 
 D1 inventory, D3a segmented replay, bounded two-venue live results, one-market diagnostic PASS, saved multi-game calculations, normalization/matching/fees/depth and reference scaffolding remain reusable. Their old next actions are superseded. See [gap assessment](beta-gap-assessment-20260920.md) and [planning snapshots](history/beta-reset-20260920/README.md).
+
+September 21 continuation: supported native listing association, selected/unconfigured ProphetX, native REST segmented replay and the temporary Novig GraphQL display bridge are offline verified. [Evidence](../evidence/b3-continuation-20260921/final-report.md) · [access/setup](b3-access-setup.md). GraphQL does not supply qualified purchase comparisons. B3 remains IN PROGRESS.
+
+September 21 B4 acquisition update: Keychain reference `keychain:prediction-arb.the-odds-api.free/nfl-pinnacle-readonly` configured; one approved request consumed. No further collection authorized. [Next independent B5 NHL mapping slice and unapproved MoneyPuck contract](b4-model-mapping-next.md).

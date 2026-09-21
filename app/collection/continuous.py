@@ -629,8 +629,6 @@ class ContinuousSession(TransportSession):
         self.mock_segmented = mock_segmented
         self.supervised_live = supervised_live
         self.segmented_history = mock_segmented or supervised_live
-        if self.spec.get('native_sources') and self.segmented_history:
-            raise ValueError('B3 native REST currently requires the shared flat journal')
         if supervised_live:
             from .supervised_live import validate_live
             if mock_segmented: raise ValueError('live and mock modes are exclusive')
@@ -736,6 +734,9 @@ class ContinuousSession(TransportSession):
         if self.spec.get('native_sources'):
             from .native_product import NativeVenue
             self.producers = {v: self.producers[v] if v in coverage.VENUES and c['state']=='enabled' and v not in getattr(self,'source_access_errors',{}) else NativeVenue(self,v,dict(c,state='unavailable') if v in getattr(self,'source_access_errors',{}) else c) for v,c in self.spec['native_sources'].items()}
+            if self.spec['native_sources']['novig'].get('transport')=='graphql':
+                from .novig_graphql import GraphQLVenue
+                self.producers['novig']=GraphQLVenue(self,'novig',self.spec['native_sources']['novig'])
             self.health = {v:'idle' for v in self.producers}
         return self.sid
 

@@ -1,0 +1,6 @@
+{
+  "mode": "real",
+  "reference_enabled": false,
+  "acquisition": "retained-only",
+  "prediction_collection": false
+}

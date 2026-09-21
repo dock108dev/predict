@@ -1,0 +1,27 @@
+test_missing_fees_and_source_times (tests.test_b5_nhl.NHL.test_missing_fees_and_source_times) ... ok
+test_model_conflicts_immutable_cutoff_and_native_orientation (tests.test_b5_nhl.NHL.test_model_conflicts_immutable_cutoff_and_native_orientation) ... FAIL
+test_registry_identity_and_historical_vocabulary (tests.test_b5_nhl.NHL.test_registry_identity_and_historical_vocabulary) ... ok
+test_semantic_failures_source_isolation_and_duplicates (tests.test_b5_nhl.NHL.test_semantic_failures_source_isolation_and_duplicates) ... ok
+test_supported_ev_unknowns_details_and_reopening (tests.test_b5_nhl.NHL.test_supported_ev_unknowns_details_and_reopening) ... ok
+test_ordinary_stop_and_exact_saved_calculation (tests.test_b5_nhl.StopAPI.test_ordinary_stop_and_exact_saved_calculation) ... /Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:86: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=1024*1024);app['owner']=owner
+Executing <Task pending name='Task-5' coro=<RequestHandler.start() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:630> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/web_protocol.py:371> took 0.125 seconds
+Executing <Task pending name='Task-2' coro=<StopAPI.test_ordinary_stop_and_exact_saved_calculation() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b5_nhl.py:154> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:459> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.225 seconds
+Executing <Task finished name='Task-8' coro=<Owner.finish() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/b5_nhl_preview.py:49> result=None created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:395> took 0.230 seconds
+Executing <Task pending name='Task-2' coro=<StopAPI.test_ordinary_stop_and_exact_saved_calculation() running at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b5_nhl.py:159> wait_for=<Task pending name='Task-11' coro=<_wait_for_close() running at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/connector.py:123> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:749> cb=[Task.task_wakeup()] created at /Users/michaelfuscoletti/Desktop/prediction-arb/.venv/lib/python3.14/site-packages/aiohttp/connector.py:497> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:109> took 0.301 seconds
+ok
+
+======================================================================
+FAIL: test_model_conflicts_immutable_cutoff_and_native_orientation (tests.test_b5_nhl.NHL.test_model_conflicts_immutable_cutoff_and_native_orientation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b5_nhl.py", line 140, in test_model_conflicts_immutable_cutoff_and_native_orientation
+    snap=projection(rows)[0].snapshot();self.assertEqual(len(snap['games']),1,mutate)
+                                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 3 != 1 : native_team
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.269s
+
+FAILED (failures=1)

@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-09-21T16:01:44.830014+00:00",
+  "endpoint": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+  "params": {
+    "bookmakers": "pinnacle",
+    "markets": "h2h",
+    "oddsFormat": "decimal",
+    "dateFormat": "iso"
+  },
+  "credential_reference": "keychain:prediction-arb.the-odds-api.free/nfl-pinnacle-readonly",
+  "requests_authorized": 1,
+  "planned_credits": 1,
+  "body_limit": 262144,
+  "timeout_seconds": 20,
+  "retries": 0,
+  "approval": "Owner explicit B4 NFL Pinnacle sample authorization",
+  "attempt_consumed": true
+}

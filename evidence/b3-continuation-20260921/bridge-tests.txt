@@ -1,0 +1,9 @@
+Executing <Task finished name='Task-6' coro=<Bridge.test_no_secrets_exact_catalog_no_executable_quotes() done, defined at /Users/michaelfuscoletti/Desktop/prediction-arb/tests/test_b3_continuation.py:22> result=None created at /opt/anaconda3/lib/python3.11/asyncio/runners.py:100> took 0.113 seconds
+native_snapshot failed (ConnectionError); frames=native_product.py:222:run > test_b3_native.py:162:get_snapshot
+/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/multi_game_server.py:85: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
+https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
+  app=web.Application(middlewares=[guard],client_max_size=4096);app['owner']=owner
+----------------------------------------------------------------------
+Ran 12 tests in 0.950s
+
+OK

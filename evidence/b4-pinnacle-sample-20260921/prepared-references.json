@@ -1,0 +1,1858 @@
+[
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "32367f882fac1a0c20a6335619922025"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-22T00:15:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Los Angeles Rams",
+    "source_event_id": "32367f882fac1a0c20a6335619922025",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "32367f882fac1a0c20a6335619922025"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-22T00:15:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Los Angeles Rams",
+      "source_event_id": "32367f882fac1a0c20a6335619922025",
+      "source_participants": [
+        "Los Angeles Rams",
+        "New York Giants"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.7416173570019723865877712031558185404339",
+    "original_value": [
+      {
+        "name": "Los Angeles Rams",
+        "price": "1.31"
+      },
+      {
+        "name": "New York Giants",
+        "price": "3.76"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029316225434464836771154783173623517947",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Los Angeles Rams",
+          "price": "1.31"
+        },
+        {
+          "name": "New York Giants",
+          "price": "3.76"
+        }
+      ]
+    },
+    "id": "f3a68e2406186263124191b14222fe31ea1be7eefb154931d697a5e9f4b8082d"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "32367f882fac1a0c20a6335619922025"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-22T00:15:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "New York Giants",
+    "source_event_id": "32367f882fac1a0c20a6335619922025",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "32367f882fac1a0c20a6335619922025"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-22T00:15:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "New York Giants",
+      "source_event_id": "32367f882fac1a0c20a6335619922025",
+      "source_participants": [
+        "Los Angeles Rams",
+        "New York Giants"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.2583826429980276134122287968441814595661",
+    "original_value": [
+      {
+        "name": "Los Angeles Rams",
+        "price": "1.31"
+      },
+      {
+        "name": "New York Giants",
+        "price": "3.76"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029316225434464836771154783173623517947",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Los Angeles Rams",
+          "price": "1.31"
+        },
+        {
+          "name": "New York Giants",
+          "price": "3.76"
+        }
+      ]
+    },
+    "id": "0ffb151f69cce5463291494d60ad7ba3ed4e44a2652457acf4859a80809a517b"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "e5fbd3b3953b896b1bf897ddadb3cc4b"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-25T00:15:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Green Bay Packers",
+    "source_event_id": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "e5fbd3b3953b896b1bf897ddadb3cc4b"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-25T00:15:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Green Bay Packers",
+      "source_event_id": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+      "source_participants": [
+        "Green Bay Packers",
+        "Atlanta Falcons"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.7257731958762886597938144329896907216495",
+    "original_value": [
+      {
+        "name": "Atlanta Falcons",
+        "price": "3.52"
+      },
+      {
+        "name": "Green Bay Packers",
+        "price": "1.33"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.035970608339029391660970608339029391661",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Atlanta Falcons",
+          "price": "3.52"
+        },
+        {
+          "name": "Green Bay Packers",
+          "price": "1.33"
+        }
+      ]
+    },
+    "id": "15043040a820cf4eb3f1de28b4fe62ce29d7db55888ae65f67f0a760f921f3c6"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "e5fbd3b3953b896b1bf897ddadb3cc4b"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-25T00:15:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Atlanta Falcons",
+    "source_event_id": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "e5fbd3b3953b896b1bf897ddadb3cc4b"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-25T00:15:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Atlanta Falcons",
+      "source_event_id": "e5fbd3b3953b896b1bf897ddadb3cc4b",
+      "source_participants": [
+        "Green Bay Packers",
+        "Atlanta Falcons"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.2742268041237113402061855670103092783505",
+    "original_value": [
+      {
+        "name": "Atlanta Falcons",
+        "price": "3.52"
+      },
+      {
+        "name": "Green Bay Packers",
+        "price": "1.33"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.035970608339029391660970608339029391661",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Atlanta Falcons",
+          "price": "3.52"
+        },
+        {
+          "name": "Green Bay Packers",
+          "price": "1.33"
+        }
+      ]
+    },
+    "id": "2c068361c63227cbfa2d0cb3691c0242e73927f65300075a189b3ec3dce3739a"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "0339a0e41bcee12820eb3e64bb5fadb4"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Miami Dolphins",
+    "source_event_id": "0339a0e41bcee12820eb3e64bb5fadb4",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "0339a0e41bcee12820eb3e64bb5fadb4"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Miami Dolphins",
+      "source_event_id": "0339a0e41bcee12820eb3e64bb5fadb4",
+      "source_participants": [
+        "Miami Dolphins",
+        "Kansas City Chiefs"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.1647564469914040114613180515759312320917",
+    "original_value": [
+      {
+        "name": "Kansas City Chiefs",
+        "price": "1.15"
+      },
+      {
+        "name": "Miami Dolphins",
+        "price": "5.83"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.041091804012230591393839958237004996644",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Kansas City Chiefs",
+          "price": "1.15"
+        },
+        {
+          "name": "Miami Dolphins",
+          "price": "5.83"
+        }
+      ]
+    },
+    "id": "79fc32b6a0aaa9358ef7f1586d30a71051ae01fbd64e2a593e8a1debe4a14cac"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "0339a0e41bcee12820eb3e64bb5fadb4"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Kansas City Chiefs",
+    "source_event_id": "0339a0e41bcee12820eb3e64bb5fadb4",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "0339a0e41bcee12820eb3e64bb5fadb4"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Kansas City Chiefs",
+      "source_event_id": "0339a0e41bcee12820eb3e64bb5fadb4",
+      "source_participants": [
+        "Miami Dolphins",
+        "Kansas City Chiefs"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.8352435530085959885386819484240687679084",
+    "original_value": [
+      {
+        "name": "Kansas City Chiefs",
+        "price": "1.15"
+      },
+      {
+        "name": "Miami Dolphins",
+        "price": "5.83"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.041091804012230591393839958237004996644",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Kansas City Chiefs",
+          "price": "1.15"
+        },
+        {
+          "name": "Miami Dolphins",
+          "price": "5.83"
+        }
+      ]
+    },
+    "id": "c969b20bd9842be68733e9257f221fb68ea7b1dc678b246d4900423cd94a6240"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "07f552badfa8a565d1be22123713e4da"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Detroit Lions",
+    "source_event_id": "07f552badfa8a565d1be22123713e4da",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "07f552badfa8a565d1be22123713e4da"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Detroit Lions",
+      "source_event_id": "07f552badfa8a565d1be22123713e4da",
+      "source_participants": [
+        "Detroit Lions",
+        "New York Jets"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.7190775681341719077568134171907756813415",
+    "original_value": [
+      {
+        "name": "Detroit Lions",
+        "price": "1.34"
+      },
+      {
+        "name": "New York Jets",
+        "price": "3.43"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.037813846220791088290326791697489230234",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Detroit Lions",
+          "price": "1.34"
+        },
+        {
+          "name": "New York Jets",
+          "price": "3.43"
+        }
+      ]
+    },
+    "id": "690616633037efed072fc6f1be2804e5e1e8027e2d3963c1332d47ad0418885a"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "07f552badfa8a565d1be22123713e4da"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "New York Jets",
+    "source_event_id": "07f552badfa8a565d1be22123713e4da",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "07f552badfa8a565d1be22123713e4da"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "New York Jets",
+      "source_event_id": "07f552badfa8a565d1be22123713e4da",
+      "source_participants": [
+        "Detroit Lions",
+        "New York Jets"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.2809224318658280922431865828092243186582",
+    "original_value": [
+      {
+        "name": "Detroit Lions",
+        "price": "1.34"
+      },
+      {
+        "name": "New York Jets",
+        "price": "3.43"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.037813846220791088290326791697489230234",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Detroit Lions",
+          "price": "1.34"
+        },
+        {
+          "name": "New York Jets",
+          "price": "3.43"
+        }
+      ]
+    },
+    "id": "5a0374dd432469b04084fbe052c784075aea235083591c640e1d47f2d952b163"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "17a730b7d399feeab6a78c30767c29d2"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Indianapolis Colts",
+    "source_event_id": "17a730b7d399feeab6a78c30767c29d2",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "17a730b7d399feeab6a78c30767c29d2"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Indianapolis Colts",
+      "source_event_id": "17a730b7d399feeab6a78c30767c29d2",
+      "source_participants": [
+        "Indianapolis Colts",
+        "Houston Texans"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.4079601990049751243781094527363184079603",
+    "original_value": [
+      {
+        "name": "Houston Texans",
+        "price": "1.64"
+      },
+      {
+        "name": "Indianapolis Colts",
+        "price": "2.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029924164787866366058618569378971100635",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Houston Texans",
+          "price": "1.64"
+        },
+        {
+          "name": "Indianapolis Colts",
+          "price": "2.38"
+        }
+      ]
+    },
+    "id": "f1b2ae717a93642a6a80edaa2c255ef7ee308e5901df6513efd640eb39c8fad5"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "17a730b7d399feeab6a78c30767c29d2"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Houston Texans",
+    "source_event_id": "17a730b7d399feeab6a78c30767c29d2",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "17a730b7d399feeab6a78c30767c29d2"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Houston Texans",
+      "source_event_id": "17a730b7d399feeab6a78c30767c29d2",
+      "source_participants": [
+        "Indianapolis Colts",
+        "Houston Texans"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.5920398009950248756218905472636815920401",
+    "original_value": [
+      {
+        "name": "Houston Texans",
+        "price": "1.64"
+      },
+      {
+        "name": "Indianapolis Colts",
+        "price": "2.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029924164787866366058618569378971100635",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Houston Texans",
+          "price": "1.64"
+        },
+        {
+          "name": "Indianapolis Colts",
+          "price": "2.38"
+        }
+      ]
+    },
+    "id": "d42700893a294cbc64aee1482d9ca406d8e0840bbebf3966ef5325e57b74200b"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "1f3cfd315a24d1a7dd5859a8e6b88e18"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Jacksonville Jaguars",
+    "source_event_id": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "1f3cfd315a24d1a7dd5859a8e6b88e18"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Jacksonville Jaguars",
+      "source_event_id": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+      "source_participants": [
+        "Jacksonville Jaguars",
+        "New England Patriots"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.5920398009950248756218905472636815920401",
+    "original_value": [
+      {
+        "name": "Jacksonville Jaguars",
+        "price": "1.64"
+      },
+      {
+        "name": "New England Patriots",
+        "price": "2.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029924164787866366058618569378971100635",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Jacksonville Jaguars",
+          "price": "1.64"
+        },
+        {
+          "name": "New England Patriots",
+          "price": "2.38"
+        }
+      ]
+    },
+    "id": "e2adfa8ca57d73fbff7489fd480050143e1e155a40b032e1833388f588c8438e"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "1f3cfd315a24d1a7dd5859a8e6b88e18"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "New England Patriots",
+    "source_event_id": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "1f3cfd315a24d1a7dd5859a8e6b88e18"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "New England Patriots",
+      "source_event_id": "1f3cfd315a24d1a7dd5859a8e6b88e18",
+      "source_participants": [
+        "Jacksonville Jaguars",
+        "New England Patriots"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.4079601990049751243781094527363184079603",
+    "original_value": [
+      {
+        "name": "Jacksonville Jaguars",
+        "price": "1.64"
+      },
+      {
+        "name": "New England Patriots",
+        "price": "2.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029924164787866366058618569378971100635",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Jacksonville Jaguars",
+          "price": "1.64"
+        },
+        {
+          "name": "New England Patriots",
+          "price": "2.38"
+        }
+      ]
+    },
+    "id": "12f01cd67c949a2e176bc980560aa37db03d4b73e04a4d9c4e8980e196ee9b56"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "2a529c108305ffa049d8b6cfdbaa4d36"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Washington Commanders",
+    "source_event_id": "2a529c108305ffa049d8b6cfdbaa4d36",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "2a529c108305ffa049d8b6cfdbaa4d36"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Washington Commanders",
+      "source_event_id": "2a529c108305ffa049d8b6cfdbaa4d36",
+      "source_participants": [
+        "Washington Commanders",
+        "Seattle Seahawks"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.2854122621564482029598308668076109936576",
+    "original_value": [
+      {
+        "name": "Seattle Seahawks",
+        "price": "1.35"
+      },
+      {
+        "name": "Washington Commanders",
+        "price": "3.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.036598728906421214113521805829498137190",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Seattle Seahawks",
+          "price": "1.35"
+        },
+        {
+          "name": "Washington Commanders",
+          "price": "3.38"
+        }
+      ]
+    },
+    "id": "3bc07bacb632c285467f32aba9ed6aa32c079972d4011aeeda66fa404c436310"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "2a529c108305ffa049d8b6cfdbaa4d36"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Seattle Seahawks",
+    "source_event_id": "2a529c108305ffa049d8b6cfdbaa4d36",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "2a529c108305ffa049d8b6cfdbaa4d36"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Seattle Seahawks",
+      "source_event_id": "2a529c108305ffa049d8b6cfdbaa4d36",
+      "source_participants": [
+        "Washington Commanders",
+        "Seattle Seahawks"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.7145877378435517970401691331923890063428",
+    "original_value": [
+      {
+        "name": "Seattle Seahawks",
+        "price": "1.35"
+      },
+      {
+        "name": "Washington Commanders",
+        "price": "3.38"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.036598728906421214113521805829498137190",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Seattle Seahawks",
+          "price": "1.35"
+        },
+        {
+          "name": "Washington Commanders",
+          "price": "3.38"
+        }
+      ]
+    },
+    "id": "18d2939c715cfed5e9bf05fb4c1c66d59dd810f0c8a42ac9d1f7c1df4165bb99"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "613b8cd3a5fab58f7be4e3fd6f76223e"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Cleveland Browns",
+    "source_event_id": "613b8cd3a5fab58f7be4e3fd6f76223e",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "613b8cd3a5fab58f7be4e3fd6f76223e"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Cleveland Browns",
+      "source_event_id": "613b8cd3a5fab58f7be4e3fd6f76223e",
+      "source_participants": [
+        "Cleveland Browns",
+        "Carolina Panthers"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.4185463659147869674185463659147869674188",
+    "original_value": [
+      {
+        "name": "Carolina Panthers",
+        "price": "1.67"
+      },
+      {
+        "name": "Cleveland Browns",
+        "price": "2.32"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029836877968201527978525707206277100970",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Carolina Panthers",
+          "price": "1.67"
+        },
+        {
+          "name": "Cleveland Browns",
+          "price": "2.32"
+        }
+      ]
+    },
+    "id": "42ed6b2c7321e2244edf741247bc2d43ba63c8d8dcf9e54063adee612a3c7faf"
+  },
+  {
+    "schema_version": "b4-reference-1",
+    "role": "bookmaker_reference",
+    "provider_id": "the_odds_api",
+    "origin_id": "pinnacle",
+    "market_identity": {
+      "version": 1,
+      "event": [
+        "the_odds_api",
+        "613b8cd3a5fab58f7be4e3fd6f76223e"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": null,
+      "scheduled_start": "2026-09-27T17:00:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "subject": null,
+      "outcome_set": null,
+      "rules": "pinnacle-h2h-settlement-unverified",
+      "category": null,
+      "horizon": null
+    },
+    "participant": "Carolina Panthers",
+    "source_event_id": "613b8cd3a5fab58f7be4e3fd6f76223e",
+    "binding": {
+      "market_identity": {
+        "version": 1,
+        "event": [
+          "the_odds_api",
+          "613b8cd3a5fab58f7be4e3fd6f76223e"
+        ],
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": null,
+        "scheduled_start": "2026-09-27T17:00:00Z",
+        "family": "moneyline",
+        "period": "full_game",
+        "line": null,
+        "subject": null,
+        "outcome_set": null,
+        "rules": "pinnacle-h2h-settlement-unverified",
+        "category": null,
+        "horizon": null
+      },
+      "participant": "Carolina Panthers",
+      "source_event_id": "613b8cd3a5fab58f7be4e3fd6f76223e",
+      "source_participants": [
+        "Cleveland Browns",
+        "Carolina Panthers"
+      ]
+    },
+    "source_at": "2026-09-21T16:01:17Z",
+    "model_as_of": "2026-09-21T16:01:17Z",
+    "model_version": "proportional-no-vig-1",
+    "received_at": "2026-09-21T16:01:45.028502+00:00",
+    "delay_seconds": null,
+    "delay_basis": "Public Pinnacle website odds may be delayed; duration unknown",
+    "dependency": "Pinnacle betting-market input; not independent of betting markets",
+    "independence": "not_established",
+    "receipt": {
+      "body": "[{\"id\":\"32367f882fac1a0c20a6335619922025\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-22T00:15:00Z\",\"home_team\":\"Los Angeles Rams\",\"away_team\":\"New York Giants\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Los Angeles Rams\",\"price\":1.31},{\"name\":\"New York Giants\",\"price\":3.76}]}]}]},{\"id\":\"e5fbd3b3953b896b1bf897ddadb3cc4b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-25T00:15:00Z\",\"home_team\":\"Green Bay Packers\",\"away_team\":\"Atlanta Falcons\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Atlanta Falcons\",\"price\":3.52},{\"name\":\"Green Bay Packers\",\"price\":1.33}]}]}]},{\"id\":\"b225458a282e140c44c45651255f2f6c\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Buffalo Bills\",\"away_team\":\"Los Angeles Chargers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Buffalo Bills\",\"price\":1.31},{\"name\":\"Los Angeles Chargers\",\"price\":3.65}]}]}]},{\"id\":\"613b8cd3a5fab58f7be4e3fd6f76223e\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Cleveland Browns\",\"away_team\":\"Carolina Panthers\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Carolina Panthers\",\"price\":1.67},{\"name\":\"Cleveland Browns\",\"price\":2.32}]}]}]},{\"id\":\"71123be049587b6facce3a20c53e5d09\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Pittsburgh Steelers\",\"away_team\":\"Cincinnati Bengals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Cincinnati Bengals\",\"price\":1.54},{\"name\":\"Pittsburgh Steelers\",\"price\":2.63}]}]}]},{\"id\":\"07f552badfa8a565d1be22123713e4da\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Detroit Lions\",\"away_team\":\"New York Jets\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Detroit Lions\",\"price\":1.34},{\"name\":\"New York Jets\",\"price\":3.43}]}]}]},{\"id\":\"17a730b7d399feeab6a78c30767c29d2\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Indianapolis Colts\",\"away_team\":\"Houston Texans\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Houston Texans\",\"price\":1.64},{\"name\":\"Indianapolis Colts\",\"price\":2.38}]}]}]},{\"id\":\"1f3cfd315a24d1a7dd5859a8e6b88e18\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Jacksonville Jaguars\",\"away_team\":\"New England Patriots\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Jacksonville Jaguars\",\"price\":1.64},{\"name\":\"New England Patriots\",\"price\":2.38}]}]}]},{\"id\":\"0339a0e41bcee12820eb3e64bb5fadb4\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Miami Dolphins\",\"away_team\":\"Kansas City Chiefs\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Kansas City Chiefs\",\"price\":1.15},{\"name\":\"Miami Dolphins\",\"price\":5.83}]}]}]},{\"id\":\"555afd4a27aaa392662881cffa8f2eef\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"New York Giants\",\"away_team\":\"Tennessee Titans\",\"bookmakers\":[]},{\"id\":\"2a529c108305ffa049d8b6cfdbaa4d36\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T17:00:00Z\",\"home_team\":\"Washington Commanders\",\"away_team\":\"Seattle Seahawks\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Seattle Seahawks\",\"price\":1.35},{\"name\":\"Washington Commanders\",\"price\":3.38}]}]}]},{\"id\":\"9d2b09e0f9b6dd5ce0d985894f4f98fa\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"San Francisco 49ers\",\"away_team\":\"Arizona Cardinals\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Arizona Cardinals\",\"price\":4.05},{\"name\":\"San Francisco 49ers\",\"price\":1.27}]}]}]},{\"id\":\"f1724dead3eab61546033032fc782375\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:05:00Z\",\"home_team\":\"Tampa Bay Buccaneers\",\"away_team\":\"Minnesota Vikings\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Minnesota Vikings\",\"price\":1.83},{\"name\":\"Tampa Bay Buccaneers\",\"price\":2.08}]}]}]},{\"id\":\"84cfca14efc21363fd605508404cf1ff\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"Dallas Cowboys\",\"away_team\":\"Baltimore Ravens\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Baltimore Ravens\",\"price\":1.65},{\"name\":\"Dallas Cowboys\",\"price\":2.35}]}]}]},{\"id\":\"2e523fcb0497aa689473e290eb2b97de\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-27T20:25:00Z\",\"home_team\":\"New Orleans Saints\",\"away_team\":\"Las Vegas Raiders\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Las Vegas Raiders\",\"price\":2.56},{\"name\":\"New Orleans Saints\",\"price\":1.56}]}]}]},{\"id\":\"3bfd8bfb4b8e9a365a0877879b73b16b\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-28T00:20:00Z\",\"home_team\":\"Denver Broncos\",\"away_team\":\"Los Angeles Rams\",\"bookmakers\":[]},{\"id\":\"47dc7baa254659f3beb2ed2b38c207b6\",\"sport_key\":\"americanfootball_nfl\",\"sport_title\":\"NFL\",\"commence_time\":\"2026-09-29T00:15:00Z\",\"home_team\":\"Chicago Bears\",\"away_team\":\"Philadelphia Eagles\",\"bookmakers\":[{\"key\":\"pinnacle\",\"title\":\"Pinnacle\",\"last_update\":\"2026-09-21T16:01:17Z\",\"markets\":[{\"key\":\"h2h\",\"last_update\":\"2026-09-21T16:01:17Z\",\"outcomes\":[{\"name\":\"Chicago Bears\",\"price\":2.63},{\"name\":\"Philadelphia Eagles\",\"price\":1.55}]}]}]}]\n",
+      "provider_id": "the_odds_api",
+      "url": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+      "received_at": "2026-09-21T16:01:45.028502+00:00",
+      "evidence_mode": "observation",
+      "status": 200,
+      "headers": {
+        "date": "Mon, 21 Sep 2026 16:01:45 GMT",
+        "x-requests-remaining": "499",
+        "x-requests-last": "1",
+        "x-requests-used": "1"
+      },
+      "id": "19c3af2993d1cbf6e33ab5c76f0cb64d7017e696ca92ca9645536a64461c966d"
+    },
+    "provenance": "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds",
+    "evidence_mode": "observation",
+    "exceptional_probabilities": null,
+    "unconditional_ev": null,
+    "refresh_after_seconds": 3600,
+    "value": "0.5814536340852130325814536340852130325817",
+    "original_value": [
+      {
+        "name": "Carolina Panthers",
+        "price": "1.67"
+      },
+      {
+        "name": "Cleveland Browns",
+        "price": "2.32"
+      }
+    ],
+    "value_kind": "probability",
+    "convention": "decimal_odds",
+    "conversion_method": "proportional no-vig: inverse odds / sum of both inverse odds (Decimal precision 40)",
+    "state": "available",
+    "reason": null,
+    "implied_probability_sum": "1.029836877968201527978525707206277100970",
+    "native_market": {
+      "key": "h2h",
+      "last_update": "2026-09-21T16:01:17Z",
+      "outcomes": [
+        {
+          "name": "Carolina Panthers",
+          "price": "1.67"
+        },
+        {
+          "name": "Cleveland Browns",
+          "price": "2.32"
+        }
+      ]
+    },
+    "id": "8d622ee92988d5442bb6383d798412af50dcb9974360a9fb3a5df544539205b6"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "preserved": {
+    "entities": true,
+    "aliases": true,
+    "native_mappings": true
+  },
+  "note": "All preexisting registry entities, aliases and native mapping rows remain byte-value equal; registry version advances, retained IDs and evidence untouched"
+}

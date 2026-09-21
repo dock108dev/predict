@@ -1,0 +1,8 @@
+{
+  "path": "evidence/product-sessions/pinnacle-nfl-retained-20260921",
+  "source": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/b4-pinnacle-sample-20260921/sessions/pinnacle-nfl-retained-20260921",
+  "exact_snapshot_match": true,
+  "cutoff": "18-a90b20920bad25c89ba4e1b271bc72b09b708fa27b59ef23e8c4aaffb4c8a0ca",
+  "references": 16,
+  "note": "New immutable package copied byte-for-byte into the ordinary product history discovery root. No beta process restart or collection."
+}
