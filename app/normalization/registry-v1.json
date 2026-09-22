@@ -4158,6 +4158,2106 @@
         "NHL:NYR"
       ],
       "text": "New York"
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; B5 reviewed local shorthand 2026-09-21; not provider ID",
+      "targets": [
+        "MLB:LAD"
+      ],
+      "text": "LA Dodgers"
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; B5 reviewed local shorthand 2026-09-21; not provider ID",
+      "targets": [
+        "MLB:LAA"
+      ],
+      "text": "LA Angels"
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA"
+      ],
+      "text": "NBA",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA"
+      ],
+      "text": "National Basketball Association",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ATL"
+      ],
+      "text": "ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ATL"
+      ],
+      "text": "NBA:ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ATL"
+      ],
+      "text": "Atlanta Hawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ATL"
+      ],
+      "text": "Atlanta",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ATL"
+      ],
+      "text": "Hawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BOS"
+      ],
+      "text": "BOS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BOS"
+      ],
+      "text": "NBA:BOS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BOS"
+      ],
+      "text": "Boston Celtics",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BOS"
+      ],
+      "text": "Boston",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BOS"
+      ],
+      "text": "Celtics",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BKN"
+      ],
+      "text": "BKN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BKN"
+      ],
+      "text": "NBA:BKN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BKN"
+      ],
+      "text": "Brooklyn Nets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BKN"
+      ],
+      "text": "Brooklyn",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:BKN"
+      ],
+      "text": "Nets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHA"
+      ],
+      "text": "CHA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHA"
+      ],
+      "text": "NBA:CHA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHA"
+      ],
+      "text": "Charlotte Hornets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHA"
+      ],
+      "text": "Charlotte",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHA"
+      ],
+      "text": "Hornets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHI"
+      ],
+      "text": "CHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHI"
+      ],
+      "text": "NBA:CHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHI"
+      ],
+      "text": "Chicago Bulls",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHI"
+      ],
+      "text": "Chicago",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CHI"
+      ],
+      "text": "Bulls",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CLE"
+      ],
+      "text": "CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CLE"
+      ],
+      "text": "NBA:CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CLE"
+      ],
+      "text": "Cleveland Cavaliers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CLE"
+      ],
+      "text": "Cleveland",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:CLE"
+      ],
+      "text": "Cavaliers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DAL"
+      ],
+      "text": "DAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DAL"
+      ],
+      "text": "NBA:DAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DAL"
+      ],
+      "text": "Dallas Mavericks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DAL"
+      ],
+      "text": "Dallas",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DAL"
+      ],
+      "text": "Mavericks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DEN"
+      ],
+      "text": "DEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DEN"
+      ],
+      "text": "NBA:DEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DEN"
+      ],
+      "text": "Denver Nuggets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DEN"
+      ],
+      "text": "Denver",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DEN"
+      ],
+      "text": "Nuggets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DET"
+      ],
+      "text": "DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DET"
+      ],
+      "text": "NBA:DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DET"
+      ],
+      "text": "Detroit Pistons",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DET"
+      ],
+      "text": "Detroit",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:DET"
+      ],
+      "text": "Pistons",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:GSW"
+      ],
+      "text": "GSW",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:GSW"
+      ],
+      "text": "NBA:GSW",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:GSW"
+      ],
+      "text": "Golden State Warriors",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:GSW"
+      ],
+      "text": "Golden State",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:GSW"
+      ],
+      "text": "Warriors",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:HOU"
+      ],
+      "text": "HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:HOU"
+      ],
+      "text": "NBA:HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:HOU"
+      ],
+      "text": "Houston Rockets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:HOU"
+      ],
+      "text": "Houston",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:HOU"
+      ],
+      "text": "Rockets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:IND"
+      ],
+      "text": "IND",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:IND"
+      ],
+      "text": "NBA:IND",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:IND"
+      ],
+      "text": "Indiana Pacers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:IND"
+      ],
+      "text": "Indiana",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:IND"
+      ],
+      "text": "Pacers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC"
+      ],
+      "text": "LAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC"
+      ],
+      "text": "NBA:LAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC"
+      ],
+      "text": "Los Angeles Clippers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC",
+        "NBA:LAL"
+      ],
+      "text": "Los Angeles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC"
+      ],
+      "text": "Clippers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAC"
+      ],
+      "text": "LA Clippers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAL"
+      ],
+      "text": "LAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAL"
+      ],
+      "text": "NBA:LAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAL"
+      ],
+      "text": "Los Angeles Lakers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAL"
+      ],
+      "text": "Lakers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:LAL"
+      ],
+      "text": "LA Lakers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MEM"
+      ],
+      "text": "MEM",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MEM"
+      ],
+      "text": "NBA:MEM",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MEM"
+      ],
+      "text": "Memphis Grizzlies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MEM"
+      ],
+      "text": "Memphis",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MEM"
+      ],
+      "text": "Grizzlies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIA"
+      ],
+      "text": "MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIA"
+      ],
+      "text": "NBA:MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIA"
+      ],
+      "text": "Miami Heat",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIA"
+      ],
+      "text": "Miami",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIA"
+      ],
+      "text": "Heat",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIL"
+      ],
+      "text": "MIL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIL"
+      ],
+      "text": "NBA:MIL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIL"
+      ],
+      "text": "Milwaukee Bucks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIL"
+      ],
+      "text": "Milwaukee",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIL"
+      ],
+      "text": "Bucks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIN"
+      ],
+      "text": "MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIN"
+      ],
+      "text": "NBA:MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIN"
+      ],
+      "text": "Minnesota Timberwolves",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIN"
+      ],
+      "text": "Minnesota",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:MIN"
+      ],
+      "text": "Timberwolves",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NOP"
+      ],
+      "text": "NOP",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NOP"
+      ],
+      "text": "NBA:NOP",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NOP"
+      ],
+      "text": "New Orleans Pelicans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NOP"
+      ],
+      "text": "New Orleans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NOP"
+      ],
+      "text": "Pelicans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NYK"
+      ],
+      "text": "NYK",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NYK"
+      ],
+      "text": "NBA:NYK",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NYK"
+      ],
+      "text": "New York Knicks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NYK"
+      ],
+      "text": "New York",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:NYK"
+      ],
+      "text": "Knicks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:OKC"
+      ],
+      "text": "OKC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:OKC"
+      ],
+      "text": "NBA:OKC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:OKC"
+      ],
+      "text": "Oklahoma City Thunder",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:OKC"
+      ],
+      "text": "Oklahoma City",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:OKC"
+      ],
+      "text": "Thunder",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ORL"
+      ],
+      "text": "ORL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ORL"
+      ],
+      "text": "NBA:ORL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ORL"
+      ],
+      "text": "Orlando Magic",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ORL"
+      ],
+      "text": "Orlando",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:ORL"
+      ],
+      "text": "Magic",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "NBA:PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "Philadelphia 76ers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "Philadelphia",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "76ers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "Sixers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHI"
+      ],
+      "text": "Philadelphia Sixers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHX"
+      ],
+      "text": "PHX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHX"
+      ],
+      "text": "NBA:PHX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHX"
+      ],
+      "text": "Phoenix Suns",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHX"
+      ],
+      "text": "Phoenix",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:PHX"
+      ],
+      "text": "Suns",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:POR"
+      ],
+      "text": "POR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:POR"
+      ],
+      "text": "NBA:POR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:POR"
+      ],
+      "text": "Portland Trail Blazers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:POR"
+      ],
+      "text": "Portland",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:POR"
+      ],
+      "text": "Trail Blazers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAC"
+      ],
+      "text": "SAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAC"
+      ],
+      "text": "NBA:SAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAC"
+      ],
+      "text": "Sacramento Kings",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAC"
+      ],
+      "text": "Sacramento",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAC"
+      ],
+      "text": "Kings",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAS"
+      ],
+      "text": "SAS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAS"
+      ],
+      "text": "NBA:SAS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAS"
+      ],
+      "text": "San Antonio Spurs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAS"
+      ],
+      "text": "San Antonio",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:SAS"
+      ],
+      "text": "Spurs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:TOR"
+      ],
+      "text": "TOR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:TOR"
+      ],
+      "text": "NBA:TOR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:TOR"
+      ],
+      "text": "Toronto Raptors",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:TOR"
+      ],
+      "text": "Toronto",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:TOR"
+      ],
+      "text": "Raptors",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:UTA"
+      ],
+      "text": "UTA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:UTA"
+      ],
+      "text": "NBA:UTA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:UTA"
+      ],
+      "text": "Utah Jazz",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:UTA"
+      ],
+      "text": "Utah",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:UTA"
+      ],
+      "text": "Jazz",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:WAS"
+      ],
+      "text": "WAS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:WAS"
+      ],
+      "text": "NBA:WAS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:WAS"
+      ],
+      "text": "Washington Wizards",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:WAS"
+      ],
+      "text": "Washington",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21",
+      "targets": [
+        "NBA:WAS"
+      ],
+      "text": "Wizards",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.ncaa.org/division-i/member-schools/",
+      "targets": [
+        "NCAAF"
+      ],
+      "text": "NCAAF",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.ncaa.org/division-i/member-schools/",
+      "targets": [
+        "NCAAF"
+      ],
+      "text": "NCAA Football",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.ncaa.org/division-i/member-schools/",
+      "targets": [
+        "NCAAF"
+      ],
+      "text": "NCAA Division I Football",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://rolltide.com/sports/football/; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:ALA"
+      ],
+      "text": "Alabama Crimson Tide",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://rolltide.com/sports/football/; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:ALA"
+      ],
+      "text": "NCAAF:ALA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://rolltide.com/sports/football/; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:ALA"
+      ],
+      "text": "Alabama",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://rolltide.com/sports/football/; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:ALA"
+      ],
+      "text": "University of Alabama",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://rolltide.com/sports/football/; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:ALA"
+      ],
+      "text": "ALA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:AAMU"
+      ],
+      "text": "Alabama A&M Bulldogs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:AAMU"
+      ],
+      "text": "NCAAF:AAMU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:AAMU"
+      ],
+      "text": "Alabama A&M",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:AAMU"
+      ],
+      "text": "Alabama A&M University",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:AAMU"
+      ],
+      "text": "AAMU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "Miami (FL) Hurricanes",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "NCAAF:MIAFL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "Miami (FL)",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "Miami FL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "Miami Hurricanes",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAFL"
+      ],
+      "text": "University of Miami",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami (OH) RedHawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "NCAAF:MIAOH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami (OH)",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami OH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami RedHawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami University",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:NDSU"
+      ],
+      "text": "North Dakota State Bison",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:NDSU"
+      ],
+      "text": "NCAAF:NDSU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:NDSU"
+      ],
+      "text": "North Dakota State",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:NDSU"
+      ],
+      "text": "North Dakota State University",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:NDSU"
+      ],
+      "text": "NDSU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gojacks.com/sports/football; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:SDAKST"
+      ],
+      "text": "South Dakota State Jackrabbits",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gojacks.com/sports/football; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:SDAKST"
+      ],
+      "text": "NCAAF:SDAKST",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gojacks.com/sports/football; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:SDAKST"
+      ],
+      "text": "South Dakota State",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "https://gojacks.com/sports/football; reviewed school-specific alias",
+      "targets": [
+        "NCAAF:SDAKST"
+      ],
+      "text": "South Dakota State University",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "source": "Explicit ambiguous school name; both official school sites",
+      "targets": [
+        "NCAAF:MIAFL",
+        "NCAAF:MIAOH"
+      ],
+      "text": "Miami",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "source": "Owner scope 2026-09-21: men Division I; https://www.ncaa.org/championships/playing-rules/mens-basketball-playing-rules/",
+      "targets": [
+        "NCAAB"
+      ],
+      "text": "NCAAB"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://rolltide.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:ALA"
+      ],
+      "text": "Alabama Crimson Tide"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://rolltide.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:ALA"
+      ],
+      "text": "Alabama"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://rolltide.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:ALA"
+      ],
+      "text": "University of Alabama"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://rolltide.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:ALA"
+      ],
+      "text": "ALA"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://aamusports.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:AAMU"
+      ],
+      "text": "Alabama A&M Bulldogs"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://aamusports.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:AAMU"
+      ],
+      "text": "Alabama A&M"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://aamusports.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:AAMU"
+      ],
+      "text": "Alabama A&M University"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://aamusports.com/sports/mens-basketball",
+      "targets": [
+        "NCAAB:M:D1:AAMU"
+      ],
+      "text": "AAMU"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamihurricanes.com/sports/mbball",
+      "targets": [
+        "NCAAB:M:D1:MIAFL"
+      ],
+      "text": "Miami (FL) Hurricanes"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamihurricanes.com/sports/mbball",
+      "targets": [
+        "NCAAB:M:D1:MIAFL"
+      ],
+      "text": "Miami (FL)"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamihurricanes.com/sports/mbball",
+      "targets": [
+        "NCAAB:M:D1:MIAFL"
+      ],
+      "text": "Miami FL"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamihurricanes.com/sports/mbball",
+      "targets": [
+        "NCAAB:M:D1:MIAFL"
+      ],
+      "text": "Miami Hurricanes"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamihurricanes.com/sports/mbball",
+      "targets": [
+        "NCAAB:M:D1:MIAFL"
+      ],
+      "text": "University of Miami"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster",
+      "targets": [
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami (OH) RedHawks"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster",
+      "targets": [
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami (OH)"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster",
+      "targets": [
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami OH"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster",
+      "targets": [
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami RedHawks"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster",
+      "targets": [
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami University"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAB",
+      "source": "Explicit school ambiguity; Miami FL and Miami OH athletics",
+      "targets": [
+        "NCAAB:M:D1:MIAFL",
+        "NCAAB:M:D1:MIAOH"
+      ],
+      "text": "Miami"
     }
   ],
   "entities": [
@@ -4836,6 +6936,386 @@
       "league": "NHL",
       "name": "Washington Capitals",
       "source": "https://www.nhl.com/info/teams/; B5 reviewed names 2026-09-21; shorthand is local, not provider ID"
+    },
+    {
+      "id": "NBA",
+      "kind": "league",
+      "name": "NBA",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:ATL",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Atlanta Hawks",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:BOS",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Boston Celtics",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:BKN",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Brooklyn Nets",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:CHA",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Charlotte Hornets",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:CHI",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Chicago Bulls",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:CLE",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Cleveland Cavaliers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:DAL",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Dallas Mavericks",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:DEN",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Denver Nuggets",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:DET",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Detroit Pistons",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:GSW",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Golden State Warriors",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:HOU",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Houston Rockets",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:IND",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Indiana Pacers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:LAC",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Los Angeles Clippers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:LAL",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Los Angeles Lakers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:MEM",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Memphis Grizzlies",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:MIA",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Miami Heat",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:MIL",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Milwaukee Bucks",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:MIN",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Minnesota Timberwolves",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:NOP",
+      "kind": "team",
+      "league": "NBA",
+      "name": "New Orleans Pelicans",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:NYK",
+      "kind": "team",
+      "league": "NBA",
+      "name": "New York Knicks",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:OKC",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Oklahoma City Thunder",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:ORL",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Orlando Magic",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:PHI",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Philadelphia 76ers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:PHX",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Phoenix Suns",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:POR",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Portland Trail Blazers",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:SAC",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Sacramento Kings",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:SAS",
+      "kind": "team",
+      "league": "NBA",
+      "name": "San Antonio Spurs",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:TOR",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Toronto Raptors",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:UTA",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Utah Jazz",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NBA:WAS",
+      "kind": "team",
+      "league": "NBA",
+      "name": "Washington Wizards",
+      "source": "https://www.nba.com/teams; reviewed explicit local shorthand 2026-09-21"
+    },
+    {
+      "id": "NCAAF",
+      "kind": "league",
+      "name": "NCAAF",
+      "source": "https://www.ncaa.org/division-i/member-schools/"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://rolltide.com/sports/football/",
+          "value": "FBS"
+        }
+      },
+      "id": "NCAAF:ALA",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "Alabama Crimson Tide",
+      "source": "https://rolltide.com/sports/football/"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx",
+          "value": "FCS"
+        }
+      },
+      "id": "NCAAF:AAMU",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "Alabama A&M Bulldogs",
+      "source": "https://aamusports.com/news/2026/8/27/football-alabama-am-begins-2026-season-on-national-stage.aspx"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule",
+          "value": "FBS"
+        }
+      },
+      "id": "NCAAF:MIAFL",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "Miami (FL) Hurricanes",
+      "source": "https://miamihurricanes.com/news/2026/01/26/hurricanes-release-2026-football-schedule"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced",
+          "value": "FBS"
+        }
+      },
+      "id": "NCAAF:MIAOH",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "Miami (OH) RedHawks",
+      "source": "https://miamiredhawks.com/news/2026/3/24/2026-football-schedule-announced"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference",
+          "value": "FBS"
+        }
+      },
+      "id": "NCAAF:NDSU",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "North Dakota State Bison",
+      "source": "https://gobison.com/news/2026/2/9/ndsu-football-joining-mountain-west-conference"
+    },
+    {
+      "football_subdivisions": {
+        "2026": {
+          "reviewed_at": "2026-09-21",
+          "source": "https://gojacks.com/sports/football",
+          "value": "FCS"
+        }
+      },
+      "id": "NCAAF:SDAKST",
+      "kind": "team",
+      "league": "NCAAF",
+      "name": "South Dakota State Jackrabbits",
+      "source": "https://gojacks.com/sports/football"
+    },
+    {
+      "id": "NCAAB",
+      "kind": "league",
+      "name": "NCAAB",
+      "source": "Owner scope 2026-09-21: men Division I; https://www.ncaa.org/championships/playing-rules/mens-basketball-playing-rules/"
+    },
+    {
+      "basketball_memberships": {
+        "2026-2027": {
+          "competition_id": "NCAA:M:D1",
+          "division": "I",
+          "reviewed_at": "2026-09-21",
+          "source": "https://web3.ncaa.org/directory/orgDetail?id=8"
+        }
+      },
+      "gender": "men",
+      "id": "NCAAB:M:D1:ALA",
+      "kind": "team",
+      "league": "NCAAB",
+      "name": "Alabama Crimson Tide",
+      "school_id": "school:ALA",
+      "source": "https://rolltide.com/sports/mens-basketball"
+    },
+    {
+      "basketball_memberships": {
+        "2026-2027": {
+          "competition_id": "NCAA:M:D1",
+          "division": "I",
+          "reviewed_at": "2026-09-21",
+          "source": "https://web3.ncaa.org/directory/orgDetail?id=6"
+        }
+      },
+      "gender": "men",
+      "id": "NCAAB:M:D1:AAMU",
+      "kind": "team",
+      "league": "NCAAB",
+      "name": "Alabama A&M Bulldogs",
+      "school_id": "school:AAMU",
+      "source": "https://aamusports.com/sports/mens-basketball"
+    },
+    {
+      "basketball_memberships": {
+        "2026-2027": {
+          "competition_id": "NCAA:M:D1",
+          "division": "I",
+          "reviewed_at": "2026-09-21",
+          "source": "https://web3.ncaa.org/directory/orgDetail?id=415"
+        }
+      },
+      "gender": "men",
+      "id": "NCAAB:M:D1:MIAFL",
+      "kind": "team",
+      "league": "NCAAB",
+      "name": "Miami (FL) Hurricanes",
+      "school_id": "school:MIAFL",
+      "source": "https://miamihurricanes.com/sports/mbball"
+    },
+    {
+      "basketball_memberships": {
+        "2026-2027": {
+          "competition_id": "NCAA:M:D1",
+          "division": "I",
+          "reviewed_at": "2026-09-21",
+          "source": "https://web3.ncaa.org/directory/orgDetail?id=414"
+        }
+      },
+      "gender": "men",
+      "id": "NCAAB:M:D1:MIAOH",
+      "kind": "team",
+      "league": "NCAAB",
+      "name": "Miami (OH) RedHawks",
+      "school_id": "school:MIAOH",
+      "source": "https://miamiredhawks.com/sports/mens-basketball/roster"
     }
   ],
   "native_mappings": [
@@ -5540,6 +8020,14 @@
       "source": "evidence/slice-3/sandbox-qualification-20260912/catalog/sandbox-20260912T005709Z/market-001.json#/data/tournaments/185",
       "target": "NHL",
       "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "league",
+      "native_id": "132",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/catalog/sandbox-20260912T005709Z/market-001.json",
+      "target": "NBA",
+      "venue": "prophetx"
     }
   ],
   "planned_leagues": [
@@ -5551,5 +8039,5 @@
   ],
   "schema_version": 1,
   "verified_at": "2026-09-21",
-  "version": "2026-09-21.nhl-1"
+  "version": "2026-09-21.nhl-mlb-nba-ncaaf-ncaab-b5"
 }

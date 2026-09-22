@@ -95,7 +95,10 @@ def observation(normalized: NormalizedEvent, *, artifact=None, schedule_status=N
     key = packed([*scope, e.raw.ref.venue.value, e.raw.ref.event_id])
     ids = sorted(p.resolution.canonical_id for p in normalized.participants
                  if p.resolution.status == 'resolved' and p.resolution.canonical_id)
-    valid = (normalized.league.status == 'resolved' and len(ids) == 2
+    # Generic enrichment has no reviewed college gender/division/game fields.
+    # NCAAB equivalence is established only by the ordinary bounded review path.
+    valid = (normalized.league.canonical_id != 'NCAAB'
+             and normalized.league.status == 'resolved' and len(ids) == 2
              and len(normalized.participants) == 2 and len(set(ids)) == 2
              and all(i.startswith(normalized.league.canonical_id + ':') for i in ids))
     roles = {p.resolution.canonical_id: p.role for p in normalized.participants

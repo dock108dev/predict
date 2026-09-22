@@ -1,6 +1,8 @@
 # B1 — working source, sport and market coverage matrix
 
-**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [Next independent work: B4](b4-independent-handoff.md).
+**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
+
+**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [Next independent work: shared B5 score lines](b5-score-lines-next.md).
 
 Assessment completed September 20, 2026. **B1 COMPLETE; beta NOT READY FOR SIGNOFF.** Companion: [B2 implementation handoff](b2-product-integration-handoff.md). This is an assessment of the current working tree, retained evidence and bounded public official-source research, not a new qualification. No credentials, accounts or authenticated market data were accessed. Provider availability below is not an entitlement claim.
 
@@ -23,16 +25,16 @@ Generic parsers and type names do not prove coverage. `MarketType` currently rec
 | Source | Sport | Full-game winner | Full-game spread | Full-game total | First half W/S/T | Second half W/S/T | Other period W/S/T | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
 | Kalshi K | NFL | P+C | U | U | U | U | U | U | B3 K discovery; B5 native family/period rules |
-| Kalshi K | NBA | U | U | U | U | U | U | U | B3 catalog; B5 NBA identities and definitions |
-| Kalshi K | MLB | F | U | U | N/A | N/A | U, innings | U | B3 MLB sample; B5 innings/run-line rules |
+| Kalshi K | NBA | F, reviewed engineering | U | U | U | U | U | U | B3 actual NBA listing/fees; B5 winner engineering complete, other families open |
+| Kalshi K | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual listing/fees; B5 MLB winner engineering complete, innings/run-line open |
 | Kalshi K | NHL | U | U | U | N/A | N/A | U, periods | U | B3 catalog; B5 regulation/OT and periods |
-| Kalshi K | NCAAF | U | U | U | U | U | U | U | B3 catalog; B5 competition/season mappings |
+| Kalshi K | NCAAF | F, bounded reviewed engineering | U | U | U | U | U | U | B3 actual listing/rules/fees; B5 remaining schools/seasons |
 | Kalshi K | NCAAB | U | U | U | U | U | U | U | B3 catalog; B5 competition and period choice |
 | Polymarket US P | NFL | P+C legacy Long; B3 Short F | U | U | U | U | U | D example only | B3 Short/discovery; B5 families/rules |
-| Polymarket US P | NBA | U | U | U | U | U | U | U | B3 US catalog; B5 identities/families |
-| Polymarket US P | MLB | U | U | U | N/A | N/A | U, innings | U | B3 US catalog; B5 innings/run-line rules |
+| Polymarket US P | NBA | F, reviewed engineering | U | U | U | U | U | U | B3 actual US NBA listing/terms; B5 winner engineering complete, other families open |
+| Polymarket US P | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual US MLB listing/terms; B5 winner engineering complete, innings/run-line open |
 | Polymarket US P | NHL | U | U | U | N/A | N/A | U, periods | U | B3 US catalog; B5 regulation/OT and periods |
-| Polymarket US P | NCAAF | U | U | U | U | U | U | U | B3 US catalog; B5 competition mappings |
+| Polymarket US P | NCAAF | F, bounded reviewed engineering | U | U | U | U | U | U | B3 actual US college listing/terms; B5 remaining schools/seasons |
 | Polymarket US P | NCAAB | U | U | U | U | U | U | U | B3 US catalog; B5 competition and period choice |
 | Novig N | NFL | F+D | D | D | D | U | U | D | B3 provisioning/wire; B5 family normalization |
 | Novig N | NBA | D | D | D | D | U | U | D | B3 discovery extension; B5 families |
@@ -78,11 +80,11 @@ B4 independent engineering is now offline verified: both roles use retained-inpu
 | Reference type | Sport | Full-game winner | Spread | Total | First half W/S/T | Second half W/S/T | Other period | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
 | Independent model | NFL | F B4 model path / U independence + acquisition | U | U | U | U | U | M / U acquisition | B4 FPI candidate independence/output check; B5 rules |
-| Independent model | NBA | M / U acquisition | U | U | U | U | U | M / U acquisition | B4 BPI candidate dated outputs; B5 rules |
+| Independent model | NBA | F interface / U actual game forecast | U | U | U | U | U | M / U acquisition | B4 actual dated game-win output/independence; B5 other families |
 | Independent model | MLB | U game forecast | U | U | N/A | N/A | U innings | M FanGraphs | B4 forecasts/acquisition; B5 categories |
-| Independent model | NHL | M MoneyPuck | U | U | N/A | N/A | U periods | M MoneyPuck | B4 dated probabilities/acquisition; B5 OT/categories |
-| Independent model | NCAAF | M / U acquisition | U | U | U | U | U | M / U acquisition | B4 FPI output/independence check; B5 competition |
-| Independent model | NCAAB | M / U acquisition | U score-margin applicability | U | U | U | U | U current output | B4 KenPom deferred; BPI output/dependency unresolved; B5 men/women/division scope |
+| Independent model | NHL | MISSING | U | U | N/A | N/A | U periods | MISSING | Analytics deferred; no MoneyPuck acquisition queued |
+| Independent model | NCAAF | F interface / U actual game forecast | U | U | U | U | U | M / U acquisition | B4 actual game output/independence; B5 remaining scope |
+| Independent model | NCAAB | F interface / U actual game forecast | U score-margin applicability | U | U | U | U | U current output | B4 KenPom deferred; BPI output/dependency unresolved; B5 men’s Division I selected; four-team roster only |
 | Free delayed Pinnacle | NFL | Actual sample: 15 populated events; 16 extracted sides in saved Details; EV join outstanding | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U selected competitions | B4 observed free h2h access, delay unknown; B5 event/settlement mapping |
 | Free delayed Pinnacle | NBA | D-route | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U | B4 acquisition; B5 mapping |
 | Free delayed Pinnacle | MLB | D-route | D-route | D-route | N/A | N/A | U innings | U | B4 acquisition; B5 innings/run-line mapping |
@@ -97,7 +99,7 @@ B4 independent engineering is now offline verified: both roles use retained-inpu
 | ESPN FPI/BPI | [Analytics index](https://www.espn.com/analytics/) lists NFL/NCAAF FPI and NBA/college BPI. | Acquisition, current dated outputs, market-specific probabilities and independence need verification; no totals/halves inferred. | First football/basketball candidates, conditional on usable outputs and independence; retain model date/version and exact competition. |
 | ESPN NFL FPI dependency caveat | [2025 methodology](https://www.espn.com/nfl/story/_/id/45272576/nfl-football-power-index-2025-season-projections-super-bowl-chances-playoff-draft) uses preseason betting-market inputs. | Statistical model does not necessarily mean bookmaker-independent. | Record dependency; do not label independent without current-method verification. |
 | FanGraphs | [MLB projections](https://www.fangraphs.com/standings/playoff-odds) expose division, playoff and World Series probabilities and projected records. | Not proof of game moneyline, run-line, totals or innings probabilities; current game forecast acquisition unknown. | Leading MLB futures candidate; inspect dated game forecasts separately and preserve projection-system identity. |
-| MoneyPuck | [Methodology](https://www.moneypuck.com/about.htm) describes NHL pregame home-win probabilities, power ratings and season simulations. | Model-based expected goals are not automatically pregame totals or puck-line probabilities; period outputs/acquisition rights unknown. | Leading NHL game-winner candidate; verify OT/shootout scope and dated season-category outputs before matching. |
+| MoneyPuck | [Methodology](https://www.moneypuck.com/about.htm) describes NHL pregame home-win probabilities, power ratings and season simulations. | Model-based expected goals are not automatically pregame totals or puck-line probabilities; period outputs/acquisition rights unknown. | Dropped by owner; historical research only. NHL analytics missing/deferred. |
 | KenPom | [Subscription](https://kenpom.com/register-kenpom.php) documents Division I game predictions; [API](https://kenpom.com/register-api.php) advertises archived FanMatch predictions. | Access is separate from public ranks; current forecasts, women's coverage, market probability distributions and rights unknown. | Deferred by owner. Prior FanMatch fixture support preserved; no login or entitlement investigation. |
 
 Specific FPI/BPI output boundaries from official pages:
@@ -107,7 +109,7 @@ Specific FPI/BPI output boundaries from official pages:
 - [NBA BPI](https://www.espn.com/nba/story/_/page/Basketball-Power-Index/espn-nba-basketball-power-index): points-above-average ratings; the displayed historical table does not establish current game probabilities.
 - [Men's college BPI](https://www.espn.com/mens-college-basketball/bpi): ratings and season projections; last updated April 7, 2026. Women's coverage is not established here.
 
-B4 should start with MoneyPuck's explicitly described winner output and the football/basketball candidates in parallel where accessible. FanGraphs supplies a distinct MLB futures candidate, not the missing MLB game probability. No model portfolio above presently covers all required cells. A projected margin cannot supply cover probability without an independently validated distribution; predicted score sums cannot supply total-market probability; ranks cannot supply either. Any new conversion needs a named/versioned method, dated inputs and validation, with unsupported outputs staying null. Public pages are leads, not a promise of free automated ingestion or permission to republish. A Massey public-page check returned 403; no coverage inference or bypass pursued.
+MoneyPuck is dropped. Continue independent sport/market engineering; remaining non-NHL model candidates may be assessed in their owning slices. FanGraphs supplies a distinct MLB futures candidate, not the missing MLB game probability. No model portfolio above presently covers all required cells. A projected margin cannot supply cover probability without an independently validated distribution; predicted score sums cannot supply total-market probability; ranks cannot supply either. Any new conversion needs a named/versioned method, dated inputs and validation, with unsupported outputs staying null. Public pages are leads, not a promise of free automated ingestion or permission to republish. A Massey public-page check returned 403; no coverage inference or bypass pursued.
 
 ### Free delayed Pinnacle: promising documented route, not yet verified usable
 
@@ -127,11 +129,11 @@ B4 sequence: implement isolated fixtures and free-budget accounting first; after
 |---|---|---|---|
 | B3 Novig provisioning | Engineering reconciles issued environment/auth contract and initial-image/ask units; provider supplies provisioning | Obtain issued QA/production access instructions and OAuth client provisioning using [unsent request](novig-access-request.md); enter secrets locally, never chat | Environment-specific wire evidence and health/history; real ask/size/fee limits explicit |
 | B3 fourth venue | Engineering recommends ProphetX and resolves its units/update contract using retained examples; provider supplies missing contract answers | ProphetX selected September 21; make approved production API access available locally when qualification needs it. Provider clarification may use Slice 3's unsent request | Selected source records actual production observations and comparable participation; unknown quantities remain unknown |
-| B4 model outputs | Engineering verifies dates, outputs, independence and acquisition for candidates above | KenPom deferred. MoneyPuck single-page proposal unapproved; no owner research | Supported event/market probability or line, provenance and dependency recorded; unsupported outputs explicit |
+| B4 model outputs | Engineering verifies dates, outputs, independence and acquisition for candidates above | KenPom deferred. MoneyPuck dropped; NHL analytics missing; no owner action queued | Supported event/market probability or line, provenance and dependency recorded; unsupported outputs explicit |
 | B4 Pinnacle | Engineering verifies free candidate, quota, delay and coverage | Local Keychain setup complete and single authorized credit consumed; no repeat request authorized | Actual Pinnacle rows from repeatable free route with time/delay labels; no substitution |
 | B5 halftime | Engineering maps explicit periods separately from observation time | Choose first-half markets, second-half markets, at-halftime evaluation, or a combination; whether MLB innings/NHL periods are desired equivalents | Approved definition plus native rule/period IDs; in-play dependency identified separately |
 | B5 futures | Engineering proposes team championship and make-playoffs first, then division/conference and season-win totals where applicable | Confirm desired categories, including whether player awards are wanted | Season/category/participant/settlement horizon and multi-outcome rules mapped |
-| B5 NCAAB | Engineering inspects each source's competition IDs | Confirm men's, women's or both, and Division I versus broader competition scope | Distinct competition IDs/period rules with evidence; no inferred universal college coverage |
+| B5 NCAAB | Engineering inspects each source's competition IDs | Resolved September 21: owner selected men’s Division I; four-team 2026-2027 engineering roster is not broad coverage | Distinct competition IDs/period rules with evidence; no inferred universal college coverage |
 | B5 results and settlements | Engineering identifies sporting results and separate venue payouts, including pending futures | No initial owner action | Results and payout/void records independently linked, seasonal gaps retained |
 | B6 practical session | Engineering measures authorized bounds/cadence, then proposes 30-minute integration and representative viewing session | Desired normal viewing duration before B6 scoping | Reviewed finite allowance and measured useful coverage, not automatic live authorization |
 
@@ -164,8 +166,50 @@ Independent engineering complete; full B4 remains open. Annotated published-valu
 | Canonical teams/event/season | 32 teams, reviewed aliases; exact season/start/home/away; duplicate/conflict rejection | ProphetX sandbox tournament 234 only; actual native team/game bindings incomplete |
 | Kalshi / PMUS two-way full-game winner | Reviewed OT/shootout gate, native orientation, conditional fees/depth and Details/history verified with labeled fixtures | No exact NHL venue rule/book package qualified |
 | Novig / ProphetX winner | Shared source isolation and visible unknown economics; explicit terms required | Access requests pending; terms, fee and size gaps remain |
-| MoneyPuck home-win | Explicit probability mapping and unavailable ratings/unknown semantics verified offline | One-page proposal pending approval; no actual model receipt or independence established |
+| MoneyPuck home-win | Explicit probability mapping and unavailable ratings/unknown semantics verified offline | Homepage allowance consumed: HTTP 302, zero values. MoneyPuck dropped; NHL analytics missing/deferred |
 | Pinnacle NHL | Reference display retained; no assumed hockey settlement equivalence | No NHL sample or new credit use; existing sample is NFL |
 | Regulation / three-way / other NHL families | Isolated as unsupported; no guessed probabilities or payouts | Open B5 work, including spreads/totals/periods/futures/results |
 
 Full B4/B5 remain IN PROGRESS; beta NOT READY FOR SIGNOFF.
+
+MoneyPuck actual acquisition update: [September 21 single homepage capture](../evidence/b4-moneypuck-sample-20260921/final-report.md) returned HTTP 302 to its data-license page. Redirect not followed; model probability cells remain unqualified. No homepage retry authorized.
+
+## September 21 B5 MLB bounded engineering update
+
+**MLB full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-mlb-handoff.md) · [acceptance evidence](../evidence/b5-mlb-20260921/final-report.md). Kalshi and PMUS have ordinary comparison paths for explicitly reviewed single-game two-way extra-innings/action contracts. Native IDs/outcomes, season, home/away, game number, original/current starts and reschedule lineage must agree. Unsupported families/conditions remain visible. No actual MLB game price comparison is qualified.
+
+Retained KXMLBGAME series/fee changes/contract are verified; multiplier 0.5 is MLB-specific and is not a football default. Current event overrides, exact action/pitcher/status terms and native game evidence remain missing. PMUS needs an actual US MLB listing/rule/fee binding. Novig MLB native orientation/terms/economics remain unsupported, request pending. ProphetX's retained sandbox tournament 109 and public MLB amendment do not establish production event/quantity/fee qualification. The amendment's postponement/36-hour suspension/shortened-game rules differ from Kalshi's; no equivalence is inferred. Actual MLB model probabilities and MLB Pinnacle input remain missing; synthetic home-win checks do not qualify a provider. No acquisition or credits used.
+
+MLB listed-pitcher contracts, spreads/totals, innings/first-five, series/futures and result/settlement linkage remain open. NBA full-game winner engineering was subsequently completed; see below. Broader B5, full B4 and actual venue qualification remain separate; beta NOT READY FOR SIGNOFF.
+
+## September 21 B5 NBA bounded engineering update
+
+**NBA full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-nba-handoff.md) · [acceptance evidence](../evidence/b5-nba-20260921/final-report.md). Ordinary Kalshi/PMUS paths require explicit native event/outcome review, season/stage/shared game ID, original/current starts, reschedule status, full-game overtime inclusion and matching source-specific exceptional terms. Actual NBA venue comparisons remain unqualified. Compatible synthetic terms exercise the engine; official Kalshi/PMUS contracts are not asserted equivalent.
+
+B3/B5 owns missing actual NBA native listings, participants, stage/start/status and applicable rule evidence; Kalshi milestone schema remains unknown and start is not guessed. Retained KXNBAGAME series multiplier 1 and ProphetX sandbox tournament 132 are verified context only. Novig/ProphetX native NBA orientation/economics remain unsupported pending evidence and provider replies. B4 owns actual NBA game forecasts/independence and NBA Pinnacle input; no acquisition or credits used. Ratings, margins, ranks and season/playoff outputs are not game forecasts. Full-game interfaces support explicit home- or away-win probabilities only when exactly bound.
+
+NBA spreads/totals, half/quarter economics, regulation-only, series/futures and result linkage remain broader B5 work. NCAAF engineering was subsequently completed; see below. MLB saved snapshot/calculations are exactly preserved. Full B4/B5 and actual venue qualification remain open; beta NOT READY FOR SIGNOFF.
+
+## September 21 B5 NCAAF bounded engineering update
+
+**NCAAF full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-ncaaf-handoff.md) · [acceptance](../evidence/b5-ncaaf-20260921/final-report.md). Six reviewed 2026 schools (Alabama, Alabama A&M, Miami FL/OH, North Dakota State, South Dakota State) cover FBS/FCS/cross-subdivision identity. Membership is season-specific; North Dakota State is FBS in 2026. Ambiguous schools, mascots and unreviewed teams stay unsupported. Exact game/start/season/stage/reschedule/site/subdivision bindings and native outcomes are mandatory. Unknown site status is displayed, never interpreted as home-field advantage.
+
+Kalshi/PMUS comparison and model-input paths are fixture-verified only. Actual NCAAF listings, usable books, source-specific rules/economics and model/Pinnacle forecasts remain missing. KXNCAAFGAME and KXNCAAFCSGAME have distinct retained fee types; no NFL applicability transfer. The FCS FOOTBALLARCHIVED URL returned 404: B3/B5 owns obtaining an applicable current contract in a separately authorized qualification. Novig/ProphetX requests remain pending; native college outcomes/quantity/fees are unqualified. B5 owns remaining schools/seasons, Division II/III/other competitions, spreads/totals, half/quarter economics and futures; none is silently excluded from beta. B4 owns actual game probabilities and independence; ratings, rankings, margins and season/playoff outputs cannot substitute.
+
+The subsequent NCAAB slice is recorded below; its owner selection is men’s Division I. No acquisition or credits used. Full B4/B5 and actual venue/model qualification remain open; beta NOT READY FOR SIGNOFF.
+
+## B5 NCAAB bounded implementation update — September 21
+
+**NCAAB full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-ncaab-handoff.md) · [acceptance](../evidence/b5-ncaab-20260921/final-report.md). Owner selected **men’s Division I**. Reviewed 2026-2027 teams: Alabama, Alabama A&M, Miami FL and Miami OH. Team identities include gender/division and separate school identity; tournament ID/round, season/start/reschedule and neutral/home/unknown site evidence must agree. Generic names-only matching cannot qualify college events. Other schools/seasons, women’s and other divisions remain visible unsupported scope; no broad NCAAB coverage claim.
+
+| Venue / role | Engineering evidence | Actual qualification gap |
+|---|---|---|
+| Kalshi | F: KXNCAAMBGAME native YES/NO binding, separately retained quadratic-with-maker-fees multiplier 1; ordinary conditional calculations | U: actual college game listing, IDs, start/round/site, applicable ACHIEVEMENTS or market-specific rules, usable book and overrides |
+| Polymarket US | F: native teams/Long/Short and its own fee coefficient, explicit compatible synthetic rules | U: actual US college listing, applicable AEC scope/exceptions and book/economics |
+| Novig / ProphetX | F: isolation and visible unsupported scope/health | U: native college outcomes/rules/quantity/fees; requests pending |
+| Model | F: explicit game probability and exact college context, unsupported ratings/margins/tournament inputs | U: actual dated forecast and independence; KenPom deferred |
+| Pinnacle | Existing reference path retained; no college input acquired | U: compatible NCAAB native event/line/rule input; no request or credit authorized |
+
+The retained men’s series points to ACHIEVEMENTS, not NBA BASKETBALLGAMEWIN. Its postponement, suspension and cancellation allocation are not assumed equivalent to PMUS. NCAA men’s two halves/five-minute OT is separately reviewed; women’s quarters and NBA periods do not transfer. Required source terms remain explicit; unknown exceptional outcomes prevent unconditional EV/all-outcome Arb. Existing matrix P/S/U classifications remain their historical evidence classes; the F evidence above does not upgrade actual cells.
+
+**Next: [shared full-game spread/total outcome partitions](b5-score-lines-next.md)** with NBA/NCAAB fixtures, strict/inclusive score thresholds, equality/push/refund behavior and ordinary fees/depth/history. Remaining spread/total mappings across all six sports, other periods, futures and results remain B5 work. Six bounded winner slices do not complete full six-sport coverage or B5. Actual venue/model qualification and full B4/B5 remain open. Beta NOT READY FOR SIGNOFF.

@@ -19,7 +19,11 @@ from app.models.core import (BookLevel, BookSync, Depth, Event, EvidenceKind, La
 
 REST_URL = 'https://external-api.kalshi.com/trade-api/v2'
 SPORT_SERIES = {'KXNFLGAME': ('football', 'NFL', 'football_game'),
-                'KXMLBGAME': ('baseball', 'MLB', 'baseball_game')}
+                'KXMLBGAME': ('baseball', 'MLB', 'baseball_game'),
+                'KXNBAGAME': ('basketball', 'NBA', None),
+                'KXNCAAFGAME': ('football', 'NCAAF', None),
+                'KXNCAAFCSGAME': ('football', 'NCAAF', None),
+                'KXNCAAMBGAME': ('basketball', 'NCAAB', None)}
 
 
 def decode(body):
@@ -83,7 +87,7 @@ def parse_event(response, data, series_id):
         raise ValueError('series relationship mismatch')
     sport, league, milestone_type = SPORT_SERIES[series_id]
     matching = [m for m in decode(response.body).get('milestones', [])
-                if event_id in m.get('related_event_tickers', [])
+                if milestone_type is not None and event_id in m.get('related_event_tickers', [])
                 and m.get('category') == 'Sports' and m.get('type') == milestone_type]
     starts = {timestamp(m['start_date']) for m in matching}
     start = next(iter(starts)) if len(starts) == 1 else None
@@ -242,7 +246,7 @@ class KalshiAdapter(ReadOnlyAdapter):
                     if data.get('series_ticker') != series:
                         raise ValueError('series relationship mismatch')
                     sport, league, milestone_type = SPORT_SERIES[series]
-                    matching = [m for m in milestones if event_id in m.get('related_event_tickers', [])
+                    matching = [m for m in milestones if milestone_type is not None and event_id in m.get('related_event_tickers', [])
                                 and m.get('category') == 'Sports' and m.get('type') == milestone_type]
                     starts = {timestamp(m['start_date']) for m in matching}
                     start = next(iter(starts)) if len(starts) == 1 else None

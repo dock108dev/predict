@@ -27,6 +27,18 @@ def assess(rows, cutoff, identity=None):
     if identity and identity.get('product_identity',{}).get('competition')=='NHL':
         from app.normalization.nhl import assessment
         return assessment(rows,cutoff,identity)
+    if identity and identity.get('product_identity',{}).get('competition')=='MLB':
+        from app.normalization.mlb import assessment
+        return assessment(rows,cutoff,identity)
+    if identity and identity.get('product_identity',{}).get('competition')=='NBA':
+        from app.normalization.nba import assessment
+        return assessment(rows,cutoff,identity)
+    if identity and identity.get('product_identity',{}).get('competition')=='NCAAF':
+        from app.normalization.ncaaf import assessment
+        return assessment(rows,cutoff,identity)
+    if identity and identity.get('product_identity',{}).get('competition')=='NCAAB':
+        from app.normalization.ncaab import assessment
+        return assessment(rows,cutoff,identity)
     profiles={};sources={};coefficient=None
     for venue in ('kalshi','polymarket_us'):
         eligible=[r for r in rows if r['type']=='market_selected' and r['source']==venue and exact_time(r['observed_at'])<=exact_time(cutoff)]
@@ -108,18 +120,28 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
     c=dict(venue=v,environment='production',market_id=assessment['sources'][v]['market_id'],product='event_contract',
            trade_time=at,calculation_time=assessment['assessed_at'],complete_order_history=True,settlement_status='UNKNOWN',
            fills=[dict(fill_id=str(i),order_id='hypothetical-new-order',role='taker',price=f['price'],quantity=f['quantity'],unit='contracts') for i,f in enumerate(fills)],outcomes=outcomes)
-    nhl=identity and identity.get('product_identity',{}).get('competition')=='NHL'
-    basis=assessment.get('nhl_fee_bases',{}).get(v) if nhl else None
-    if nhl and not basis:
-        result['reasons'].append('NHL source fee basis missing');return result
-    if nhl and v=='kalshi' and (basis.get('series_id')!='KXNHLGAME' or basis.get('fee_type')!='quadratic_with_maker_fees' or basis.get('multiplier')!='1'):
-        result['reasons'].append('Unsupported NHL fee basis');return result
+    sport=identity.get('product_identity',{}).get('competition') if identity else None
+    reviewed_sport=sport in ('NHL','MLB','NBA','NCAAF','NCAAB')
+    series={'MLB':'KXMLBGAME','NBA':'KXNBAGAME','NCAAF':'KXNCAAFGAME','NCAAB':'KXNCAAMBGAME'}.get(sport,'KXNHLGAME')
+    fee_key=sport.lower()+'_fee_bases' if reviewed_sport else 'nhl_fee_bases'
+    basis=assessment.get(fee_key,{}).get(v) if reviewed_sport else None
+    if reviewed_sport and not basis:
+        result['reasons'].append(sport+' source fee basis missing');return result
+    fee_type='quadratic_with_maker_fees'
+    if sport=='NCAAF' and v=='kalshi':
+        series=basis.get('series_id')
+        fee_type={'KXNCAAFGAME':'quadratic_with_maker_fees','KXNCAAFCSGAME':'quadratic'}.get(series)
+        if not fee_type:
+            result['reasons'].append('Unsupported NCAAF native series fee basis');return result
+    if reviewed_sport and v=='kalshi' and (basis.get('series_id')!=series or basis.get('fee_type')!=fee_type or basis.get('multiplier') not in (('0.5','1') if sport=='MLB' else ('1',))):
+        result['reasons'].append('Unsupported '+sport+' fee basis');return result
+    multiplier=basis['multiplier'] if reviewed_sport and v=='kalshi' else '1'
     if v=='kalshi':
         c.update(schedule_version='kalshi-july7-observed-sep12')
         if scenario!='unknown':
-            c.update(series_id='KXNHLGAME' if nhl else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',balance_precision='0.0001' if scenario=='direct' else '0.01',
-                kalshi_metadata=dict(source='Explicit what-if: retained series type, multiplier 1; no event override',series_id='KXNHLGAME' if nhl else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',event_history_complete=False,
-                    series_changes=[dict(scheduled_ts=at,fee_type='quadratic_with_maker_fees',fee_multiplier='1')],event_changes=[]))
+            c.update(series_id=series if reviewed_sport else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',balance_precision='0.0001' if scenario=='direct' else '0.01',
+                kalshi_metadata=dict(source='Explicit what-if: retained series type, multiplier '+multiplier+'; no event override',series_id=series if reviewed_sport else 'KXNFLGAME',event_id=identity['sources']['kalshi']['event_id'] if identity else 'KXNFLGAME-26SEP17DETBUF',event_history_complete=False,
+                    series_changes=[dict(scheduled_ts=at,fee_type=fee_type,fee_multiplier=multiplier)],event_changes=[]))
     elif v=='polymarket_us':
         if assessment['pmus_coefficient']!='0.06':result['reasons'].append('Retained coefficient not supported by pinned schedule');return result
         c.update(schedule_version='pmus-2026-07-01',applicability_evidence=assessment['sources'][v],assume_no_settlement_fee=scenario!='unknown',taker_rebate_rate='0')
@@ -168,7 +190,8 @@ def evaluate(point, rows, quantity='100', scenario='cent', probability=None, sel
                 try: partial=assess([row],point['at'],identity)
                 except (ValueError,KeyError,StopIteration): continue
                 assessment['profiles'].update(partial['profiles']);assessment['sources'].update(partial['sources'])
-                if 'nhl_fee_bases' in partial:assessment.setdefault('nhl_fee_bases',{}).update(partial['nhl_fee_bases'])
+                for key in ('nhl_fee_bases','mlb_fee_bases','nba_fee_bases','ncaaf_fee_bases','ncaab_fee_bases'):
+                    if key in partial:assessment.setdefault(key,{}).update(partial[key])
                 if partial['pmus_coefficient'] is not None: assessment['pmus_coefficient']=partial['pmus_coefficient']
         else: assessment=assess(rows,point['at'],identity)
         cs=contracts(point,identity)

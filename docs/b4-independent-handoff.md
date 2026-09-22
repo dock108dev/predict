@@ -1,5 +1,7 @@
 # B4 — model and delayed-Pinnacle reference integration
 
+**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
+
 September 21, 2026. **Independent engineering COMPLETE, offline verified. Full B4 IN PROGRESS: actual model acquisition, compatible reference EV and model independence qualification outstanding.** B1/B2 and B3 independent engineering are preserved. Novig and ProphetX requests are sent/pending, with no repeat outreach or key wait.
 
 ## Delivered through the existing product
@@ -21,7 +23,7 @@ Remaining cells: NFL has actual Pinnacle h2h inputs; the other five sports lack 
 
 ## Next action
 
-The Pinnacle allowance is consumed. Ordinary retained-reference Details now expose native odds, conversion, provenance, dates, delay limitation and saved cutoff; exact reopening passed. Actual EV is unavailable because compatible prediction observations and reviewed event/settlement binding are absent. No new prediction collection occurred. Next: [B5 NHL full-game mapping and revised one-page MoneyPuck proposal](b4-model-mapping-next.md). No KenPom action; B3 replies remain pending. **Beta remains NOT READY FOR SIGNOFF.**
+The Pinnacle allowance is consumed. Ordinary retained-reference Details now expose native odds, conversion, provenance, dates, delay limitation and saved cutoff; exact reopening passed. Actual EV is unavailable because compatible prediction observations and reviewed event/settlement binding are absent. No new prediction collection occurred. Next: [B5 MLB full-game mapping; NHL analytics remains missing](b4-model-mapping-next.md). No KenPom action; B3 replies remain pending. **Beta remains NOT READY FOR SIGNOFF.**
 
 ## Local preparation and import
 

@@ -67,7 +67,7 @@ def enrich_event(event: Event, *, environment=None, registry=None) -> Normalized
         matches = [x for x in rows if x.get('event_ticker') == event.raw.ref.event_id]
         if len(matches) == 1:
             row = matches[0]
-            series_league = {'KXNFLGAME':'NFL', 'KXMLBGAME':'MLB'}.get(row.get('series_ticker'))
+            series_league = {'KXNFLGAME':'NFL', 'KXMLBGAME':'MLB', 'KXNBAGAME':'NBA', 'KXNCAAFGAME':'NCAAF', 'KXNCAAFCSGAME':'NCAAF', 'KXNCAAMBGAME':'NCAAB'}.get(row.get('series_ticker'))
             if series_league:
                 league_name = series_league
                 # Bounded observed format; deliberately no ticker substring decoding.

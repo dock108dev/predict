@@ -31,23 +31,21 @@ The existing annotated published-value importer and original-input validation re
 | Polymarket US | Existing native side handling offline verified; public hockey **totals** illustration found | Actual NHL winner listing/rules, native IDs, period and fee binding; totals rules do not qualify winner contracts |
 | Novig | Existing read-only adapter and unknown-economic behavior preserved | Actual reviewed NHL listing, period, outcomes, fees and settlement; request sent/pending |
 | ProphetX | NHL tournament 234 in retained sandbox catalog | Production identity, size ownership/units, fees, winner terms; selected, request sent/pending |
-| MoneyPuck | Synthetic explicit home-win interface works | Actual page receipt, game/outcome meaning, source date/version and independence unresolved |
+| NHL analytics | Synthetic explicit home-win interface works | MISSING/deferred. MoneyPuck dropped; no actual model values or independence established |
 | Pinnacle | Original NFL sample remains reproducible | Compatible prediction observations and settlement equivalence; NHL not collected; no additional credits authorized |
 
 Official sources: [NHL teams](https://www.nhl.com/info/teams/), [2026–2027 NHL rulebook](https://media.d3.nhle.com/image/private/t_document/prd/i9yumvyaojps5kixzaxz.pdf), [Kalshi ACHIEVEMENTS](https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf), [PMUS totals filing](https://www.cftc.gov/filings/orgrules/rules03272642617.pdf), [Novig rules landing page](https://support.novig.com/en/articles/9612523-market-rules).
 
 The NHL rulebook distinguishes regular-season overtime/shootout from repeated playoff overtime. Kalshi's linked generic ACHIEVEMENTS contract contains postponement/suspension, cancellation and discretionary allocation provisions; it does not justify copying football's 48-hour terms into an NHL market. The fixture's 48-hour/fair-value/tie values are **synthetic test conditions**, not asserted Kalshi or PMUS NHL rules. PMUS's reviewed filing concerns totals and explicitly defers to contract terms. Novig's rules landing page did not establish a complete NHL winner contract. These are source-specific gaps, not a reason to stop other engineering.
 
-## MoneyPuck proposal — pending approval, not executed
+<a id="moneypuck-proposal--pending-approval-not-executed"></a>
 
-Exactly **one GET to https://moneypuck.com/**. No login, key, credits, redirects, retries, secondary page, script/data request, fallback provider or repeated capture. Total timeout 20 seconds; body cap 256 KiB; at most two explicitly published values for the earliest upcoming fully identified NHL game. This slice supports the explicit home-win output; a second side remains separate unless independently established. No implied complement.
+## NHL analytics — missing/deferred
 
-Success must establish, in the initial retained body: (1) unambiguous NHL participants and home/away orientation; (2) date, timezone-aware start, season and regular-season/playoff scope sufficient for the reviewed event key; (3) an explicitly published home-win probability and evidenced units; (4) full-game two-way overtime/shootout meaning matching the implemented gate. Preserve literal offsets and original body/hash, source/model date and version where present (otherwise unknown), actual receipt and dependency limitations. Independence must remain unestablished unless supported; absence of a bookmaker mention is not proof.
+**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
 
-Stop after the single response, including on non-200, restriction, timeout, oversize, empty/current-game absence, ambiguous identity, missing probability or unresolved outcome meaning. Retain unsuccessful evidence honestly. A dated display may remain unavailable for EV. If the body requires JavaScript or another endpoint, stop and propose that exact endpoint separately; do not fetch it. No prediction-market collection is included, so a successful model response alone cannot supply missing venue books or settlement evidence.
-
-**Next concrete owner action:** approve or decline this exact single-page proposal. The user expressly withheld that request from this implementation authorization. All independent work in this bounded slice is complete first. KenPom remains deferred; Novig/ProphetX requests remain pending; the locally stored Pinnacle key is untouched.
+Historical [MoneyPuck capture](../evidence/b4-moneypuck-sample-20260921/final-report.md) is preserved; its old acquisition/next-step instructions are superseded. No actual model values were obtained.
 
 ## Remaining B5 scope
 
-Actual NHL source/venue qualification, regulation/three-way economics, spreads, totals/push distributions, half/period definitions, futures, result/settlement linkage, MLB/NBA/NCAAF/NCAAB mapping and the wider six-sport coverage/history exit remain open. No exclusion from the beta floor is implied. B6 integrated readiness and B7 owner signoff remain separate.
+Actual NHL source/venue qualification, regulation/three-way economics, spreads, totals/push distributions, half/period definitions, futures, result/settlement linkage, remaining MLB markets and NBA/NCAAF/NCAAB mapping and the wider six-sport coverage/history exit remain open. No exclusion from the beta floor is implied. B6 integrated readiness and B7 owner signoff remain separate.

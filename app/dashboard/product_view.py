@@ -9,7 +9,7 @@ def references_for(snapshot,game,key=None):
 
 
 def usable(r):
-    if r.get('market_identity',{}).get('competition')=='NHL' and r.get('schema_version')!='b4-reference-1':return False
+    if r.get('market_identity',{}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') and r.get('schema_version')!='b4-reference-1':return False
     return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind')=='probability' and r.get('conversion_method') and r.get('value') is not None
 
 

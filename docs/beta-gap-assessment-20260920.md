@@ -1,5 +1,7 @@
 # Predict — current beta gap assessment
 
+**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
+
 **Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [B4 offline integration and next acquisition](b4-independent-handoff.md).
 
 Updated September 21, 2026. **NOT READY FOR BETA SIGNOFF.** Reconciled B2 implementation and current B3 offline/native-fixture evidence. No B3 authenticated access or external market collection occurred.
@@ -42,7 +44,7 @@ Novig access and real listing period/rules are unresolved. ProphetX is owner-sel
 
 The [B1 matrix](b1-coverage-matrix.md) records the checked official links, exact evidence classes, per-sport/family limitations and owner-help ledger. ProphetX is recommended because of reusable sandbox ingestion and observed NFL overlap; owner selection/access and economic qualification remain B3. Sporttrade's official site reports its May 2026 market closure; Betfair requires separate access/economics work and does not improve the immediate integration path.
 
-The Odds API lists a free tier and Pinnacle website-sourced odds with possible delay. The authorized September 21 sample now verifies observed NFL h2h access on the locally confirmed free account; it does not establish a fixed delay or other sport/market entitlement. B4 owns actual acquisition, populated coverage, time semantics, retention and free-quota viability. FPI/BPI, MoneyPuck, FanGraphs and KenPom are candidates with different outputs/access. In particular, FPI's published preseason methodology uses betting-market inputs; independence must be verified rather than inferred from the word model. Raw rankings do not supply market probabilities.
+The Odds API lists a free tier and Pinnacle website-sourced odds with possible delay. The authorized September 21 sample now verifies observed NFL h2h access on the locally confirmed free account; it does not establish a fixed delay or other sport/market entitlement. B4 owns actual acquisition, populated coverage, time semantics, retention and free-quota viability. FPI/BPI and FanGraphs remain candidates with different outputs/access. MoneyPuck is dropped and KenPom deferred. In particular, FPI's published preseason methodology uses betting-market inputs; independence must be verified rather than inferred from the word model. Raw rankings do not supply market probabilities.
 
 Owner help is limited to Novig issued provisioning, fourth-venue selection/approved access, and B5's halftime/period, futures and NCAAB competition preferences. Existing model access or a known Pinnacle URL is optional useful information, not homework. No secrets in chat, provider message or new account check. Engineering owns remaining acquisition and mapping research.
 

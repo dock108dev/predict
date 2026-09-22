@@ -39,13 +39,17 @@ class RegistryTests(unittest.TestCase):
         self.assertIsNone(self.r.resolve('team','Giants').canonical_id)
 
     def test_missing_unknown_and_unsupported_context(self):
-        for name,context in [(None,{}),('Invented',{}),('Panthers',{}),('Dallas',{'league':'NBA'}),('Oakland Raiders',{'league':'NFL'})]:
+        for name,context in [(None,{}),('Invented',{}),('Panthers',{}),('Dallas',{'league':'WNBA'}),('Oakland Raiders',{'league':'NFL'})]:
             with self.subTest(name=name):self.assertEqual(self.r.resolve('team',name,**context).status,'unknown')
         self.assertEqual(self.r.resolve('team','Dallas Cowboys').canonical_id,'NFL:DAL')
         self.assertEqual(self.r.resolve('team','DAL').status,'ambiguous')
-        self.assertEqual(self.r.resolve('team','DAL').candidates,('NFL:DAL','NHL:DAL'))
+        self.assertEqual(self.r.resolve('team','DAL').candidates,('NBA:DAL','NFL:DAL','NHL:DAL'))
         self.assertEqual(self.r.resolve('league','NHL').canonical_id,'NHL')
-        for league in ('NBA','NCAAF'):
+        self.assertEqual(self.r.resolve('league','NBA').canonical_id,'NBA')
+        self.assertEqual(self.r.resolve('league','NCAAF').canonical_id,'NCAAF')
+        self.assertEqual(self.r.resolve('team','Dallas',league='NBA').canonical_id,'NBA:DAL')
+        self.assertEqual(self.r.resolve('league','NCAAB').canonical_id,'NCAAB')
+        for league in ('WNBA','NAIA'):
             self.assertEqual(self.r.resolve('league',league).status,'unknown')
         self.assertNotEqual(name_key('LA'),name_key('L A'))
         self.assertNotEqual(name_key('49ers'),name_key('ers'))
@@ -65,7 +69,7 @@ class RegistryTests(unittest.TestCase):
         unmapped=self.r.resolve('team','Dallas Cowboys',**{**c,'native_id':'not-a-team-id'})
         self.assertEqual(unmapped.canonical_id,'NFL:DAL')
         self.assertIn('native-id-unmapped; name-only-resolution',unmapped.provenance)
-        self.assertEqual(len(self.r.native),78)
+        self.assertEqual(len(self.r.native),79)
         self.assertEqual(self.r.resolve('league','NHL',venue='prophetx',environment='sandbox',native_id='234').canonical_id,'NHL')
 
     def test_validation_duplicate_conflicting_rows_and_targets(self):
@@ -180,5 +184,9 @@ class ObservationTests(unittest.IsolatedAsyncioTestCase):
         r=await report()
         self.assertEqual(sum(x['events'] for x in r['coverage'] if x['evidence_class']=='actual_capture'),47)
         self.assertTrue(all(x['evidence_class']=='synthetic' for x in r['records'] if x['venue']=='novig'))
-        self.assertEqual({x['result']['status'] for x in r['synthetic_edges']},{'ambiguous','unknown','conflicting'})
+        self.assertEqual({x['result']['status'] for x in r['synthetic_edges']},{'ambiguous','unknown','conflicting','resolved'})
+        edges={x['label']:x['result'] for x in r['synthetic_edges']}
+        self.assertEqual(edges['unsupported league']['status'],'unknown')
+        self.assertEqual(edges['reviewed college football league']['canonical_id'],'NCAAF')
+        self.assertEqual(edges['reviewed college basketball league']['canonical_id'],'NCAAB')
         self.assertTrue(all(x['evidence_class']=='documentation_example' for x in r['documentation_examples']))

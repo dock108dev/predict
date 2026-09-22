@@ -93,7 +93,9 @@ async def report():
              ('cross-league abbreviation',registry.resolve('team','CIN')),
              ('unknown',registry.resolve('team','Unknown Club',league='NFL')),
              ('native/name conflict',registry.resolve('team','Dallas Cowboys',league='NFL',venue='polymarket_us',environment='production',native_id='77')),
-             ('unsupported league',registry.resolve('league','NCAAF'))]
+             ('unsupported league',registry.resolve('league','NAIA')),
+             ('reviewed college basketball league',registry.resolve('league','NCAAB')),
+             ('reviewed college football league',registry.resolve('league','NCAAF'))]
     return {'registry_version':registry.version,'registry_sha256':registry.fingerprint,
             'registry_teams':dict(Counter(e['league'] for e in registry.entities.values() if e['kind']=='team')),
             'scope':'Identity enrichment only; no event equivalence, line comparison or settlement approval.',
@@ -103,7 +105,7 @@ async def report():
                 'result':asdict(registry.resolve('team',name,league='MLB'))} for name in ('NY Yankees','Boston Red Sox')],
             'limitations':['Novig: synthetic only; no live capture or native mappings.',
                 'MLB: 30 registry teams; no MLB event capture in this replay.',
-                'NCAAF/NBA/NHL remain planned, absent from registry.',
+                'NCAAB/NCAAF/NBA/NHL have reviewed registry coverage; this retained replay does not qualify their venue markets.',
                 'Historical names not present in these captures are not auto-merged.']}
 
 

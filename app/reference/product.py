@@ -76,7 +76,7 @@ def base(r, binding, *, source_at=None, model_version=None):
         provider_id=p,origin_id='pinnacle' if p=='the_odds_api' else p,market_identity=i,
         participant=binding['participant'],source_event_id=binding['source_event_id'],binding=deepcopy(binding),
         source_at=source_at,model_as_of=source_at,model_version=model_version or 'unknown',received_at=r['received_at'],
-        delay_seconds=None,delay_basis='Unknown; receipt age is not publication delay',dependency=SOURCES[p]['dependency'],
+        delay_seconds=None,delay_basis='Unknown; receipt age is not publication delay',dependency=('College-football model inputs not independently verified; betting-market independence not established' if p=='espn_fpi' and i['competition']=='NCAAF' else SOURCES[p]['dependency']),
         independence='not_established',receipt=deepcopy(r),provenance=r['url'],evidence_mode=r['evidence_mode'],
         exceptional_probabilities=None,unconditional_ev=None,refresh_after_seconds=SOURCES[p]['refresh'])
 
@@ -174,8 +174,30 @@ def at_cutoff(refs,at):
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NHL Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
+            if i['competition']=='MLB':
+                from app.normalization.mlb import model_reason
+                reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'MLB Pinnacle native winner settlement evidence unavailable'
+                if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
+                if reason:x.update(availability='unsupported',reason=reason)
+            if i['competition']=='NBA':
+                from app.normalization.nba import model_reason
+                reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NBA Pinnacle native winner settlement evidence unavailable'
+                if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
+                if reason:x.update(availability='unsupported',reason=reason)
+            if i['competition']=='NCAAB':
+                from app.normalization.ncaab import model_reason
+                reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NCAAB Pinnacle native winner settlement evidence unavailable'
+                if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
+                if reason:x.update(availability='unsupported',reason=reason)
+            if i['competition']=='NCAAF':
+                from app.normalization.ncaaf import model_reason
+                reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NCAAF Pinnacle native winner settlement evidence unavailable'
+                if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
+                if reason:x.update(availability='unsupported',reason=reason)
             age=(time(at)-time(x['source_at'] or x['received_at'])).total_seconds()
             x.update(age_seconds=str(age),freshness='refresh_due' if age>x['refresh_after_seconds'] else 'within_refresh_plan')
+        elif x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB'):
+            x.update(availability='unsupported',reason=x['market_identity']['competition']+' reference requires an original-input B4 receipt and reviewed game binding')
         result.append(x)
     # Same source revision with conflicting values is never resolved by insertion order.
     groups={}
