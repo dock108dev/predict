@@ -132,7 +132,7 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None, score
     fee_type='quadratic_with_maker_fees'
     if score_payouts is not None and v=='kalshi':
         series=basis.get('series_id')
-        allowed=('KXNBA' if sport=='NBA' else 'KXNFL' if sport=='NFL' else 'KXNCAAF' if sport=='NCAAF' else 'KXNCAAMB')+('SPREAD' if identity['product_identity']['family']=='spread' else 'TOTAL')
+        allowed=('KXMLB' if sport=='MLB' else 'KXNBA' if sport=='NBA' else 'KXNFL' if sport=='NFL' else 'KXNCAAF' if sport=='NCAAF' else 'KXNCAAMB')+('SPREAD' if identity['product_identity']['family']=='spread' else 'TOTAL')
         if series!=allowed or basis.get('fee_type') not in ('quadratic','quadratic_with_maker_fees'):
             result['reasons'].append('Score-line native fee series/type unavailable');return result
         fee_type=basis['fee_type']

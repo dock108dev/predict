@@ -182,7 +182,7 @@ def at_cutoff(refs,at):
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NHL Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
-            if i['competition']=='MLB':
+            if i['competition']=='MLB' and not score_line:
                 from app.normalization.mlb import model_reason
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'MLB Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'

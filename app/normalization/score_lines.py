@@ -3,12 +3,12 @@ from copy import deepcopy
 from decimal import Decimal, ROUND_FLOOR, ROUND_CEILING
 from hashlib import sha256
 import json
-from app.normalization import nba,ncaab,nfl_lines,ncaaf_lines
+from app.normalization import nba,ncaab,nfl_lines,ncaaf_lines,mlb_lines
 from app.reference.product import time
 from app.fees.engine import number
 
 VERSION='score-lines-1'
-CONFIG={'NBA':nba,'NCAAB':ncaab,'NFL':nfl_lines,'NCAAF':ncaaf_lines}
+CONFIG={'NBA':nba,'NCAAB':ncaab,'NFL':nfl_lines,'NCAAF':ncaaf_lines,'MLB':mlb_lines}
 OPS={'gt','ge','lt','le'}
 
 def decimal(x):
@@ -23,12 +23,13 @@ def path_value(native,path):
     return native
 
 def descriptor(event,d):
-    if d.get('version')!=VERSION or d.get('period')!='full_game' or d.get('unit')!='points' or d.get('overtime')!='included':
-        raise ValueError('Reviewed full-game points including overtime required')
-    expected='four_12_minute_quarters' if event['competition']=='NBA' else 'four_15_minute_quarters' if event['competition'] in ('NFL','NCAAF') else 'two_20_minute_halves'
+    if d.get('version')!=VERSION or d.get('period')!='full_game' or d.get('unit')!=('runs' if event['competition']=='MLB' else 'points') or d.get('overtime')!='included':
+        raise ValueError('Reviewed full-game scoring unit and extra periods required')
+    expected='nine_scheduled_innings' if event['competition']=='MLB' else 'four_12_minute_quarters' if event['competition']=='NBA' else 'four_15_minute_quarters' if event['competition'] in ('NFL','NCAAF') else 'two_20_minute_halves'
     if d.get('regulation')!=expected:raise ValueError('Scoring period structure conflicts with competition')
     if event['competition']=='NFL':nfl_lines.validate_descriptor(event,d)
     if event['competition']=='NCAAF':ncaaf_lines.validate_descriptor(event,d)
+    if event['competition']=='MLB':mlb_lines.validate_descriptor(event,d)
     family=d.get('family');line=decimal(d.get('line'))
     if family=='spread':
         if d.get('participant') not in (event['home'],event['away']):raise ValueError('Spread participant missing or outside game')
@@ -82,7 +83,7 @@ def review(event,market,meta,source,mode):
     if basis and path_value(native,r.get('fee_path'))!=basis:raise ValueError('Score-line fee evidence conflicts')
     if source not in ('kalshi','polymarket_us'):raise ValueError('Source score economics not reviewed')
     if source=='kalshi':
-        series=('KXNBA' if event['competition']=='NBA' else 'KXNFL' if event['competition']=='NFL' else 'KXNCAAF' if event['competition']=='NCAAF' else 'KXNCAAMB')+('SPREAD' if d['family']=='spread' else 'TOTAL')
+        series=('KXMLB' if event['competition']=='MLB' else 'KXNBA' if event['competition']=='NBA' else 'KXNFL' if event['competition']=='NFL' else 'KXNCAAF' if event['competition']=='NCAAF' else 'KXNCAAMB')+('SPREAD' if d['family']=='spread' else 'TOTAL')
         if r.get('series_id')!=series or d.get('series_id')!=series:raise ValueError('Native line series binding conflict')
     return dict(r,canonical=canonical)
 

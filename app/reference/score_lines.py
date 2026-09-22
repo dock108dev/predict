@@ -10,7 +10,7 @@ def score_distribution(r,binding,*,source_at=None,model_version=None):
     if i['competition'] not in CONFIG or i['family'] not in ('spread','total') or i['period']!='full_game' or not isinstance(i['rules'],dict) or i['rules'].get('version')!=VERSION:raise ValueError('Reviewed pilot score-line identity required')
     if native.get('market_identity')!=i or native.get('participant')!=binding['participant'] or native.get('source_event_id')!=binding['source_event_id']:raise ValueError('Forecast exact market, partition or native outcome conflicts')
     if CONFIG[i['competition']].event_key(native.get('event',{}))!=i['event']:raise ValueError('Forecast event binding conflicts')
-    if native.get('value_kind')!='score_partition_probability' or native.get('conditional_on')!='completed_full_game_including_overtime':raise ValueError('Explicit completed-game score partition probabilities required; scores and ratings are unsupported')
+    if native.get('value_kind')!='score_partition_probability' or native.get('conditional_on')!=('completed_full_game_including_extra_innings_action' if i['competition']=='MLB' else 'completed_full_game_including_overtime'):raise ValueError('Explicit completed-game score partition probabilities required; scores and ratings are unsupported')
     parts=market_partitions(i)
     value=distribution(native.get('probabilities'),parts)
     x.update(parser='score_distribution',value_kind='partition_distribution',value=value,original_value=native['probabilities'],conversion_method='Explicit exact partition probabilities; no fitting',state='available',reason=None,partitions=parts)

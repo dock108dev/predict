@@ -160,7 +160,7 @@ class SessionProjection:
                 if e and ident['competition']=='NBA':reason=reason or nba_gaps.get((source,e['id']))
                 if e and ident['competition']=='NCAAF':reason=reason or ncaaf_gaps.get((source,e['id']))
                 if e and ident['competition']=='NCAAB':reason=reason or ncaab_gaps.get((source,e['id']))
-                is_line=bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF') and ident['family'] in ('spread','total'))
+                is_line=bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF','MLB') and ident['family'] in ('spread','total'))
                 if is_line and ident['competition']=='NFL':reason=reason or nfl_line_gaps.get((source,e['id']))
                 if ident and ((ident['family']!='moneyline' and not is_line) or ident['period']!='full_game'): reason=reason or 'unsupported family or period (B5)'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
@@ -193,11 +193,13 @@ class SessionProjection:
                         canonical=key_fn(e)
                         ident=dict(ident,event=canonical,sport={'NFL':'american_football','MLB':'baseball','NBA':'basketball','NHL':'ice_hockey','NCAAF':'american_football','NCAAB':'basketball'}[ident['competition']],scheduled_start=canonical[3])
                         if is_line:
-                            ident.update(line=review['canonical']['threshold'],subject=e['home'] if ident['family']=='spread' else 'combined',rules={'version':'score-lines-1','unit':'points','domain':review['canonical']['domain'],'overtime':'included','completion':review['terms']['completion']})
+                            ident.update(line=review['canonical']['threshold'],subject=e['home'] if ident['family']=='spread' else 'combined',rules={'version':'score-lines-1','unit':review['descriptor']['unit'],'domain':review['canonical']['domain'],'overtime':'included','completion':review['terms']['completion']})
                         if is_line and ident['competition']=='NFL':
                             ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','tied_score','normal_completion')})
                         if is_line and ident['competition']=='NCAAF':
                             ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','overtime_scoring','tied_score','normal_completion','subdivision_scope')})
+                        if is_line and ident['competition']=='MLB':
+                            ident['rules'].update({k:review['descriptor'][k] for k in ('extra_innings','pitcher_conditions','normal_completion','tied_score','completion_scope')})
                         record['identity']=ident
                     except (ValueError,KeyError,TypeError,AttributeError,IndexError,StopIteration) as exc:
                         record['reason']=str(exc);continue
@@ -238,11 +240,11 @@ class SessionProjection:
                     game['score_reviews']={x[0]:deepcopy(x[2]['score_review']) for x in (a,b)}
                     game['product_identity']=dict(game['product_identity'],outcome_set={x[0]:deepcopy(x[2]['score_review']['descriptor']) for x in (a,b)})
                     if a[6]['competition']=='NFL':game['title']+=' · including overtime · '+a[6]['stage']
-                    game['title']+=' · line '+a[6]['line']+' points'
+                    game['title']+=' · line '+a[6]['line']+' '+a[6]['rules']['unit']
                 games.append(game); points[gid]=dict(id=token,at=at,cards=[a[4],b[4]],label='Durable cutoff')
                 if a[6]['competition']=='NHL':
                     game['nhl_reviews']={x[0]:deepcopy(x[2]['nhl_review']) for x in (a,b)}
-                if a[6]['competition']=='MLB':
+                if a[6]['competition']=='MLB' and not is_line:
                     game['mlb_reviews']={x[0]:deepcopy(x[2]['mlb_review']) for x in (a,b)}
                 if a[6]['competition']=='NBA' and not is_line:
                     game['nba_reviews']={x[0]:deepcopy(x[2]['nba_review']) for x in (a,b)}
