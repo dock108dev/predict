@@ -2,7 +2,7 @@
 
 **Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
 
-**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [Next independent work: shared B5 score lines](b5-score-lines-next.md).
+**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [NCAAF score-line engineering complete; next MLB mapping](b5-ncaaf-lines-handoff.md).
 
 Assessment completed September 20, 2026. **B1 COMPLETE; beta NOT READY FOR SIGNOFF.** Companion: [B2 implementation handoff](b2-product-integration-handoff.md). This is an assessment of the current working tree, retained evidence and bounded public official-source research, not a new qualification. No credentials, accounts or authenticated market data were accessed. Provider availability below is not an entitlement claim.
 
@@ -18,24 +18,26 @@ Each cell combines its code below with its source record and its row's next acti
 - **N/A**: the sporting format has no literal halftime; the period-equivalent requirement remains a B5 decision.
 - **C**: retained legacy saved comparison evidence at the B1 assessment. B2 now connects coverage/current/history through the ordinary dashboard with fixture acceptance; this does not upgrade any source to new production qualification.
 
-Generic parsers and type names do not prove coverage. `MarketType` currently recognizes only moneyline and unknown. Unless explicitly shown as C, cells are not connected to ordinary comparison/history views. Full-game rules (regulation, overtime, ties) remain source-specific. Live/in-play across every row is unqualified and a stretch goal; no pregame result transfers to it.
+Generic parsers and type names do not prove coverage. `MarketType` currently recognizes only moneyline and unknown. C records retained capture integration. Cells labeled F reviewed engineering or score-line pilot also connect synthetic reviews to ordinary comparison/history views; they do not establish actual-source qualification. Full-game rules (regulation, overtime, ties) remain source-specific. Live/in-play across every row is unqualified and a stretch goal; no pregame result transfers to it.
+
+**NFL full-game line engineering update, September 21:** [bounded handoff](b5-nfl-lines-handoff.md) and [acceptance](../evidence/b5-nfl-lines-20260921/final-report.md). 2026 regular/postseason spread/combined-total conditional calculations and exact reopening are fixture verified. Kalshi catalog/contracts establish documentation only; actual selected native line/orientation/fee/depth binding remains B3 work. PMUS source-specific NFL line rules and purchasable Short remain missing. Novig/ProphetX cells are unchanged. B4 owns actual exact-line distributions; the completed Pinnacle h2h sample and moneyline probabilities do not substitute. B5 owns other seasons, periods/team totals and unsupported refunds. NCAAF mapping is subsequently complete; next independent mapping is MLB.
 
 ## Prediction venues
 
 | Source | Sport | Full-game winner | Full-game spread | Full-game total | First half W/S/T | Second half W/S/T | Other period W/S/T | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
-| Kalshi K | NFL | P+C | U | U | U | U | U | U | B3 K discovery; B5 native family/period rules |
-| Kalshi K | NBA | F, reviewed engineering | U | U | U | U | U | U | B3 actual NBA listing/fees; B5 winner engineering complete, other families open |
+| Kalshi K | NFL | P+C | F+D, reviewed NFL lines | F+D, reviewed NFL lines | U | U | U | U | B3 actual NFL line bindings/rules/fees/depth; B5 other periods/futures |
+| Kalshi K | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual NBA listing/fees; B5 winner/score-line pilot complete; other periods/futures open |
 | Kalshi K | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual listing/fees; B5 MLB winner engineering complete, innings/run-line open |
 | Kalshi K | NHL | U | U | U | N/A | N/A | U, periods | U | B3 catalog; B5 regulation/OT and periods |
-| Kalshi K | NCAAF | F, bounded reviewed engineering | U | U | U | U | U | U | B3 actual listing/rules/fees; B5 remaining schools/seasons |
-| Kalshi K | NCAAB | U | U | U | U | U | U | U | B3 catalog; B5 competition and period choice |
-| Polymarket US P | NFL | P+C legacy Long; B3 Short F | U | U | U | U | U | D example only | B3 Short/discovery; B5 families/rules |
-| Polymarket US P | NBA | F, reviewed engineering | U | U | U | U | U | U | B3 actual US NBA listing/terms; B5 winner engineering complete, other families open |
+| Kalshi K | NCAAF | F, bounded reviewed engineering | F+D, FCS-only gap | F+D, FCS-only gap | U | U | U | U | B3 actual listing/rules/fees; B5 remaining schools/seasons |
+| Kalshi K | NCAAB | F, four-team men D1 winner | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual men D1 listing/rules/economics; B5 remaining roster/periods |
+| Polymarket US P | NFL | P+C legacy Long; B3 Short F | F, reviewed NFL lines | F, reviewed NFL lines | U | U | U | D example only | B3 actual NFL line rules/Short/depth; B5 other periods/futures |
+| Polymarket US P | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual US NBA listing/terms; B5 winner/score-line pilot complete; other periods/futures open |
 | Polymarket US P | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual US MLB listing/terms; B5 winner engineering complete, innings/run-line open |
 | Polymarket US P | NHL | U | U | U | N/A | N/A | U, periods | U | B3 US catalog; B5 regulation/OT and periods |
-| Polymarket US P | NCAAF | F, bounded reviewed engineering | U | U | U | U | U | U | B3 actual US college listing/terms; B5 remaining schools/seasons |
-| Polymarket US P | NCAAB | U | U | U | U | U | U | U | B3 US catalog; B5 competition and period choice |
+| Polymarket US P | NCAAF | F, bounded reviewed engineering | F, explicit line reviews | F, explicit line reviews | U | U | U | U | B3 actual US college listing/terms; B5 remaining schools/seasons |
+| Polymarket US P | NCAAB | F, four-team men D1 winner | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual US men D1 listing/rules/economics; B5 remaining roster/periods |
 | Novig N | NFL | F+D | D | D | D | U | U | D | B3 provisioning/wire; B5 family normalization |
 | Novig N | NBA | D | D | D | D | U | U | D | B3 discovery extension; B5 families |
 | Novig N | MLB | F+D | D | D | N/A | N/A | D first-five W/S/T; other U | D | B3 wire; B5 innings/settlement |
@@ -79,11 +81,11 @@ B4 independent engineering is now offline verified: both roles use retained-inpu
 
 | Reference type | Sport | Full-game winner | Spread | Total | First half W/S/T | Second half W/S/T | Other period | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
-| Independent model | NFL | F B4 model path / U independence + acquisition | U | U | U | U | U | M / U acquisition | B4 FPI candidate independence/output check; B5 rules |
+| Independent model | NFL | F B4 model path / U independence + acquisition | F exact-partition interface / U actual | F exact-partition interface / U actual | U | U | U | M / U acquisition | B4 FPI candidate independence/output check; B5 rules |
 | Independent model | NBA | F interface / U actual game forecast | U | U | U | U | U | M / U acquisition | B4 actual dated game-win output/independence; B5 other families |
 | Independent model | MLB | U game forecast | U | U | N/A | N/A | U innings | M FanGraphs | B4 forecasts/acquisition; B5 categories |
 | Independent model | NHL | MISSING | U | U | N/A | N/A | U periods | MISSING | Analytics deferred; no MoneyPuck acquisition queued |
-| Independent model | NCAAF | F interface / U actual game forecast | U | U | U | U | U | M / U acquisition | B4 actual game output/independence; B5 remaining scope |
+| Independent model | NCAAF | F interface / U actual game forecast | F partition interface / U actual | F partition interface / U actual | U | U | U | M / U acquisition | B4 actual game output/independence; B5 remaining scope |
 | Independent model | NCAAB | F interface / U actual game forecast | U score-margin applicability | U | U | U | U | U current output | B4 KenPom deferred; BPI output/dependency unresolved; B5 men’s Division I selected; four-team roster only |
 | Free delayed Pinnacle | NFL | Actual sample: 15 populated events; 16 extracted sides in saved Details; EV join outstanding | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U selected competitions | B4 observed free h2h access, delay unknown; B5 event/settlement mapping |
 | Free delayed Pinnacle | NBA | D-route | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U | B4 acquisition; B5 mapping |
@@ -213,3 +215,13 @@ The subsequent NCAAB slice is recorded below; its owner selection is men’s Div
 The retained men’s series points to ACHIEVEMENTS, not NBA BASKETBALLGAMEWIN. Its postponement, suspension and cancellation allocation are not assumed equivalent to PMUS. NCAA men’s two halves/five-minute OT is separately reviewed; women’s quarters and NBA periods do not transfer. Required source terms remain explicit; unknown exceptional outcomes prevent unconditional EV/all-outcome Arb. Existing matrix P/S/U classifications remain their historical evidence classes; the F evidence above does not upgrade actual cells.
 
 **Next: [shared full-game spread/total outcome partitions](b5-score-lines-next.md)** with NBA/NCAAB fixtures, strict/inclusive score thresholds, equality/push/refund behavior and ordinary fees/depth/history. Remaining spread/total mappings across all six sports, other periods, futures and results remain B5 work. Six bounded winner slices do not complete full six-sport coverage or B5. Actual venue/model qualification and full B4/B5 remain open. Beta NOT READY FOR SIGNOFF.
+
+## Shared score-line pilot — September 21 acceptance
+
+**Bounded NBA/men D1 NCAAB full-game spread/total engineering COMPLETE (F only).** [Handoff](b5-score-lines-handoff.md) · [evidence](../evidence/b5-score-lines-20260921/final-report.md). Exact integer/half-point predicates, equality partitions, retained-fee purchase-stake refunds, source-specific fee/depth calculations and exact-partition probability imports now feed ordinary Details/filter/Stop/history. Actual native listings/rules/economics remain B3 gaps; actual forecasts remain B4 gaps. Unsupported fee returns, unknown equality, missing size/fees and conflicting completed-score definitions remain visible/unavailable. No venue/model qualification upgraded. NFL mapping is subsequently complete; NCAAF mapping is subsequently complete; next B5 mapping: MLB full-game run lines/totals. Full B4/B5 open; beta NOT READY FOR SIGNOFF.
+
+## B5 NCAAF full-game line update — September 21
+
+**Bounded engineering COMPLETE, fixtures only.** [Handoff](b5-ncaaf-lines-handoff.md) · [acceptance](../evidence/b5-ncaaf-lines-20260921/final-report.md). Six reviewed schools/2026 only; native predicates, college possession-series overtime including extra-period tries, exact school/subdivision/site identity, conditional fees/depth/refunds and partition probabilities integrate with ordinary Details/filter/Stop/exact reopening. Neutral or unknown site never implies home advantage. Existing winners/NFL/basketball line outputs remain exact.
+
+**Owning gaps:** B3/B5 retains actual selected NCAAF line/period/participant rules, source economics/size and missing FCS-only contracts; no FBS/NFL terms are inherited. Kalshi KXNCAAFSPREAD/KXNCAAFTOTAL catalog/documentation is not actual venue qualification. PMUS actual college line/Short semantics, Novig provisioned wire and ProphetX production semantics remain missing. B4 owns actual exact-line distributions and independence; moneyline odds, rankings and projected margins cannot substitute. B5 owns broader schools/seasons, partial games/team totals and unsupported refunds. Next independent engineering is MLB full-game run-line/total mapping. Full B4/B5 open; beta NOT READY FOR SIGNOFF.

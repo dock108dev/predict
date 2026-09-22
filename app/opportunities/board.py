@@ -99,7 +99,7 @@ def contracts(point, identity=None):
                 received_at=None if not b else b['received_at'],source_at=None if not b else b['source_at'],book_id=None if not b else b['id'])
     return result
 
-def leg_value(contract, assessment, at, quantity, scenario, identity=None):
+def leg_value(contract, assessment, at, quantity, scenario, identity=None, score_payouts=None):
     sides=identity['sides'] if identity else SIDES
     teams=identity['teams'] if identity else TEAMS
     result={**contract,'fills':None,'notional':None,'fee_audit':None,'cash':None,'fee':None,'cashflows':{},'reasons':list(contract['warnings'])}
@@ -115,20 +115,28 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None):
         else:result['reasons'].append('Unsupported source fee/settlement handler' if v not in ('kalshi','polymarket_us') else 'Listing terms missing at cutoff')
         return result
     side=sides[contract['id']]
-    pays={s:payout(side,s,p) for s in [*('winner:'+t for t in teams),*SCENARIOS]}
+    pays=score_payouts if score_payouts is not None else {s:payout(side,s,p) for s in [*('winner:'+t for t in teams),*SCENARIOS]}
     outcomes={s:x['value'] for s,x in pays.items() if x['kind']=='fraction'}
     c=dict(venue=v,environment='production',market_id=assessment['sources'][v]['market_id'],product='event_contract',
            trade_time=at,calculation_time=assessment['assessed_at'],complete_order_history=True,settlement_status='UNKNOWN',
            fills=[dict(fill_id=str(i),order_id='hypothetical-new-order',role='taker',price=f['price'],quantity=f['quantity'],unit='contracts') for i,f in enumerate(fills)],outcomes=outcomes)
+    if score_payouts is not None:
+        c['refund_outcomes']=[s for s,x in pays.items() if x['kind']=='stake_refund']
     sport=identity.get('product_identity',{}).get('competition') if identity else None
-    reviewed_sport=sport in ('NHL','MLB','NBA','NCAAF','NCAAB')
+    reviewed_sport=sport in ('NHL','MLB','NBA','NCAAF','NCAAB') or (sport=='NFL' and score_payouts is not None)
     series={'MLB':'KXMLBGAME','NBA':'KXNBAGAME','NCAAF':'KXNCAAFGAME','NCAAB':'KXNCAAMBGAME'}.get(sport,'KXNHLGAME')
     fee_key=sport.lower()+'_fee_bases' if reviewed_sport else 'nhl_fee_bases'
     basis=assessment.get(fee_key,{}).get(v) if reviewed_sport else None
     if reviewed_sport and not basis:
         result['reasons'].append(sport+' source fee basis missing');return result
     fee_type='quadratic_with_maker_fees'
-    if sport=='NCAAF' and v=='kalshi':
+    if score_payouts is not None and v=='kalshi':
+        series=basis.get('series_id')
+        allowed=('KXNBA' if sport=='NBA' else 'KXNFL' if sport=='NFL' else 'KXNCAAF' if sport=='NCAAF' else 'KXNCAAMB')+('SPREAD' if identity['product_identity']['family']=='spread' else 'TOTAL')
+        if series!=allowed or basis.get('fee_type') not in ('quadratic','quadratic_with_maker_fees'):
+            result['reasons'].append('Score-line native fee series/type unavailable');return result
+        fee_type=basis['fee_type']
+    if sport=='NCAAF' and v=='kalshi' and score_payouts is None:
         series=basis.get('series_id')
         fee_type={'KXNCAAFGAME':'quadratic_with_maker_fees','KXNCAAFCSGAME':'quadratic'}.get(series)
         if not fee_type:
@@ -175,6 +183,9 @@ def expected(leg, probability, quantity, identity=None):
     return result
 
 def evaluate(point, rows, quantity='100', scenario='cent', probability=None, selected='polymarket_us:1315440', identity=None):
+    if identity and identity.get('score_reviews'):
+        from app.opportunities.score_lines import evaluate as evaluate_lines
+        return evaluate_lines(point,rows,quantity,scenario,probability,selected,identity)
     sides=identity['sides'] if identity else SIDES
     teams=identity['teams'] if identity else TEAMS
     candidate_defs=identity['candidates'] if identity else CANDIDATES

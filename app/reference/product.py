@@ -149,7 +149,10 @@ def validate(r):
     if r['receipt']['id']!=digest({k:v for k,v in r['receipt'].items() if k!='id'}):raise ValueError('Receipt digest mismatch')
     if r['received_at']!=r['receipt']['received_at']:raise ValueError('Receipt time changed')
     if r['value_kind']=='probability':probability(r['value'],'probability')
-    if 'extraction' in r:
+    if r.get('parser')=='score_distribution':
+        from app.reference.score_lines import score_distribution
+        expected=score_distribution(r['receipt'],r['binding'],source_at=r['source_at'],model_version=r['model_version'])
+    elif 'extraction' in r:
         expected=published_value(r['receipt'],r['binding'],start=r['extraction']['start'],end=r['extraction']['end'],kind=r['source_value_kind'],convention=r['convention'],source_at=r['source_at'],model_version=r['model_version'])
     elif r['provider_id']=='the_odds_api':
         expected=pinnacle(r['receipt'],r['binding'],odds_format='decimal' if r['convention']=='decimal_odds' else 'american')
@@ -165,7 +168,12 @@ def at_cutoff(refs,at):
         x=deepcopy(r)
         if x.get('schema_version')==VERSION:
             i=x['market_identity'];x['availability']=x['state']
-            if i['family']!='moneyline' or i['period']!='full_game' or i.get('line') is not None or i.get('horizon') or i.get('category'):
+            score_line=x.get('parser')=='score_distribution'
+            if score_line:
+                from app.reference.score_lines import cutoff_reason
+                reason=cutoff_reason(x)
+                if reason:x.update(availability='unsupported',reason=reason)
+            if not score_line and (i['family']!='moneyline' or i['period']!='full_game' or i.get('line') is not None or i.get('horizon') or i.get('category')):
                 x.update(availability='unsupported',reason='Reference does not describe an unlined full-game winner (B5)')
             if i.get('scheduled_start') and time(x['received_at'])>=time(i['scheduled_start']):
                 x.update(availability='unsupported',reason='First received after scheduled start; retrospective reference only')
@@ -179,24 +187,24 @@ def at_cutoff(refs,at):
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'MLB Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
-            if i['competition']=='NBA':
+            if i['competition']=='NBA' and not score_line:
                 from app.normalization.nba import model_reason
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NBA Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
-            if i['competition']=='NCAAB':
+            if i['competition']=='NCAAB' and not score_line:
                 from app.normalization.ncaab import model_reason
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NCAAB Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
-            if i['competition']=='NCAAF':
+            if i['competition']=='NCAAF' and not score_line:
                 from app.normalization.ncaaf import model_reason
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NCAAF Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
                 if reason:x.update(availability='unsupported',reason=reason)
             age=(time(at)-time(x['source_at'] or x['received_at'])).total_seconds()
             x.update(age_seconds=str(age),freshness='refresh_due' if age>x['refresh_after_seconds'] else 'within_refresh_plan')
-        elif x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB'):
+        elif x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB') or (x.get('market_identity',{}).get('competition')=='NFL' and x.get('market_identity',{}).get('family') in ('spread','total')):
             x.update(availability='unsupported',reason=x['market_identity']['competition']+' reference requires an original-input B4 receipt and reviewed game binding')
         result.append(x)
     # Same source revision with conflicting values is never resolved by insertion order.
@@ -228,7 +236,8 @@ def prepare(entries):
     result=[]
     for entry in entries:
         r=receipt(**entry['receipt']);binding=entry['binding'];options=entry.get('options',{})
-        parser={'published_value':published_value,'pinnacle':pinnacle,'kenpom_fanmatch':kenpom_fanmatch}.get(entry['parser'])
+        from app.reference.score_lines import score_distribution
+        parser={'score_distribution':score_distribution,'published_value':published_value,'pinnacle':pinnacle,'kenpom_fanmatch':kenpom_fanmatch}.get(entry['parser'])
         if parser is None:raise ValueError('Unknown retained-input parser')
         ref=parser(r,binding,**options);validate(ref);result.append(ref)
     return result

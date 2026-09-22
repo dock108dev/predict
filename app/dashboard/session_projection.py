@@ -136,11 +136,12 @@ class SessionProjection:
         groups={}; catalog=[]; metadata=[]
         from app.normalization.nhl import inventory_gaps, winner_review, event_key
         nhl_gaps=inventory_gaps(self.inventory)
-        from app.normalization import mlb,nba,ncaaf,ncaab
+        from app.normalization import mlb,nba,ncaaf,ncaab,nfl_lines
         mlb_gaps=mlb.inventory_gaps(self.inventory)
         nba_gaps=nba.inventory_gaps(self.inventory)
         ncaaf_gaps=ncaaf.inventory_gaps(self.inventory)
         ncaab_gaps=ncaab.inventory_gaps(self.inventory)
+        nfl_line_gaps=nfl_lines.inventory_gaps(self.inventory)
         for source,cat in sorted(self.inventory.items()):
             if cat.get('role','prediction')!='prediction':continue
             events={e['id']:e for e in cat['events']}
@@ -159,7 +160,9 @@ class SessionProjection:
                 if e and ident['competition']=='NBA':reason=reason or nba_gaps.get((source,e['id']))
                 if e and ident['competition']=='NCAAF':reason=reason or ncaaf_gaps.get((source,e['id']))
                 if e and ident['competition']=='NCAAB':reason=reason or ncaab_gaps.get((source,e['id']))
-                if ident and (ident['family']!='moneyline' or ident['period']!='full_game'): reason=reason or 'unsupported family or period (B5)'
+                is_line=bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF') and ident['family'] in ('spread','total'))
+                if is_line and ident['competition']=='NFL':reason=reason or nfl_line_gaps.get((source,e['id']))
+                if ident and ((ident['family']!='moneyline' and not is_line) or ident['period']!='full_game'): reason=reason or 'unsupported family or period (B5)'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
                 record=dict(source_id=source,event_id=m['event_id'],market_id=m['id'],identity=ident,title=(e or {}).get('title'),reason=reason,health=deepcopy(self.health.get(key)),native=deepcopy(m))
                 if 'display_prices' in m:
@@ -173,20 +176,28 @@ class SessionProjection:
                 meta=self.metadata.get(key)
                 if not meta: record['reason']='awaiting metadata'; continue
                 review=None
-                if ident['competition'] in ('NHL','MLB','NBA','NCAAF','NCAAB'):
+                if ident['competition'] in ('NHL','MLB','NBA','NCAAF','NCAAB') or is_line:
                     try:
-                        if ident['competition'] in ('MLB','NBA','NCAAF','NCAAB'):
+                        if ident['competition'] in ('MLB','NBA','NCAAF','NCAAB') or is_line:
                             for observed in (meta,self.books.get(key)):
                                 if not observed:continue
                                 raw=observed.get('market',observed.get('book'))['raw']
                                 if any(raw.get(k) and stamp(raw[k])>stamp(at) for k in ('received_at','exchange_at')) or stamp(observed['observed_at'])>stamp(at):
                                     raise ValueError(ident['competition']+' native input is later than cutoff')
                         review_fn={'MLB':mlb.winner_review,'NBA':nba.winner_review,'NCAAF':ncaaf.winner_review,'NCAAB':ncaab.winner_review}.get(ident['competition'],winner_review)
-                        key_fn={'MLB':mlb.event_key,'NBA':nba.event_key,'NCAAF':ncaaf.event_key,'NCAAB':ncaab.event_key}.get(ident['competition'],event_key)
+                        key_fn={'NFL':nfl_lines.event_key,'MLB':mlb.event_key,'NBA':nba.event_key,'NCAAF':ncaaf.event_key,'NCAAB':ncaab.event_key}.get(ident['competition'],event_key)
+                        if is_line:
+                            from app.normalization.score_lines import review as review_fn
                         review=review_fn(e,m,meta,source,self.spec.get('mode'))
                         # Additive projection only: retained event/native IDs are untouched.
                         canonical=key_fn(e)
-                        ident=dict(ident,event=canonical,sport={'MLB':'baseball','NBA':'basketball','NHL':'ice_hockey','NCAAF':'american_football','NCAAB':'basketball'}[ident['competition']],scheduled_start=canonical[3])
+                        ident=dict(ident,event=canonical,sport={'NFL':'american_football','MLB':'baseball','NBA':'basketball','NHL':'ice_hockey','NCAAF':'american_football','NCAAB':'basketball'}[ident['competition']],scheduled_start=canonical[3])
+                        if is_line:
+                            ident.update(line=review['canonical']['threshold'],subject=e['home'] if ident['family']=='spread' else 'combined',rules={'version':'score-lines-1','unit':'points','domain':review['canonical']['domain'],'overtime':'included','completion':review['terms']['completion']})
+                        if is_line and ident['competition']=='NFL':
+                            ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','tied_score','normal_completion')})
+                        if is_line and ident['competition']=='NCAAF':
+                            ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','overtime_scoring','tied_score','normal_completion','subdivision_scope')})
                         record['identity']=ident
                     except (ValueError,KeyError,TypeError,AttributeError,IndexError,StopIteration) as exc:
                         record['reason']=str(exc);continue
@@ -203,39 +214,46 @@ class SessionProjection:
                     connection=connection,age_seconds=age,receipt_stale=age is not None and Decimal(age)>30)
                 if card['book'] and card['book']['market_state']=='unknown' and not self.spec.get('native_sources'): card['book']['market_state']=meta['market']['state']
                 record.update(age_seconds=age,usable=bool(book and connection=='connected' and not card['receipt_stale'] and card['book']['sync']=='synchronized' and card['book']['market_state']=='active'))
-                groups.setdefault(stable([ident,review['terms']]) if review else stable(ident),[]).append((source,e,m,sides,card,meta,ident))
+                groups.setdefault(stable(ident) if is_line else stable([ident,review['terms']]) if review else stable(ident),[]).append((source,e,m,sides,card,meta,ident))
         games=[]; points={}; rows_by_game={}; truncated=0
         for group,values in sorted(groups.items()):
             values.sort(key=lambda x:(x[0],x[1]["id"],x[2]["id"]))
             for a,b in combinations(values,2):
                 if a[0]==b[0] or self.inventory[a[0]].get('origin_id',a[0])==self.inventory[b[0]].get('origin_id',b[0]): continue
                 sides={**a[3],**b[3]}; teams=sorted(set(s['participant'] for s in sides.values()))
-                if len(teams)!=2: continue
+                is_line=a[6]['family'] in ('spread','total')
+                if not is_line and len(teams)!=2: continue
                 def winner(s): return next(t for t in teams if t!=s['participant']) if s['predicate']=='not_win' else s['participant']
                 candidates=[]
                 for x,y in product(a[3],b[3]):
-                    if winner(sides[x])!=winner(sides[y]): candidates.append((stable([x,y]),winner(sides[x])+' + '+winner(sides[y]),(x,y)))
+                    if is_line or winner(sides[x])!=winner(sides[y]): candidates.append((stable([x,y]),winner(sides[x])+' + '+winner(sides[y]),(x,y)))
                 if not candidates: continue
                 if len(games)>=64:
                     truncated+=1;continue
                 gid=stable([group,sorted([list((x[0],x[1]['id'],x[2]['id'])) for x in (a,b)])])
+                if is_line:gid=stable([gid,[(x[0],x[2]['score_review']) for x in (a,b)]])
                 game=dict(id=gid,title=a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period']+(' · including OT/shootout' if a[6]['competition']=='NHL' and a[6]['stage']=='regular_season' else ' · including playoff OT' if a[6]['competition']=='NHL' else ' · including extra innings · action · game '+str(a[1]['game_number']) if a[6]['competition']=='MLB' else ' · including overtime' if a[6]['competition']=='NBA' else ' · including college overtime · '+a[1]['subdivisions'][a[1]['home']]+'/'+a[1]['subdivisions'][a[1]['away']]+' · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAF' else ' · men Division I · two 20-minute halves + overtime · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAB' else ''),scheduled_start=a[1]['scheduled_start'],teams=teams,sides=sides,
                     sources={x[0]:dict(event_id=x[1]['id'],market_id=x[2]['id']) for x in (a,b)},candidates=candidates,product_identity=a[6])
+                if is_line:
+                    game['score_reviews']={x[0]:deepcopy(x[2]['score_review']) for x in (a,b)}
+                    game['product_identity']=dict(game['product_identity'],outcome_set={x[0]:deepcopy(x[2]['score_review']['descriptor']) for x in (a,b)})
+                    if a[6]['competition']=='NFL':game['title']+=' · including overtime · '+a[6]['stage']
+                    game['title']+=' · line '+a[6]['line']+' points'
                 games.append(game); points[gid]=dict(id=token,at=at,cards=[a[4],b[4]],label='Durable cutoff')
                 if a[6]['competition']=='NHL':
                     game['nhl_reviews']={x[0]:deepcopy(x[2]['nhl_review']) for x in (a,b)}
                 if a[6]['competition']=='MLB':
                     game['mlb_reviews']={x[0]:deepcopy(x[2]['mlb_review']) for x in (a,b)}
-                if a[6]['competition']=='NBA':
+                if a[6]['competition']=='NBA' and not is_line:
                     game['nba_reviews']={x[0]:deepcopy(x[2]['nba_review']) for x in (a,b)}
-                if a[6]['competition']=='NCAAF':
+                if a[6]['competition']=='NCAAF' and not is_line:
                     game['ncaaf_reviews']={x[0]:deepcopy(x[2]['ncaaf_review']) for x in (a,b)}
-                if a[6]['competition']=='NCAAB':
+                if a[6]['competition']=='NCAAB' and not is_line:
                     game['ncaab_reviews']={x[0]:deepcopy(x[2]['ncaab_review']) for x in (a,b)}
                 rows_by_game[gid]=[a[5],b[5]]
         paired={(v,ids['market_id']) for g in games for v,ids in g['sources'].items()}
         for record in catalog:
-            if (record.get('identity') or {}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') and not record['reason'] and (record['source_id'],record['market_id']) not in paired:
+            if ((record.get('identity') or {}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') or ((record.get('identity') or {}).get('competition')=='NFL' and (record.get('identity') or {}).get('family') in ('spread','total'))) and not record['reason'] and (record['source_id'],record['market_id']) not in paired:
                 record['reason']='No other source has matching reviewed '+record['identity']['competition']+' event and settlement terms'
         from app.reference.product import at_cutoff
         refs=at_cutoff(self.references.values(),at)

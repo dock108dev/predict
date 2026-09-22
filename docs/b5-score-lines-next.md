@@ -1,6 +1,8 @@
 # Next B5 slice — shared full-game spread/total calculations
 
-**Concrete next implementation slice, not started:** add score-line outcome partitions to ordinary Predict, piloted with NBA and men’s Division I NCAAB full-game spread/total fixtures. Reuse their reviewed game identities and the existing fees, depth, settlement evidence and saved-history paths. No acquisition or provider response is prerequisite to this independent engineering.
+**Completed bounded proposal:** [implementation and acceptance handoff](b5-score-lines-handoff.md). The original scope below is retained for traceability. [NFL mapping is subsequently complete](b5-nfl-lines-handoff.md); [NCAAF mapping is subsequently complete](b5-ncaaf-lines-handoff.md); next independent work is MLB full-game run-line/total mapping.
+
+**Original implementation proposal:** add score-line outcome partitions to ordinary Predict, piloted with NBA and men’s Division I NCAAB full-game spread/total fixtures. Reuse their reviewed game identities and the existing fees, depth, settlement evidence and saved-history paths. No acquisition or provider response is prerequisite to this independent engineering.
 
 ## Why this is the next shared gap
 

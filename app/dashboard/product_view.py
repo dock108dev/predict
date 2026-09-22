@@ -5,12 +5,13 @@ from app.dashboard.multi_game import game_calculation, rank_filter
 def references_for(snapshot,game,key=None):
     side=game['sides'].get(key) if key else None
     return [r for r in snapshot['references'] if r.get('market_identity')==game['product_identity'] and
-            (side is None or (r.get('participant')==side['participant'] and side['predicate']=='win'))]
+            (side is None or (r.get('participant')==side['participant'] and side['predicate'] in ('win','score')))]
 
 
 def usable(r):
+    if r.get('market_identity',{}).get('family') in ('spread','total') and (r.get('parser')!='score_distribution' or r.get('schema_version')!='b4-reference-1'):return False
     if r.get('market_identity',{}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') and r.get('schema_version')!='b4-reference-1':return False
-    return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind')=='probability' and r.get('conversion_method') and r.get('value') is not None
+    return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind') in ('probability','partition_distribution') and r.get('conversion_method') and r.get('value') is not None
 
 
 def reference_for(snapshot,game,key):
@@ -30,8 +31,10 @@ def calculate(snapshot,game,q):
     if reference:
         result['ev']['probability_source']=reference['role']+' · '+reference['provider_id']+' / '+reference.get('origin_id','unknown')+' · received '+reference['received_at']
         result['ev'].update(reference=reference,unconditional_ev=None,exceptional_probabilities=reference.get('exceptional_probabilities'),reference_limitation=reference.get('reason') or 'Published probability used in a normal-winner two-state what-if; no exceptional-outcome renormalization. Unconditional EV unavailable.')
+    if game.get('score_reviews') and reference:
+        result['ev']['reference_limitation']='Explicit completed-game partition distribution; exceptional probabilities unknown. Unconditional EV unavailable.'
     result['reference_id']=reference['id'] if reference else None
-    result['assumptions']='Normal winner comparison; fees apply only where retained source terms and the pinned source handler support them. Unknown fee, settlement or depth inputs leave net dollars unavailable. '+('Synthetic integration inputs.' if snapshot['data_mode']=='synthetic' else 'Retained observation inputs.')
+    if not game.get('score_reviews'):result['assumptions']='Normal winner comparison; fees apply only where retained source terms and the pinned source handler support them. Unknown fee, settlement or depth inputs leave net dollars unavailable. '+('Synthetic integration inputs.' if snapshot['data_mode']=='synthetic' else 'Retained observation inputs.')
     result.update(references=references_for(snapshot,game),data_mode=snapshot['data_mode'],view_mode=snapshot['view_mode'],state=snapshot['state'],frozen_cutoff=True)
     return result
 
