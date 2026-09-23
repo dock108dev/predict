@@ -1,6 +1,6 @@
 # Predict — beta product definition
 
-Updated September 22, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) owns engineering order and the [Desktop tracker](../../prediction_arb_next_steps.md) owns status/next action. Older E/D/slice reports are evidence for their recorded work, not competing roadmaps.
+Updated September 22, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) owns engineering order and the [Desktop tracker](../../prediction_arb_next_steps.md) owns status/next action. Older implementation reports are evidence for their recorded work, not competing roadmaps.
 
 ## Product goal
 
@@ -26,7 +26,11 @@ Pinnacle delay is acceptable by owner direction. Unknown delay must remain unkno
 
 ## Coverage contract
 
-B1/B2 and independent B3/B4/B5 engineering are complete. The [coverage matrix](b1-coverage-matrix.md) distinguishes reviewed fixture capabilities from actual source evidence. B6 offline integrated readiness is COMPLETE; see the [B6 handoff](b6-offline-integrated-handoff.md). Full B3/B4/B5/B6 and beta signoff remain open for actual-source criteria. Missing listings, native rules, dated model distributions and source economics remain precise qualification work, not reasons to repeat finished engineering.
+The shared product, venue adapters, reference handling and selected sport/market
+calculations are implemented and verified offline. The [coverage matrix](coverage-matrix.md)
+separates those capabilities from actual source evidence. [Integrated offline
+validation](offline-integration.md) is complete. Native source qualification and
+beta signoff remain open.
 
 Support all six sports and every requested family where the sporting format applies. Do not promise all venues list every combination. Useful comparable overlap is required; four connected logos or isolated unmatched samples are insufficient. Unavailable requested cells remain gaps until resolved or explicitly accepted as exclusions by the owner.
 
@@ -56,8 +60,14 @@ The previous roadmap is retained in [planning history](history/beta-reset-202609
 
 ## Current engineering and remaining qualification
 
-Independent B5 is complete across the selected six-sport full-game, first-half, baseball/hockey period and championship scope. [B5 handoff](b5-independent-engineering-handoff.md) and [remaining native dependencies](b5-remaining-backlog.md) replace historical sport-by-sport next actions. B6 integrates those capabilities through ordinary collection, viewing and saved history; its evidence establishes offline behavior only.
+[Sports integration](sports-integration.md) covers the selected full-game,
+first-half, baseball/hockey period and championship markets. [Native data
+dependencies](market-data-gaps.md) remain open.
 
-The single retained NFL Pinnacle h2h sample contains 16 side references (one authorized credit consumed; 499 recorded remaining at that attempt). It remains historical, with delay unknown. Compatible prediction books, reviewed native settlement and actual independent model inputs remain unqualified. MoneyPuck is dropped; NHL analytics and KenPom are deferred. Novig/ProphetX provider responses remain pending in current records; no new access inspection or outreach occurred.
+One historical NFL Pinnacle sample contains 16 side references, with delay unknown.
+Compatible prediction observations, native settlement and independent model inputs
+remain unqualified. MoneyPuck is dropped; NHL analytics and KenPom are deferred.
+Novig and ProphetX provider replies remain pending in the current records.
 
-[Pre-B6 document snapshots](history/b6-offline-20260923/README.md) preserve superseded roadmap wording and earlier engineering milestones. Next actual work is the separately approvable [bounded real-data proposal](b6-next-real-milestone.md), not owner beta acceptance.
+See the [delivery plan](data-coverage-plan.md) for the current handoff and
+[retained planning snapshots](history/beta-reset-20260920/README.md) for earlier records.

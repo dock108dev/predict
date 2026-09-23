@@ -35,40 +35,40 @@ python -m unittest \
     tests.test_future_qualification \
     tests.test_public_doc_package \
     tests.test_session_projection \
-    tests.test_b2_product \
-    tests.test_b3_native \
-    tests.test_b3_continuation \
-    tests.test_b4_reference \
+    tests.test_product_integration \
+    tests.test_native_integration \
+    tests.test_native_continuation \
+    tests.test_reference_integration \
     tests.test_pinnacle_sample \
-    tests.test_b4_actual \
-    tests.test_b5_nhl \
-    tests.test_b5_mlb \
-    tests.test_b5_nba \
-    tests.test_b5_ncaaf \
-    tests.test_b5_ncaab \
-    tests.test_b5_score_lines \
-    tests.test_b5_nfl_lines \
-    tests.test_b5_ncaaf_lines \
-    tests.test_b5_mlb_lines \
-    tests.test_b5_nhl_lines \
-    tests.test_b5_nfl_first_half \
-    tests.test_b5_ncaaf_first_half \
-    tests.test_b5_nba_first_half \
-    tests.test_b5_ncaab_first_half \
-    tests.test_b5_nfl_resolution \
-    tests.test_b5_nba_resolution \
-    tests.test_b5_ncaaf_resolution \
-    tests.test_b5_ncaab_resolution \
-    tests.test_b5_diamond_ice_resolution \
-    tests.test_b5_periods \
-    tests.test_b5_futures \
-    tests.test_b5_college_expansion \
-    tests.test_b5_payout_extensions \
+    tests.test_actual_references \
+    tests.test_nhl \
+    tests.test_mlb \
+    tests.test_nba \
+    tests.test_ncaaf \
+    tests.test_ncaab \
+    tests.test_score_lines \
+    tests.test_nfl_lines \
+    tests.test_ncaaf_lines \
+    tests.test_mlb_lines \
+    tests.test_nhl_lines \
+    tests.test_nfl_first_half \
+    tests.test_ncaaf_first_half \
+    tests.test_nba_first_half \
+    tests.test_ncaab_first_half \
+    tests.test_nfl_resolution \
+    tests.test_nba_resolution \
+    tests.test_ncaaf_resolution \
+    tests.test_ncaab_resolution \
+    tests.test_diamond_ice_resolution \
+    tests.test_periods \
+    tests.test_futures \
+    tests.test_college_expansion \
+    tests.test_payout_extensions \
     -v
 node tests/test_dashboard_failures.cjs
 node tests/test_board_security.cjs
 node tests/test_concise_dashboard.cjs
-node tests/test_b6_details.cjs
+node tests/test_source_details.cjs
 
 # Registry expansion keeps historical identities and captured matching intact.
 python -m unittest \

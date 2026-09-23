@@ -42,12 +42,12 @@ from app.matching import Matcher
 
 parents = Matcher.load('current-event-store.json')
 matcher = MoneylineMatcher()  # or MoneylineMatcher.load('market-store.json')
-# rows = [observe(adapter_market, parent_observation, rule_profile,
+# Rows = [observe(adapter_market, parent_observation, rule_profile,
 #                 native=native_market, context=native_event,
 #                 artifact=capture_path), ...]
-# matcher.update(parents, rows)
-# matcher.save('market-store.json')
-# result = matcher.report(parents)
+# Matcher.update(parents, rows)
+# Matcher.save('market-store.json')
+# Result = matcher.report(parents)
 ```
 
 `observe()` consumes shared adapter Market observations and existing normalized

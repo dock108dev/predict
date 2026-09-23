@@ -11,8 +11,8 @@ from app.normalization import Registry, enrich_event, resolve_team
 registry = Registry.load()
 team = resolve_team('DAL', league='NFL', registry=registry)
 normalized = enrich_event(observation, environment='production', registry=registry)
-# normalized.observation is the original immutable shared Event.
-# normalized.participants[i].resolution.canonical_id is usable by Slice 7.
+# Normalized.observation is the original immutable shared Event.
+# Normalized.participants[i].resolution.canonical_id is usable by Slice 7.
 ```
 
 The package includes `registry-v1.json`. Internal IDs such as `NFL:DAL` and `MLB:NYY` are assigned keys, independent of mutable display names. NFL and MLB are the only registered leagues. There are 32 NFL and 30 MLB teams; NCAAF, NBA and NHL remain planned and return unknown. No college-team completeness is implied.

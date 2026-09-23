@@ -58,7 +58,7 @@ Why this is authoritative: the default factory selects `CoverageOwner(product_mo
 Source configuration comes from `multi_game.configuration` unless an explicit
 preview supplies a run spec. Start/Stop, cleanup, finalization and resource ownership
 remain shared. Real source Start requires the configured approval path; legacy
-D2 and supervised modes retain their separate consumed-attempt policies.
+bounded collection and supervised modes retain their separate consumed-attempt policies.
 
 Known callers: current router, native preview, qualification owner/session and
 isolated fixture harnesses. No scheduling, auto-Start or new live allowance is added.
@@ -130,11 +130,11 @@ Research ranking shares only selection validation with ordinary ranking.
 | `SessionProjection.legacy` | Assigned on selection rows, never read anywhere. Deleted state and assignment; row accounting is unchanged. |
 | Retained single-game and multi-game readers | Kept: default catalog, saved calculations and page research use them. No migration of evidence. |
 | `MultiOwner`, old one-attempt/supervised modes | Kept: current owner inherits lifecycle/status helpers; qualification and offline entry points use distinct policies. |
-| Historical SQL, E5/E6 previews, all-outcome audit engines | Kept: independent entry points and shared imported helpers remain. These contracts are not interchangeable with conditional product calculations. |
+| Historical SQL, research and collection previews, all-outcome audit engines | Kept: independent entry points and shared imported helpers remain. These contracts are not interchangeable with conditional product calculations. |
 | Native Novig/ProphetX and separate reference acquisition | Kept: current collector has native-source branches; pending real qualification is not proof of dead code. |
 | Launcher instance names and reference environment setting | Kept: `poc/beta` select different process records; historical optional reference transport reads `ODDS_API_KEY`. Neither grants collection authority. |
 
-Risky follow-up: extract shared E6 lifecycle/book formatting helpers and identify
+Risky follow-up: extract shared collection preview lifecycle/book formatting helpers and identify
 which historical executable workflows can be retired before deleting their modules.
 Keep consumed-attempt guards, original records and exact replay versions.
 `CoverageOwner.start(max_games=...)` remains a legacy request-shape compatibility
@@ -149,7 +149,7 @@ because some branches look alike.
 61 tests passed:
 
 ```sh
-.venv/bin/python -m unittest tests.test_ssot_policy tests.test_dashboard_security tests.test_session_projection tests.test_b4_reference tests.test_multi_game tests.test_multi_page tests.test_math_reconciliation tests.test_b5_score_lines -q
+.venv/bin/python -m unittest tests.test_ssot_policy tests.test_dashboard_security tests.test_session_projection tests.test_reference_integration tests.test_multi_game tests.test_multi_page tests.test_math_reconciliation tests.test_score_lines -q
 ```
 
 Four new guard tests cover direct fallback rejection, duplicate selectors,
@@ -196,34 +196,34 @@ credential lookup, database work, application restart, packaging, full CI matrix
 commit or publishing was performed. Browser/live checks were not run; this pass
 claims focused source validation only.
 
-## D1 independent coverage projection — September 16, 2026
+## Inventory projection independent coverage projection — September 16, 2026
 
 `app/collection/coverage.py` owns offline catalog completeness/accounting and report
 projection, before intersection or scan selection. It shares native adapter
 `parse_event`/`parse_market` conversion and `prediction_discovery.participant_mapping`
 with the existing normalization registry. It never replaces the collection owner,
 matching/settlement qualification or calculation engines. Retained market absence
-is unknown coverage, not a zero venue denominator. See [D1](data-coverage-d1-report.md).
+is unknown coverage, not a zero venue denominator. See [inventory projection](data-coverage-d1-report.md).
 
-D3's chosen persistence direction is to extend `ObservationJournal`/native replay
+sustained collection's chosen persistence direction is to extend `ObservationJournal`/native replay
 with bounded segments and manifests; the historical SQL API remains separate.
 This decision performs no migration or new collection.
 
 
-## D2 evidence boundary — September 16, 2026
+## Bounded collection evidence boundary — September 16, 2026
 
 The sole authorized pilot failed in local discovery after 2.434 seconds. Its
 immutable journal/manifest and frozen pilot source are under `evidence/d2-coverage/`.
 The repaired candidate has 67 focused offline checks; no replacement live run
 occurred. Current denominators, wider subscriptions and live browser/Stop evidence
-are unestablished. [D2 report](data-coverage-d2-report.md) owns those observations;
+are unestablished. [bounded collection report](data-coverage-d2-report.md) owns those observations;
 the Desktop tracker/coverage plan retain incomplete status. This does not authorize
-D3, another pilot, indefinite collection or migration.
+sustained collection, another pilot, indefinite collection or migration.
 
-D2 offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
+bounded collection offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
 
 
-## D3a offline segmented history — September 16, 2026
+## Segmented history offline segmented history — September 16, 2026
 
 `collection/segmented.py` extends `ObservationJournal` with the separately versioned
 `d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
@@ -235,10 +235,10 @@ must precede a usable book. No checkpoints or external payload store are used.
 `dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
 expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
 completed histories. The production factory still selects legacy `CoverageOwner`.
-D2 transport, 2,048 lifetime ingress allowance and original recovery identity checks
+bounded collection transport, 2,048 lifetime ingress allowance and original recovery identity checks
 are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
-live segmented route or daily collection authorization. See [D3a results, storage
-format and recovery limits](data-coverage-d3a-report.md). D2 and full D3 are incomplete.
+live segmented route or daily collection authorization. See [segmented history results, storage
+format and recovery limits](data-coverage-d3a-report.md). bounded collection and full sustained collection are incomplete.
 
 
 ## Mock-only segmented collector integration — September 16, 2026
@@ -250,7 +250,7 @@ finalization. Production construction does not select this option. No credential
 resolution, reference feed or external redirect is permitted in the mock path.
 Published catalog generations, producer-applied generations and usable books are
 separate; shared lifecycle cleanup creates the terminal only after producer joins
-and queue accounting. Failure cannot manufacture completion. D3a policy and D2
+and queue accounting. Failure cannot manufacture completion. segmented history policy and bounded collection
 limits/attempt protection remain unchanged. Busy local Stop passes; resource
 pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
 Next is an offline sustained-capacity policy/experiment, not a live pilot.

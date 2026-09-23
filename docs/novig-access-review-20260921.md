@@ -1,6 +1,6 @@
 # Novig access review and fourth-venue decision
 
-**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [Next independent work: B4](b4-independent-handoff.md).
+**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](venue-access-status.md) · [Next independent work: B4](reference-integration.md).
 
 September 21, 2026. Owner selected **ProphetX** as venue four. This resolves product selection only; runtime activation, production access and qualification remain unverified. No source code, approval file, credentials or retained evidence changed.
 

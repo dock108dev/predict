@@ -1,4 +1,4 @@
-"""B2 fixture acceptance. Retained input is read-only; all writes are disposable."""
+"""fixture acceptance. Retained input is read-only; all writes are disposable."""
 import asyncio
 from copy import deepcopy
 from datetime import datetime,timezone,timedelta
@@ -82,7 +82,7 @@ class Projection(unittest.TestCase):
         row=dict(type='coverage_inventory',session_id=p.sid,source='session',observed_at=p.last,generation=2,previous_generation=1,inventory=base)
         p.apply(row);self.assertNotIn(('kalshi',e['id'],m['id']),p.books)
         row['inventory']['kalshi']['markets'][0]['period']='H1';row.update(generation=3,previous_generation=2);p.apply(row)
-        self.assertTrue(any(x['reason']=='unsupported family or period (B5)' for x in p.snapshot()['market_catalog']))
+        self.assertTrue(any(x['reason']=='unsupported family or period' for x in p.snapshot()['market_catalog']))
 
     def test_health_isolation_clock_and_resync(self):
         p=self.projection();at=p.last

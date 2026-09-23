@@ -78,8 +78,8 @@ the ordinary collector without overwriting the original prediction.
 PostgreSQL remains separate: `storage/store.py` and migrations retain earlier
 capture, reference, fair-price and opportunity-audit contracts. These are not
 interchangeable with current conditional board results. See
-[Slice 12](slice-12.md), [E2](e2-implementation-report.md),
-[E3 contracts](e3-contracts.md) and [E4 contracts](e4-contracts.md).
+[PostgreSQL capture](slice-12.md), [reference collection](e2-implementation-report.md),
+[settlement-aware comparisons contracts](e3-contracts.md) and [reference comparisons contracts](e4-contracts.md).
 
 ## Retained surfaces and limits
 
@@ -89,14 +89,14 @@ interchangeable with current conditional board results. See
 | Native / two-source qualification panels | Same router and shared owner, with explicit spec/approval and separate attempt constraints |
 | Historical capture readers | Active saved-catalog and research dependencies; original identities retained |
 | All-outcome/depth/audit engines | Distinct calculation contracts, reused where appropriate |
-| E5/E6 previews and `scripts/dashboard` | Separate historical entry points; shared book/lifecycle helpers remain imported |
+| research and collection previews and `scripts/dashboard` | Separate historical entry points; shared book/lifecycle helpers remain imported |
 | Novig/ProphetX / GraphQL | Native collector extensions; real qualification gaps remain. Display-only prices are not sized opportunities |
 | Trading | No order execution implemented |
 
 Retirement requires call-site and evidence review before removing shared modules;
 see [SSOT follow-up](ssot.md#conflicts-removed-and-retained-paths).
 Original results remain in their dated reports: [coverage](data-coverage-d1-report.md),
-[D2](data-coverage-d2-report.md), [journal efficiency](data-coverage-d2-journal-efficiency-report.md),
+[bounded collection](data-coverage-d2-report.md), [journal efficiency](data-coverage-d2-journal-efficiency-report.md),
 [segmented history](data-coverage-d3a-report.md), and
 [mock integration](data-coverage-d3-mock-integration-report.md).
 These are historical candidate evidence, not current operating instructions.

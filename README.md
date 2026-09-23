@@ -9,13 +9,11 @@ delayed Pinnacle data; NFL, NBA, MLB, NHL, NCAAF and NCAAB; winners, spreads,
 totals, halftime and futures. Live/in-play is a stretch goal. See the
 [current beta definition](docs/product-roadmap-review.md),
 [gap assessment](docs/beta-gap-assessment-20260920.md) and
-[B1–B7 delivery plan](docs/data-coverage-plan.md).
+[delivery plan](docs/data-coverage-plan.md).
 
-The current tracker records the September 23 public investigation and review7
-engineering as complete; missing authoritative terms and full venue/model
-qualification remain open. Those historical results do not qualify this
-uncommitted maintenance checkout. See the [development guide](docs/development.md)
-for current local checks and hosted-CI limits.
+Public native-rule research is complete. Full venue/model qualification and owner
+review remain open. See the [development guide](docs/development.md) for local
+checks and CI.
 
 ## Existing prototype tooling
 
@@ -86,9 +84,9 @@ and never enters live ranking or prospective scoring. See the
 - [Roadmap](docs/product-roadmap-review.md) and [Desktop tracker](../prediction_arb_next_steps.md):
   product priorities and current owner action.
 - [Historical implementation records](docs/implementation-history.md): original
-  slice summaries, evidence links and older workflows.
+  implementation summaries, evidence links and older workflows.
 
-The older PostgreSQL dashboard and E5/E6 previews are separate historical tools.
+The older PostgreSQL dashboard and research and collection previews are separate historical tools.
 Their lifecycle and authorization boundaries remain in the linked handoffs.
 [PLAN.md](PLAN.md) routes to the current definition and delivery order. Previous
 planning versions and their historical reuse notes are preserved in

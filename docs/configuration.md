@@ -102,5 +102,5 @@ and `.local/pgsocket`, socket port 55432, role/database `prediction_arb`, withou
 TCP listener. Start can initialize a cluster and change local directory modes.
 `.venv/bin/python -m app.storage migrate` applies the migrations in `app/storage/migrations`;
 these are explicit operations, never a beta startup prerequisite. See
-[Slice 12](slice-12.md) before any database work. Neither database operations nor
+[PostgreSQL capture](slice-12.md) before any database work. Neither database operations nor
 live verifiers are installation checks.

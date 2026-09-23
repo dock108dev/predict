@@ -7,7 +7,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestServer
 from app.collection.two_source import QualificationOwner,QualificationSession
 from app.dashboard.multi_game_server import create_app
-from tests.b6_integrated import NativeFixture
+from tests.integrated_workload import NativeFixture
 from tests.test_two_source_qualification import spec
 
 async def main():

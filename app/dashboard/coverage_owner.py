@@ -1,4 +1,4 @@
-"""D2 mode of the existing single owner; saved calculation catalog stays intact."""
+"""Bounded collection using the shared owner; saved calculation catalog stays intact."""
 import asyncio
 import fcntl
 import json
@@ -80,7 +80,7 @@ class CoverageOwner(MultiOwner):
             if getattr(self.session, 'cleanup_errors', []):
                 raise ValueError('Previous resource cleanup failed; restart the application before another scan')
             if not self.product_mode and (self.pilot_output/'attempt.json').exists():
-                raise ValueError('D2 pilot consumed; no automatic or second live run authorized')
+                raise ValueError('Collection attempt consumed; no automatic or second live run authorized')
             self.owner_lock = ((OUTPUT if self.supervised_live else self.pilot_output)/'collector.lock').open('a')
             try:
                 fcntl.flock(self.owner_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -146,7 +146,7 @@ class CoverageOwner(MultiOwner):
                 # Startup owns resources even if the request is cancelled. Cleanup
                 # must not replace the original failure or cancellation.
                 failure(__name__, 'coverage_start', exc)
-                self.error = 'Product fixture Start failed; run retained' if self.product_mode else 'D2 Start failed; attempt retained, no retry authorized'
+                self.error = 'Product fixture Start failed; run retained' if self.product_mode else 'Collection Start failed; attempt retained, no retry authorized'
                 try:
                     if self.session and self.session.task:
                         await self.session.stop()
@@ -195,7 +195,7 @@ class CoverageOwner(MultiOwner):
                 replay = dict(verified=False,reason=replay_error)
             save_json(folder/'replay.json',replay)
             if replay_error:
-                self.error = 'D2 native replay unverified: '+replay_error
+                self.error = 'Native replay unverified: '+replay_error
             summary = dict(session=session.sid,state=session.state,reason=session.reason,
                 cleanup_complete=session.cleanup_complete,health=session.health,
                 coverage=session.status_coverage(),resources=session.resources(),
@@ -217,7 +217,7 @@ class CoverageOwner(MultiOwner):
             os.replace(folder/'manifest.pending.json',folder/'manifest.json')
         except Exception as exc:
             self.session.state = 'failed'
-            self.error = 'D2 finalization incomplete: '+type(exc).__name__
+            self.error = 'Finalization incomplete: '+type(exc).__name__
             # Sanitized report; retain original journal in place.
             failure(__name__,'d2_finalization',exc)
         finally:
@@ -244,7 +244,7 @@ class CoverageOwner(MultiOwner):
                     validate_approval(self.spec_factory(),self.endpoints,self.native_approval_path,self.pilot_output)
                     configured=True
                 except (ValueError,OSError):pass
-            value.update(operating_mode='product-session',start_available=configured and not self.active() and not getattr(self.session,'cleanup_errors',[]),pilot_allowance='One approved B3 qualification; no automatic repeat' if self.native_approval_path else 'Explicit bounded fixture sessions; real source Start not authorized')
+            value.update(operating_mode='product-session',start_available=configured and not self.active() and not getattr(self.session,'cleanup_errors',[]),pilot_allowance='One approved native-source qualification; no automatic repeat' if self.native_approval_path else 'Explicit bounded fixture sessions; real source Start not authorized')
         return value
 
     def history_paths(self):

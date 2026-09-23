@@ -171,7 +171,7 @@ class SessionProjection:
                         if stamp(at)>=stamp(e['scheduled_start']):reason=reason or 'scheduled start reached'
                     except (ValueError,TypeError):reason=reason or 'Invalid or timezone-less scheduled start'
                 if not e or e.get('identity')!='resolved': reason=reason or 'unresolved event'
-                if ident and not ((ident['competition'] in ('NFL','NCAAF') and ident['sport'] in ('american_football','football')) or (ident['competition']=='MLB' and ident['sport']=='baseball') or (ident['competition'] in ('NBA','NCAAB') and ident['sport']=='basketball') or (ident['competition']=='NHL' and ident['sport'] in ('hockey','ice_hockey'))):reason=reason or 'unsupported sport or competition (B5)'
+                if ident and not ((ident['competition'] in ('NFL','NCAAF') and ident['sport'] in ('american_football','football')) or (ident['competition']=='MLB' and ident['sport']=='baseball') or (ident['competition'] in ('NBA','NCAAB') and ident['sport']=='basketball') or (ident['competition']=='NHL' and ident['sport'] in ('hockey','ice_hockey'))):reason=reason or 'unsupported sport or competition'
                 if e and not futures.scope(ident) and ident['competition']=='NHL':reason=reason or nhl_gaps.get((source,e['id']))
                 if e and not futures.scope(ident) and ident['competition']=='MLB':reason=reason or mlb_gaps.get((source,e['id']))
                 if e and not futures.scope(ident) and ident['competition']=='NBA':reason=reason or nba_gaps.get((source,e['id']))
@@ -182,7 +182,7 @@ class SessionProjection:
                 is_line=futures.scope(ident or {}) or h1 or segment or bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF','MLB','NHL') and ident['family'] in ('spread','total'))
                 if is_line and ident['competition']=='NHL':reason=reason or nhl_line_gaps.get((source,e['id']))
                 if is_line and ident['competition']=='NFL':reason=reason or nfl_line_gaps.get((source,e['id']))
-                if ident and ((ident['family']!='moneyline' and not is_line) or (ident['period']!='full_game' and not h1 and not segment and not futures.scope(ident))): reason=reason or 'unsupported family or period (B5)'
+                if ident and ((ident['family']!='moneyline' and not is_line) or (ident['period']!='full_game' and not h1 and not segment and not futures.scope(ident))): reason=reason or 'unsupported family or period'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
                 record=dict(source_id=source,event_id=m['event_id'],market_id=m['id'],identity=ident,title=(e or {}).get('title'),reason=reason,health=deepcopy(self.health.get(key)),native=deepcopy(m))
                 if 'display_prices' in m:

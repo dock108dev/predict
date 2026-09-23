@@ -156,12 +156,12 @@ All checks used disposable synthetic state, retained read-only fixtures or loopb
 HTTP/WebSocket servers. No credentials, provider requests or owner-state writes.
 
 - 25 tests passed: `tests.test_coverage_failure_handling` (initial four tests),
-  `tests.test_failure_handling`, `tests.test_b2_product`,
+  `tests.test_failure_handling`, `tests.test_product_integration`,
   `tests.test_segmented_collector`.
 - 27 tests passed: `tests.test_coverage_failure_handling` (then five tests),
   `tests.test_multi_game`, `tests.test_continuous`.
 - Final seven tests passed after publication-order changes:
-  `.venv/bin/python -m unittest tests.test_coverage_failure_handling tests.test_b2_product -q`.
+  `.venv/bin/python -m unittest tests.test_coverage_failure_handling tests.test_product_integration -q`.
   This includes six new tests covering direct Start, startup cancellation and
   secondary cleanup failure, flat replay/fsync/cap failures, safe saved-read
   errors, segmented secondary-report failure and segmented output-cap failure,

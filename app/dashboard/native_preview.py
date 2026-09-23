@@ -1,4 +1,4 @@
-"""Idle ordinary Predict product with explicit B3 spec/approval; never auto-Start."""
+"""Idle ordinary Predict product with explicit spec/approval; never auto-Start."""
 import argparse
 import json
 from pathlib import Path

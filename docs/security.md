@@ -105,7 +105,7 @@ secret-history audit. No local credential file was opened.
 - The new chunked-control regression failed before the fix (HTTP 200 instead of
   413), then passed.
 - **44 tests passed** with:
-  `.venv/bin/python -m unittest tests.test_dashboard_security tests.test_b4_reference tests.test_b5_nfl_resolution tests.test_coverage_failure_handling -q`.
+  `.venv/bin/python -m unittest tests.test_dashboard_security tests.test_reference_integration tests.test_nfl_resolution tests.test_coverage_failure_handling -q`.
   This includes eight browser-boundary tests, normal retained-reference/result
   imports and saved reopening, and the prior error-handling regressions.
 - `node tests/test_board_security.cjs` and
@@ -161,7 +161,7 @@ in this product. There is no login session or cookie to harden.
 | Internal worker → worker | Historical `dashboard/refresh.py` uses pickle for internally generated thread handoffs. No user/file/wire deserialization path was identified there; maintain its explicit internal-only contract. |
 | Data → browser | Current templates escape dynamic text; assumptions in localStorage are user-entered probabilities/bases, not provider secrets. Research source URLs come from bound local evidence. No public analytics integration was identified in this surface. |
 
-Provider verifiers and historical E5/E6 previews remain separate commands.
+Provider verifiers and historical research and collection previews remain separate commands.
 ProphetX/Novig adapters and optional reference-service environment settings are
 retained; this pass neither activates them nor changes their entitlement status.
 Launcher subprocess arguments are lists, with process command and start-time
@@ -254,7 +254,7 @@ Severity reflects this single-user, direct-loopback deployment.
    Do not delete retained evidence to implement this implicitly.
 3. **Choose a maintenance/retirement policy for historical servers.** Category:
    attack surface; severity: **low**; confidence: high; status: **needs decision**.
-   E6 live/real guards retain the older Host-port policy, and the PostgreSQL
+   collection preview live/real guards retain the older Host-port policy, and the PostgreSQL
    dashboard has a separate token policy. If these remain actively supported,
    port shared browser protections with their own compatibility tests. This pass
    changes only the active beta and its delegating entry point, not preserved

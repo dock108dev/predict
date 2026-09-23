@@ -15,7 +15,7 @@ scripts/project-postgres start
 .venv/bin/python -m app.storage migrate
 
 # Imports the selected preserved Kalshi/PMUS captures and original audit files,
-# then writes finite historical and explicitly synthetic calculation sessions.
+# Then writes finite historical and explicitly synthetic calculation sessions.
 .venv/bin/python -m app.storage ingest-default
 # The twelfth example runs the same complete workflow:
 .venv/bin/python -m app.storage_example
