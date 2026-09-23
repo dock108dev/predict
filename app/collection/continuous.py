@@ -8,7 +8,6 @@ import base64
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 import fnmatch
 import json
 import resource

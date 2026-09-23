@@ -13,6 +13,9 @@ See the [Slice 1 historical record](slice-1.md),
 [Kalshi terms assessment](kalshi-data-use.md), and
 [current tracker](../../prediction_arb_next_steps.md).
 
+Earlier repository maintenance is recorded in [September 16 cleanup notes](history/cleanup-20260916.md).
+Current checks live in the [development guide](development.md).
+
 ## Slice 2 — bounded US retail ingestion (complete)
 
 Create a local environment and install REST plus optional stream dependencies:

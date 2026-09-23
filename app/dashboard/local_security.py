@@ -1,6 +1,16 @@
 """Browser boundary for the direct, loopback-only personal dashboard."""
-from app.fees.engine import number
+import json
+import math
 from aiohttp import web
+
+CONTROL_BODY_LIMIT = 4096
+IMPORT_BODY_LIMIT = 1024 * 1024
+IMPORT_ROUTES = frozenset(('/api/references', '/api/resolutions'))
+
+
+def body_limit(path):
+    return IMPORT_BODY_LIMIT if path in IMPORT_ROUTES else CONTROL_BODY_LIMIT
+
 
 HEADERS = {
     'Cache-Control': 'no-store',
@@ -28,31 +38,46 @@ def check_browser(request):
     if request.method not in ('GET', 'HEAD', 'OPTIONS'):
         if origins != [expected]:
             raise web.HTTPForbidden(text='Same-origin request required')
+        if request.headers.getall('Content-Encoding', ['identity']) != ['identity']:
+            raise web.HTTPUnsupportedMediaType(text='Uncompressed JSON required')
         if request.content_type != 'application/json':
             raise web.HTTPUnsupportedMediaType(text='JSON required')
 
 
-def decimal_input(value, label):
-    # Reuse the existing exact numeric policy before loading saved datasets.
-    if type(value) not in (str, int, float) or len(str(value)) > 128:
-        raise ValueError('Invalid ' + label)
-    return number(value)
+async def read_json(request):
+    """Bound actual bytes, including chunked requests, before parsing/dispatch."""
+    limit = body_limit(request.path)
+    if (request.content_length or 0) > limit:
+        raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=request.content_length)
+    body = bytearray()
+    while True:
+        chunk = await request.content.read(min(65536, limit + 1 - len(body)))
+        if not chunk:
+            break
+        body.extend(chunk)
+        if len(body) > limit:
+            raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(body))
 
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('Duplicate JSON field')
+            result[key] = value
+        return result
 
-def calculation_inputs(query):
-    decimal_input(query.get('quantity', '100'), 'quantity')
-    if query.get('probability'):
-        decimal_input(query['probability'], 'probability')
+    def invalid_constant(value):
+        raise ValueError('Nonfinite JSON number')
 
+    def finite_float(value):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError('Nonfinite JSON number')
+        return result
 
-def validate_assumptions(value):
-    if not isinstance(value, dict) or len(value) > 256:
-        raise ValueError('Invalid assumptions object')
-    for key, entry in value.items():
-        if not isinstance(key, str) or not isinstance(entry, dict) or set(entry) - {'probability', 'basis'}:
-            raise ValueError('Invalid assumption')
-        if not isinstance(entry.get('basis', ''), str) or len(entry.get('basis', '')) > 2000:
-            raise ValueError('Invalid assumption basis')
-        if entry.get('probability') not in (None, ''):
-            decimal_input(entry['probability'], 'probability')
-    return value
+    try:
+        return json.loads(body.decode('utf-8'), object_pairs_hook=unique_object,
+                          parse_constant=invalid_constant, parse_float=finite_float)
+    except (ValueError, RecursionError):
+        # Parser messages must not echo input fields, contents or encoding bytes.
+        raise ValueError('Invalid JSON body; use unique fields and finite values') from None

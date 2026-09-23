@@ -1,0 +1,428 @@
+                                                                                             KalshiEX LLC
+
+
+
+
+February 18, 2026
+
+SUBMITTED VIA CFTC PORTAL
+Secretary of the Commission
+Office of the Secretariat
+U.S. Commodity Futures Trading Commission
+Three Lafayette Centre
+1155 21st Street, N.W.
+Washington, D.C. 20581
+
+Re: KalshiEX LLC – CFTC Regulation 40.2(a) Notification Regarding the Initial Listing
+of the “Will <team> win <time period> of <football game>?” Contract
+
+Dear Sir or Madam,
+
+Pursuant to Section 5c(c) of the Commodity Exchange Act and Section 40.2(a) of the regulations of the
+Commodity Futures Trading Commission, KalshiEX LLC (Kalshi), a registered DCM, hereby notifies
+the Commission that it is self-certifying the “Will <team> win <time period> of <football game>?”
+contract (Contract). The Contract will initially be listed after close-of-business on February 18, 2026; it
+is listed as the day after because of limitations of the Commission's online submission portal. The
+Exchange intends to list the contract on a custom             basis. The Contract’s terms and conditions
+(Appendix A) includes the following strike conditions:
+    ● <team>
+    ● <football game>
+    ● <time period>
+
+Along with this letter, Kalshi submits the following documents:
+
+●   A concise explanation and analysis of the Contract;
+●   Certification;
+●   Appendix A with the Contract’s Terms and Conditions;
+●   Confidential Appendices with further information; and
+●   A request for FOIA confidential treatment.
+
+If you have any questions, please do not hesitate to contact me.
+
+
+
+                                                                     Sincerely,
+
+                                                                     Xavier Sottile
+                                                                     Head of Markets
+                                                                     KalshiEX LLC
+                                                                     xsottile@kalshi.com
+
+
+
+
+KalshiEX LLC
+                                                                                    KalshiEX LLC
+
+
+
+
+KalshiEX LLC
+Official Product Name: “Will <team> win <time period> of <football game>?”
+Rulebook: FOOTBALLGAMEWIN
+Summary: Team winning specified period of football game
+Kalshi Contract Category: Sports
+Kalshi Internal Category: Sports
+February 18, 2026
+
+
+
+    CONCISE EXPLANATION AND ANALYSIS OF THE PRODUCT AND ITS
+COMPLIANCE WITH APPLICABLE PROVISIONS OF THE ACT, INCLUDING CORE
+   PRINCIPLES AND THE COMMISSION'S REGULATIONS THEREUNDER
+
+Pursuant to Commission Rule 40.2(a)(3)(v), the following is a concise explanation and analysis
+of the product and its compliance with the Act, including the relevant Core Principles (discussed
+in Appendix D), and the Commission's regulations thereunder.
+
+  I.   Introduction
+
+       The “Will <team> win <time period> of <football game>?” Contract is a contract relating
+       to Sports.
+
+       Further information about the Contract, including an analysis of its risk mitigation and
+       price basing utility, as well as additional considerations related to the Contract, is
+       included in Confidential Appendices C, D, and E.
+
+       Pursuant to Section 5c(c) of the Act and CFTC Regulations 40.2(a), the Exchange hereby
+       certifies that the listing of the Contract complies with the Act and Commission
+       regulations under the Act.
+
+       General Contract Terms and Conditions: The Contract operates similar to other event
+       contracts that the Exchange lists for trading. The minimum price fluctuation is $0.01 (one
+       cent). Price bands will apply so that Contracts may only be listed at values of at least
+       $0.01 and at most $0.99. Further, the Contract is sized with a one-dollar notional value
+       and has a minimum price fluctuation of $0.01 to enable Members to match the size of the
+       contracts purchased to their economic risks. As outlined in Rule 5.16 of the Rulebook,
+       trading shall be available at all times outside of any maintenance windows, which will be
+       announced in advance by the Exchange. Members will be charged fees in accordance
+       with Rule 3.13 of the Rulebook. Fees, if they are charged, are charged in such amounts as
+       may be revised from time to time to be reflected on the Exchange’s Website. A new
+       Source Agency can be added via a Part 40 amendment. All instructions on how to access
+
+
+KalshiEX LLC
+                                                                                     KalshiEX LLC
+
+
+       the Underlying are non-binding and are provided for convenience only and are not part of
+       the binding Terms and Conditions of the Contract. They may be clarified at any time.
+       Furthermore, the Contract’s payout structure is characterized by the payment of an
+       absolute amount to the holder of one side of the option and no payment to the
+       counterparty. During the time that trading on the Contract is open, Members are able to
+       adjust their positions and trade freely. The Expiration Value and Market Outcome are
+       determined at or after Market Close. The market is then settled by the Exchange, and the
+       long position holders and short position holders are paid according to the Market
+       Outcome. In this case, “long position holders” refers to Members who purchased the
+       “Yes” side of the Contract and “short position holders” refers to Members who purchased
+       the “No” side of the Contract. If the Market Outcome is “Yes,” meaning that an event
+       occurs that is encompassed within the Payout Criterion, then the long position holders are
+       paid an absolute amount proportional to the size of their position and the short position
+       holders receive no payment. If the Market Outcome is “No,” then the short position
+       holders are paid an absolute amount proportional to the size of their position and the long
+       position holders receive no payment. Specification of the circumstances that would
+       trigger a Market Outcome of “Yes” are included below in the section titled “Payout
+       Criterion” in Appendix A.
+
+
+
+
+KalshiEX LLC
+                                                                               KalshiEX LLC
+
+
+CERTIFICATIONS PURSUANT TO SECTION 5c OF THE COMMODITY EXCHANGE
+ACT, 7 U.S.C. § 7A-2 AND COMMODITY FUTURES TRADING COMMISSION RULE
+                             40.2, 17 C.F.R. § 40.2
+
+Based on the above analysis, the Exchange certifies that:
+   ❏ The Contract complies with the Act and Commission regulations thereunder.
+   ❏ This submission (other than those appendices for which confidential treatment has been
+       requested) has been concurrently posted on the Exchange’s website at
+       https://kalshi.com/regulatory/filings.
+
+Should you have any questions concerning the above, please contact the exchange at
+ProductFilings@kalshi.com.
+
+
+
+
+______________________
+
+By: Xavier Sottile
+Title: Head of Markets
+Date: February 18, 2026
+
+
+
+
+KalshiEX LLC
+                                             KalshiEX LLC
+
+
+Attachments:
+Appendix A - Contract Terms and Conditions
+Appendix B - Trading Prohibitions
+Confidential Appendices
+
+
+
+
+KalshiEX LLC
+                                                                           KalshiEX LLC
+
+
+               APPENDIX A – CONTRACT TERMS AND CONDITIONS
+
+       Official Product Name: “Will <team> win <time period> of <football game>?”
+                           Rulebook: FOOTBALLGAMEWIN
+
+
+
+
+KalshiEX LLC
+                                                                                      KalshiEX LLC
+
+
+                                 FOOTBALLGAMEWIN
+
+Scope: These rules shall apply to this contract.
+
+Underlying: The Underlying for this Contract is the official final result of <time period> of
+<football game>. Revisions to the Underlying made after Expiration will not be accounted for in
+determining the Expiration Value.
+
+Source Agency: The Source Agencies are, in hierarchical order, the governing league or
+association of <football game> (e.g., the National Football League, NCAA, UFL), ESPN, CBS
+Sports, Fox Sports, NBC Sports, the Associated Press, The Wall Street Journal, and the official
+broadcaster of <football game>.
+
+Type: The type of Contract is an Event Contract.
+
+Issuance: The Contract is based on the outcome of a recurrent event. Thus, Contract iterations
+will be issued on a recurring basis, and future Contract iterations will generally correspond to the
+next scheduled occurrence of <football game> or similar games within the same league or
+season.
+
+<team>: <team> refers to an entity participating in American football, specified by the
+Exchange. This includes, but is not limited to, professional teams (e.g., NFL), collegiate teams
+(e.g., NCAA Division I, II, III), or other organized football teams at any level of competition.
+<team> may refer to a singular team, multiple teams, an element in a set of teams, or teams
+defined by distinguishing characteristics (e.g., "any NFC team," "the home team," "teams with
+winning records"). <team> may also take the values "Any" or "None". The Exchange may list
+iterations of the Contract corresponding to variations of <team>. If a team name changes,
+relocates, or undergoes organizational restructuring while maintaining substantial continuity,
+<team> shall track the successor entity. This will be announced by the Exchange in the event it is
+relevant.
+
+<football game>: <football game> refers to a specific American football contest or set of
+contests as specified by the Exchange. This may be defined by exact matchup (e.g., "Kansas City
+Chiefs vs. Philadelphia Eagles"), date and time, location or venue, playoff round or tournament
+stage (e.g., "Super Bowl LIX," "AFC Championship"), week designation (e.g., "Week 1 of the
+2026 NFL season"), or other distinguishing information. <football game> may refer to games
+sanctioned by the National Football League (NFL), the National Collegiate Athletic Association
+(NCAA), high school athletic associations, international leagues, or any other organized football
+competition as specified by the Exchange. <football game> may refer to a singular game,
+multiple games (even if non-consecutive), an element in a set of games, or games defined by
+distinguishing characteristics (e.g., "any playoff game," "all games in October 2026," "home
+
+
+
+KalshiEX LLC
+                                                                                      KalshiEX LLC
+
+
+games"). <football game> may also take the values "Any" or "None". The Exchange may list
+iterations of the Contract corresponding to variations of <football game>.
+
+<time period>: <time period> refers to a specific duration of or discrete time specified by the
+Exchange. <time period> may be expressed as a calendar year (e.g., "2025"), a calendar month
+and year (e.g., "February 2025"), a specific week (e.g., "NFL Week 10, 2025"), a season (e.g.,
+"2024-25 NFL Season"), a discrete time (e.g. “starting at 10:00pm ET”) or other bounded time
+periods as appropriate to the contract subject matter (e.g. quarter, full regulation time). All time
+periods are interpreted in Eastern Time (ET) unless otherwise specified. Unless specified
+otherwise, the end of <time period> is defined as 11:59:59 PM ET on the final day of the
+specified period. The Exchange may list iterations of the Contract corresponding to variations of
+<time period>. Unless otherwise specified, <time period> shall be understood to be full
+regulation time (including any overtime) of <football game>.
+
+Payout Criterion: The Payout Criterion for the Contract encompasses the Expiration Values that
+<team> is the winner of <time period> of <football game>.
+
+Additional clarification(s):
+
+   ● In order to be considered the “winner” of <time period> of <football game>, <team>
+     must score more points (a strictly greater number) than their opponent in <time period>.
+   ● The market resolves based on the first official final result reported unless the Exchange,
+     in its sole discretion, has reason to believe that the first official final result is clearly
+     erroneous, in which case it may defer to a corrected official final result if such a
+     correction is made prior to Contract Expiration. Subsequent corrections or revisions after
+     Expiration will not be considered.
+   ● Unless otherwise specified, all overtime periods are included in determining the winner.
+     If <football game> extends into overtime, the market will resolve based on the final result
+     after all overtime periods have concluded.
+   ● If <football game> ends in a tie after all regulation and overtime periods (as permitted
+     under the applicable league's rules) and where <time period> is understood to be or
+     specified as the full regulation time (including any overtime), the market will resolve to
+     $1/(the number of tied teams), rounded down. For example, if two teams tie, then each
+     team strike will resolve to $0.50.
+         ○ Further, if a “Tie” strike is listed for a given <time period> (e.g., a first half or a
+              single quarter), and both teams score an equal number of points (or both fail to
+              score any points) within that <time period> alone, the “Tie” strike will resolve to
+              “Yes” and all team-specific strikes for that <time period> will resolve to “No.”
+              Resolution is based exclusively on points scored within <time period>.
+   ● If <football game> is suspended or abandoned after kickoff and is not scheduled to
+     resume or complete, and the suspension occurs before 55 minutes of play, all markets,
+
+
+
+KalshiEX LLC
+                                                                                       KalshiEX LLC
+
+
+       except for those for which the relevant <time period> has definitively concluded (which
+       will settle based on actual results from that completed <time period>), will resolve to the
+       last fair price as determined by the Exchange in its sole discretion.
+   ●   If <football game> is abandoned, cancelled, or suspended after 55 minutes of game time
+       have passed but before the completion of regulation time, and is not resumed and
+       completed within the time frames specified below, the following shall apply: (a) markets
+       for which the relevant <time period> has definitively concluded (e.g., a first-half market
+       where the entire first half was completed) will settle based on actual results from that
+       completed <time period>; and (b) all other markets will resolve based on the last fair
+       market price as determined by Kalshi. However, if after the suspension the governing
+       league declares a winner or final result, all markets not yet settled under (a) shall resolve
+       on that basis.
+   ●   If <football game> is postponed from its originally scheduled date but is rescheduled and
+       begins play within 48 hours of its originally scheduled date, the market will remain open
+       and will resolve based on the official final result of the rescheduled game. If <football
+       game> is not started within that time period, the market will resolve based on the last fair
+       market price as determined by Kalshi.
+   ●   Forfeit: If a team forfeits <football game> before the game has started (i.e., before the
+       opening kickoff), the team markets will resolve based on the last fair market price as
+       determined by Kalshi. If <team> forfeits <football game> after the game has started, the
+       market for the forfeiting <team> will resolve to "No." If the opposing team is declared
+       the winner by forfeit after the game has started, the market for that team will resolve to
+       "Yes."
+   ●   Venue Change: If the venue of <football game> is changed but the designated home and
+       away teams remain the same and the game is played within 48 hours of the originally
+       scheduled date, the market will remain open and will resolve based on the official final
+       result. If the home/away designation is reversed or if the game is moved outside the same
+       scheduling week, the market will resolve based on the last fair market price as
+       determined by Kalshi.
+   ●   Disqualification or Ineligibility: If <team> is disqualified, deemed ineligible, or
+       has the result of <football game> vacated before the game has started, the market
+       will resolve based on the last fair market price as determined by Kalshi. If <team>
+       is disqualified, deemed ineligible, or has the result of <football game> vacated
+       after the game has started but before the Contract expires, the market will resolve
+       to "No" for the disqualified <team>. If such disqualification causes the opposing
+       team to be declared the winner, the market for that team will resolve to "Yes."
+
+Examples that would resolve the market to "Yes" for <team>:
+
+   ● <team> wins <football game> 24-17 in regulation.
+   ● <team> wins <football game> 31-28 in overtime.
+
+
+KalshiEX LLC
+                                                                                     KalshiEX LLC
+
+
+   ● <football game> is postponed from Sunday to Monday due to weather, and <team> wins
+     the rescheduled game.
+   ● <football game> is suspended in the third quarter due to a power outage, resumes the
+     next day, and <team> wins the completed game.
+
+Examples that would NOT resolve the market to "Yes" for <team>:
+
+   ● <football game> ends in a 20-20 tie after overtime (<team> resolves to $0.50).
+   ● <team> loses <football game> 14-21.
+   ● <football game> is cancelled due to a pandemic and not rescheduled within 48 hours
+     (resolves at last fair market price).
+   ● <team> wins <football game> but is immediately disqualified before Expiration for using
+     ineligible players before the Contract expires (resolves to "No").
+   ● <team> forfeits <football game> after the game begins (resolves to "No" for the
+     forfeiting team).
+   ● The opposing team forfeits <football game> before kickoff (resolves at last fair market
+     price, not "Yes" for <team>).
+   ● <football game> is abandoned in the first quarter due to severe weather and not resumed
+     within 48 hours (resolves at last fair market price).
+
+Minimum Tick: The Minimum Tick size for the Contract shall be $0.01.
+
+Position Accountability Level: The Position Accountability Level for the Contract shall be
+$25,000 per strike, per Member.
+
+Last Trading Date: The Last Trading Date of the Contract will be the same as the Expiration
+Date. The Last Trading Time will be the same as the Expiration time.
+
+Settlement Date: The Settlement Date of the Contract shall be no later than the day after the
+Expiration Date, unless the Market Outcome is under review pursuant to Rule 7.1.
+
+Expiration Date: The latest Expiration Date of the Contract shall be one week after the end of
+<time period>. If an event described in the Payout Criterion occurs (i.e., a winner is reported or
+the game concludes with a tie), expiration will be moved to an earlier date and time in
+accordance with Rule 7.2.
+
+Expiration time: The Expiration time of the Contract shall be 10:00 AM ET.
+
+Settlement Value: The Settlement Value for this Contract is $1.00.
+
+Expiration Value: The Expiration Value is the value of the Underlying as documented by the
+Source Agency on the Expiration Date at the Expiration time.
+
+
+
+KalshiEX LLC
+                                                                                KalshiEX LLC
+
+
+Contingencies: Before Settlement, Kalshi may, at its sole discretion, initiate the Market
+Outcome Review Process pursuant to Rule 7.1 of the Rulebook. If an Expiration Value cannot be
+determined on the Expiration Date, Kalshi has the right to determine payouts pursuant to Rule
+7.1 in the Rulebook.
+
+
+
+
+KalshiEX LLC
+                                                                                   KalshiEX LLC - Confidential
+
+
+                            APPENDIX B – TRADING PROHIBITIONS
+
+In addition to the general prohibition against trading on material nonpublic information, the
+Exchange will institute additional prohibitions for trading the contract. Persons under 18 years of
+age are not permitted to create Kalshi accounts. The following individuals will be prohibited
+from trading:
+
+    ● Current and former players, coaches, and staff of the teams participating in <football
+      game>;
+          ○ For college leagues/associations specifically, or where otherwise appropriate (as
+             identified by the Exchange), this applies to current and former players, coaches,
+             and staff of the specific teams in <football game> rather than the
+             league/association as a whole (e.g., if the University of Alabama is playing in
+             <football game>, this prohibition will restrict trades by current/former
+             players/coaches/staff of that team, rather than all current/former
+             players/coaches/staff in any NCAA sport);
+    ● Game officials, referees, replay officials, and any officiating crew assigned to <football
+      game>, as well as league officiating supervisors and evaluators;
+    ● Paid employees of the league or association governing <football game>, including but
+      not limited to league office staff, competition committee members, and football
+      operations personnel;
+    ● Team medical staff, athletic trainers, team physicians, and any personnel with access to
+      nonpublic injury or health information about players participating in <football game>;
+    ● Ultimate beneficial owners of the teams participating in <football game> and ultimate
+      beneficial owners of the league; and
+    ● Household members and immediate family (parents, siblings, spouses, domestic partners,
+      and children) of all of the above.
+
+These prohibitions apply to the appropriate values of <football game>. For example, former
+players of the National Football League are not necessarily prohibited from trading on iterations
+of the Contract related to NCAA football games, unless they are part of any other group listed for
+that game or league.
+
+
+
+
+KalshiEX LLC - Confidential Treatment Under Regulations 40.8 and 145.9 Requested
+

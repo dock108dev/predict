@@ -1,0 +1,65 @@
+{
+  "version": "b6-public-documents-2",
+  "scope": {
+    "kalshi_series": "KXNFLGAME",
+    "kalshi_event": "KXNFLGAME-26SEP24ATLGB",
+    "kalshi_markets": [
+      "KXNFLGAME-26SEP24ATLGB-ATL",
+      "KXNFLGAME-26SEP24ATLGB-GB"
+    ],
+    "us_event": "108683",
+    "us_market": "779756"
+  },
+  "requests": [
+    {
+      "source": "kalshi",
+      "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+      "format": "pdf"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+      "format": "text"
+    },
+    {
+      "source": "polymarket_us",
+      "url": "https://docs.polymarket.us/fees.md",
+      "format": "text"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://docs.kalshi.com/websockets/orderbook-updates",
+      "format": "html"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://docs.kalshi.com/getting_started/maintenance_and_pauses",
+      "format": "html"
+    },
+    {
+      "source": "polymarket_us",
+      "url": "https://docs.polymarket.us/api-reference/websocket/markets",
+      "format": "html"
+    }
+  ],
+  "conditional_us_contract_slot": "One exact HTTPS official contract/rule document directly linked in the acquired US fees page; applicability to market779756 must be reviewed before retrieval. Otherwise unused. No index/search/crawl.",
+  "limits": {
+    "requests": 7,
+    "seconds": 90,
+    "request_seconds": 10,
+    "body_bytes": 2097152,
+    "retained_body_bytes": 14680064,
+    "output_bytes": 67108864,
+    "rss_bytes": 268435456,
+    "concurrency": 1,
+    "retries": 0,
+    "credits": 0
+  },
+  "blocked_pdf": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+  "source_failure": "Close the affected source on HTTP errors, timeout, unexpected content or redirect; skip its remaining slots. Continue the other listed source only if global limits remain.",
+  "global_stop": "Operator Stop, hard deadline, resource/request limit, integrity mismatch or ambiguous/invalid scope. Close active request and consume attempt. No retries or extensions.",
+  "credentials": false,
+  "streaming": false,
+  "discovery": false,
+  "approval_status": "PREPARED_NOT_APPROVED"
+}

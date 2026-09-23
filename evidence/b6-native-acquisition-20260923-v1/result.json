@@ -1,0 +1,14 @@
+{
+  "consumed": true,
+  "retry_allowed": false,
+  "stop_reason": "Stop: HTTP status 429; no retry or redirect",
+  "requests": 3,
+  "retained_body_bytes": 35529,
+  "elapsed_seconds": 0.33288787500350736,
+  "peak_rss_bytes": 45367296,
+  "closed_utc": "2026-09-23T15:41:21.853815+00:00",
+  "credentials_accessed": false,
+  "streaming": false,
+  "credits": 0,
+  "connections_closed": true
+}

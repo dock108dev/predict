@@ -1,152 +1,173 @@
 # Current sources of truth
 
-Product scope was reset September 20, 2026: the [beta definition](product-roadmap-review.md),
-[B1–B7 delivery plan](data-coverage-plan.md) and [Desktop tracker](../../prediction_arb_next_steps.md)
-are authoritative. Four prediction venues, model plus free delayed Pinnacle references,
-six sports and the requested market families are required. Beta signoff is not ready.
-Earlier D/E/slice reports retain component evidence, not active next-action authority.
-
-Local HEAD inspected in this documentation pass: `edad00dd980cc8535d69a815d1199b82dd0e83cb`,
-with existing uncommitted work. No current runtime/hosted qualification is inferred.
-The domain map below describes existing implementation, not completion of the expanded beta.
-
-The domain and retention decisions below originate from the earlier SSOT pass at
-`5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7` and remain applicable. See
-[development](development.md) for current setup/checks and
-[failure handling](error-handling.md) for current finalization and diagnostics.
-The earlier verification record at the end is historical.
+September 23, 2026. Inspected HEAD:
+`1f7c1ce1950194a2b230e40cf93417f851f2cc30`, with the uncommitted error-handling,
+security, SSOT, cleanup, CI and documentation passes preserved. These changes affect working source, not running
+processes or retained qualification candidates. The [beta definition](product-roadmap-review.md),
+[delivery plan](data-coverage-plan.md) and [Desktop tracker](../../prediction_arb_next_steps.md)
+own product scope and acquisition authority. Full beta signoff remains open.
 
 ## Authoritative domains
 
-Domain: Product routing and client API
+Domain: Product routing and entry points
 
 SSOT module/file: `app/dashboard/multi_game_server.py`
 
-Why this is authoritative: the current opportunity-board launcher serves its
-multi-game list, game details, saved sessions and explicit Start/Stop routes.
-Views are `arb`, `ev`, `research`; sorts are `roi`, `dollars`. Unknown selections,
-duplicate query selections and unknown cutoffs fail with HTTP 422.
+Why this is authoritative: the default CLI, native preview and bounded two-source
+qualification panel all construct this router with their respective owner.
+The public `opportunity_board.create_app` delegates here; it does not own an
+alternate route implementation.
 
-Known callers: `app/dashboard/opportunity_board.py` (both factory and CLI),
-`app/dashboard/opportunity_static/dashboard.js` and `board.js`.
+Known callers: `scripts/opportunity-board`, `app/dashboard/opportunity_board.py`,
+`native_preview.py`, `two_source_preview.py`, browser list/details/import controls.
 
-Domain: Configuration and scan lifecycle
+Domain: Dashboard choices and manual assumptions
 
-SSOT module/file: `app/dashboard/coverage_owner.py` (`CoverageOwner`, D2 production mode), extending `app/dashboard/multi_game.py:MultiOwner`
+SSOT module/file: `app/dashboard/query_policy.py`
 
-Why this is authoritative: production selects the bounded D2 inventory collector,
-with one Start/Stop owner, finalizer, process lock and persistent consumed-attempt
-guard. Startup is idle, with no scheduled collection or autoresume. Historical
-MultiOwner configuration/sample tests and saved calculations remain supported.
+Why this is authoritative: one choice catalog governs view, sort, scenario,
+freshness, period, family and positive filters. HTTP queries also enforce unique
+selectors and exact scalar numeric bounds. Explicit manual probabilities, including
+zero, require a nonblank basis. Invalid direct ranking/product choices raise
+ValueError instead of selecting an alternate behavior.
 
-Known callers: multi-game server; local-only beta test producer.
+Known callers: router middleware for dashboard, calculation, session catalog and
+resolution; `product_view.calculate/dashboard`; `multi_game.rank_filter`;
+`reference.multi_page.rank_research`. Internal score-distribution probabilities
+remain a separate supported calculation contract; HTTP scalar validation is not
+applied to those dictionaries.
 
-Domain: Ingestion and event identity
+Domain: Local browser boundary and mutation bodies
 
-SSOT module/file: `app/collection/continuous.py` with `app/collection/coverage.py`,
-using `app/normalization/registry.py` and existing venue adapters
+SSOT module/file: `app/dashboard/local_security.py`
 
-Why this is authoritative: `ContinuousSession` builds each venue catalog before
-matching and subscriptions, retaining unmatched/excluded markets, refreshing every
-60 seconds and enforcing the kickoff margin. It extends `TransportSession` and
-reuses native producers/stream parsers. `MultiSession` retains historical sample
-compatibility; its six-game selection no longer controls production collection.
+Why this is authoritative: Host/Origin policy, response headers, strict streamed
+JSON parsing and path-specific body limits are defined here. Controls use 4 KiB;
+reference/resolution imports use 1 MiB. Early Content-Length checks and streamed
+reads use the same `body_limit`; handlers no longer supply duplicate limits.
 
-Known callers: `MultiOwner`; `PredictionProducer`; native replay checks.
+Known callers: `multi_game_server` middleware, Start/Stop and both import handlers.
+The application maximum uses `IMPORT_BODY_LIMIT`. See [security](security.md).
 
-Domain: Credentials and destination policy
+Domain: Configuration, lifecycle and authorization
 
-SSOT module/file: `app/collection/venue_access.py`
+SSOT module/file: `app/dashboard/coverage_owner.py`, with
+`app/collection/native_approval.py` for native approval checks
 
-Why this is authoritative: defines the current prediction-only destinations,
-project credential references and credential loading for explicit Start.
+Why this is authoritative: the default factory selects `CoverageOwner(product_mode=True)`.
+Source configuration comes from `multi_game.configuration` unless an explicit
+preview supplies a run spec. Start/Stop, cleanup, finalization and resource ownership
+remain shared. Real source Start requires the configured approval path; legacy
+D2 and supervised modes retain their separate consumed-attempt policies.
 
-Known callers: prediction discovery, producer and transport session. The route
-middleware separately owns loopback/Origin checks; these are not account login.
+Known callers: current router, native preview, qualification owner/session and
+isolated fixture harnesses. No scheduling, auto-Start or new live allowance is added.
 
-Domain: Current capture persistence and replay
+Domain: Ingestion, identity and durable projection
 
-SSOT module/file: `app/collection/transport_session.py` (`ObservationJournal`,
-`reopen`), `app/collection/native_replay.py`
+SSOT module/file: `app/collection/continuous.py`, `coverage.py`,
+`app/dashboard/session_projection.py`
 
-Why this is authoritative: the beta retains file journals and native replay;
-`multi_game.saved_rows` verifies manifests before projection. The CLI forbids
-database connections. PostgreSQL storage remains a separate historical API.
+Why this is authoritative: collection reuses native adapters, registry and shared
+sport/market handlers. `SessionProjection` reduces acknowledged rows into current
+and saved snapshots. The unused `legacy` selection copy is removed; historical
+selection records still participate in cursor/hash accounting.
 
-Known callers: `MultiSession`, `MultiOwner.finish`, saved dashboard and research.
+Known callers: `CoverageOwner`, native producers, `session_history` and
+`product_view`. `native_product.py` and `novig_graphql.py` extend the same collector;
+GraphQL displayed values remain distinct from sized book opportunities.
 
-Domain: Conditional board calculations
+Domain: Persistence and saved reopening
 
-SSOT module/file: `app/opportunities/board.py`
+SSOT module/file: `app/collection/transport_session.py`, `segmented.py`,
+`native_replay.py`, `app/dashboard/session_history.py`
 
-Why this is authoritative: computes original-input board legs and conditional
-normal-winner Arb/EV using `app/depth.py:consume`, `app/fees/engine.py:calculate`
-and `app/settlement.py` payout/relationship rules. Missing probability is `None`;
-no default fair probability exists. This is distinct from all-outcome qualification.
+Why this is authoritative: flat/segmented journals and native replay preserve
+original observations. The format-aware reader validates before projection.
+`multi_game.saved_rows` remains the reader for older multi-game packages that
+current catalog/research paths still consume.
 
-Known callers: `multi_game.game_calculation`; `reference.page_estimate.estimate`.
-The shared fee, depth and settlement implementations also serve the older
-arbitrage and opportunity audit engines.
+Known callers: collector finalization, ordinary saved catalog, cutoff/details,
+resolution history and retained research. PostgreSQL is a separate historical
+persistence API, not a second backend selected by the current launcher.
 
-Domain: Saved-page research
+Domain: Conditional calculations and reference selection
 
-SSOT module/file: `app/reference/multi_page.py` (`saved_comparisons`, `research_row`)
-and `app/reference/page_estimate.py:estimate`
+SSOT module/file: `app/dashboard/product_view.py`, `multi_game.game_calculation`,
+`app/opportunities/board.py` and `score_lines.py`
 
-Why this is authoritative: one six-game manifest binds saved source and target
-identity; both list and details use these comparisons and the same estimator.
-`public_page.py` parses paired odds; `research_loop.page_arithmetic` supplies
-page arithmetic. Requested research size is never silently capped.
+Why this is authoritative: list/detail paths reuse the same calculation engines,
+depth, fees, settlement and ranking. Product references are enumerated or explicitly
+selected by ID at a retained cutoff. The unused `reference_for` convenience
+selector is removed; no automatic single-reference selection path remains there.
 
-Known callers: multi-game server and `page_estimate.for_saved_game`.
+Known callers: ordinary dashboard/detail routes and retained replay tests.
+`reference.product` owns original-input reference validation;
+`resolution.core` owns bound sporting/venue-result calculations. Unknown values
+and negative/zero results remain valid; no source qualification is inferred.
 
-Domain: Projection, ranking and presentation
+Domain: Retrospective page research and browser rendering
 
-SSOT module/file: `app/dashboard/multi_game.py` and
+SSOT module/file: `app/reference/multi_page.py`, `page_estimate.py`,
 `app/dashboard/opportunity_static/`
 
-Why this is authoritative: per-game projection isolates observations, selects a
-retained cutoff and sizes board candidates against depth. Ranking preserves
-Decimal precision. Research uses its separate retrospective ranking class in
-`multi_page.rank_research`. Browser presentation does not calculate financial values.
+Why this is authoritative: research uses its original saved event bindings and
+separate retrospective ranking semantics. Browser code formats server results and
+uses explicit reference IDs; it does not recalculate financial values.
 
-Known callers: current server; dashboard and game-detail pages.
+Known callers: list/details, saved research routes and browser controls.
+Research ranking shares only selection validation with ordinary ranking.
 
 ## Conflicts removed and retained paths
 
-- Removed the alternate single-game route implementation and its duplicate
-  `opportunity_board.catalog` cutoff policy. The public `create_app` entry point
-  delegates to the current server, and tests use `multi_game.default_point`.
-  CLI and factory now share routes; the CLI default port matches the launcher.
-- Removed the implicit 0.50 probability in `opportunities.board.evaluate`.
-  Explicit numerical test scenarios still pass their probability. Omitted inputs
-  produce “Assumption needed” and null EV.
-- Removed silent unknown-view-to-EV, unknown-sort-to-dollar and unknown-freshness
-  selection behavior at the product API boundary. Known UI selections are unchanged.
-- Removed routine evidence writes from the math and multi-page regression tests;
-  they assert equality against the retained baselines instead.
-- Keep the two original single-game captures and default identity constants:
-  `load_sessions` actively includes them in the current saved catalog, and offline
-  arithmetic tests use their exact identity. Their compatibility is data projection,
-  not an alternate server policy.
-- Keep `page_estimate.retained`: the one-game binding/hash validator remains a
-  focused regression input. Runtime list/detail calculations use the six-game
-  manifest; historical one-game artifacts remain unchanged.
-- Keep `MultiOwner.personal_beta=False` and older E6 one-attempt guards: they protect
-  consumed verification attempts and are exercised by guard/recovery checks. They
-  are never selected by the current production factory. Removing them safely
-  requires a separate retirement decision for the verification entry points.
-- Keep historical Slice/E5/E6 previews, adapters and PostgreSQL replay/storage:
-  the roadmap explicitly retains completed work, the current beta imports E6
-  projection/journal helpers, and the historical tools retain independent callers.
-  ProphetX/Novig limits are documented, not silently promoted to current live support.
-  No unsupported environment aliases were removed in this pass.
+| Candidate | Usage evidence / action |
+| --- | --- |
+| Route-local choice dictionary and resolution duplicate/numeric checks | Replaced with `query_policy.validate_http_query` at all four selection routes. |
+| Direct invalid view/sort/freshness fallback | Rejected using the same choice catalog in direct product and ranking callers. |
+| Separate product/retained manual-basis checks | Replaced with shared assumptions validation; whitespace-only basis fails consistently. |
+| Repeated control/import byte limits | Routed through `local_security.body_limit`; strict security behavior retained. |
+| `product_view.reference_for` | Only three test call sites, no application/script caller. Deleted; tests now exercise explicit reference IDs or absent selection. |
+| `SessionProjection.legacy` | Assigned on selection rows, never read anywhere. Deleted state and assignment; row accounting is unchanged. |
+| Retained single-game and multi-game readers | Kept: default catalog, saved calculations and page research use them. No migration of evidence. |
+| `MultiOwner`, old one-attempt/supervised modes | Kept: current owner inherits lifecycle/status helpers; qualification and offline entry points use distinct policies. |
+| Historical SQL, E5/E6 previews, all-outcome audit engines | Kept: independent entry points and shared imported helpers remain. These contracts are not interchangeable with conditional product calculations. |
+| Native Novig/ProphetX and separate reference acquisition | Kept: current collector has native-source branches; pending real qualification is not proof of dead code. |
+| Launcher instance names and reference environment setting | Kept: `poc/beta` select different process records; historical optional reference transport reads `ODDS_API_KEY`. Neither grants collection authority. |
 
-Follow-up for risky removals: decide which historical launchers/verification APIs
-can be retired, then extract shared E6 helpers before removing their modules.
-Do not delete consumed-attempt markers or original evidence. Unify conditional
-board and versioned all-outcome audit contracts only after defining how their
-intentionally different qualification/provenance semantics should map.
+Risky follow-up: extract shared E6 lifecycle/book formatting helpers and identify
+which historical executable workflows can be retired before deleting their modules.
+Keep consumed-attempt guards, original records and exact replay versions.
+`CoverageOwner.start(max_games=...)` remains a legacy request-shape compatibility
+parameter with no coverage-limit effect; the current UI hides it. A later control
+contract cleanup should stop sending it from current clients and reject it on that
+owner while retaining it for the explicitly supported historical MultiOwner path.
+Do not unify sporting/qualification policy or conditional/all-outcome math merely
+because some branches look alike.
+
+## September 23 validation
+
+61 tests passed:
+
+```sh
+.venv/bin/python -m unittest tests.test_ssot_policy tests.test_dashboard_security tests.test_session_projection tests.test_b4_reference tests.test_multi_game tests.test_multi_page tests.test_math_reconciliation tests.test_b5_score_lines -q
+```
+
+Four new guard tests cover direct fallback rejection, duplicate selectors,
+nonblank assumption basis, shared route rejection before loading data, and removal
+of the unused helper/state. Existing reference tests now exercise explicit
+selection; they were not deleted. Checks also cover saved reopening, exact original
+math and supported partition-distribution inputs. The CI script includes
+`tests.test_ssot_policy`.
+
+Changed-module Python compilation, shell syntax, local documentation links and
+`git diff --check` passed. Existing aiohttp AppKey and asyncio timing warnings
+remained visible. No full CI matrix, live collection, credential lookup, service
+restart, database migration, browser walkthrough, commit or publication.
+
+## Historical records
+
+The following sections retain earlier candidate-specific observations. They are
+not the current product contract or authorization to execute a run.
 
 ## Historical SSOT verification
 

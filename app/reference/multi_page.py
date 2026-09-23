@@ -84,6 +84,8 @@ def research_row(session, game, quantity, scenario, common, *, live=False):
 
 
 def rank_research(rows, sort='roi', search=''):
+    from app.dashboard.query_policy import validate_choice
+    validate_choice('sort', sort)
     field = 'return_pct' if sort=='roi' else 'profit'
     return sorted((r for r in rows if search.casefold() in r['game_title'].casefold()),
                   key=lambda r:(r[field] is None, Decimal(r[field]).copy_negate() if r[field] is not None else Decimal(0),r['id']))

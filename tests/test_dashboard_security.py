@@ -2,10 +2,11 @@
 import json
 import unittest
 from decimal import Decimal
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from aiohttp.test_utils import AioHTTPTestCase
 from app.dashboard.multi_game_server import create_app
-from app.dashboard.local_security import HEADERS, decimal_input
+from app.dashboard.local_security import HEADERS
+from app.dashboard.query_policy import decimal_input
 
 
 class BrowserBoundary(AioHTTPTestCase):
@@ -54,6 +55,56 @@ class BrowserBoundary(AioHTTPTestCase):
         self.owner.start.assert_awaited_once_with(max_games=2,duration=5)
         await self.assert_response(await self.client.post('/api/stop',json={},headers=headers),200)
         self.owner.stop.assert_awaited_once()
+
+    async def test_chunked_control_limit_is_enforced_before_dispatch(self):
+        headers = {'Origin': self.origin(), 'Content-Type': 'application/json'}
+        for route in ('start', 'stop'):
+            async def chunks():
+                yield b' ' * 4096
+                yield b'{}'
+            await self.assert_response(
+                await self.client.post('/api/' + route, data=chunks(), headers=headers), 413)
+        self.owner.start.assert_not_awaited()
+        self.owner.stop.assert_not_awaited()
+
+    async def test_ambiguous_and_excessively_nested_json_rejected(self):
+        headers = {'Origin': self.origin(), 'Content-Type': 'application/json'}
+        for body in ('{"duration":1,"duration":180}', '{"duration":NaN}',
+                     '{"duration":Infinity}', '{"duration":1e9999}', '[' * 1100 + '0' + ']' * 1100):
+            await self.assert_response(
+                await self.client.post('/api/start', data=body, headers=headers), 422)
+        self.owner.start.assert_not_awaited()
+
+    async def test_encoded_request_bodies_are_not_supported(self):
+        import gzip
+        headers = {'Origin': self.origin(), 'Content-Type': 'application/json',
+                   'Content-Encoding': 'gzip'}
+        await self.assert_response(await self.client.post(
+            '/api/start', data=gzip.compress(b'{}'), headers=headers), 415)
+        self.owner.start.assert_not_awaited()
+
+    async def test_imports_keep_their_separate_streamed_byte_limit(self):
+        self.owner.active.return_value = True
+        self.owner.session = Mock(sid='synthetic', queue=Mock(join=AsyncMock()))
+        self.owner.spec_factory.return_value = {'mode': 'mock'}
+        headers = {'Origin': self.origin(), 'Content-Type': 'application/json'}
+        for route, target in (('references', 'app.reference.product.emit_references'),
+                              ('resolutions', 'app.resolution.core.emit_records')):
+            with patch(target) as emit:
+                async def permitted():
+                    yield b' ' * 4096
+                    yield b'[{}]'
+                await self.assert_response(await self.client.post(
+                    '/api/' + route, data=permitted(), headers=headers), 200)
+                emit.assert_called_once_with(self.owner.session, [{}])
+                emit.reset_mock()
+                async def oversized():
+                    for _ in range(17):
+                        yield b' ' * 65536
+                    yield b'[{}]'
+                await self.assert_response(await self.client.post(
+                    '/api/' + route, data=oversized(), headers=headers), 413)
+                emit.assert_not_called()
 
     async def test_invalid_assumptions_and_decimal_expansion(self):
         for value in ('1e-999999999','0e999999999','NaN','Infinity','1'*129):

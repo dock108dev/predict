@@ -1,0 +1,16 @@
+[
+  {
+    "source": "polymarket_us",
+    "parent_url": "https://docs.polymarket.us/llms.txt",
+    "url": "https://docs.polymarket.us/learn/advanced/rule-structure.md",
+    "topic": "contract rules and precedence",
+    "relevance_passage": "- [Market Rules](https://docs.polymarket.us/learn/advanced/rule-structure.md): Learn the structure of market rules and how each part affects resolution"
+  },
+  {
+    "source": "polymarket_us",
+    "parent_url": "https://docs.polymarket.us/llms.txt",
+    "url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+    "topic": "settlement charges",
+    "relevance_passage": "- [Market Settlement](https://docs.polymarket.us/learn/markets/contract-settlement.md): Learn how Polymarket US and Polymarket Clearing settle and finalize event contracts after resolution"
+  }
+]

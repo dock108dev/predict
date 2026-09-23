@@ -1,0 +1,50 @@
+{
+  "6a7d8fc33667aab197ec40ecf68a3d394c48705914f26b01ac808f1b0f3b20f7": {
+    "kalshi": {
+      "source": {
+        "url": "/trade-api/v2/markets",
+        "sha256": "a40c11aa35e163d0deaf2852f5f041328c5571622f296ff7ea1700470531e2bf",
+        "text": "If Atlanta wins the Atlanta vs Green Bay Pro Football game originally scheduled for Sep 24, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the Atlanta vs Green Bay Pro Football game originally scheduled for Sep 24, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+        "priority": "market-specific",
+        "received_at": "2026-09-23 15:08:42.153697+00:00"
+      },
+      "known_at": "2026-09-23T15:08:42.505480+00:00",
+      "market_id": "KXNFLGAME-26SEP24ATLGB-ATL"
+    },
+    "polymarket_us": {
+      "source": {
+        "url": "/v1/events",
+        "sha256": "c439e06528fb125622ab3571d375c2cbf5e323af0825b01e025a7efa2332e778",
+        "text": "This market will settle to the winner of the Atlanta Falcons vs Green Bay Packers professional football game scheduled for Sep 24, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body.",
+        "priority": "market-specific",
+        "received_at": "2026-09-23 15:08:38.629584+00:00"
+      },
+      "known_at": "2026-09-23T15:08:42.508548+00:00",
+      "market_id": "779756"
+    }
+  },
+  "df945043f4751e48e127d424daa815e092c3293e710c08ec63c29d56ddbc922d": {
+    "kalshi": {
+      "source": {
+        "url": "/trade-api/v2/markets",
+        "sha256": "9ac4cdce53c68d982e2b5ffc0ad5d78384c4fff6bda61525a0ec2de47f3e3bdf",
+        "text": "If Green Bay wins the Atlanta vs Green Bay Pro Football game originally scheduled for Sep 24, 2026, then the market resolves to Yes.\n\nThe following market refers to the team who wins the Atlanta vs Green Bay Pro Football game originally scheduled for Sep 24, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+        "priority": "market-specific",
+        "received_at": "2026-09-23 15:08:42.153697+00:00"
+      },
+      "known_at": "2026-09-23T15:08:42.510696+00:00",
+      "market_id": "KXNFLGAME-26SEP24ATLGB-GB"
+    },
+    "polymarket_us": {
+      "source": {
+        "url": "/v1/events",
+        "sha256": "c439e06528fb125622ab3571d375c2cbf5e323af0825b01e025a7efa2332e778",
+        "text": "This market will settle to the winner of the Atlanta Falcons vs Green Bay Packers professional football game scheduled for Sep 24, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two days of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body.",
+        "priority": "market-specific",
+        "received_at": "2026-09-23 15:08:38.629584+00:00"
+      },
+      "known_at": "2026-09-23T15:08:42.508548+00:00",
+      "market_id": "779756"
+    }
+  }
+}

@@ -53,7 +53,7 @@ class SessionProjection:
         self.cursor=0; self.chain='0'*64; self.last=None; self.started=None; self.finished=None; self.stop_reason=None
         self.qualification_contexts={}; self.sid=None; self.spec={}; self.inventory={}; self.generation=None
         self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}; self.resolutions={}
-        self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.legacy=None; self.last_row_hash=None; self.sizes={}; self.safety={}
+        self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.last_row_hash=None; self.sizes={}; self.safety={}
 
     def apply(self,row,cursor=None):
         # Match journal JSON types at the acknowledged live boundary.
@@ -81,7 +81,6 @@ class SessionProjection:
             if key in self.qualification_contexts:raise ValueError('Qualification context cannot be rewritten')
             if len(self.qualification_contexts)>=64 or len(json.dumps(context).encode())>32768:raise ValueError('Qualification context bound')
             self.qualification_contexts[key]=context
-        elif typ=='multi_game_selection': self.legacy=deepcopy(row)
         elif typ=='coverage_inventory':
             if row.get('previous_generation')!=self.generation: raise ValueError('inventory dependency mismatch')
             cats=deepcopy(row['inventory'])

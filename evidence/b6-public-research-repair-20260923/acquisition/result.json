@@ -1,0 +1,15 @@
+{
+  "consumed": true,
+  "stop_reason": "Complete; source-closed slots unused",
+  "requests": 5,
+  "closed_sources": [
+    "polymarket_us"
+  ],
+  "elapsed": 12.587410999985877,
+  "peak_rss_bytes": 46153728,
+  "body_bytes": 358739,
+  "connections_closed": true,
+  "credentials": false,
+  "retries": 0,
+  "credits": 0
+}

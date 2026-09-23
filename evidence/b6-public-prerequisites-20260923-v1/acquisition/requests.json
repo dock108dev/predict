@@ -1,0 +1,716 @@
+[
+  {
+    "attempt": 1,
+    "source": "kalshi",
+    "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+    "start": "2026-09-23T16:20:14.143022+00:00",
+    "elapsed_start": 0.00016174998017959297,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:14.271028+00:00",
+    "headers": [
+      [
+        "Content-Type",
+        "application/pdf"
+      ],
+      [
+        "Content-Length",
+        "40044"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Accept-Ranges",
+        "bytes"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 02:13:07 GMT"
+      ],
+      [
+        "Server",
+        "AmazonS3"
+      ],
+      [
+        "Last-Modified",
+        "Fri, 11 Sep 2026 03:12:34 GMT"
+      ],
+      [
+        "Etag",
+        "\"b5bf07abed782d43963fb10961136470\""
+      ],
+      [
+        "x-amz-version-id",
+        "25SFFwo5nyNxgYnCvzGAy2LHGW7kZrkz"
+      ],
+      [
+        "x-amz-server-side-encryption",
+        "AES256"
+      ],
+      [
+        "x-amz-replication-status",
+        "COMPLETED"
+      ],
+      [
+        "X-Cache",
+        "Hit from cloudfront"
+      ],
+      [
+        "Via",
+        "1.1 913d5c5c16f161b143b54784c7f6d4be.cloudfront.net (CloudFront)"
+      ],
+      [
+        "X-Amz-Cf-Pop",
+        "JFK52-P9"
+      ],
+      [
+        "X-Amz-Cf-Id",
+        "S4r-utTPNSHIpQHsc_LtxkgTr1HfM-IBYoTetsKPxm_W_VqMcuzyCA=="
+      ],
+      [
+        "Age",
+        "50827"
+      ]
+    ],
+    "response_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+    "complete_body": true,
+    "body": "01-response.bin",
+    "bytes": 40044,
+    "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+    "end": "2026-09-23T16:20:14.285287+00:00",
+    "elapsed_end": 0.1424390839820262
+  },
+  {
+    "attempt": 2,
+    "source": "kalshi",
+    "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+    "start": "2026-09-23T16:20:14.286297+00:00",
+    "elapsed_start": 0.1434411249938421,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:14.515407+00:00",
+    "headers": [
+      [
+        "Age",
+        "93"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=0, must-revalidate"
+      ],
+      [
+        "Cf-Cache-Status",
+        "EXPIRED"
+      ],
+      [
+        "Cf-Ray",
+        "a3fae0264d44da36-IAD"
+      ],
+      [
+        "Content-Disposition",
+        "inline"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'none'"
+      ],
+      [
+        "Content-Type",
+        "text/markdown; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Last-Modified",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_mintlify/_markdown/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Robots-Tag",
+        "noindex, nofollow"
+      ],
+      [
+        "X-Vercel-Cache",
+        "HIT"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1:iad1::iad1::5pjmm-1790180414407-e50f6108c6b0"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+    "complete_body": true,
+    "body": "02-response.bin",
+    "bytes": 4041,
+    "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22",
+    "end": "2026-09-23T16:20:14.517719+00:00",
+    "elapsed_end": 0.3748708750063088
+  },
+  {
+    "attempt": 3,
+    "source": "polymarket_us",
+    "url": "https://docs.polymarket.us/fees.md",
+    "start": "2026-09-23T16:20:14.519412+00:00",
+    "elapsed_start": 0.37656012500519864,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:14.715046+00:00",
+    "headers": [
+      [
+        "Age",
+        "13"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=0, must-revalidate"
+      ],
+      [
+        "Cf-Cache-Status",
+        "EXPIRED"
+      ],
+      [
+        "Cf-Ray",
+        "a3fae027896059f1-IAD"
+      ],
+      [
+        "Content-Disposition",
+        "inline"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'none'"
+      ],
+      [
+        "Content-Type",
+        "text/markdown; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Last-Modified",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_mintlify/_markdown/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Robots-Tag",
+        "noindex, nofollow"
+      ],
+      [
+        "X-Vercel-Cache",
+        "HIT"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1:iad1::iad1::5pjmm-1790180414614-5fb508643fdf"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.polymarket.us/fees.md",
+    "complete_body": true,
+    "body": "03-response.bin",
+    "bytes": 13537,
+    "sha256": "24fcb758e11d6c1d8bd412dd12e5afd1725d390ffb52233786963c7d64cb564e",
+    "end": "2026-09-23T16:20:14.716584+00:00",
+    "elapsed_end": 0.573728041985305
+  },
+  {
+    "attempt": 4,
+    "source": "kalshi",
+    "url": "https://docs.kalshi.com/websockets/orderbook-updates",
+    "start": "2026-09-23T16:20:14.717595+00:00",
+    "elapsed_start": 0.5747369169839658,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:14.853617+00:00",
+    "headers": [
+      [
+        "Age",
+        "124"
+      ],
+      [
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+      ],
+      [
+        "Cf-Cache-Status",
+        "HIT"
+      ],
+      [
+        "Cf-Ray",
+        "a3fae0288f68be7d-IAD"
+      ],
+      [
+        "Content-Security-Policy",
+        "worker-src * blob: data:; object-src data:; base-uri 'self'; upgrade-insecure-requests; frame-ancestors 'self' https://dashboard.mintlify.com https://app.mintlify.com; form-action 'self';"
+      ],
+      [
+        "Content-Security-Policy-Report-Only",
+        "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; report-uri /_mintlify/api/csp-report; report-to mintlify-csp;"
+      ],
+      [
+        "Content-Type",
+        "text/html; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Reporting-Endpoints",
+        "mintlify-csp=\"/_mintlify/api/csp-report\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding, Accept, User-Agent"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Mint-Proxy-Version",
+        "1.0.0-prod"
+      ],
+      [
+        "X-Mintlify-Client-Version",
+        "0.0.3646"
+      ],
+      [
+        "X-Nextjs-Prerender",
+        "1"
+      ],
+      [
+        "X-Nextjs-Stale-Time",
+        "60"
+      ],
+      [
+        "X-Served-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "X-Vercel-Cache",
+        "REVALIDATED"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1::iad1::4vjcs-1790180414780-cbe8d12018df"
+      ],
+      [
+        "X-Vercel-Project-Id",
+        "prj_NdMUpHpUIb41Po1H8c6hrChv2bgr"
+      ],
+      [
+        "X-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.kalshi.com/websockets/orderbook-updates",
+    "complete_body": true,
+    "body": "04-response.bin",
+    "bytes": 414139,
+    "sha256": "e577577568e436423c5d377ee89d236becaf4a24161e42cdde721f86642f3dc1",
+    "end": "2026-09-23T16:20:14.909345+00:00",
+    "elapsed_end": 0.7665086670021992
+  },
+  {
+    "attempt": 5,
+    "source": "kalshi",
+    "url": "https://docs.kalshi.com/getting_started/maintenance_and_pauses",
+    "start": "2026-09-23T16:20:14.910866+00:00",
+    "elapsed_start": 0.7680120839795563,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:15.068637+00:00",
+    "headers": [
+      [
+        "Age",
+        "118"
+      ],
+      [
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+      ],
+      [
+        "Cf-Cache-Status",
+        "HIT"
+      ],
+      [
+        "Cf-Ray",
+        "a3fae029bcbb3e97-IAD"
+      ],
+      [
+        "Content-Security-Policy",
+        "worker-src * blob: data:; object-src data:; base-uri 'self'; upgrade-insecure-requests; frame-ancestors 'self' https://dashboard.mintlify.com https://app.mintlify.com; form-action 'self';"
+      ],
+      [
+        "Content-Security-Policy-Report-Only",
+        "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; report-uri /_mintlify/api/csp-report; report-to mintlify-csp;"
+      ],
+      [
+        "Content-Type",
+        "text/html; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 16:20:14 GMT"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Reporting-Endpoints",
+        "mintlify-csp=\"/_mintlify/api/csp-report\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding, Accept, User-Agent"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Mint-Proxy-Version",
+        "1.0.0-prod"
+      ],
+      [
+        "X-Mintlify-Client-Version",
+        "0.0.3646"
+      ],
+      [
+        "X-Nextjs-Prerender",
+        "1"
+      ],
+      [
+        "X-Nextjs-Stale-Time",
+        "60"
+      ],
+      [
+        "X-Served-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "X-Vercel-Cache",
+        "REVALIDATED"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1::iad1::2tmzw-1790180414970-acf5ff83e369"
+      ],
+      [
+        "X-Vercel-Project-Id",
+        "prj_NdMUpHpUIb41Po1H8c6hrChv2bgr"
+      ],
+      [
+        "X-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.kalshi.com/getting_started/maintenance_and_pauses",
+    "complete_body": true,
+    "body": "05-response.bin",
+    "bytes": 231632,
+    "sha256": "e7aa2287e34edbb5462c1030a518b2d268e0a5deb54f039bee6cacb3f92820b7",
+    "end": "2026-09-23T16:20:15.127438+00:00",
+    "elapsed_end": 0.9845864590024576
+  },
+  {
+    "attempt": 6,
+    "source": "polymarket_us",
+    "url": "https://docs.polymarket.us/api-reference/websocket/markets",
+    "start": "2026-09-23T16:20:15.128336+00:00",
+    "elapsed_start": 0.9854805840004701,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T16:20:15.264992+00:00",
+    "headers": [
+      [
+        "Age",
+        "73021"
+      ],
+      [
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+      ],
+      [
+        "Cf-Cache-Status",
+        "HIT"
+      ],
+      [
+        "Cf-Ray",
+        "a3fae02b2f01a177-IAD"
+      ],
+      [
+        "Content-Security-Policy",
+        "worker-src * blob: data:; object-src data:; base-uri 'self'; upgrade-insecure-requests; frame-ancestors 'self' https://dashboard.mintlify.com https://app.mintlify.com; form-action 'self';"
+      ],
+      [
+        "Content-Security-Policy-Report-Only",
+        "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; report-uri /_mintlify/api/csp-report; report-to mintlify-csp;"
+      ],
+      [
+        "Content-Type",
+        "text/html; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 16:20:15 GMT"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Reporting-Endpoints",
+        "mintlify-csp=\"/_mintlify/api/csp-report\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding, Accept, User-Agent"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Mint-Proxy-Version",
+        "1.0.0-prod"
+      ],
+      [
+        "X-Mintlify-Client-Version",
+        "0.0.3646"
+      ],
+      [
+        "X-Nextjs-Prerender",
+        "1"
+      ],
+      [
+        "X-Nextjs-Stale-Time",
+        "60"
+      ],
+      [
+        "X-Served-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "X-Vercel-Cache",
+        "REVALIDATED"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1::iad1::6pn7h-1790180415191-e436afc7fe56"
+      ],
+      [
+        "X-Vercel-Project-Id",
+        "prj_NdMUpHpUIb41Po1H8c6hrChv2bgr"
+      ],
+      [
+        "X-Version",
+        "dpl_WUrXqCd5nPFDSzoTYvx4Wt8NzcVY"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.polymarket.us/api-reference/websocket/markets",
+    "complete_body": true,
+    "body": "06-response.bin",
+    "bytes": 410053,
+    "sha256": "16ae9838aacaeea22e5bf40c1328755d6b2d07f03dc637bec2a28e76d7f255cc",
+    "end": "2026-09-23T16:20:15.325760+00:00",
+    "elapsed_end": 1.1829164589871652
+  }
+]

@@ -1,4 +1,5 @@
 """Ordinary dashboard payload from the shared durable projection."""
+from app.dashboard.query_policy import validate_choices, validate_assumptions
 from app.normalization import score_periods
 from app.dashboard.multi_game import game_calculation, rank_filter
 
@@ -15,13 +16,8 @@ def usable(r):
     return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind') in ('probability','partition_distribution') and r.get('conversion_method') and r.get('value') is not None
 
 
-def reference_for(snapshot,game,key):
-    # Compatibility only: never silently choose between multiple usable estimates.
-    refs=[r for r in references_for(snapshot,game,key) if usable(r)]
-    return refs[0] if len(refs)==1 else None
-
-
 def calculate(snapshot,game,q):
+    validate_choices(q)
     locked=snapshot.get('qualification_fee_policy')=='native-evidence-required'
     if locked:q=dict(q,scenario='unknown')
     point=snapshot['points'][game['id']]
@@ -55,6 +51,8 @@ def calculate(snapshot,game,q):
 
 
 def dashboard(snapshot,q,assumptions):
+    validate_choices(q)
+    validate_assumptions(assumptions)
     items=[];sid=snapshot['session_id'];view=q.get('view','arb')
     if view=='research':return [] # Retrospective research remains on its original saved packages.
     for game in snapshot['games']:
@@ -77,7 +75,6 @@ def dashboard(snapshot,q,assumptions):
                 for ref,assumption in choices:
                     probability=assumption.get('probability') if assumption else None
                     basis=assumption.get('basis') if assumption else (ref['role']+' · '+ref['provider_id']+' / '+ref.get('origin_id','unknown')+' · as of '+str(ref.get('source_at') or ref.get('model_as_of') or 'unknown')+' · '+ref.get('freshness','dated')) if ref else 'Assumption needed'
-                    if probability is not None and not basis:raise ValueError('Probability needs an explicit source or basis')
                     ev=calculate(snapshot,game,dict(q,contract=key,probability=probability,reference=ref['id'] if ref else ''))['ev'];leg=ev['leg'];v=leg['venue']
                     if ref and not usable(ref):basis+=' · '+(ref.get('reason') or 'Unsupported reference value')
                     items.append(dict(**common,id=game['id']+'~'+key+('~'+ref['id'] if ref else ''),candidate='',contract=key,reference_id=ref['id'] if ref else None,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis,venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))

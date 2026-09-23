@@ -1,0 +1,296 @@
+{
+  "sources": {
+    "K-JULY": {
+      "file": "evidence/slice-9/research/kalshi-pdf-browser.json",
+      "sha256": "1c6f99bd0b2b733170d47e6ab6c213d004d956547f8114e2e51e27eb53acba0f",
+      "url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+      "version": "July7 effective browser extraction; direct PDF response was429",
+      "publication": "2026-07-07 (stated updated/effective); publication timestamp not independently established",
+      "effective": "2026-07-07; continuation to cutoff unproved"
+    },
+    "K-ROUND": {
+      "file": "evidence/b6-public-prerequisites-20260923-v1/acquisition/02-response.bin",
+      "sha256": "7591cf0fb277eaf8fac8aedaf1645e58b61dacb22b5fed20ba7d8ea9f76ffa22",
+      "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+      "version": "undated fee rounding guide",
+      "publication": "unknown; acquired September23",
+      "effective": "unknown"
+    },
+    "K-FILING": {
+      "file": "evidence/b6-native-review-20260923-v5/filing.txt",
+      "sha256": "dd4b2b5f8efb0488acf1104c0cb8debc793c093f56e1278ce7790d455f6df4e9",
+      "url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+      "version": "February18 original filing, extracted from pinned PDF",
+      "publication": "document dated2026-02-18; says concurrently posted; no independent publication timestamp",
+      "effective": "initial listing after close of business February18; later applicability requires amendment history"
+    },
+    "K-CURRENT": {
+      "file": "evidence/b6-native-review-20260923-v3/kalshi-terms.txt",
+      "sha256": "9327f53bd1b9904c6697ca914848af744409b335d2453607e3dac9f74a3f6d0c",
+      "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+      "version": "undated current contract terms, acquired September23",
+      "publication": "unknown",
+      "effective": "unknown"
+    },
+    "K-HISTORY": {
+      "file": "evidence/b6-public-research-repair-20260923/acquisition/03-response.bin",
+      "sha256": "8ea02e068a64812adfe344b151d6173ad8038b1973de184e7b802552f757ab02",
+      "url": "https://api.elections.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+      "version": "native historical series response",
+      "publication": "retrieved September23; publication not supplied",
+      "effective": "scheduled_ts2026-01-01T08:00:00Z"
+    },
+    "US-FEE": {
+      "file": "evidence/b6-public-prerequisites-20260923-v1/acquisition/03-response.bin",
+      "sha256": "24fcb758e11d6c1d8bd412dd12e5afd1725d390ffb52233786963c7d64cb564e",
+      "url": "https://docs.polymarket.us/fees.md",
+      "version": "September17 exchange-wide fee schedule",
+      "publication": "publication unknown; acquired September23",
+      "effective": "2026-09-17T04:00:00Z, explicit"
+    },
+    "US-GUIDE": {
+      "file": "evidence/b6-public-research-repair-20260923/acquisition/04-response.bin",
+      "sha256": "6f993d4b893de1dd351ca4eac3413123364ca5a3b47c2013a9eea37227f727f4",
+      "url": "https://docs.polymarket.us/learn/advanced/rule-structure.md",
+      "version": "undated general rule-structure guide",
+      "publication": "unknown; acquired September23",
+      "effective": "unknown; no779756 incorporation"
+    },
+    "NATIVE": {
+      "file": "evidence/b6-native-review-20260923-v1/retained-terms.json",
+      "sha256": "1d8fbec2fac4122656d2e62d213b1763e61bd52fc86587eef284ee83248aae49",
+      "url": "native retained market/events responses",
+      "version": "exact selected contract text",
+      "publication": "received September23 before cutoff",
+      "effective": "selected market terms at observation; no full general-rule history"
+    }
+  },
+  "rows": [
+    {
+      "id": "K-meta",
+      "subject": "Kalshi fee type / multiplier",
+      "status": "established applicable metadata",
+      "native_linkage": "KXNFLGAME; exact ATLGB event override history empty",
+      "passages": [
+        {
+          "source": "K-HISTORY",
+          "exact_passage": "\"fee_multiplier\":1,\"fee_type\":\"quadratic_with_maker_fees\""
+        },
+        {
+          "source": "K-HISTORY",
+          "exact_passage": "\"scheduled_ts\":\"2026-01-01T08:00:00Z\""
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Explicit dated baseline selected at cutoff; this does not establish formula schedule or account fees."
+    },
+    {
+      "id": "K-formula",
+      "subject": "Kalshi formula / schedule continuity",
+      "status": "missing precedence",
+      "native_linkage": "July extraction expressly lists KXNFLGAME; filing linked by native series",
+      "passages": [
+        {
+          "source": "K-JULY",
+          "exact_passage": "fees = round up(M x 0.07 x C x P x (1-P))"
+        },
+        {
+          "source": "K-JULY",
+          "exact_passage": "fees = round up(M x 0.0175 x C x P x (1-P))"
+        },
+        {
+          "source": "K-FILING",
+          "exact_passage": "Members will be charged fees in accordance with Rule 3.13 of the Rulebook."
+        },
+        {
+          "source": "K-FILING",
+          "exact_passage": "may be revised from time to time to be reflected on the Exchange\u2019s Website."
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Retained formulas known conditionally, M=1 established. Need effective schedule/change notice at cutoff, not another series snapshot."
+    },
+    {
+      "id": "K-round",
+      "subject": "Kalshi account rounding / accumulator",
+      "status": "missing precedence or account scope",
+      "native_linkage": "General fee guide versus July series-listed extraction",
+      "passages": [
+        {
+          "source": "K-JULY",
+          "exact_passage": "round up = rounds up such that the fee + positionCost is rounded to a centicent"
+        },
+        {
+          "source": "K-ROUND",
+          "exact_passage": "Direct member balances are aligned to `$0.0001`"
+        },
+        {
+          "source": "K-ROUND",
+          "exact_passage": "Non-direct member balances are aligned to `$0.01`"
+        },
+        {
+          "source": "K-ROUND",
+          "exact_passage": "Compute `trade_fee = ceil_6dp(model_fee)`"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Centicent and direct-member grid may agree; non-direct is a distinct account scope, not proven contradiction. Need effective priority plus membership route. Existing complete-fill two-grid envelope remains conditional."
+    },
+    {
+      "id": "K-settlement",
+      "subject": "Kalshi settlement and intermediary charges",
+      "status": "missing effective applicability",
+      "native_linkage": "July general schedule; exact series not exempted in retained extraction",
+      "passages": [
+        {
+          "source": "K-JULY",
+          "exact_passage": "There is no settlement fee."
+        },
+        {
+          "source": "K-JULY",
+          "exact_passage": "may be charged fees by their Futures Commission"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Zero settlement charge is stated for July schedule, not proven continuously effective at cutoff. FCM/private charges require account-specific terms."
+    },
+    {
+      "id": "US-fee",
+      "subject": "US entry commission and optional rebates",
+      "status": "established applicable entry model",
+      "native_linkage": "Exchange-wide date plus native779756 theta matches",
+      "passages": [
+        {
+          "source": "US-FEE",
+          "exact_passage": "Effective exchange-wide from 12 AM ET, Thursday September 17, 2026."
+        },
+        {
+          "source": "US-FEE",
+          "exact_passage": "| **Taker Fee**    | 0.0695"
+        },
+        {
+          "source": "US-FEE",
+          "exact_passage": "Rebates are paid out weekly."
+        }
+      ],
+      "explicit_supersession": "Explicit later effective schedule; no literal supersedes clause. Temporal replacement of July theta is supported by exchange-wide effective statement and matching native coefficient.",
+      "conclusion": "Theta .0695 and documented cumulative cap preserved; exact partition unknown, conditional bounds unchanged. Optional private rebate eligibility not inferred."
+    },
+    {
+      "id": "US-settlement",
+      "subject": "US settlement charge / rule incorporation",
+      "status": "missing source information",
+      "native_linkage": "779756; settlement guide timed out",
+      "passages": [
+        {
+          "source": "US-GUIDE",
+          "exact_passage": "Any **alternative settlement terms** also appear here"
+        },
+        {
+          "source": "US-GUIDE",
+          "exact_passage": "If the game is canceled entirely with no make-up game, this market will settle 50-50."
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Generic example is not779756 cancellation rule; cannot establish a settlement charge or fee exemption. Exact scoped rule/fee statement needed."
+    },
+    {
+      "id": "suspension-before",
+      "subject": "Suspension before55",
+      "status": "missing precedence",
+      "native_linkage": "FOOTBALLGAMEWIN original and current links both supplied by KXNFLGAME",
+      "passages": [
+        {
+          "source": "K-FILING",
+          "exact_passage": "is not scheduled to resume or complete, and the suspension occurs before 55 minutes of play"
+        },
+        {
+          "source": "K-CURRENT",
+          "exact_passage": "is not scheduled to resume within 48 hours of the originally scheduled date"
+        },
+        {
+          "source": "K-CURRENT",
+          "exact_passage": "or for which the Payout Criterion has been definitively satisfied or definitively cannot be satisfied"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Common no-final/no-resumption/no-completed-period/no-definitive-criterion branch is fair price. Other exceptions differ; exact amendment effective date required."
+    },
+    {
+      "id": "suspension-after",
+      "subject": "Suspension after55 before regulation end",
+      "status": "genuine document-version conflict; missing precedence",
+      "native_linkage": "Same FOOTBALLGAMEWIN template; historical iteration binding not resolved",
+      "passages": [
+        {
+          "source": "K-FILING",
+          "exact_passage": "all other markets will resolve based on the last fair market price as determined by Kalshi."
+        },
+        {
+          "source": "K-FILING",
+          "exact_passage": "However, if after the suspension the governing league declares a winner or final result"
+        },
+        {
+          "source": "K-CURRENT",
+          "exact_passage": "all markets shall settle based on what has occurred as of that point"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Without league final, original fair price versus current result-at-suspension differ. With applicable league final the narrow branch agrees. Agreement does not prove complete contract equivalence."
+    },
+    {
+      "id": "suspension-55",
+      "subject": "Exact55 boundary",
+      "status": "unsupported boundary",
+      "native_linkage": "Both contract versions",
+      "passages": [
+        {
+          "source": "K-FILING",
+          "exact_passage": "after 55 minutes of game time have passed"
+        },
+        {
+          "source": "K-CURRENT",
+          "exact_passage": "after fifty-five (55) minutes of play"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Do not extrapolate strict before/after wording to equality. Exact boundary clarification required."
+    },
+    {
+      "id": "cross-postpone",
+      "subject": "Cross-venue postponement",
+      "status": "genuine cross-venue difference",
+      "native_linkage": "Selected ATL/GB Kalshi and US779756",
+      "passages": [
+        {
+          "source": "NATIVE",
+          "exact_passage": "begins within 48 hours from its originally scheduled start time"
+        },
+        {
+          "source": "NATIVE",
+          "exact_passage": "not rescheduled to a date within two days of the originally scheduled date"
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Actual start within elapsed48h is different from rescheduled calendar date within two days. No blanket equivalence; separate venue fair values not guaranteed complementary."
+    },
+    {
+      "id": "normal-tie",
+      "subject": "Ordinary final winner / full-game tie",
+      "status": "established selected conditional branches",
+      "native_linkage": "Exact native markets in retained-terms.json",
+      "passages": [
+        {
+          "source": "NATIVE",
+          "exact_passage": "If the game ends in a tie, the market will resolve to $0.50 for each team."
+        },
+        {
+          "source": "NATIVE",
+          "exact_passage": "If the game ends in a tie, the market will settle to $0.50."
+        }
+      ],
+      "explicit_supersession": "No explicit supersession language in retained evidence",
+      "conclusion": "Original ordinary winner/tie conditional pair payout100 retained. No exceptional branch override or all-outcome net qualification."
+    }
+  ]
+}

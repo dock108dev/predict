@@ -1,0 +1,215 @@
+[
+  {
+    "attempt": 1,
+    "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXNFLGAME",
+    "method": "GET",
+    "start_utc": "2026-09-23T15:41:21.521089+00:00",
+    "start_elapsed": 0.00016966700786724687,
+    "request_headers": {
+      "Accept-Encoding": "identity"
+    },
+    "credentials": false,
+    "redirect_followed": false,
+    "status": 200,
+    "response_url": "https://api.elections.kalshi.com/trade-api/v2/series/KXNFLGAME",
+    "headers_received_utc": "2026-09-23T15:41:21.651751+00:00",
+    "response_headers": [
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Content-Length",
+        "1554"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 15:41:21 GMT"
+      ],
+      [
+        "x-content-type-options",
+        "nosniff"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=15"
+      ],
+      [
+        "content-security-policy",
+        "default-src 'none';"
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "Vary",
+        "Accept-Encoding,Accept-Language"
+      ],
+      [
+        "X-Cache",
+        "Miss from cloudfront"
+      ],
+      [
+        "Via",
+        "1.1 80f517c5ec4d986c177bb1a50f8c9156.cloudfront.net (CloudFront)"
+      ],
+      [
+        "X-Amz-Cf-Pop",
+        "JFK50-P7"
+      ],
+      [
+        "X-Amz-Cf-Id",
+        "_u6uwDqsIqbobWuqeQpItyW5bfA3438p47rIFVkPxkmmfqmj6SnWvQ=="
+      ]
+    ],
+    "complete_body": true,
+    "body": "01-response.bin",
+    "bytes": 1554,
+    "sha256": "d2ec6e7db2b70feea6054737ba97640f52ccb01ae95a0fc99773ce72d58319ee",
+    "end_utc": "2026-09-23T15:41:21.653003+00:00",
+    "end_elapsed": 0.1320852500211913,
+    "peak_rss_bytes": 44924928
+  },
+  {
+    "attempt": 2,
+    "url": "https://api.elections.kalshi.com/trade-api/v2/events/fee_changes?event_ticker=KXNFLGAME-26SEP24ATLGB&limit=100",
+    "method": "GET",
+    "start_utc": "2026-09-23T15:41:21.653887+00:00",
+    "start_elapsed": 0.13296945902402513,
+    "request_headers": {
+      "Accept-Encoding": "identity"
+    },
+    "credentials": false,
+    "redirect_followed": false,
+    "status": 200,
+    "response_url": "https://api.elections.kalshi.com/trade-api/v2/events/fee_changes?event_ticker=KXNFLGAME-26SEP24ATLGB&limit=100",
+    "headers_received_utc": "2026-09-23T15:41:21.731180+00:00",
+    "response_headers": [
+      [
+        "Content-Type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "Content-Length",
+        "36"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 15:41:21 GMT"
+      ],
+      [
+        "x-content-type-options",
+        "nosniff"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=30"
+      ],
+      [
+        "content-security-policy",
+        "default-src 'none';"
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "Vary",
+        "Accept-Encoding,Accept-Language"
+      ],
+      [
+        "X-Cache",
+        "Miss from cloudfront"
+      ],
+      [
+        "Via",
+        "1.1 75b993b111cd9fbf19d5284ea3de78ec.cloudfront.net (CloudFront)"
+      ],
+      [
+        "X-Amz-Cf-Pop",
+        "JFK50-P7"
+      ],
+      [
+        "X-Amz-Cf-Id",
+        "Kw4NZK7agn7Q1Xo-Kq4xSDofDeH5trAiSjjqlyP2viI0ppTLgbgcjw=="
+      ]
+    ],
+    "complete_body": true,
+    "body": "02-response.bin",
+    "bytes": 36,
+    "sha256": "4d755a11d76cd85bec7a4758a2d226815fd2a935a5563dbafae35ee9d373da45",
+    "end_utc": "2026-09-23T15:41:21.732754+00:00",
+    "end_elapsed": 0.21183891702094115,
+    "peak_rss_bytes": 45039616
+  },
+  {
+    "attempt": 3,
+    "url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+    "method": "GET",
+    "start_utc": "2026-09-23T15:41:21.733598+00:00",
+    "start_elapsed": 0.21267987502506003,
+    "request_headers": {
+      "Accept-Encoding": "identity"
+    },
+    "credentials": false,
+    "redirect_followed": false,
+    "status": 429,
+    "response_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+    "headers_received_utc": "2026-09-23T15:41:21.848347+00:00",
+    "response_headers": [
+      [
+        "Cache-Control",
+        "private, no-store, max-age=0"
+      ],
+      [
+        "Content-Type",
+        "text/html; charset=utf-8"
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "X-Vercel-Challenge-Token",
+        "2.1790178081.60.YTI5NjYwNzY0YmNhZmVlYmQ2M2NiNGFkNmM1MmMwOWE7NTU5NGVmOGE7NDY0MjI4Y2RjNWRmODM5MzIzZDhjODI4YWZkMTI0ZWIzOWQ5MjBkODszO1mT99G3c8KTl9WckAPCgs/DdMRCB5mvS6VXrKpY9CQPBaQlGkcgcWSLCxRKq9A=.54b78d2295905c2f7081b353e10082b2"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1::1790178081-rYNw575qjEua8lTBVOwQmALOMHjyOAga"
+      ],
+      [
+        "X-Vercel-Mitigated",
+        "challenge"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 15:41:21 GMT"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "complete_body": true,
+    "error": "Stop: HTTP status 429; no retry or redirect",
+    "body": "03-response.bin",
+    "bytes": 33939,
+    "sha256": "7183ba45e69878326333f1ce4b8ba9cb07e65d04624969d27a1dd1afef4f109a",
+    "end_utc": "2026-09-23T15:41:21.852877+00:00",
+    "end_elapsed": 0.33197312502306886,
+    "peak_rss_bytes": 45350912
+  }
+]

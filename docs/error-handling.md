@@ -1,9 +1,53 @@
 # Failure handling and recovery
 
-September 16, 2026. This maintenance pass started from clean source commit
-`00bc5ee`. It updates source, not the running owner-review process or retained
-qualification evidence. The current product remains the file-backed personal beta
-specified in [SSOT](ssot.md) and the [Desktop tracker](../../prediction_arb_next_steps.md).
+Current source behavior, updated September 23, 2026 from clean commit
+`1f7c1ce`. These are uncommitted source changes; running processes and retained
+qualification candidates are unchanged. Product scope and authorization remain in
+[SSOT](ssot.md) and the [Desktop tracker](../../prediction_arb_next_steps.md).
+Earlier validation below is explicitly historical.
+
+## Current coverage-owner maintenance
+
+The current `CoverageOwner` now enforces prior cleanup failure at Start itself,
+before opening the collector lock or accessing configuration. Hiding/disabling the
+browser button is not the enforcement boundary. Startup errors and cancellation
+attempt collector Stop and lock release, then propagate the original exception.
+A secondary Stop/release error is logged safely and recorded in `cleanup_errors`
+when a session exists, preventing another Start in that process.
+
+Flat coverage finalization retains replay/report diagnostics, but publishes no
+completion manifest when replay fails, memory reservation prevents replay,
+the terminal record is unacknowledged, or cleanup is incomplete. It writes/fsyncs
+`manifest.pending.json`, checks the output cap including that file, then renames
+it. Write/fsync/cap failures leave original data and any pending file intact.
+The runtime state becomes `failed`; readable pending JSON is not a receipt.
+
+Segmented finalization also checks the output cap before manifest publication.
+Replay, publication and secondary failure-report errors now log safe operation,
+exception class and traceback locations, and set runtime state to `failed`.
+The existing best-effort `finalization-failure.json` remains; failure to write it
+does not erase the original runtime failure. A directory-fsync error after rename
+can leave a manifest alongside a failure marker. Saved readers reject that marker;
+if storage also prevents recording it, retained bytes alone cannot establish the
+failed fsync's durability. Preserve the runtime log and package for investigation.
+
+Saved-package read failures keep the affected capture visibly incomplete with
+empty results and a fixed browser message. Raw exception text (including paths or
+provider content) is no longer included in these messages. The local log records
+`saved_package_read`, `saved_history_read` or `resolution_history_read`;
+resolution lookup continues to list unavailable session IDs. Other valid saved
+captures remain usable. This does not change ordinary input-validation messages.
+
+The September 23 repository scan covered application Python, browser code,
+launchers and CI suppression/error patterns. Context review followed the current
+HTTP, collector, startup, finalization and saved-reader boundaries, with adapter,
+reference and historical storage recovery checks. Changes target the demonstrated
+gaps above; this is not exhaustive fault injection of every historical entry point.
+Bounded retries, disconnected/unavailable venue health, unknown financial inputs,
+optional references and credential-safe verifier summaries remain intentional.
+No warning filters, automatic retries of failed finalization, new external calls,
+or changes to acquisition authorization were added.
+
 
 ## Implemented behavior
 
@@ -106,7 +150,30 @@ No real collection, credential lookup, database migration, service restart,
 packaging, release, commit or push was performed. Live reliability and owner
 acceptance are not established by these tests.
 
-## Validation
+## September 23 validation
+
+All checks used disposable synthetic state, retained read-only fixtures or loopback
+HTTP/WebSocket servers. No credentials, provider requests or owner-state writes.
+
+- 25 tests passed: `tests.test_coverage_failure_handling` (initial four tests),
+  `tests.test_failure_handling`, `tests.test_b2_product`,
+  `tests.test_segmented_collector`.
+- 27 tests passed: `tests.test_coverage_failure_handling` (then five tests),
+  `tests.test_multi_game`, `tests.test_continuous`.
+- Final seven tests passed after publication-order changes:
+  `.venv/bin/python -m unittest tests.test_coverage_failure_handling tests.test_b2_product -q`.
+  This includes six new tests covering direct Start, startup cancellation and
+  secondary cleanup failure, flat replay/fsync/cap failures, safe saved-read
+  errors, segmented secondary-report failure and segmented output-cap failure,
+  plus existing successful Start/Stop/reopening in both formats.
+- Python compilation of both changed application modules and the new test module,
+  local document link validation and `git diff --check` passed.
+
+Existing aiohttp AppKey and asyncio slow-task warnings remained visible. No full
+CI matrix, database integration, live collection, browser walkthrough, packaging
+or release qualification was run.
+
+## Historical September 16 validation
 
 - Initial focused run: 17 tests passed across failure injection, existing storage
   failure handling, personal-beta two-cycle lifecycle and dashboard security.

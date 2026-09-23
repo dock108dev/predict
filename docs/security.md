@@ -1,5 +1,133 @@
 # Local security maintenance
 
+## Current source — September 23, 2026
+
+This pass starts from `1f7c1ce1950194a2b230e40cf93417f851f2cc30` plus the
+uncommitted [error-handling maintenance](error-handling.md), which is preserved.
+The fixes below change working source only. Existing processes, frozen candidates,
+saved evidence and credentials were not modified. This is not beta signoff.
+
+### Current trust boundaries
+
+Predict is a personal Python/aiohttp application with static browser JavaScript.
+The supported launcher binds `127.0.0.1`, starts idle and supplies a minimal
+environment without inherited provider credentials. The current HTTP factory is
+`app/dashboard/multi_game_server.py`; `CoverageOwner` owns collection and saving.
+
+| Boundary | Implemented policy |
+| --- | --- |
+| Browser to local server | Every product route uses exact socket-derived Host, supplied Origin and Fetch Metadata checks. Mutations require matching Origin and JSON. No CORS permission, account roles, login cookies, webhooks or remote administration. Headers include CSP, no-store, nosniff, frame denial, no-referrer and noindex. |
+| Browser to mutations | Start/Stop accept at most 4,096 actual body bytes. Reference/result imports accept at most 1,048,576 bytes, with existing 1–16-record validation and session bounds. Limits apply to chunked bodies too. Only uncompressed UTF-8 JSON with unique object fields and finite parsed numbers is accepted; invalid/deeply nested parser inputs fail with a fixed 422 message. |
+| Imported data to collector | `/api/references` and `/api/resolutions` require an active product projection, reject imports excluded by the frozen attempt, validate records before emitting, and reuse the collector journal/Stop path. These are local JSON imports, not remote fetches or arbitrary file writes. |
+| Process to providers | Dedicated Keychain references are loaded only for explicitly configured real Start. Native-source approval and consumed-attempt gates remain. Browser input cannot supply destinations or credentials. Four source roles exist; actual access/coverage is not established by this pass. |
+| External data to browser | Provider data, imports and saved packages remain untrusted display content. Native identifiers are preserved verbatim in the data model and escaped when inserted into HTML attributes. |
+| Background tasks to files | File-backed journals, manifests, replay validation, bounded collection and failure diagnostics remain authoritative. Session selectors index discovered packages. Hashes establish consistency, not authenticity against a writer who can replace the entire package. |
+| Historical tools | Older PostgreSQL APIs, internal pickle handoffs, verifiers and previews have separate entry points. The current CLI prohibits database connections. SQL parameterization and internal-only pickle ownership remain; no new hosted or cross-user security claim. |
+
+Loopback/browser checks do not authenticate another local program, which can forge
+headers. The supported trust model remains one trusted OS account on a personal
+machine. Remote/proxy/shared-host deployment is unsupported. HSTS remains absent
+on HTTP loopback; noindex is not an access control.
+
+### Confirmed defects fixed
+
+**Chunked control-body limit bypass.** Category: API input/resource validation;
+severity: **low**; confidence: **high**; affected area:
+`multi_game_server.py` Start/Stop. After imports raised the application's overall
+limit to 1 MiB, the smaller control limit checked only Content-Length. A caller
+using chunked transfer could send a control body above 4 KiB and still dispatch a
+scan. The regression reproduced HTTP 200 for 4,096 spaces followed by `{}`.
+Existing Origin and run-authorization gates still applied; this was not a remote
+authorization bypass or an unbounded-memory claim. **Fixed:** shared
+`local_security.read_json` counts actual streamed bytes before parsing or owner
+dispatch; oversized controls return 413. Imports retain their separate larger cap.
+
+**Unescaped native identifier in game controls.** Category: HTML injection;
+severity: **medium**; confidence: **high**; affected area:
+`opportunity_static/board.js:candidateHTML`. The `data-explore` attribute embedded
+a leg ID directly; `SessionProjection.sides` constructs that ID using the original
+native outcome identifier. A malicious provider/saved identifier containing quotes
+and markup could create unintended HTML in the local page. Existing CSP limits
+script execution; arbitrary JavaScript execution was not demonstrated.
+**Fixed:** escape the leg ID and, defensively, candidate and session-option IDs
+using the existing `esc` function. No identifiers or saved hashes are rewritten.
+The regression verifies markup cannot be injected and attribute decoding preserves
+the exact identifier used by controls.
+
+### Hardening opportunities implemented
+
+**Ambiguous JSON and compressed request handling.** Category: parser validation;
+severity: **low**; confidence: **high**; status: **fixed**.
+The previous general JSON decoder accepted duplicate fields and nonstandard
+NaN/Infinity values, and the server automatically decompressed request bodies.
+Some domain validators rejected those values later; no authorization bypass is
+claimed. The shared mutation reader now rejects duplicate fields, nonfinite float
+results, invalid UTF-8 and excessive parser nesting with a fixed error.
+The server disables request decompression, and middleware rejects non-identity
+Content-Encoding with 415. Browser controls and prepared JSON imports do not need
+compression. Original JSON embedded as reference/result evidence strings is not
+rewritten; existing domain verification still applies.
+
+### Accepted patterns and prioritized follow-up
+
+1. **Before any remote or shared-host deployment:** category authentication;
+   severity medium outside the supported personal scope; confidence high;
+   status **needs decision**. Choose a local capability-token design or authenticated
+   remote service, then define filesystem ownership and proxy/TLS policy.
+   Headers alone cannot distinguish authorized local processes. For the current
+   single-account loopback deployment, absence of login is **accepted**.
+2. **Before sharing captures across OS users:** category filesystem integrity;
+   severity low in current scope; confidence high; status **deferred**.
+   New files inherit local permissions, and there is no comprehensive
+   hostile-symlink/same-account-writer defense. Define whether artifacts are shared,
+   then introduce private runtime roots and no-follow file handling at ownership
+   boundaries. Do not chmod or migrate retained owner evidence as a side effect.
+3. **If contention becomes observable:** category availability; severity low;
+   confidence high; status **deferred**. Per-request limits and collection budgets
+   remain; there is no global request quota or dedicated body-read deadline.
+   Add measured concurrency/request-time bounds if needed for the local workflow.
+4. **External verification:** category dependency/operational assurance;
+   severity informational; confidence medium; status **manual verification needed**.
+   Keychain ACLs, provider entitlements, active-process configuration, hosted
+   security jobs and current advisory status were not checked. CI has a hashed
+   dependency lock and weekly Dependabot configuration; these are not evidence of
+   an advisory-clean dependency set. No package vulnerability claim is made.
+
+The repository scan covered Python/JavaScript entry points, file readers,
+subprocess use, environment access, dynamic HTML, deserialization, HTTP clients,
+warning/error handling and CI configuration. No changes to historical SQL,
+internal-only pickle or deliberate credential-safe error suppression were needed.
+The tracked-file inventory contained no `.env`, PEM or key files; this is not a
+secret-history audit. No local credential file was opened.
+
+### September 23 validation
+
+- The new chunked-control regression failed before the fix (HTTP 200 instead of
+  413), then passed.
+- **44 tests passed** with:
+  `.venv/bin/python -m unittest tests.test_dashboard_security tests.test_b4_reference tests.test_b5_nfl_resolution tests.test_coverage_failure_handling -q`.
+  This includes eight browser-boundary tests, normal retained-reference/result
+  imports and saved reopening, and the prior error-handling regressions.
+- `node tests/test_board_security.cjs` and
+  `node tests/test_concise_dashboard.cjs` passed.
+- JavaScript syntax, Python compilation of changed Python modules/tests,
+  shell syntax for `scripts/check-ci`, local documentation links and
+  `git diff --check` passed.
+- The existing offline CI script now includes browser-boundary and identifier
+  escaping regressions. The full CI script/matrix was not run.
+
+Validation used temporary synthetic state and loopback fixtures. Existing aiohttp
+AppKey and asyncio timing warnings remain visible. No live acquisition, provider
+spend, credential access, owner service restart, database migration, browser
+walkthrough, dependency advisory scan, commit or publication occurred.
+Running processes require a later explicit restart to receive source changes.
+
+## Historical September 16 record
+
+The following retains the earlier pass and its original verification counts.
+Its route/coverage descriptions are historical; the current contract is above.
+
+
 September 16, 2026. This source pass starts at HEAD
 `5fd1d5e8234a84a96d5465f74335c16f9a8b5bc7` **plus the preexisting uncommitted
 SSOT/math changes** documented in [ssot.md](ssot.md). This is a historical

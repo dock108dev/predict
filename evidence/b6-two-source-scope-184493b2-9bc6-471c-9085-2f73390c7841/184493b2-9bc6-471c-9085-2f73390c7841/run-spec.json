@@ -1,0 +1,91 @@
+{
+  "mode": "real",
+  "start_after": "2026-09-23T15:07:57.787102+00:00",
+  "start_before": "2026-09-23T15:22:57.787102+00:00",
+  "duration": 90,
+  "discovery_cadence": 300,
+  "stale_seconds": 15,
+  "reference_enabled": false,
+  "mapping_revision": "native-occurrence-NFL-bounded-1",
+  "assessment_revisions": {
+    "pairing": null,
+    "lineage": null,
+    "fees": null,
+    "settlement": null
+  },
+  "capture_authorization": "Pending explicit approval: one two-source NFL observation attempt; no reference acquisition or trading",
+  "cleanup": "Stop new work at 89 seconds; close sources; external supervisor terminates unclosed collection at 90 seconds; retain incomplete prefix on failure",
+  "sources": {
+    "kalshi": {
+      "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+      "entitlement_reference": "existing dedicated project read-only access; availability checked only at approved Start"
+    },
+    "polymarket_us": {
+      "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+      "entitlement_reference": "existing dedicated project read-only access; availability checked only at approved Start"
+    }
+  },
+  "prediction": {
+    "messages": 600,
+    "connections": 2,
+    "frame_bytes": 1048576,
+    "session_bytes": 16777216,
+    "discovery_requests": 100,
+    "dollar_cap_per_source": "0",
+    "dollars_per_discovery_request": "0",
+    "dollars_per_connection": "0",
+    "plan_evidence": "Existing read-only API access; zero additional spend permitted; no quota/account changes"
+  },
+  "native_sources": {
+    "kalshi": {
+      "state": "enabled",
+      "environment": "production",
+      "poll_seconds": 30,
+      "event_cap": 1,
+      "market_cap": 2,
+      "series": [
+        "KXNFLGAME"
+      ]
+    },
+    "polymarket_us": {
+      "state": "enabled",
+      "environment": "production",
+      "poll_seconds": 30,
+      "event_cap": 1,
+      "market_cap": 2,
+      "tags": [
+        "nfl"
+      ]
+    },
+    "novig": {
+      "state": "not_configured",
+      "selected": true
+    },
+    "prophetx": {
+      "state": "not_configured",
+      "selected": true
+    }
+  },
+  "two_source_qualification": {
+    "version": "two-source-nfl-2",
+    "discovery_seconds": 30,
+    "event_pages": 2,
+    "page_size": 5,
+    "market_pages": 2,
+    "events_selected": 1,
+    "markets_per_venue": 2,
+    "kickoff_margin_seconds": 300,
+    "target_stop_seconds": 60,
+    "cleanup_start_seconds": 89,
+    "hard_deadline_seconds": 90,
+    "refresh": false,
+    "imports": false,
+    "us_event_filter": "football_team_full_game_winner",
+    "future_start_filter": true,
+    "rest_attempts": {
+      "kalshi": 12,
+      "polymarket_us": 8
+    },
+    "attempt_id": "184493b2-9bc6-471c-9085-2f73390c7841"
+  }
+}

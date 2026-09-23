@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 import tempfile
 import unittest
@@ -6,6 +7,10 @@ import httpx
 from app.reference.pinnacle_sample import capture,LIMIT
 
 class BoundedSample(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        # The one-shot executable disables logging; restore it for later tests.
+        self.addCleanup(logging.disable, logging.root.manager.disable)
+
     async def test_one_call_original_bytes_and_exclusive_attempt(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);calls=[];body=b'[]'

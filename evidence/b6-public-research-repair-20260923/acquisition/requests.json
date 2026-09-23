@@ -1,0 +1,392 @@
+[
+  {
+    "attempt": 1,
+    "source": "kalshi",
+    "url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+    "start": "2026-09-23T17:39:02.408151+00:00",
+    "elapsed_start": 0.0001497499761171639,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T17:39:02.508018+00:00",
+    "headers": [
+      [
+        "Content-Type",
+        "application/pdf"
+      ],
+      [
+        "Content-Length",
+        "301600"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 02:13:08 GMT"
+      ],
+      [
+        "x-amz-replication-status",
+        "COMPLETED"
+      ],
+      [
+        "Last-Modified",
+        "Thu, 19 Feb 2026 19:16:03 GMT"
+      ],
+      [
+        "Etag",
+        "\"f0bb64d80ef93f69989d581810b174c7\""
+      ],
+      [
+        "x-amz-server-side-encryption",
+        "AES256"
+      ],
+      [
+        "x-amz-meta-date",
+        "2026-02-19"
+      ],
+      [
+        "x-amz-meta-content-type",
+        "application/pdf"
+      ],
+      [
+        "x-amz-meta-tag",
+        "FOOTBALLGAMEWIN"
+      ],
+      [
+        "x-amz-meta-title",
+        "Team winning specified period of football game"
+      ],
+      [
+        "x-amz-version-id",
+        "mdezNMERTjeKuU3wKFAjnDp8LeV66z_I"
+      ],
+      [
+        "Accept-Ranges",
+        "bytes"
+      ],
+      [
+        "Server",
+        "AmazonS3"
+      ],
+      [
+        "X-Cache",
+        "Hit from cloudfront"
+      ],
+      [
+        "Via",
+        "1.1 4b6b5023747759b0047c5cbc8d742cea.cloudfront.net (CloudFront)"
+      ],
+      [
+        "X-Amz-Cf-Pop",
+        "JFK52-P9"
+      ],
+      [
+        "X-Amz-Cf-Id",
+        "Z58zupUoYmKBu2NMihNsE51epnpKvzs8IfzlkTp6AVGo3Q9l4EE0hQ=="
+      ],
+      [
+        "Age",
+        "55555"
+      ]
+    ],
+    "response_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+    "complete_body": true,
+    "body": "01-response.bin",
+    "bytes": 301600,
+    "sha256": "d89ea1b11d8ec7290111eeb6f3878864ff0ea790185d619b4e6f89b6359fc2cc",
+    "end": "2026-09-23T17:39:02.552291+00:00",
+    "elapsed_end": 0.14429999998537824
+  },
+  {
+    "attempt": 2,
+    "source": "kalshi",
+    "url": "https://docs.kalshi.com/llms.txt",
+    "start": "2026-09-23T17:39:02.553057+00:00",
+    "elapsed_start": 0.14506133398390375,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T17:39:02.770050+00:00",
+    "headers": [
+      [
+        "Age",
+        "4313"
+      ],
+      [
+        "Cache-Control",
+        "public"
+      ],
+      [
+        "Cf-Cache-Status",
+        "HIT"
+      ],
+      [
+        "Cf-Ray",
+        "a3fb5395ed64a471-IAD"
+      ],
+      [
+        "Content-Security-Policy",
+        "worker-src * blob: data:; object-src data:; base-uri 'self'; upgrade-insecure-requests; frame-ancestors 'self' https://dashboard.mintlify.com https://app.mintlify.com; form-action 'self';"
+      ],
+      [
+        "Content-Security-Policy-Report-Only",
+        "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; report-uri /_mintlify/api/csp-report; report-to mintlify-csp;"
+      ],
+      [
+        "Content-Type",
+        "text/plain; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 17:39:02 GMT"
+      ],
+      [
+        "Etag",
+        "W/\"-cz_Gqp4cMvV_HLb3WFGS5TmJv2a-ta1-LxthfVEPD8\""
+      ],
+      [
+        "Reporting-Endpoints",
+        "mintlify-csp=\"/_mintlify/api/csp-report\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Matched-Path",
+        "/_sites/[subdomain]/llms.txt"
+      ],
+      [
+        "X-Vercel-Cache",
+        "MISS"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:pdx1:iad1::iad1::6z86c-1790185142675-d75943d9e9fc"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.kalshi.com/llms.txt",
+    "complete_body": true,
+    "body": "02-response.bin",
+    "bytes": 54753,
+    "sha256": "705007d99a8b49a98350e0592ab70c297c4131f58df282f5a5f4144217e6268e",
+    "end": "2026-09-23T17:39:02.786550+00:00",
+    "elapsed_end": 0.3785657499975059
+  },
+  {
+    "attempt": 3,
+    "source": "kalshi",
+    "url": "https://api.elections.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+    "start": "2026-09-23T17:39:02.788044+00:00",
+    "elapsed_start": 0.3800503749807831,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T17:39:02.913245+00:00",
+    "headers": [
+      [
+        "Content-Type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "Content-Length",
+        "197"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 17:39:02 GMT"
+      ],
+      [
+        "x-content-type-options",
+        "nosniff"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=30"
+      ],
+      [
+        "content-security-policy",
+        "default-src 'none';"
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "Vary",
+        "Accept-Encoding,Accept-Language"
+      ],
+      [
+        "X-Cache",
+        "Miss from cloudfront"
+      ],
+      [
+        "Via",
+        "1.1 005b0f8dc37e46fc9bdc40ea2ce8a602.cloudfront.net (CloudFront)"
+      ],
+      [
+        "X-Amz-Cf-Pop",
+        "JFK50-P1"
+      ],
+      [
+        "X-Amz-Cf-Id",
+        "l_UI9DqBXh7jcAW5QC-16yEq3VbQ_mNVcU5lazVhD1oqoPrfFQnrcA=="
+      ]
+    ],
+    "response_url": "https://api.elections.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+    "complete_body": true,
+    "body": "03-response.bin",
+    "bytes": 197,
+    "sha256": "8ea02e068a64812adfe344b151d6173ad8038b1973de184e7b802552f757ab02",
+    "end": "2026-09-23T17:39:02.913930+00:00",
+    "elapsed_end": 0.5059315419930499
+  },
+  {
+    "attempt": 4,
+    "source": "polymarket_us",
+    "url": "https://docs.polymarket.us/learn/advanced/rule-structure.md",
+    "start": "2026-09-23T17:39:02.916188+00:00",
+    "elapsed_start": 0.5081881249789149,
+    "credentials": false,
+    "status": 200,
+    "headers_received": "2026-09-23T17:39:04.112161+00:00",
+    "headers": [
+      [
+        "Age",
+        "0"
+      ],
+      [
+        "Cache-Control",
+        "public, max-age=0, must-revalidate"
+      ],
+      [
+        "Cf-Cache-Status",
+        "EXPIRED"
+      ],
+      [
+        "Cf-Ray",
+        "a3fb53980c9f2d11-IAD"
+      ],
+      [
+        "Content-Disposition",
+        "inline"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'none'"
+      ],
+      [
+        "Content-Type",
+        "text/markdown; charset=utf-8"
+      ],
+      [
+        "Date",
+        "Wed, 23 Sep 2026 17:39:03 GMT"
+      ],
+      [
+        "Last-Modified",
+        "Wed, 23 Sep 2026 17:39:04 GMT"
+      ],
+      [
+        "Link",
+        "</llms.txt>; rel=\"llms-txt\", </llms-full.txt>; rel=\"llms-full-txt\", </.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\", </.well-known/agent-card.json>; rel=\"agent-card\", </.well-known/agent-skills/index.json>; rel=\"agent-skills\""
+      ],
+      [
+        "Server",
+        "Vercel"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=63072000"
+      ],
+      [
+        "Vary",
+        "rsc, accept-encoding"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "X-Llms-Txt",
+        "/llms.txt"
+      ],
+      [
+        "X-Matched-Path",
+        "/_mintlify/_markdown/_sites/[subdomain]/[[...slug]]"
+      ],
+      [
+        "X-Robots-Tag",
+        "noindex, nofollow"
+      ],
+      [
+        "X-Vercel-Cache",
+        "REVALIDATED"
+      ],
+      [
+        "X-Vercel-Id",
+        "iad1:iad1:iad1::iad1::5x5lj-1790185143009-1fb4ab6cb858"
+      ],
+      [
+        "Connection",
+        "close"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "response_url": "https://docs.polymarket.us/learn/advanced/rule-structure.md",
+    "complete_body": true,
+    "body": "04-response.bin",
+    "bytes": 2189,
+    "sha256": "6f993d4b893de1dd351ca4eac3413123364ca5a3b47c2013a9eea37227f727f4",
+    "end": "2026-09-23T17:39:04.114781+00:00",
+    "elapsed_end": 1.7067931249912363
+  },
+  {
+    "attempt": 5,
+    "source": "polymarket_us",
+    "url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+    "start": "2026-09-23T17:39:04.116218+00:00",
+    "elapsed_start": 1.7082223749894183,
+    "credentials": false,
+    "error": "TimeoutError: ",
+    "body": null,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "end": "2026-09-23T17:39:14.992633+00:00",
+    "elapsed_end": 12.584668666997459
+  }
+]

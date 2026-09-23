@@ -101,14 +101,14 @@ class Projection(unittest.TestCase):
         for role,kind in [('model_reference','probability'),('bookmaker_reference','native_odds')]:
             r=dict(type='product_reference',session_id=p.sid,source='reference',observed_at=p.last,reference=dict(id=role,role=role,provider_id='fixture-provider',origin_id='synthetic' if role=='model_reference' else 'pinnacle',market_identity=g['product_identity'],participant=g['sides'][key]['participant'],value_kind=kind,value='0.6',conversion_method='explicit synthetic probability',model_as_of='2026-09-15T12:00:00+00:00',source_at='2026-09-15T12:00:00+00:00',delay_seconds=None,provenance='Synthetic B2 integration input'))
             rows.append(r);p.apply(r)
-        s=p.snapshot();self.assertEqual(len(s['references']),2);self.assertEqual(product_view.reference_for(s,g,key)['role'],'model_reference')
+        s=p.snapshot();self.assertEqual(len(s['references']),2);self.assertEqual(product_view.calculate(s,g,dict(contract=key,reference='model_reference'))['ev']['reference']['role'],'model_reference')
         self.assertTrue(any(x['probability']=='0.6' and x['profit'] is not None for x in product_view.dashboard(s,{'view':'ev'},{})))
         self.assertEqual(session_history.project_rows(rows,old)['references'],[])
         self.assertTrue(all('reference' not in l['venue'] for x in product_view.dashboard(s,{}, {}) for l in x['legs']))
         self.assertEqual(len(p.snapshot(mode='current',now='2026-09-16T13:00:00+00:00')['references']),2)
         rating=deepcopy(rows[-2]);rating['reference'].update(value_kind='rating',value='12')
         p.apply(rating)
-        self.assertIsNone(product_view.reference_for(p.snapshot(),g,key))
+        self.assertIsNone(product_view.calculate(p.snapshot(),g,dict(contract=key,reference='model_reference'))['ev']['probability'])
         future=deepcopy(rows[-2]);future['reference']['model_as_of']='2027-01-01T00:00:00+00:00';p.apply(future)
         self.assertFalse(any(r['role']=='model_reference' for r in p.snapshot()['references']))
 

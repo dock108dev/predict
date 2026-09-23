@@ -5,6 +5,7 @@ from decimal import Decimal, ROUND_FLOOR
 import asyncio
 import json
 
+from app.dashboard.query_policy import validate_choice
 from app.diagnostics import failure
 from app.collection.multi_game import MultiSession
 from app.collection.transport_session import reopen
@@ -191,6 +192,8 @@ def game_calculation(point,rows,game,quantity,scenario,probability=None,contract
 
 
 def rank_filter(rows,sort='roi',positive=False,venue='',freshness='',search=''):
+    validate_choice('sort', sort)
+    validate_choice('freshness', freshness)
     def value(r):return r.get('return_pct' if sort=='roi' else 'profit')
     rows=[r for r in rows if (not positive or r['profit'] is not None and Decimal(r['profit'])>0) and (not venue or venue==r['venue_pair'] or venue in r['venues']) and (not freshness or r['usable']==(freshness=='usable')) and search.casefold() in r['game_title'].casefold()]
     # Unsupported values never receive a numeric zero. Raw gaps have their own class.

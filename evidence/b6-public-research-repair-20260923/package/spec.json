@@ -1,0 +1,59 @@
+{
+  "version": "b6-public-documents-exact-4",
+  "scope": {
+    "kalshi_series": "KXNFLGAME",
+    "kalshi_event": "KXNFLGAME-26SEP24ATLGB",
+    "kalshi_markets": [
+      "KXNFLGAME-26SEP24ATLGB-ATL",
+      "KXNFLGAME-26SEP24ATLGB-GB"
+    ],
+    "us_event": "108683",
+    "us_market": "779756"
+  },
+  "requests": [
+    {
+      "source": "kalshi",
+      "url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+      "format": "pdf"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://docs.kalshi.com/llms.txt",
+      "format": "text"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://api.elections.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+      "format": "json"
+    },
+    {
+      "source": "polymarket_us",
+      "url": "https://docs.polymarket.us/learn/advanced/rule-structure.md",
+      "format": "text"
+    },
+    {
+      "source": "polymarket_us",
+      "url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+      "format": "text"
+    }
+  ],
+  "limits": {
+    "requests": 5,
+    "seconds": 90,
+    "request_seconds": 10,
+    "body_bytes": 2097152,
+    "retained_body_bytes": 10485760,
+    "output_bytes": 67108864,
+    "rss_bytes": 268435456,
+    "concurrency": 1,
+    "retries": 0,
+    "credits": 0
+  },
+  "blocked_pdf": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+  "source_failure": "Close the affected source on HTTP errors, timeout, unexpected content or redirect; skip its remaining slots. Continue the other listed source only if global limits remain.",
+  "global_stop": "Operator Stop, hard deadline, resource/request limit, integrity mismatch or ambiguous/invalid scope. Close active request and consume attempt. No retries or extensions.",
+  "credentials": false,
+  "streaming": false,
+  "discovery": false,
+  "approval_status": "PREPARED_NOT_APPROVED"
+}

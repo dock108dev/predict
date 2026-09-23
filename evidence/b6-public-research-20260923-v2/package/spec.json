@@ -1,0 +1,79 @@
+{
+  "version": "b6-public-research-3",
+  "scope": {
+    "kalshi_series": "KXNFLGAME",
+    "kalshi_event": "KXNFLGAME-26SEP24ATLGB",
+    "kalshi_markets": [
+      "KXNFLGAME-26SEP24ATLGB-ATL",
+      "KXNFLGAME-26SEP24ATLGB-GB"
+    ],
+    "us_event": "108683",
+    "us_market": "779756"
+  },
+  "requests": [
+    {
+      "source": "kalshi",
+      "url": "https://kalshi.com/fee-schedule",
+      "format": "html"
+    },
+    {
+      "source": "polymarket_us",
+      "url": "https://docs.polymarket.us/llms.txt",
+      "format": "text"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+      "format": "pdf"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://docs.kalshi.com/llms.txt",
+      "format": "text"
+    },
+    {
+      "source": "kalshi",
+      "url": "https://api.elections.kalshi.com/trade-api/v2/series/fee_changes?series_ticker=KXNFLGAME&show_historical=true",
+      "format": "json"
+    }
+  ],
+  "limits": {
+    "requests": 10,
+    "seconds": 90,
+    "request_seconds": 10,
+    "body_bytes": 2097152,
+    "retained_body_bytes": 20971520,
+    "output_bytes": 67108864,
+    "rss_bytes": 268435456,
+    "concurrency": 1,
+    "retries": 0,
+    "credits": 0
+  },
+  "blocked_pdf": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+  "source_failure": "Close the affected source on HTTP errors, timeout, unexpected content or redirect; skip its remaining slots. Continue the other listed source only if global limits remain.",
+  "global_stop": "Operator Stop, hard deadline, resource/request limit, integrity mismatch or ambiguous/invalid scope. Close active request and consume attempt. No retries or extensions.",
+  "credentials": false,
+  "streaming": false,
+  "discovery": "At most three Kalshi and two US directly linked text/HTML documents from successful fixed pages; one hop only; no market search. Selection via stdin while 90-second clock continues. Missing/ambiguous links unused.",
+  "approval_status": "PREPARED_NOT_APPROVED",
+  "topics": [
+    "fee applicability and version history",
+    "rounding precedence",
+    "settlement charges",
+    "contract rules and precedence",
+    "state continuity and timestamp semantics"
+  ],
+  "child_hosts": {
+    "kalshi": [
+      "docs.kalshi.com",
+      "kalshi.com",
+      "www.kalshi.com"
+    ],
+    "polymarket_us": [
+      "docs.polymarket.us",
+      "polymarket.us",
+      "www.polymarket.us"
+    ]
+  },
+  "child_exclusions": "No PDFs, query strings, credentials, redirects, APIs, market pages, search, mirrored schedule or challenge bypass. US generic rules never establish exact contract applicability on their own."
+}

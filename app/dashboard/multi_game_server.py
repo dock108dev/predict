@@ -2,9 +2,10 @@
 import json
 from app.diagnostics import failure
 from aiohttp import web
-from app.dashboard.local_security import HEADERS,check_browser,calculation_inputs,validate_assumptions
+from app.dashboard.local_security import HEADERS,check_browser,read_json,body_limit,IMPORT_BODY_LIMIT
+from app.dashboard.query_policy import validate_http_query,validate_assumptions
 from app.dashboard.opportunity_board import ROOT,load_sessions,present
-from app.dashboard.multi_game import MultiOwner,OUTPUT,configuration,saved_rows,project_game,default_point,game_calculation,rank_filter
+from app.dashboard.multi_game import OUTPUT,configuration,saved_rows,project_game,default_point,game_calculation,rank_filter
 from app.opportunities.board import SIDES,TEAMS,CANDIDATES
 from app.collection.transport_session import reopen
 from app.reference.page_estimate import for_saved_game
@@ -28,7 +29,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                 select=next(r for r in saved['rows'] if r['type']=='multi_game_selection')
                 values[sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=False,label=('Local test' if saved['rows'][0]['spec']['mode']=='mock' else 'Saved')+' · '+saved['rows'][0]['observed_at']+' · '+str(len(select['games']))+' games · Completed')
             except (ValueError,OSError,KeyError,StopIteration) as exc:
-                values[sid]=dict(games=[],error='Incomplete saved package: '+str(exc),label='Incomplete · '+sid)
+                failure(__name__, 'saved_package_read', exc)
+                values[sid]=dict(games=[],error='Incomplete saved package; inspect the local log',label='Incomplete · '+sid)
         from app.dashboard import session_history
         if hasattr(owner,'history_paths'):
             for sid,folder in owner.history_paths().items():
@@ -37,7 +39,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                     snapshot=session_history.load(folder)
                     values[sid]=dict(product=snapshot,folder=folder,games=snapshot['games'],label=snapshot['data_mode']+' · '+snapshot['state']+' · '+str(snapshot['started_at']))
                 except (ValueError,OSError,KeyError) as exc:
-                    values[sid]=dict(games=[],error='Incomplete or corrupt saved package: '+str(exc),label='Incomplete · '+sid)
+                    failure(__name__, 'saved_history_read', exc)
+                    values[sid]=dict(games=[],error='Incomplete or corrupt saved package; inspect the local log',label='Incomplete · '+sid)
         if hasattr(owner,'current_snapshot') and owner.session and owner.active():
             snapshot=owner.current_snapshot()
             if snapshot:values[owner.session.sid]=dict(product=snapshot,folder=owner.session.output,games=snapshot['games'],label=snapshot['data_mode']+' · '+snapshot['state'])
@@ -60,16 +63,11 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def guard(request,handler):
         try:
             check_browser(request)
-            if request.method=='POST' and request.path not in ('/api/references','/api/resolutions') and (request.content_length or 0)>4096:raise web.HTTPRequestEntityTooLarge(max_size=4096,actual_size=request.content_length)
-            if request.path in ('/api/dashboard','/api/calculate'):
-                q=request.query
-                calculation_inputs(q)
-                if any(len(q.getall(k))!=1 for k in q):raise ValueError('Duplicate selection')
-                choices={'period':('','full_game','first_half','second_half','quarter_1','quarter_2','quarter_3','quarter_4','first_3','first_5','first_6','regulation_9','period_1','period_2','period_3','season'),'family':('','moneyline','spread','total','futures'),'view':('arb','ev','research'),'sort':('roi','dollars'),
-                         'scenario':('cent','direct','unknown'),
-                         'freshness':('','usable','unavailable'),'positive':('true','false')}
-                for key,values in choices.items():
-                    if key in q and q[key] not in values:raise ValueError('Unknown '+key+' selection')
+            limit=body_limit(request.path)
+            if request.method=='POST' and (request.content_length or 0)>limit:
+                raise web.HTTPRequestEntityTooLarge(max_size=limit,actual_size=request.content_length)
+            if request.path in ('/api/dashboard','/api/calculate','/api/sessions','/api/resolution'):
+                validate_http_query(request.query)
             r=await handler(request)
         except web.HTTPException as exc:
             r=web.json_response({'error':exc.reason},status=exc.status)
@@ -83,23 +81,23 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             r=web.json_response({'error':'Local data unavailable'},status=503)
         r.headers.update(HEADERS)
         return r
-    app=web.Application(middlewares=[guard],client_max_size=1024*1024);app['owner']=owner
+    app=web.Application(middlewares=[guard],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app['owner']=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/coverage.html')
     app.router.add_get('/coverage',coverage_page)
     async def start(req):
-        options=await req.json()
+        options=await read_json(req)
         if not isinstance(options,dict) or set(options)-{'max_games','duration'}:raise ValueError('Unknown scan controls')
         return web.json_response(dict(session=await owner.start(**options)))
     async def stop(req):
-        if await req.json()!={}:raise ValueError('Stop does not accept options')
+        if await read_json(req)!={}:raise ValueError('Stop does not accept options')
         await owner.stop()
         return web.json_response(owner.status())
     async def import_references(req):
         if owner.spec_factory().get('two_source_qualification'):raise ValueError('Reference imports excluded from this frozen prediction-only attempt')
         from app.reference.product import emit_references
         if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained references')
-        refs=await req.json()
+        refs=await read_json(req)
         emit_references(owner.session,refs)
         await owner.session.queue.join()
         return web.json_response(dict(imported=len(refs),session=owner.session.sid))
@@ -107,15 +105,13 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         if owner.spec_factory().get('two_source_qualification'):raise ValueError('Result imports excluded from this frozen prediction-only attempt')
         from app.resolution.core import emit_records
         if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained resolution evidence')
-        records=await req.json();emit_records(owner.session,records)
+        records=await read_json(req);emit_records(owner.session,records)
         await owner.session.queue.join()
         return web.json_response(dict(imported=len(records),session=owner.session.sid))
     async def resolution(req):
         from app.dashboard import session_history
         from app.resolution.core import resolve
         q=req.query
-        if any(len(q.getall(k))!=1 for k in q):raise ValueError('Duplicate resolution selection')
-        calculation_inputs(q)
         sid,gid=q['session'].split('~',1);d=datasets()[sid]
         if q['hash']!=sid or 'product' not in d:raise ValueError('Unbound prediction snapshot')
         snap=product_cutoff(sid,d,q['cutoff']);game=next(g for g in snap['games'] if g['id']==gid)
@@ -126,7 +122,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         for rsid,folder in paths.items():
             if owner.active() and owner.session and rsid==owner.session.sid:continue
             try:hist=session_history.resolution_history(folder)
-            except (ValueError,OSError,KeyError):
+            except (ValueError,OSError,KeyError) as exc:
+                failure(__name__, 'resolution_history_read', exc)
                 unavailable.append(rsid);continue
             if hist['state']!='complete':continue
             for option in hist['options']:
@@ -204,7 +201,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                 for key in g['sides']:
                     assumption=assumptions.get(g['id']+'~'+key,{})
                     p=assumption.get('probability');basis=assumption.get('basis','').strip()
-                    if p is not None and not basis:raise ValueError('Probability needs an explicit source or basis')
                     ev=game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),p,key)['ev'];leg=ev['leg'];v=leg['venue']
                     items.append(dict(**common,id=g['id']+'~'+key,candidate='',contract=key,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis or 'Assumption needed',venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
         result['rows']=rank_research(items,q.get('sort','roi'),q.get('search','')) if view=='research' else rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))

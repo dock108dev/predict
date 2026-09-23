@@ -56,7 +56,7 @@ class Contract(unittest.TestCase):
         self.assertTrue(any(x['reference_id']==refs[1]['id'] and x['profit'] is not None for x in chosen))
         self.assertTrue(all(x['profit'] is None for x in chosen if x['reference_id']==refs[2]['id']))
         key=next(k for k,v in g['sides'].items() if v['participant']==refs[0]['participant'] and v['predicate']=='win')
-        self.assertIsNone(product_view.reference_for(s,g,key))
+        self.assertIsNone(product_view.calculate(s,g,dict(contract=key))['reference_id'])
         self.assertEqual(len(product_view.references_for(s,g,key)),3)
         for change in [dict(period='H1'),dict(line='3.5'),dict(competition='NCAAF'),dict(event=['elsewhere'])]:
             other=deepcopy(g);other['product_identity'].update(change)

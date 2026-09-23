@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regulatory Information - Polymarket US CFTC DCM Compliance & Documentation</title>
+    <meta name="description" content="Comprehensive regulatory information for Polymarket US, a CFTC-regulated Designated Contract Market. Access rulebooks, participant agreements, risk disclosures, and DCM compliance documentation.">
+    <meta name="keywords" content="CFTC DCM compliance, regulatory documentation, exchange rulebook, participant agreement, risk disclosure, designated contract market rules, derivatives regulation">
+
+    <!-- Enhanced Favicon Package -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+    <link rel="manifest" href="/assets/images/site.webmanifest">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.polymarketexchange.com/regulatory.html">
+
+    <link rel="stylesheet" href="/assets/css/styles.css" crossorigin="anonymous">
+
+    <!-- Google Tag Manager -->
+    <script>window.dataLayer = window.dataLayer || [];</script>
+    <script src="/assets/js/gtm-loader.js" crossorigin="anonymous" async></script>
+    <!-- End Google Tag Manager -->
+</head>
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <div class="container">
+        <main role="main">
+            <section class="page-header">
+                <div class="page-header-content">
+                    <h1>Regulatory Documents</h1>
+                    <p>Polymarket US operates as a Designated Contract Market (DCM) under the regulatory oversight of the Commodity Futures Trading Commission (CFTC).</p>
+                </div>
+            </section>
+
+            <section class="regulatory-overview">
+                <div class="regulatory-content">
+                    <p>
+                        As a DCM, we are subject to comprehensive regulatory requirements designed to ensure market integrity, participant protection, and fair trading
+                        practices. For clearing and settlement operations, please visit our
+                        <a href="/clearing/">Clearing</a> page.
+                    </p>
+                </div>
+            </section>
+
+            <section class="documents-section">
+                <h2>Rulebook and Risk Disclosure Statement</h2>
+                <div class="documents-grid">
+                    <div class="document-card">
+                        <h3>Exchange Rulebook</h3>
+                        <p>Comprehensive rules governing trading, market conduct, and participant obligations on Polymarket US.</p>
+                        <a href="/files/legal/latest/rulebook" target="_blank">View Rulebook →</a>
+                    </div>
+                    <div class="document-card">
+                        <h3>Risk Disclosure Statement</h3>
+                        <p>Important risk disclosures and warnings for all market participants regarding trading activities.</p>
+                        <a href="/files/legal/latest/risk-disclosure-statement" target="_blank">View Risk Disclosure →</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="applications-section">
+                <h2>Exchange Member Application Materials</h2>
+
+                <div class="application-category">
+                    <h3>Individuals</h3>
+                    <div class="application-items">
+                        <div class="application-item">
+                            <h4>Participant and Clearing Member Agreement</h4>
+                            <p>Agreement for individual exchange participants.</p>
+                            <a href="/files/legal/latest/participant-agreement" target="_blank" class="btn-document">Download Agreement</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="application-category">
+                    <h3>Legal Entities</h3>
+                    <div class="application-items">
+                        <div class="application-item">
+                            <h4>Participant and Clearing Member Agreement</h4>
+                            <p>Agreement for corporate participants.</p>
+                            <a href="/files/legal/latest/participant-agreement-corporate" target="_blank" class="btn-document">Download Agreement</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="regulatory-contacts">
+                <h3>Regulatory Contacts</h3>
+                <div class="contact-grid">
+                    <div class="contact-item">
+                        <p>For regulatory inquiries, compliance matters, legal documentation, and general support, contact support (<a href="mailto:support@polymarket.us">support@polymarket.us</a>), onboarding (<a href="mailto:onboarding@polymarket.us">onboarding@polymarket.us</a>), institutional (<a href="mailto:institutional@polymarket.us">institutional@polymarket.us</a>), FIX API (<a href="mailto:fix@polymarket.us">fix@polymarket.us</a>), data (<a href="mailto:data@polymarket.us">data@polymarket.us</a>)</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="regulatory-footer-info">
+                <div class="regulatory-text">
+                    <h3>Stay Updated</h3>
+                    <p>To stay informed about regulatory changes, rule amendments, and important notices:</p>
+                    <ul>
+                        <li>Review our <a href="/notices.html">Market Notices</a> page regularly</li>
+                        <li>Subscribe to CFTC notifications for DCM-related announcements</li>
+                        <li>Contact our support team at <a href="mailto:support@polymarket.us">support@polymarket.us</a> for specific regulatory questions</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/assets/js/includes.js" crossorigin="anonymous"></script>
+    <script src="/assets/js/main.js" crossorigin="anonymous"></script>
+    <script src="https://status.polymarketexchange.com/embed/script.js"></script>
+</body>
+</html>

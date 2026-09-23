@@ -6,17 +6,76 @@ for source in app/dashboard/opportunity_static/*.js; do
     node --check "$source"
 done
 python -m unittest \
-    tests.test_multi_game tests.test_opportunity_board \
-    tests.test_personal_beta tests.test_failure_handling \
-    tests.test_page_estimate tests.test_multi_page tests.test_math_reconciliation -q
+    tests.test_multi_game \
+    tests.test_opportunity_board \
+    tests.test_personal_beta \
+    tests.test_failure_handling \
+    tests.test_coverage_failure_handling \
+    tests.test_dashboard_security \
+    tests.test_ssot_policy \
+    tests.test_page_estimate \
+    tests.test_multi_page \
+    tests.test_math_reconciliation \
+    -q
 # A fresh process keeps collector RSS gates independent of retained-data oracle peak memory.
-python -m unittest tests.test_two_source_qualification tests.test_native_retained_review tests.test_native_public_review tests.test_native_rule_review tests.test_native_filing_review tests.test_native_precedence_review tests.test_native_us_rulebook_review tests.test_precedence_deadlines tests.test_public_request_deadline tests.test_public_research_package tests.test_public_research_repair tests.test_future_qualification tests.test_public_doc_package tests.test_session_projection tests.test_b2_product tests.test_b3_native tests.test_b3_continuation tests.test_b4_reference tests.test_pinnacle_sample tests.test_b4_actual tests.test_b5_nhl tests.test_b5_mlb tests.test_b5_nba tests.test_b5_ncaaf tests.test_b5_ncaab tests.test_b5_score_lines tests.test_b5_nfl_lines tests.test_b5_ncaaf_lines tests.test_b5_mlb_lines tests.test_b5_nhl_lines tests.test_b5_nfl_first_half tests.test_b5_ncaaf_first_half tests.test_b5_nba_first_half tests.test_b5_ncaab_first_half tests.test_b5_nfl_resolution tests.test_b5_nba_resolution tests.test_b5_ncaaf_resolution tests.test_b5_ncaab_resolution tests.test_b5_diamond_ice_resolution tests.test_b5_periods tests.test_b5_futures tests.test_b5_college_expansion tests.test_b5_payout_extensions -q
+python -m unittest \
+    tests.test_two_source_qualification \
+    tests.test_native_retained_review \
+    tests.test_native_public_review \
+    tests.test_native_rule_review \
+    tests.test_native_filing_review \
+    tests.test_native_precedence_review \
+    tests.test_native_us_rulebook_review \
+    tests.test_precedence_deadlines \
+    tests.test_public_request_deadline \
+    tests.test_public_research_package \
+    tests.test_public_research_repair \
+    tests.test_future_qualification \
+    tests.test_public_doc_package \
+    tests.test_session_projection \
+    tests.test_b2_product \
+    tests.test_b3_native \
+    tests.test_b3_continuation \
+    tests.test_b4_reference \
+    tests.test_pinnacle_sample \
+    tests.test_b4_actual \
+    tests.test_b5_nhl \
+    tests.test_b5_mlb \
+    tests.test_b5_nba \
+    tests.test_b5_ncaaf \
+    tests.test_b5_ncaab \
+    tests.test_b5_score_lines \
+    tests.test_b5_nfl_lines \
+    tests.test_b5_ncaaf_lines \
+    tests.test_b5_mlb_lines \
+    tests.test_b5_nhl_lines \
+    tests.test_b5_nfl_first_half \
+    tests.test_b5_ncaaf_first_half \
+    tests.test_b5_nba_first_half \
+    tests.test_b5_ncaab_first_half \
+    tests.test_b5_nfl_resolution \
+    tests.test_b5_nba_resolution \
+    tests.test_b5_ncaaf_resolution \
+    tests.test_b5_ncaab_resolution \
+    tests.test_b5_diamond_ice_resolution \
+    tests.test_b5_periods \
+    tests.test_b5_futures \
+    tests.test_b5_college_expansion \
+    tests.test_b5_payout_extensions \
+    -v
 node tests/test_dashboard_failures.cjs
+node tests/test_board_security.cjs
 node tests/test_concise_dashboard.cjs
 node tests/test_b6_details.cjs
 
 # Registry expansion keeps historical identities and captured matching intact.
-python -m unittest tests.test_normalization tests.test_matching tests.test_coverage -q
+python -m unittest \
+    tests.test_normalization \
+    tests.test_matching \
+    tests.test_coverage \
+    -q
 
 # Retained moneyline replay stays pinned while explicit current bindings fail closed.
-python -m unittest tests.test_moneyline -q
+python -m unittest \
+    tests.test_moneyline \
+    -q

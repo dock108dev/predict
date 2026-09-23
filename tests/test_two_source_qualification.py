@@ -79,10 +79,14 @@ class PolicyTests(unittest.TestCase):
 
     def test_actual_consumed_attempt_stays_closed_without_access(self):
         root=Path('evidence/b6-two-source-prep-20260923/package-early')
-        s=json.loads((root/'run-spec.json').read_text());a=json.loads((root/'approval.json').read_text())
+        s=json.loads((root/'run-spec.json').read_text())
+        # Check the retained consumed marker in this checkout, never an owner's
+        # absolute output path or a live approval from another machine.
+        output=Path('evidence/b6-two-source-live-20260923-6020c325-584b-44c7-9fa2-be5567568dbd')
+        self.assertTrue((output/'b3-attempt.json').is_file())
         with patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('forbidden')):
-            with self.assertRaisesRegex(ValueError,'consumed'):check_package(s,a,a['output'])
-            with self.assertRaisesRegex(ValueError,'consumed'):validate_approval(s,ENDPOINTS,root/'approval.json',a['output'],consume=True)
+            with self.assertRaisesRegex(ValueError,'consumed'):check_package(s,{},output)
+            with self.assertRaisesRegex(ValueError,'consumed'):validate_approval(s,ENDPOINTS,None,output,consume=True)
 
     def test_retained_real_event_filter_and_future_rejection(self):
         from app.collection.two_source import individual_game

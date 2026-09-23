@@ -1,0 +1,9 @@
+{
+  "start": "2026-09-23T15:41:21.520783+00:00",
+  "authorization": "User approved this exact proposal once on demand",
+  "proposal_sha256": "37ecb2aae6d1720022ff4e4fbce6b9059bedacf3a0dacaa2db818405f944ac7c",
+  "script_sha256": "57b27d1f3da1827e123f613ff6df0211265f23010fc3aa0b311e2c3a2a83e517",
+  "max_attempts": 8,
+  "total_seconds": 90,
+  "credentials": false
+}

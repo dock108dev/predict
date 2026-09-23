@@ -3,13 +3,19 @@
 A local, read-only dashboard for cross-venue sports prediction prices, conditional
 arbitrage calculations, explicit what-if EV, and saved-page research. The existing prototype supports saved multi-game views; trading is not implemented.
 
-**September 20: not ready for beta signoff.** The required beta is Kalshi, Novig,
+**September 23: not ready for beta signoff.** The required beta is Kalshi, Novig,
 Polymarket US and ProphetX, plus a power-index/model reference and free
 delayed Pinnacle data; NFL, NBA, MLB, NHL, NCAAF and NCAAB; winners, spreads,
 totals, halftime and futures. Live/in-play is a stretch goal. See the
 [current beta definition](docs/product-roadmap-review.md),
 [gap assessment](docs/beta-gap-assessment-20260920.md) and
 [B1–B7 delivery plan](docs/data-coverage-plan.md).
+
+The current tracker records the September 23 public investigation and review7
+engineering as complete; missing authoritative terms and full venue/model
+qualification remain open. Those historical results do not qualify this
+uncommitted maintenance checkout. See the [development guide](docs/development.md)
+for current local checks and hosted-CI limits.
 
 ## Existing prototype tooling
 
@@ -25,9 +31,12 @@ scripts/opportunity-board start
 
 Reuse an existing `.venv` when available. The launcher starts idle at
 [Predict](http://127.0.0.1:8783/) and prints a different port if needed. Explicit
-**Start scan** collects within 1–6 games and 1–180 seconds (defaults: six games,
-175 seconds). **Stop** finishes saving; **Saved scans** reopens retained results.
-These are existing tool controls, not qualification for the expanded beta.
+**Start scan** uses the selected owner's bounded run configuration;
+ordinary startup stays idle and requires an explicit supported spec/approval for
+real collection. **Stop** finishes saving; **Saved scans** reopens retained results.
+The current owner uses run-spec coverage limits; the historical six-game control
+is hidden. See [configuration](docs/configuration.md). These controls do not
+establish qualification for the expanded beta.
 Launching does not authorize collection or reuse of a consumed attempt. Check
 the current tracker and applicable run-specific scope before any Start; the
 [operation report](docs/personal-beta-operation-report.md) describes historical implementation.
@@ -40,6 +49,21 @@ scripts/opportunity-board stop
 These commands manage only the identified instance. Source edits do not reload an
 existing process. The beta is file-backed and does not use PostgreSQL. Run from this
 checkout: saved fixtures, research evidence and static assets are repository inputs.
+
+## Offline development checks
+
+Use the existing virtual environment and run from the repository root:
+
+```sh
+.venv/bin/python -m compileall -q app/dashboard app/collection
+.venv/bin/python -m unittest tests.test_dashboard_security tests.test_ssot_policy tests.test_coverage_failure_handling -q
+```
+
+These focused checks use saved inputs, temporary output and local mocks. They do
+not require provider credentials or PostgreSQL. Node 22 is needed for browser
+regression scripts. The [development guide](docs/development.md#focused-checks)
+lists checks by affected component and the separate full CI command. No `.env`
+file is needed for ordinary dashboard setup.
 
 ## Interpretation
 

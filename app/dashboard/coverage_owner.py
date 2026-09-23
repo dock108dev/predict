@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone
 
+from app.diagnostics import failure
 from app.dashboard.multi_game import MultiOwner, configuration
 from app.dashboard.e6_live import save_json, digest, ROOT
 from app.collection.continuous import ContinuousSession, LIMITS, MIB, rss
@@ -76,6 +77,8 @@ class CoverageOwner(MultiOwner):
         async with self.lock:
             if self.active():
                 raise ValueError('Collector already running or finalizing')
+            if getattr(self.session, 'cleanup_errors', []):
+                raise ValueError('Previous resource cleanup failed; restart the application before another scan')
             if not self.product_mode and (self.pilot_output/'attempt.json').exists():
                 raise ValueError('D2 pilot consumed; no automatic or second live run authorized')
             self.owner_lock = ((OUTPUT if self.supervised_live else self.pilot_output)/'collector.lock').open('a')
@@ -139,11 +142,23 @@ class CoverageOwner(MultiOwner):
                     os.close(fd)
                 self.finalizer = asyncio.create_task(self.finish(folder))
                 return self.session.sid
-            except Exception:
-                if self.session and self.session.task:
-                    await self.session.stop()
+            except BaseException as exc:
+                # Startup owns resources even if the request is cancelled. Cleanup
+                # must not replace the original failure or cancellation.
+                failure(__name__, 'coverage_start', exc)
                 self.error = 'Product fixture Start failed; run retained' if self.product_mode else 'D2 Start failed; attempt retained, no retry authorized'
-                self.release()
+                try:
+                    if self.session and self.session.task:
+                        await self.session.stop()
+                except BaseException as cleanup_error:
+                    failure(__name__, 'coverage_start_cleanup', cleanup_error)
+                    self.session.cleanup_errors.append('startup:' + type(cleanup_error).__name__)
+                try:
+                    self.release()
+                except Exception as cleanup_error:
+                    failure(__name__, 'coverage_start_lock_release', cleanup_error)
+                    if self.session:
+                        self.session.cleanup_errors.append('owner_lock:' + type(cleanup_error).__name__)
                 raise
             finally:
                 self.starting = False
@@ -172,6 +187,7 @@ class CoverageOwner(MultiOwner):
                     saved = reopen(session.journal.path)
                     replay = replay_groups(saved)
                 except Exception as exc:
+                    failure(__name__, 'coverage_native_replay', exc)
                     replay_error = type(exc).__name__
                     replay = dict(verified=False,reason=replay_error)
             else:
@@ -192,14 +208,17 @@ class CoverageOwner(MultiOwner):
                     'US Short depth derived only from supplied Long bids; completeness unverified' if session.spec.get('native_sources') else 'US Short purchase depth unavailable',
                     'Usable means synchronized and receipt-recent, not economic or settlement qualification'])
             save_json(folder/'report.json',summary)
+            if replay_error or not session.journal.terminal_acknowledged or not session.cleanup_complete:
+                raise ValueError('collector finalization unverified')
             names = ['run-spec.json','aggregate-limits.json',session.journal.path.name,'replay.json','report.json']
-            save_json(folder/'manifest.json',dict(session=session.sid,journal_chain=session.journal.previous,files={n:digest(folder/n) for n in names}))
+            save_json(folder/'manifest.pending.json',dict(session=session.sid,journal_chain=session.journal.previous,files={n:digest(folder/n) for n in names}))
             if sum(p.stat().st_size for p in folder.iterdir() if p.is_file())>LIMITS['output_bytes']:
                 raise ValueError('output cap exceeded')
+            os.replace(folder/'manifest.pending.json',folder/'manifest.json')
         except Exception as exc:
+            self.session.state = 'failed'
             self.error = 'D2 finalization incomplete: '+type(exc).__name__
             # Sanitized report; retain original journal in place.
-            from app.diagnostics import failure
             failure(__name__,'d2_finalization',exc)
         finally:
             self.release()
@@ -319,6 +338,8 @@ class CoverageOwner(MultiOwner):
                 counts=dict(counts),published_generations=sorted(published),applied_generations=applied,
                 replay_traced_start=replay_traced_start,replay_traced_peak=tracemalloc.get_traced_memory()[1])
         except Exception as exc:
+            self.session.state = 'failed'
+            failure(__name__, 'segmented_finalization', exc)
             self.error = 'Mock segmented finalization incomplete: '+type(exc).__name__
             outcome['error'] = type(exc).__name__
         finally:
@@ -344,14 +365,18 @@ class CoverageOwner(MultiOwner):
                     names=['run-spec.json','aggregate-limits.json','history/manifest.json','replay.json','report.json']
                     save_metadata(folder/'manifest.pending.json',dict(session=s.sid,mode='isolated-supervised-live' if self.supervised_live else 'isolated-mock-segmented',
                         files={n:digest(folder/n) for n in names}))
-                    os.replace(folder/'manifest.pending.json',folder/'manifest.json');fsync_dir(folder)
                 outcome['disk_bytes'] = history.disk_bytes()
                 if outcome['disk_bytes'] > (self.profile or POLICY)['output']: raise ValueError('segmented output cap')
+                if outcome['status']=='complete':
+                    os.replace(folder/'manifest.pending.json',folder/'manifest.json');fsync_dir(folder)
             except Exception as exc:
+                s.state = 'failed'
+                failure(__name__, 'segmented_publication', exc)
                 outcome.update(status='failed',operator_stop=False,finalization_error=type(exc).__name__)
                 self.error = 'Mock segmented finalization incomplete: '+type(exc).__name__
                 try: save_metadata(folder/'finalization-failure.json',outcome)
-                except Exception: pass
+                except Exception as exc:
+                    failure(__name__, 'segmented_failure_report', exc)
             finally:
                 self.release()
 

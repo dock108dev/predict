@@ -1,0 +1,13 @@
+{
+  "consumed": true,
+  "stop_reason": "Complete; unresolved/skipped slots unused",
+  "requests": 6,
+  "closed_sources": [],
+  "elapsed": 18.963663417001953,
+  "peak_rss_bytes": 46612480,
+  "body_bytes": 1113446,
+  "connections_closed": true,
+  "credentials": false,
+  "retries": 0,
+  "credits": 0
+}
