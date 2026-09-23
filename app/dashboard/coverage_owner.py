@@ -95,7 +95,8 @@ class CoverageOwner(MultiOwner):
                         validate_approval(value,self.endpoints,self.native_approval_path,self.pilot_output,consume=True)
                     else:
                         validate_mock(value,self.endpoints)
-                        value['capture_authorization']='B2 explicit product fixture session; no real-source allowance'
+                        if not value.get('two_source_qualification'):
+                            value['capture_authorization']='B2 explicit product fixture session; no real-source allowance'
                     self.error=None
                 options = {}
                 if self.supervised_live:

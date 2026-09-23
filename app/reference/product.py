@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 VERSION = 'b4-reference-1'
 MAX_BODY = 256 * 1024
 SOURCES = {
+    'synthetic_partition': dict(scopes=[('ice_hockey','NHL'),('baseball','MLB'),('basketball','NBA'),('basketball','NCAAB'),('american_football','NFL'),('american_football','NCAAF')], dependency='Synthetic test table only; no model provider or independence qualification', refresh=86400),
     'moneypuck': dict(scopes=[('ice_hockey','NHL')], dependency='Sporting inputs documented; betting-market independence not established', refresh=86400),
     'fangraphs': dict(scopes=[('baseball','MLB')], dependency='Player projections and playing-time dependencies; independence not established', refresh=86400),
     'espn_fpi': dict(scopes=[('american_football','NFL'),('american_football','NCAAF')], dependency='Market-informed NFL preseason model; not an independent betting-market signal', refresh=86400),
@@ -51,6 +52,7 @@ def probability(value, convention):
 
 def receipt(body, *, provider, url, received_at, mode, status=200, headers=None):
     if provider not in SOURCES or mode not in ('synthetic','observation'):raise ValueError('Unknown source or evidence mode')
+    if provider=='synthetic_partition' and mode!='synthetic':raise ValueError('Synthetic partition fixture cannot qualify observations')
     if not isinstance(body,str) or len(body.encode())>MAX_BODY:raise ValueError('Reference body bound')
     if not url.startswith('https://') or '?' in url or '#' in url:raise ValueError('Use a credential-free source URL; query stored separately')
     parsed=urlsplit(url)
@@ -177,7 +179,7 @@ def at_cutoff(refs,at):
                 x.update(availability='unsupported',reason='Reference does not describe an unlined full-game winner (B5)')
             if i.get('scheduled_start') and time(x['received_at'])>=time(i['scheduled_start']):
                 x.update(availability='unsupported',reason='First received after scheduled start; retrospective reference only')
-            if i['competition']=='NHL':
+            if i['competition']=='NHL' and not score_line:
                 from app.normalization.nhl import model_reason
                 reason=model_reason(x['binding'],x['receipt']['body']) if x['role']=='model_reference' else 'NHL Pinnacle native winner settlement evidence unavailable'
                 if x['source_at'] and time(x['source_at'])>time(x['received_at']):reason='Source publication time is later than receipt'
@@ -204,7 +206,7 @@ def at_cutoff(refs,at):
                 if reason:x.update(availability='unsupported',reason=reason)
             age=(time(at)-time(x['source_at'] or x['received_at'])).total_seconds()
             x.update(age_seconds=str(age),freshness='refresh_due' if age>x['refresh_after_seconds'] else 'within_refresh_plan')
-        elif x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB') or (x.get('market_identity',{}).get('competition')=='NFL' and x.get('market_identity',{}).get('family') in ('spread','total')):
+        elif (x.get('market_identity',{}).get('competition')=='NHL' and x.get('market_identity',{}).get('family') in ('spread','total')) or x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB') or (x.get('market_identity',{}).get('competition')=='NFL' and (x.get('market_identity',{}).get('family') in ('spread','total') or x.get('market_identity',{}).get('period')=='first_half')):
             x.update(availability='unsupported',reason=x['market_identity']['competition']+' reference requires an original-input B4 receipt and reviewed game binding')
         result.append(x)
     # Same source revision with conflicting values is never resolved by insertion order.

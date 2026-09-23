@@ -1,8 +1,24 @@
 # B1 — working source, sport and market coverage matrix
 
-**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Continue independent B5 sport/market work; missing NHL analytics does not block it. KenPom remains deferred; Novig/ProphetX replies remain pending.
+**September 23 approved single-use run COMPLETE: bounded collection and scope PASS.**
+One Atlanta–Green Bay event, exact two Kalshi contracts/one US market; no extra
+subscriptions or admitted markets. Automatic Stop60.240s, cleanup and exact fresh
+reopening PASS. Four candidate pairs; zero qualified economics. Native fees,
+settlement, state and freshness gaps remain explicit. Attempt consumed; automation
+PAUSED. Earlier failures preserved. Full actual-source qualification and beta OPEN.
+[Execution report](../evidence/b6-two-source-scope-184493b2-9bc6-471c-9085-2f73390c7841/final-report.md).
 
-**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [NCAAF score-line engineering complete; next MLB mapping](b5-ncaaf-lines-handoff.md).
+Next actor: agent reconciles retained native terms/state/fee gaps and prepares the
+smallest missing-evidence acquisition. This run is already approved and completed;
+no approval is pending for it, no repeated attempt is authorized or scheduled.
+
+
+
+**September 23 actual-run update:** corrected discovery matched a shared game, but US subscription scope expanded improperly; bounded qualification FAIL. Cleanup/replay pass. The guard is repaired and tested offline, not live-qualified. [Final report](../evidence/b6-two-source-corrected-72967ba6-7b2f-419c-9ecd-16283c9868bf/final-report.md) supersedes the generic initial PASS. Both attempts consumed; automation paused; full actual-source qualification and beta signoff OPEN.
+
+**Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Independent B5 and B6 offline integration are complete; NHL analytics remains an actual-data gap. KenPom remains deferred; Novig/ProphetX replies remain pending.
+
+**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](b3-access-status.md) · [Independent B5 engineering complete](b5-independent-engineering-handoff.md).
 
 Assessment completed September 20, 2026. **B1 COMPLETE; beta NOT READY FOR SIGNOFF.** Companion: [B2 implementation handoff](b2-product-integration-handoff.md). This is an assessment of the current working tree, retained evidence and bounded public official-source research, not a new qualification. No credentials, accounts or authenticated market data were accessed. Provider availability below is not an entitlement claim.
 
@@ -15,43 +31,41 @@ Each cell combines its code below with its source record and its row's next acti
 - **F**: implementation/fixtures only; no observed production or sandbox evidence established here.
 - **D**: public provider documentation describes the offering; no project ingestion evidence.
 - **U**: unknown availability at the specific sport/market/period; no connected product support. This is not a finding of absence.
-- **N/A**: the sporting format has no literal halftime; the period-equivalent requirement remains a B5 decision.
+- **N/A**: the sporting format has no literal halftime; selected equivalents are MLB cumulative 3/5/6/regulation 9 and NHL individual periods 1/2/3; see the current engineering overlay below.
 - **C**: retained legacy saved comparison evidence at the B1 assessment. B2 now connects coverage/current/history through the ordinary dashboard with fixture acceptance; this does not upgrade any source to new production qualification.
 
-Generic parsers and type names do not prove coverage. `MarketType` currently recognizes only moneyline and unknown. C records retained capture integration. Cells labeled F reviewed engineering or score-line pilot also connect synthetic reviews to ordinary comparison/history views; they do not establish actual-source qualification. Full-game rules (regulation, overtime, ties) remain source-specific. Live/in-play across every row is unqualified and a stretch goal; no pregame result transfers to it.
-
-**NFL full-game line engineering update, September 21:** [bounded handoff](b5-nfl-lines-handoff.md) and [acceptance](../evidence/b5-nfl-lines-20260921/final-report.md). 2026 regular/postseason spread/combined-total conditional calculations and exact reopening are fixture verified. Kalshi catalog/contracts establish documentation only; actual selected native line/orientation/fee/depth binding remains B3 work. PMUS source-specific NFL line rules and purchasable Short remain missing. Novig/ProphetX cells are unchanged. B4 owns actual exact-line distributions; the completed Pinnacle h2h sample and moneyline probabilities do not substitute. B5 owns other seasons, periods/team totals and unsupported refunds. NCAAF mapping is subsequently complete; next independent mapping is MLB.
+The venue table retains its historical source-evidence classes; the current engineering overlay below supersedes old roster/next-action wording without upgrading actual qualification. Generic parsers and type names do not prove coverage. `MarketType` currently recognizes only moneyline and unknown. C records retained capture integration. Cells labeled F reviewed engineering or score-line pilot also connect synthetic reviews to ordinary comparison/history views; they do not establish actual-source qualification. Full-game rules (regulation, overtime, ties) remain source-specific. Live/in-play across every row is unqualified and a stretch goal; no pregame result transfers to it.
 
 ## Prediction venues
 
-| Source | Sport | Full-game winner | Full-game spread | Full-game total | First half W/S/T | Second half W/S/T | Other period W/S/T | Futures | Next action / owner |
+| Source | Sport | Full-game winner | Full-game spread | Full-game total | First half W/S/T (beta) | Second half W/S/T (stretch) | Other period W/S/T | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
-| Kalshi K | NFL | P+C | F+D, reviewed NFL lines | F+D, reviewed NFL lines | U | U | U | U | B3 actual NFL line bindings/rules/fees/depth; B5 other periods/futures |
-| Kalshi K | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual NBA listing/fees; B5 winner/score-line pilot complete; other periods/futures open |
-| Kalshi K | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual listing/fees; B5 MLB winner engineering complete, innings/run-line open |
-| Kalshi K | NHL | U | U | U | N/A | N/A | U, periods | U | B3 catalog; B5 regulation/OT and periods |
-| Kalshi K | NCAAF | F, bounded reviewed engineering | F+D, FCS-only gap | F+D, FCS-only gap | U | U | U | U | B3 actual listing/rules/fees; B5 remaining schools/seasons |
-| Kalshi K | NCAAB | F, four-team men D1 winner | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual men D1 listing/rules/economics; B5 remaining roster/periods |
-| Polymarket US P | NFL | P+C legacy Long; B3 Short F | F, reviewed NFL lines | F, reviewed NFL lines | U | U | U | D example only | B3 actual NFL line rules/Short/depth; B5 other periods/futures |
-| Polymarket US P | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual US NBA listing/terms; B5 winner/score-line pilot complete; other periods/futures open |
-| Polymarket US P | MLB | F, reviewed engineering | U | U | N/A | N/A | U, innings | U | B3 actual US MLB listing/terms; B5 winner engineering complete, innings/run-line open |
-| Polymarket US P | NHL | U | U | U | N/A | N/A | U, periods | U | B3 US catalog; B5 regulation/OT and periods |
-| Polymarket US P | NCAAF | F, bounded reviewed engineering | F, explicit line reviews | F, explicit line reviews | U | U | U | U | B3 actual US college listing/terms; B5 remaining schools/seasons |
-| Polymarket US P | NCAAB | F, four-team men D1 winner | F, score-line pilot | F, score-line pilot | U | U | U | U | B3 actual US men D1 listing/rules/economics; B5 remaining roster/periods |
+| Kalshi K | NFL | P+C | F+D, reviewed NFL lines | F+D, reviewed NFL lines | F+D, explicit H1 W/S/T | U | U | U | B3 actual NFL line bindings/rules/fees/depth; B5 other periods/futures |
+| Kalshi K | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | F+D H1 review interface; actual U | U | U | U | B3 actual NBA listing/fees; B5 winner/score-line pilot complete; H1 engineering complete; actual H1/other periods/futures open |
+| Kalshi K | MLB | F, reviewed engineering | F+D line interface | F+D line interface | N/A | N/A | U, innings | U | B3 actual listing/fees; B5 winner/line engineering complete; actual qualification open; selected innings F |
+| Kalshi K | NHL | F winner interface | F+D line interface | F+D line interface | N/A | N/A | U, periods | U | B3 actual listing/shootout/fees/depth; B5 selected periods F; actual qualification open |
+| Kalshi K | NCAAF | F, bounded reviewed engineering | F+D, FCS-only gap | F+D, FCS-only gap | F+D H1 W/S/T; FCS-only unsupported | U | U | U | B3 actual listing/rules/fees; B5 later seasons; B3 native bindings |
+| Kalshi K | NCAAB | F, men D1 reviewed interface | F, score-line pilot | F, score-line pilot | F+D H1 review interface; actual U | U | U | U | B3 actual men D1 listing/rules/economics; B3 actual roster/H1 native rules/economics |
+| Polymarket US P | NFL | P+C legacy Long; B3 Short F | F, reviewed NFL lines | F, reviewed NFL lines | F, hypothetical H1 review interface; actual terms U | U | U | D example only | B3 actual NFL line rules/Short/depth; B5 other periods/futures |
+| Polymarket US P | NBA | F, reviewed engineering | F, score-line pilot | F, score-line pilot | F hypothetical H1 W/S/T; actual U | U | U | U | B3 actual US NBA listing/terms; B5 winner/score-line pilot complete; H1 engineering complete; actual H1/other periods/futures open |
+| Polymarket US P | MLB | F, reviewed engineering | F line interface | F line interface | N/A | N/A | U, innings | U | B3 actual US MLB listing/terms; B5 winner/line engineering complete; actual qualification open; selected innings F |
+| Polymarket US P | NHL | F winner interface | F line interface | F+D totals illustration | N/A | N/A | U, periods | U | B3 actual US listing/score basis/rules/economics; B5 selected periods F; actual terms U |
+| Polymarket US P | NCAAF | F, bounded reviewed engineering | F, explicit line reviews | F, explicit line reviews | F hypothetical H1 W/S/T / U actual terms | U | U | U | B3 actual US college listing/terms; B5 later seasons; B3 native bindings |
+| Polymarket US P | NCAAB | F, men D1 reviewed interface | F, score-line pilot | F, score-line pilot | F hypothetical H1 W/S/T; actual U | U | U | U | B3 actual US men D1 listing/rules/economics; B3 actual roster/H1 native rules/economics |
 | Novig N | NFL | F+D | D | D | D | U | U | D | B3 provisioning/wire; B5 family normalization |
 | Novig N | NBA | D | D | D | D | U | U | D | B3 discovery extension; B5 families |
 | Novig N | MLB | F+D | D | D | N/A | N/A | D first-five W/S/T; other U | D | B3 wire; B5 innings/settlement |
 | Novig N | NHL | D | D | D | N/A | N/A | U | D playoffs; others U | B3 discovery; B5 periods/futures |
 | Novig N | NCAAF | D football category | D football category | D football category | D football category | U | U | D football category | B3 confirm college-specific API listings; B5 mappings |
-| Novig N | NCAAB | U | U | U | U | U | U | U | Sport documented for men/women; B3 verify each family; B5 competition choice |
-| Fourth slot: ProphetX X, recommended only | NFL | S | S native catalog, type unknown | S native catalog, type unknown | S first-half moneyline; S native spread/total listings, normalization incomplete | U | S first-quarter W/S/T listings | U | B3 access/units/updates; B5 normalize native types |
-| Fourth slot: ProphetX X | NBA | U | U | U | U | U | U | U | B3 tournament/catalog sample; B5 NBA mapping |
-| Fourth slot: ProphetX X | MLB | U, sandbox tournament listed | U | U | N/A | N/A | U, innings | U | B3 event/books beyond tournament listing; B5 MLB mapping |
-| Fourth slot: ProphetX X | NHL | U | U | U | N/A | N/A | U, periods | U | B3 tournament/catalog; B5 NHL mapping |
-| Fourth slot: ProphetX X | NCAAF | U | U | U | U | U | U | U | B3 tournament/catalog; B5 college mapping |
-| Fourth slot: ProphetX X | NCAAB | U | U | U | U | U | U | U | B3 tournament/catalog; B5 competition choice |
+| Novig N | NCAAB | U | U | U | U | U | U | U | Sport documented for men/women; B3 verify each family; B5 men D1 bounded scope selected; actual native H1 unqualified |
+| Selected ProphetX X | NFL | S | S native catalog, type unknown | S native catalog, type unknown | S first-half moneyline; S native spread/total listings, normalization incomplete | U | S first-quarter W/S/T listings | U | B3 access/units/updates; B5 normalize native types |
+| Selected ProphetX X | NBA | U | U | U | U | U | U | U | B3 tournament/catalog sample; B5 NBA mapping |
+| Selected ProphetX X | MLB | U, sandbox tournament listed | U | U | N/A | N/A | U, innings | U | B3 event/books beyond tournament listing; B5 MLB mapping |
+| Selected ProphetX X | NHL | U | U | U | N/A | N/A | U, periods | U | B3 tournament/catalog; B5 NHL mapping |
+| Selected ProphetX X | NCAAF | U | U | U | U | U | U | U | B3 tournament/catalog; B5 college mapping |
+| Selected ProphetX X | NCAAB | U | U | U | U | U | U | U | B3 tournament/catalog; B5 men D1 bounded scope selected; actual native H1 unqualified |
 
-ProphetX's [retained native market catalog](../evidence/slice-3/sandbox-qualification-20260912/verification-fixed/sandbox-20260912T010141Z/market-004.json) explicitly contains full-game, first-half and first-quarter winner/spread/total subtypes. These are catalog evidence only; no full-game/half spread/total calculation is implemented. B3 must retain specific listing IDs before upgrading individual cells. ProphetX is selected for all six fourth-venue rows; their data/evidence classifications remain unchanged.
+ProphetX's [retained native market catalog](../evidence/slice-3/sandbox-qualification-20260912/verification-fixed/sandbox-20260912T010141Z/market-004.json) explicitly contains full-game, first-half and first-quarter winner/spread/total subtypes. These are catalog evidence only; shared full-game and NFL H1 calculation engineering is subsequently complete, but actual ProphetX mappings/economics remain unsupported. B3 must retain specific listing IDs before upgrading individual cells. ProphetX is selected for all six fourth-venue rows; their data/evidence classifications remain unchanged.
 
 ### Source records: implementation, evidence, access and economics
 
@@ -79,14 +93,14 @@ Stop research here: an actionable first recommendation exists. If ProphetX acces
 
 B4 independent engineering is now offline verified: both roles use retained-input adapters, ordinary Details/EV and saved history. Actual NFL Pinnacle h2h acquisition is retained; model acquisition remains absent. [Current source contracts and exact unsupported cells](b4-source-contracts.md) · [B4 evidence](../evidence/b4-reference-20260921/final-report.md). KenPom is deferred by owner; no login/entitlement investigation. **F-ref** below means existing synthetic NFL Pinnacle/reference scaffolding, not a live provider. **D-route** means documented aggregator sport/market vocabulary, with cells unverified except the observed NFL h2h sample. **M** points to the model candidate table; published model outputs are not retained project observations.
 
-| Reference type | Sport | Full-game winner | Spread | Total | First half W/S/T | Second half W/S/T | Other period | Futures | Next action / owner |
+| Reference type | Sport | Full-game winner | Spread | Total | First half W/S/T (beta) | Second half W/S/T (stretch) | Other period | Futures | Next action / owner |
 |---|---|---|---|---|---|---|---|---|---|
-| Independent model | NFL | F B4 model path / U independence + acquisition | F exact-partition interface / U actual | F exact-partition interface / U actual | U | U | U | M / U acquisition | B4 FPI candidate independence/output check; B5 rules |
+| Independent model | NFL | F B4 model path / U independence + acquisition | F exact-partition interface / U actual | F exact-partition interface / U actual | F explicit H1 partition interface / U actual | U | U | M / U acquisition | B4 FPI candidate independence/output check; B5 rules |
 | Independent model | NBA | F interface / U actual game forecast | U | U | U | U | U | M / U acquisition | B4 actual dated game-win output/independence; B5 other families |
 | Independent model | MLB | F interface / U actual game forecast | F partition interface / U actual | F partition interface / U actual | N/A | N/A | U innings | M FanGraphs | B4 forecasts/acquisition; B5 categories |
-| Independent model | NHL | MISSING | U | U | N/A | N/A | U periods | MISSING | Analytics deferred; no MoneyPuck acquisition queued |
-| Independent model | NCAAF | F interface / U actual game forecast | F partition interface / U actual | F partition interface / U actual | U | U | U | M / U acquisition | B4 actual game output/independence; B5 remaining scope |
-| Independent model | NCAAB | F interface / U actual game forecast | U score-margin applicability | U | U | U | U | U current output | B4 KenPom deferred; BPI output/dependency unresolved; B5 men’s Division I selected; four-team roster only |
+| Independent model | NHL | F winner interface / MISSING actual | F partition interface / MISSING actual | F partition interface / MISSING actual | N/A | N/A | U periods | MISSING | Analytics deferred; synthetic-only reference checks; no MoneyPuck acquisition queued |
+| Independent model | NCAAF | F interface / U actual game forecast | F partition interface / U actual | F partition interface / U actual | F exact H1 partition interface / U actual | U | U | M / U acquisition | B4 actual game output/independence; B5 remaining scope |
+| Independent model | NCAAB | F interface / U actual game forecast | U score-margin applicability | U | U | U | U | U current output | B4 KenPom deferred; BPI output/dependency unresolved; B5 men’s Division I selected; 365-program identity registry; native coverage unqualified |
 | Free delayed Pinnacle | NFL | Actual sample: 15 populated events; 16 extracted sides in saved Details; EV join outstanding | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U selected competitions | B4 observed free h2h access, delay unknown; B5 event/settlement mapping |
 | Free delayed Pinnacle | NBA | D-route | D-route | D-route | U Pinnacle listing | U Pinnacle listing | U | U | B4 acquisition; B5 mapping |
 | Free delayed Pinnacle | MLB | D-route | D-route | D-route | N/A | N/A | U innings | U | B4 acquisition; B5 innings/run-line mapping |
@@ -113,15 +127,15 @@ Specific FPI/BPI output boundaries from official pages:
 
 MoneyPuck is dropped. Continue independent sport/market engineering; remaining non-NHL model candidates may be assessed in their owning slices. FanGraphs supplies a distinct MLB futures candidate, not the missing MLB game probability. No model portfolio above presently covers all required cells. A projected margin cannot supply cover probability without an independently validated distribution; predicted score sums cannot supply total-market probability; ranks cannot supply either. Any new conversion needs a named/versioned method, dated inputs and validation, with unsupported outputs staying null. Public pages are leads, not a promise of free automated ingestion or permission to republish. A Massey public-page check returned 403; no coverage inference or bypass pursued.
 
-### Free delayed Pinnacle: promising documented route, not yet verified usable
+### Free delayed Pinnacle: NFL h2h sample complete; broader coverage unqualified
 
 **B4 first candidate: The Odds API, bookmaker `pinnacle`, website-sourced.** Its [bookmaker list](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html) explicitly warns of possible website delay. Its [free plan](https://the-odds-api.com/) advertises 500 monthly credits, all sports/markets and most bookmakers; Pinnacle is listed without a paid-only marker. Therefore free eligibility is a defensible inference, **now observed for NFL h2h only in the September 21 single-credit sample**. NFL/NBA/MLB/NHL/college sport coverage is advertised in the aggregate; this does not establish every Pinnacle cell. This preserves Pinnacle as the underlying bookmaker, not an alternative sportsbook.
 
 The [V4 guide](https://the-odds-api.com/liveapi/guides/v4/) provides sport/event IDs, bookmaker keys, outcome names, points, prices, last-update fields and credit headers. B4 can build on [reference adapter](../app/reference/adapter.py), [records](../app/reference/records.py) and [edge contracts](../app/edge_contracts.py); current records enforce synthetic NFL scope and [odds_http](../app/collection/odds_http.py) permits numeric loopback only. None is a production connector. Native decimal/American odds must remain separate from de-vigged estimates. This reference supplies no executable exchange depth; quantity is unknown/not applicable, and margin removal is not true win probability.
 
-Missing precisely: (1) free account entitlement actually returns `pinnacle`; (2) current requested sport/market/period/competition samples; (3) upstream publication timestamp versus aggregator `last_update` meaning; (4) actual delay or honest unknown-delay label; (5) allowed retention/use and repeatable free quota fit. An update interval alone is not end-to-end delay. No fixed 15-minute delay is assumed.
+Missing beyond the completed single NFL h2h sample: (1) repeatable entitlement across required cells; (2) current requested sport/market/period/competition samples; (3) upstream publication timestamp versus aggregator `last_update` meaning; (4) actual delay or honest unknown-delay label; (5) allowed retention/use and repeatable free quota fit. An update interval alone is not end-to-end delay. No fixed 15-minute delay is assumed.
 
-B4 sequence: implement isolated fixtures and free-budget accounting first; after separately authorized local key setup, retrieve a bounded representative Pinnacle response, retain request/receipt/native times and credit cost, and populate this matrix from actual returned fields. If no upstream clock exists, display **“Pinnacle via The Odds API — website-sourced; delay unknown”** and forbid synchronized/current fair-value claims. Accepting delayed data does not authorize fabricating a delay. For planning only, six sports × three full-game families is roughly 18 credits per all-sport refresh under one-bookmaker billing; 500 credits cannot support frequent all-day polling. B4 must verify actual charges, cache and prioritize selected events; halves/futures add cost. No paid upgrade is proposed.
+B4 fixture integration, local key setup and one authorized sample are complete. No repeat acquisition is authorized. Preserve “Pinnacle via The Odds API — website-sourced; delay unknown”; no synchronized/current fair-value claim follows. Future coverage and quota fit remain a separately scoped B4 qualification.
 
 [Pinnacle's own API page](https://www.pinnacle.com/en/api) describes bespoke, variable-cost access; [current help](https://support.pinnacle.com/hc/en-us/articles/47844554499345-Accessing-Pinnacle-s-Betting-API) directs personal-project requests to its team. Neither establishes a free direct endpoint. Unauthenticated Pinnacle web/export use remains another unverified path, not permission to bypass access controls. Stop public research here: a concrete free candidate and exact B4 verification dependencies exist. No direct Pinnacle signup, provider message or purchase occurred; the separately authorized Odds API NFL sample is recorded above.
 
@@ -129,17 +143,17 @@ B4 sequence: implement isolated fixtures and free-budget accounting first; after
 
 | Item | Responsible next action | Exact owner help, only when needed | Completion check |
 |---|---|---|---|
-| B3 Novig provisioning | Engineering reconciles issued environment/auth contract and initial-image/ask units; provider supplies provisioning | Obtain issued QA/production access instructions and OAuth client provisioning using [unsent request](novig-access-request.md); enter secrets locally, never chat | Environment-specific wire evidence and health/history; real ask/size/fee limits explicit |
-| B3 fourth venue | Engineering recommends ProphetX and resolves its units/update contract using retained examples; provider supplies missing contract answers | ProphetX selected September 21; make approved production API access available locally when qualification needs it. Provider clarification may use Slice 3's unsent request | Selected source records actual production observations and comparable participation; unknown quantities remain unknown |
+| B3 Novig provisioning | Engineering reconciles issued environment/auth contract and initial-image/ask units; provider supplies provisioning | Request already sent and pending; enter issued provisioning locally when available, never chat | Environment-specific wire evidence and health/history; real ask/size/fee limits explicit |
+| B3 fourth venue | ProphetX selected; engineering reconciles issued units/update contract when provider supplies missing answers | ProphetX selected September 21; make approved production API access available locally when qualification needs it. Provider clarification may use Slice 3's unsent request | Selected source records actual production observations and comparable participation; unknown quantities remain unknown |
 | B4 model outputs | Engineering verifies dates, outputs, independence and acquisition for candidates above | KenPom deferred. MoneyPuck dropped; NHL analytics missing; no owner action queued | Supported event/market probability or line, provenance and dependency recorded; unsupported outputs explicit |
 | B4 Pinnacle | Engineering verifies free candidate, quota, delay and coverage | Local Keychain setup complete and single authorized credit consumed; no repeat request authorized | Actual Pinnacle rows from repeatable free route with time/delay labels; no substitution |
-| B5 halftime | Engineering maps explicit periods separately from observation time | Choose first-half markets, second-half markets, at-halftime evaluation, or a combination; whether MLB innings/NHL periods are desired equivalents | Approved definition plus native rule/period IDs; in-play dependency identified separately |
-| B5 futures | Engineering proposes team championship and make-playoffs first, then division/conference and season-win totals where applicable | Confirm desired categories, including whether player awards are wanted | Season/category/participant/settlement horizon and multi-outcome rules mapped |
-| B5 NCAAB | Engineering inspects each source's competition IDs | Resolved September 21: owner selected men’s Division I; four-team 2026-2027 engineering roster is not broad coverage | Distinct competition IDs/period rules with evidence; no inferred universal college coverage |
-| B5 results and settlements | Engineering identifies sporting results and separate venue payouts, including pending futures | No initial owner action | Results and payout/void records independently linked, seasonal gaps retained |
-| B6 practical session | Engineering measures authorized bounds/cadence, then proposes 30-minute integration and representative viewing session | Desired normal viewing duration before B6 scoping | Reviewed finite allowance and measured useful coverage, not automatic live authorization |
+| B5 halftime | Engineering maps explicit periods separately from observation time | Resolved: pregame first-half W/S/T required for beta; second-half offered at halftime is stretch. MLB cumulative 3/5/6/regulation 9 and NHL individual periods 1/2/3 selected; no in-play collection authorized | Approved definition plus native rule/period IDs; in-play dependency identified separately |
+| B5 futures | Current-season conference/league championship engineering complete | Resolved; other categories/horizons not selected | Season/category/participant/settlement horizon and multi-outcome rules mapped |
+| B5 NCAAB | Engineering inspects each source's competition IDs | Resolved September 21: owner selected men’s Division I; 365-program 2026–2027 identity registry is not native venue qualification | Distinct competition IDs/period rules with evidence; no inferred universal college coverage |
+| B5 results and settlements | Bounded NFL/NBA/NCAAF/NCAAB linkage engineering complete; MLB/NHL and pending futures now complete offline; actual source qualification open | No initial owner action | Results and payout/void records independently linked, seasonal gaps retained |
+| B6 practical session | Offline integration COMPLETE: ten unchanged 180-second segments; see B6 report for actual measurements and limitations | No remaining fixture-setup approval; real-data package needs separate approval | Actual joint source readiness remains open; fixture success is not live qualification |
 
-B2 implementation and fixture acceptance are complete; these remain B3–B6 dependencies. B2 acceptance demonstrated two simultaneously comparable events, at least three venue IDs and two different venue combinations, with a fourth unavailable and both reference roles visible. This is an integration threshold, not beta breadth acceptance. Keep current finite bounds; UI refresh may retain 1.5 seconds and discovery its configured cadence. Reference refresh must respect free quotas. B6 owns actual sustained duration/cadence; no longer session is authorized here.
+B2 implementation and fixture acceptance are complete; these remain B3–B6 dependencies. B2 acceptance demonstrated two simultaneously comparable events, at least three venue IDs and two different venue combinations, with a fourth unavailable and both reference roles visible. This is an integration threshold, not beta breadth acceptance. Keep current finite bounds; UI refresh may retain 1.5 seconds and discovery its configured cadence. Reference refresh must respect free quotas. B6 offline segmented scope is complete; actual sustained source duration/cadence still needs its own bounded approval.
 
 ## B1 validation and completion record
 
@@ -157,84 +171,37 @@ Continuation: [GraphQL assessment](b3-graphql-assessment.md) supports a small di
 
 ## September 21 B4 evidence reconciliation
 
-Independent engineering complete; full B4 remains open. Annotated published-value imports support model probability, rating, rank, projected margin/total and season-probability types without pretending the latter are game probabilities. KenPom FanMatch JSON preserves HomeWP and scores/ranks; units must be evidenced. Pinnacle JSON selects only the actual `pinnacle` origin and two-way h2h. NFL Pinnacle h2h now has an actual bounded sample; all model roles and the other five Pinnacle sports remain unqualified. Non-NFL comparable EV and every spread/total/partial-period/futures cell remain B5; native market vocabulary alone does not change a cell to supported. Ordinary Details can inspect unmatched imported records. The owner-authorized Pinnacle request consumed one credit (499 remaining); 16 side records pass independent reconciliation and ordinary saved Details/reopening. Actual EV lacks compatible prediction books and reviewed settlement binding. [Evidence](../evidence/b4-pinnacle-sample-20260921/final-report.md). KenPom is deferred. [Unapproved model acquisition and B5 mappings](b4-model-mapping-next.md).
+Independent engineering complete; full B4 remains open. Annotated published-value imports support model probability, rating, rank, projected margin/total and season-probability types without pretending the latter are game probabilities. KenPom FanMatch JSON preserves HomeWP and scores/ranks; units must be evidenced. Pinnacle JSON selects only the actual `pinnacle` origin and two-way h2h. NFL Pinnacle h2h now has an actual bounded sample; all model roles and the other five Pinnacle sports remain unqualified. Non-NFL and spread/total/partial-period/futures engineering is now implemented through reviewed interfaces; actual-source qualification remains B3/B4/B5; native market vocabulary alone does not change a cell to supported. Ordinary Details can inspect unmatched imported records. The owner-authorized Pinnacle request consumed one credit (499 remaining); 16 side records pass independent reconciliation and ordinary saved Details/reopening. Actual EV lacks compatible prediction books and reviewed settlement binding. [Evidence](../evidence/b4-pinnacle-sample-20260921/final-report.md). KenPom is deferred. [Unapproved model acquisition and B5 mappings](b4-model-mapping-next.md).
 
-## September 21 B5 NHL bounded engineering update
+## Current B5 engineering overlay — September 22
 
-[Handoff](b5-nhl-handoff.md) · [evidence](../evidence/b5-nhl-20260921/final-report.md). NHL full-game winner engineering is COMPLETE and offline verified. Existing source cells above continue to describe actual/documentation evidence; they are not promoted by synthetic tests.
+**Independent engineering COMPLETE; actual native/model qualification remains open.** [Handoff](b5-independent-engineering-handoff.md) · [acceptance](../evidence/b5-independent-20260922/final-report.md). The above P/S/D/U source facts are retained evidence, not refreshed observations. F denotes reviewed interfaces and labeled fixtures only.
 
-| NHL cell | Engineering | Actual qualification |
+| Product capability | Independent engineering state | Remaining qualification |
 |---|---|---|
-| Canonical teams/event/season | 32 teams, reviewed aliases; exact season/start/home/away; duplicate/conflict rejection | ProphetX sandbox tournament 234 only; actual native team/game bindings incomplete |
-| Kalshi / PMUS two-way full-game winner | Reviewed OT/shootout gate, native orientation, conditional fees/depth and Details/history verified with labeled fixtures | No exact NHL venue rule/book package qualified |
-| Novig / ProphetX winner | Shared source isolation and visible unknown economics; explicit terms required | Access requests pending; terms, fee and size gaps remain |
-| MoneyPuck home-win | Explicit probability mapping and unavailable ratings/unknown semantics verified offline | Homepage allowance consumed: HTTP 302, zero values. MoneyPuck dropped; NHL analytics missing/deferred |
-| Pinnacle NHL | Reference display retained; no assumed hockey settlement equivalence | No NHL sample or new credit use; existing sample is NFL |
-| Regulation / three-way / other NHL families | Isolated as unsupported; no guessed probabilities or payouts | Open B5 work, including spreads/totals/periods/futures/results |
+| Full-game winner, spread/run-line/puck-line and total | COMPLETE across NFL, NBA, MLB, NHL, NCAAF and men’s D1 NCAAB within reviewed seasons and explicit contract scope | Native listings, participant bindings, rule applicability, purchase size and fees by venue |
+| Pregame partial periods | COMPLETE: football/basketball first half; MLB cumulative first 3, first 5, first 6 and regulation 9; NHL individual periods 1, 2 and 3. Winner/spread/total remain separate | Actual period IDs, completion/tie/exception terms and period-specific reference distributions |
+| Sporting results and venue settlement | COMPLETE shared full-game/H1 framework plus MLB/NHL/selected periods; corrections, pending/conflicting states, independent venue decisions, as-of and immutable pregame links | Actual result/payout records; unsupported completion, pitcher, fair-value and refund terms |
+| College identity coverage | COMPLETE current official directory: 266 DI football programs (2026) and 365 men’s DI basketball programs (2026–2027), additive to historical decisions | Native venue aliases/IDs, FCS-only contracts, campus/site bindings and later seasons |
+| Shared payout structures | COMPLETE explicit fractional/equality/three-way truth tables, purchase-stake pushes and categorical championship states | Real cross-strike/ternary native books and third-leg economics; exceptional probabilities, void/fair-value amounts and fee returns |
+| Conference/league championship futures | COMPLETE current-season identity, horizon, full field, exclusive/overlapping states, explicit probability mass, pending/eliminated/result handling | Native fields, source-specific award/no-award rules, actual forecasts and executable economics |
+| Ordinary product and history | COMPLETE filters, Details, source isolation, references, Stop, flat/segmented compatibility and exact saved reopening; oversized legacy flat input rejected before materialization | Sustained jointly scoped six-source use and owner beta review |
 
-Full B4/B5 remain IN PROGRESS; beta NOT READY FOR SIGNOFF.
+| Missing actual evidence | Owning action |
+|---|---|
+| Kalshi MLB selected inning and NHL period market IDs, native outcomes, exact completion/status terms, series fee applicability and books | B3/B5 selected native qualification. Generic period contracts and synthetic series are documentation/fixtures, not actual listing qualification. NHL winner-period amendment text was not retrieved; no inference of its complete terms |
+| Polymarket US sport/period/championship rules, long/short purchase quotes, fees and settlement records | B3/B5 US-only native qualification; hypothetical fixture descriptors remain F, actual terms U |
+| Novig/ProphetX listings, production access, native units/depth/settlement | B3 pending provider provisioning and reviewed bounded qualification; no source economics transfer |
+| Three-way native Tie/home/away cross-strike relations and independently purchasable legs | B3/B5 actual contract/book binding; ternary Kalshi book depth remains unavailable, never binary-complement inferred |
+| Listed-pitcher changes, FCS-only rules, uncompleted segments, cancellation/fair-value/refund amounts and fee-return treatment | B5 source-specific contract review. Unknown material outcomes retained, not rewritten as refunds |
+| Current college native aliases/IDs, venue sites and actual games | B3/B5. NCAA directory identity is authoritative membership evidence only, not venue/model coverage |
+| Actual game/period/line/championship distributions and exceptional mass | B4. No model acquired; wrong event/type/period or incomplete mass rejected; manual scenarios stay labeled |
+| Actual sporting results and each venue payout/correction record | B3/B5. Fixture linkage and as-of tests do not prove source qualification |
 
-MoneyPuck actual acquisition update: [September 21 single homepage capture](../evidence/b4-moneypuck-sample-20260921/final-report.md) returned HTTP 302 to its data-license page. Redirect not followed; model probability cells remain unqualified. No homepage retry authorized.
+No new actual market/model/result data were collected. [Detailed remaining dependencies](b5-remaining-backlog.md) and [historical matrix](history/b5-independent-20260922/README.md) retain old evidence and decisions. Full B4/B5 remain open; beta NOT READY FOR SIGNOFF.
 
-## September 21 B5 MLB bounded engineering update
+## B6 offline integration overlay — September 23 UTC / September 22 local
 
-**MLB full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-mlb-handoff.md) · [acceptance evidence](../evidence/b5-mlb-20260921/final-report.md). Kalshi and PMUS have ordinary comparison paths for explicitly reviewed single-game two-way extra-innings/action contracts. Native IDs/outcomes, season, home/away, game number, original/current starts and reschedule lineage must agree. Unsupported families/conditions remain visible. No actual MLB game price comparison is qualified.
+**B6 offline integrated readiness COMPLETE.** [Exact identity, acceptance and measurements](../evidence/b6-offline-20260923/final-report.md). Four native synthetic venue roles plus model/Pinnacle-shaped references pass ordinary collector/projection/history integration with explicitly reviewed B5 market annotations across all six sports, selected periods and championships. Details, filters, negative/unavailable calculations, source failures, reference changes, result corrections, bounded Stop and exact reopening are verified. Native Novig/ProphetX purchase usability remains zero where rule/quantity inputs are missing; their adapter participation is not usable actual coverage.
 
-Retained KXMLBGAME series/fee changes/contract are verified; multiplier 0.5 is MLB-specific and is not a football default. Current event overrides, exact action/pitcher/status terms and native game evidence remain missing. PMUS needs an actual US MLB listing/rule/fee binding. Novig MLB native orientation/terms/economics remain unsupported, request pending. ProphetX's retained sandbox tournament 109 and public MLB amendment do not establish production event/quantity/fee qualification. The amendment's postponement/36-hour suspension/shortened-game rules differ from Kalshi's; no equivalence is inferred. Actual MLB model probabilities and MLB Pinnacle input remain missing; synthetic home-win checks do not qualify a provider. No acquisition or credits used.
-
-MLB listed-pitcher contracts, spreads/totals, innings/first-five, series/futures and result/settlement linkage remain open. NBA full-game winner engineering was subsequently completed; see below. Broader B5, full B4 and actual venue qualification remain separate; beta NOT READY FOR SIGNOFF.
-
-## September 21 B5 NBA bounded engineering update
-
-**NBA full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-nba-handoff.md) · [acceptance evidence](../evidence/b5-nba-20260921/final-report.md). Ordinary Kalshi/PMUS paths require explicit native event/outcome review, season/stage/shared game ID, original/current starts, reschedule status, full-game overtime inclusion and matching source-specific exceptional terms. Actual NBA venue comparisons remain unqualified. Compatible synthetic terms exercise the engine; official Kalshi/PMUS contracts are not asserted equivalent.
-
-B3/B5 owns missing actual NBA native listings, participants, stage/start/status and applicable rule evidence; Kalshi milestone schema remains unknown and start is not guessed. Retained KXNBAGAME series multiplier 1 and ProphetX sandbox tournament 132 are verified context only. Novig/ProphetX native NBA orientation/economics remain unsupported pending evidence and provider replies. B4 owns actual NBA game forecasts/independence and NBA Pinnacle input; no acquisition or credits used. Ratings, margins, ranks and season/playoff outputs are not game forecasts. Full-game interfaces support explicit home- or away-win probabilities only when exactly bound.
-
-NBA spreads/totals, half/quarter economics, regulation-only, series/futures and result linkage remain broader B5 work. NCAAF engineering was subsequently completed; see below. MLB saved snapshot/calculations are exactly preserved. Full B4/B5 and actual venue qualification remain open; beta NOT READY FOR SIGNOFF.
-
-## September 21 B5 NCAAF bounded engineering update
-
-**NCAAF full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-ncaaf-handoff.md) · [acceptance](../evidence/b5-ncaaf-20260921/final-report.md). Six reviewed 2026 schools (Alabama, Alabama A&M, Miami FL/OH, North Dakota State, South Dakota State) cover FBS/FCS/cross-subdivision identity. Membership is season-specific; North Dakota State is FBS in 2026. Ambiguous schools, mascots and unreviewed teams stay unsupported. Exact game/start/season/stage/reschedule/site/subdivision bindings and native outcomes are mandatory. Unknown site status is displayed, never interpreted as home-field advantage.
-
-Kalshi/PMUS comparison and model-input paths are fixture-verified only. Actual NCAAF listings, usable books, source-specific rules/economics and model/Pinnacle forecasts remain missing. KXNCAAFGAME and KXNCAAFCSGAME have distinct retained fee types; no NFL applicability transfer. The FCS FOOTBALLARCHIVED URL returned 404: B3/B5 owns obtaining an applicable current contract in a separately authorized qualification. Novig/ProphetX requests remain pending; native college outcomes/quantity/fees are unqualified. B5 owns remaining schools/seasons, Division II/III/other competitions, spreads/totals, half/quarter economics and futures; none is silently excluded from beta. B4 owns actual game probabilities and independence; ratings, rankings, margins and season/playoff outputs cannot substitute.
-
-The subsequent NCAAB slice is recorded below; its owner selection is men’s Division I. No acquisition or credits used. Full B4/B5 and actual venue/model qualification remain open; beta NOT READY FOR SIGNOFF.
-
-## B5 NCAAB bounded implementation update — September 21
-
-**NCAAB full-game winner engineering COMPLETE — fixtures/offline replay only.** [Handoff](b5-ncaab-handoff.md) · [acceptance](../evidence/b5-ncaab-20260921/final-report.md). Owner selected **men’s Division I**. Reviewed 2026-2027 teams: Alabama, Alabama A&M, Miami FL and Miami OH. Team identities include gender/division and separate school identity; tournament ID/round, season/start/reschedule and neutral/home/unknown site evidence must agree. Generic names-only matching cannot qualify college events. Other schools/seasons, women’s and other divisions remain visible unsupported scope; no broad NCAAB coverage claim.
-
-| Venue / role | Engineering evidence | Actual qualification gap |
-|---|---|---|
-| Kalshi | F: KXNCAAMBGAME native YES/NO binding, separately retained quadratic-with-maker-fees multiplier 1; ordinary conditional calculations | U: actual college game listing, IDs, start/round/site, applicable ACHIEVEMENTS or market-specific rules, usable book and overrides |
-| Polymarket US | F: native teams/Long/Short and its own fee coefficient, explicit compatible synthetic rules | U: actual US college listing, applicable AEC scope/exceptions and book/economics |
-| Novig / ProphetX | F: isolation and visible unsupported scope/health | U: native college outcomes/rules/quantity/fees; requests pending |
-| Model | F: explicit game probability and exact college context, unsupported ratings/margins/tournament inputs | U: actual dated forecast and independence; KenPom deferred |
-| Pinnacle | Existing reference path retained; no college input acquired | U: compatible NCAAB native event/line/rule input; no request or credit authorized |
-
-The retained men’s series points to ACHIEVEMENTS, not NBA BASKETBALLGAMEWIN. Its postponement, suspension and cancellation allocation are not assumed equivalent to PMUS. NCAA men’s two halves/five-minute OT is separately reviewed; women’s quarters and NBA periods do not transfer. Required source terms remain explicit; unknown exceptional outcomes prevent unconditional EV/all-outcome Arb. Existing matrix P/S/U classifications remain their historical evidence classes; the F evidence above does not upgrade actual cells.
-
-**Next: [shared full-game spread/total outcome partitions](b5-score-lines-next.md)** with NBA/NCAAB fixtures, strict/inclusive score thresholds, equality/push/refund behavior and ordinary fees/depth/history. Remaining spread/total mappings across all six sports, other periods, futures and results remain B5 work. Six bounded winner slices do not complete full six-sport coverage or B5. Actual venue/model qualification and full B4/B5 remain open. Beta NOT READY FOR SIGNOFF.
-
-## Shared score-line pilot — September 21 acceptance
-
-**Bounded NBA/men D1 NCAAB full-game spread/total engineering COMPLETE (F only).** [Handoff](b5-score-lines-handoff.md) · [evidence](../evidence/b5-score-lines-20260921/final-report.md). Exact integer/half-point predicates, equality partitions, retained-fee purchase-stake refunds, source-specific fee/depth calculations and exact-partition probability imports now feed ordinary Details/filter/Stop/history. Actual native listings/rules/economics remain B3 gaps; actual forecasts remain B4 gaps. Unsupported fee returns, unknown equality, missing size/fees and conflicting completed-score definitions remain visible/unavailable. No venue/model qualification upgraded. NFL mapping is subsequently complete; NCAAF mapping is subsequently complete; MLB mapping is subsequently complete; next B5 mapping: NHL full-game puck lines/totals. Full B4/B5 open; beta NOT READY FOR SIGNOFF.
-
-## B5 NCAAF full-game line update — September 21
-
-**Bounded engineering COMPLETE, fixtures only.** [Handoff](b5-ncaaf-lines-handoff.md) · [acceptance](../evidence/b5-ncaaf-lines-20260921/final-report.md). Six reviewed schools/2026 only; native predicates, college possession-series overtime including extra-period tries, exact school/subdivision/site identity, conditional fees/depth/refunds and partition probabilities integrate with ordinary Details/filter/Stop/exact reopening. Neutral or unknown site never implies home advantage. Existing winners/NFL/basketball line outputs remain exact.
-
-**Owning gaps:** B3/B5 retains actual selected NCAAF line/period/participant rules, source economics/size and missing FCS-only contracts; no FBS/NFL terms are inherited. Kalshi KXNCAAFSPREAD/KXNCAAFTOTAL catalog/documentation is not actual venue qualification. PMUS actual college line/Short semantics, Novig provisioned wire and ProphetX production semantics remain missing. B4 owns actual exact-line distributions and independence; moneyline odds, rankings and projected margins cannot substitute. B5 owns broader schools/seasons, partial games/team totals and unsupported refunds. MLB mapping is subsequently complete; next independent engineering is NHL full-game puck-line/total mapping. Full B4/B5 open; beta NOT READY FOR SIGNOFF.
-
-## B5 MLB full-game line update — September 22
-
-**Bounded engineering COMPLETE (F only).** [Handoff](b5-mlb-lines-handoff.md) · [acceptance](../evidence/b5-mlb-lines-20260922/final-report.md). Existing 30-team identity/calendar-season bounds, native game number and reschedule lineage support explicitly reviewed integer/half-run lines and combined totals. Source-specific extra-innings/action/completion review, strict/inclusive predicates, material equality mass, purchase-stake refunds with retained fees and exact-line probabilities now use ordinary Details/filtering/Stop/history. Zero-margin equality is not discarded. 367 Python tests, two JS suites and isolated browser acceptance pass. No production or model cell is upgraded by fixture evidence.
-
-| MLB line source | Engineering evidence | Owning unresolved data |
-|---|---|---|
-| Kalshi | F reviewed line path; D retained KXMLBSPREAD/KXMLBTOTAL, quadratic multiplier .5 and current separate contracts | B3/B5 exact selected listing/game/side/period, fee override/depth, total action pitcher evidence, exceptional/refund economics |
-| Polymarket US | F explicitly annotated run-line/total comparison; own fee/depth path | B3/B5 actual US listing/action/extra innings/completion rules; native Short economics |
-| Novig / ProphetX | Visible unsupported/unconfigured; no borrowed economics | B3 provisioned native listings/units/fees and B5 applicable settlement; requests pending |
-| Model / Pinnacle | F exact-partition interface; no actual MLB line forecast or reference sample | B4 original probability distributions and independence; prior NFL h2h cannot substitute |
-
-Retained ProphetX line nine/8.5-inning completion differs from moneyline five/4.5-inning shortening; malformed amendment text/current applicability remains unresolved. Kalshi shortened-official/fair-price clauses are not mapped to universal refunds. Listed-pitcher, shortened, exception probabilities/payouts and unsupported fee returns remain B5 work, alongside innings/team totals/series/futures/result linkage. **Next: NHL full-game puck-line/total mapping. Full B4/B5 open; beta NOT READY FOR SIGNOFF.**
+The table's P/S/F/D/U source evidence classes remain unchanged. The retained actual Pinnacle sample remains historical. No native sport/market/rule or model cell is upgraded by this overlay. B4/B5/full B6 and beta signoff remain open. [Next real-data proposal](b6-next-real-milestone.md); no new collection or access authorized. [Pre-B6 planning snapshot](history/b6-offline-20260923/README.md).

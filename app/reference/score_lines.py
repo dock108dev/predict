@@ -7,10 +7,14 @@ from app.normalization.score_lines import VERSION,market_partitions,distribution
 def score_distribution(r,binding,*,source_at=None,model_version=None):
     x=base(r,binding,source_at=source_at,model_version=model_version)
     i=x['market_identity'];native=json.loads(r['body'])
-    if i['competition'] not in CONFIG or i['family'] not in ('spread','total') or i['period']!='full_game' or not isinstance(i['rules'],dict) or i['rules'].get('version')!=VERSION:raise ValueError('Reviewed pilot score-line identity required')
+    from app.normalization.score_lines import partial as scope
+    from app.normalization import score_periods,futures
+    h1=scope(i) or futures.scope(i)
+    if i['competition'] not in CONFIG or (i['family'] not in ('spread','total') and not h1) or (i['period']!='full_game' and not h1) or not isinstance(i['rules'],dict) or i['rules'].get('version')!=VERSION:raise ValueError('Reviewed pilot score-line identity required')
     if native.get('market_identity')!=i or native.get('participant')!=binding['participant'] or native.get('source_event_id')!=binding['source_event_id']:raise ValueError('Forecast exact market, partition or native outcome conflicts')
-    if CONFIG[i['competition']].event_key(native.get('event',{}))!=i['event']:raise ValueError('Forecast event binding conflicts')
-    if native.get('value_kind')!='score_partition_probability' or native.get('conditional_on')!=('completed_full_game_including_extra_innings_action' if i['competition']=='MLB' else 'completed_full_game_including_overtime'):raise ValueError('Explicit completed-game score partition probabilities required; scores and ratings are unsupported')
+    if (futures if futures.scope(i) else CONFIG[i['competition']]).event_key(native.get('event',{}))!=i['event']:raise ValueError('Forecast event binding conflicts')
+    if native.get('value_kind')!='score_partition_probability' or native.get('conditional_on')!=('explicit_championship_states' if futures.scope(i) else 'completed_'+i['period']+'_only' if score_periods.scope(i) else 'completed_first_half_only' if h1 else 'completed_full_game_exact_reviewed_nhl_settlement_score' if i['competition']=='NHL' else 'completed_full_game_including_extra_innings_action' if i['competition']=='MLB' else 'completed_full_game_including_overtime'):raise ValueError('Explicit completed-game score partition probabilities required; scores and ratings are unsupported')
+    if i['competition']=='NHL' and native.get('settlement_score')!=i['rules'].get('settlement_score'):raise ValueError('NHL probability settlement-score convention missing or conflicting')
     parts=market_partitions(i)
     value=distribution(native.get('probabilities'),parts)
     x.update(parser='score_distribution',value_kind='partition_distribution',value=value,original_value=native['probabilities'],conversion_method='Explicit exact partition probabilities; no fitting',state='available',reason=None,partitions=parts)

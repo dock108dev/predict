@@ -49,6 +49,8 @@ def select_inventory(inventory, at, cap=100):
     for row in inventory['markets']:
         event = events.get(row['event_id'])
         reason = row['exclusion'] or row.get('subscription_evidence_exclusion') or row.get('parse_exclusion')
+        if 'qualification_ids' in inventory and row['id'] not in inventory['qualification_ids']:
+            reason='outside_frozen_qualification_selection'
         if not reason and (not event or not event['scheduled_start']):
             reason = 'unknown_schedule'
         if not reason and coverage.stamp(event['scheduled_start']) <= at + timedelta(seconds=300):
@@ -465,6 +467,8 @@ class Venue:
             market_ids=list(g['ids']), gap_reason='fresh synchronization required' if state!='connected' else None))
 
     def emit(self, group, source, row):
+        guard = getattr(self.session, 'guard_scope', None)
+        if guard: guard(source, row)  # Before acknowledgement, books or usable-state mutation.
         segmented = getattr(self.session, 'segmented_history', False)
         error = None; result = None
         if segmented:
@@ -626,6 +630,8 @@ class ContinuousSession(TransportSession):
     journal_encoding = 'd2-zlib-row-1'
     def __init__(self, *args, mock_segmented=False, supervised_live=False, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.spec.get('two_source_qualification') and not getattr(self,'supports_two_source_qualification',False):
+            raise ValueError('two-source scope requires its isolated qualification runtime')
         self.mock_segmented = mock_segmented
         self.supervised_live = supervised_live
         self.segmented_history = mock_segmented or supervised_live

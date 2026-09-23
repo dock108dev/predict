@@ -44,7 +44,8 @@ def event_key(event):
         raise ValueError('Tournament game requires reviewed tournament ID and round')
     if event.get('period_structure')!='two_20_minute_halves':
         raise ValueError('NCAAB men period structure must be two 20-minute halves')
-    registry=Registry.load();mapping=event.get('participants',{})
+    from app.normalization.college_registry import for_event
+    registry=for_event(event);mapping=event.get('participants',{})
     if not isinstance(mapping,dict) or len(mapping)!=2 or len(set(mapping.values()))!=2:
         raise ValueError('Two distinct reviewed NCAAB school teams required')
     schools=event.get('schools',{})

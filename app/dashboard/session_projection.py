@@ -1,3 +1,4 @@
+from app.normalization import score_periods,futures
 """Bounded durable session view shared by current viewing and verified history.
 
 No transport ownership, provider activation or economic rules live here. Product
@@ -51,8 +52,8 @@ class SessionProjection:
     def __init__(self):
         self.cursor=0; self.chain='0'*64; self.last=None; self.started=None; self.finished=None; self.stop_reason=None
         self.sid=None; self.spec={}; self.inventory={}; self.generation=None
-        self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}
-        self.coverage_status={}; self.refresh=None; self.legacy=None; self.last_row_hash=None; self.sizes={}; self.safety={}
+        self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}; self.resolutions={}
+        self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.legacy=None; self.last_row_hash=None; self.sizes={}; self.safety={}
 
     def apply(self,row,cursor=None):
         # Match journal JSON types at the acknowledged live boundary.
@@ -102,8 +103,17 @@ class SessionProjection:
                 if row.get('stream_group') and row.get('market_ids') is None and self.books.get(key,{}).get('stream_group')!=row['stream_group']: continue
                 self.health[key]={k:deepcopy(row.get(k)) for k in ('source','state','gap_reason','market_ids','observed_at','stream_group')}
                 if row['state']!='connected': self.invalid.add(key)
+        elif typ=='qualification_discovery_failed':
+            self.qualification_failure=deepcopy(row)
         elif typ=='product_coverage_status':
             self.coverage_status=deepcopy(row['coverage']); self.refresh=deepcopy(row.get('refresh'));self.safety=deepcopy(row.get('safety_exclusions',{}))
+        elif typ=='product_resolution':
+            from app.resolution.core import validate,MAX_RECORDS
+            r=deepcopy(row['resolution']);validate(r)
+            if self.spec.get('mode')!='mock' and r['evidence_mode']=='synthetic':raise ValueError('Synthetic resolution in real session')
+            if r['id'] not in self.resolutions:
+                if len(self.resolutions)>=MAX_RECORDS or sum(len(json.dumps(v).encode()) for v in self.resolutions.values())+len(json.dumps(r).encode())>8*1024*1024:raise ValueError('Resolution bound')
+                self.resolutions[r['id']]=dict(record=r,observed_at=at,cursor=cursor)
         elif typ=='product_reference':
             ref=deepcopy(row['reference'])
             if ref['role'] not in ('model_reference','bookmaker_reference'): raise ValueError('invalid reference role')
@@ -141,6 +151,8 @@ class SessionProjection:
         nba_gaps=nba.inventory_gaps(self.inventory)
         ncaaf_gaps=ncaaf.inventory_gaps(self.inventory)
         ncaab_gaps=ncaab.inventory_gaps(self.inventory)
+        from app.normalization import nhl_lines
+        nhl_line_gaps=nhl_lines.inventory_gaps(self.inventory)
         nfl_line_gaps=nfl_lines.inventory_gaps(self.inventory)
         for source,cat in sorted(self.inventory.items()):
             if cat.get('role','prediction')!='prediction':continue
@@ -155,14 +167,17 @@ class SessionProjection:
                     except (ValueError,TypeError):reason=reason or 'Invalid or timezone-less scheduled start'
                 if not e or e.get('identity')!='resolved': reason=reason or 'unresolved event'
                 if ident and not ((ident['competition'] in ('NFL','NCAAF') and ident['sport'] in ('american_football','football')) or (ident['competition']=='MLB' and ident['sport']=='baseball') or (ident['competition'] in ('NBA','NCAAB') and ident['sport']=='basketball') or (ident['competition']=='NHL' and ident['sport'] in ('hockey','ice_hockey'))):reason=reason or 'unsupported sport or competition (B5)'
-                if e and ident['competition']=='NHL':reason=reason or nhl_gaps.get((source,e['id']))
-                if e and ident['competition']=='MLB':reason=reason or mlb_gaps.get((source,e['id']))
-                if e and ident['competition']=='NBA':reason=reason or nba_gaps.get((source,e['id']))
-                if e and ident['competition']=='NCAAF':reason=reason or ncaaf_gaps.get((source,e['id']))
-                if e and ident['competition']=='NCAAB':reason=reason or ncaab_gaps.get((source,e['id']))
-                is_line=bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF','MLB') and ident['family'] in ('spread','total'))
+                if e and not futures.scope(ident) and ident['competition']=='NHL':reason=reason or nhl_gaps.get((source,e['id']))
+                if e and not futures.scope(ident) and ident['competition']=='MLB':reason=reason or mlb_gaps.get((source,e['id']))
+                if e and not futures.scope(ident) and ident['competition']=='NBA':reason=reason or nba_gaps.get((source,e['id']))
+                if e and not futures.scope(ident) and ident['competition']=='NCAAF':reason=reason or ncaaf_gaps.get((source,e['id']))
+                if e and not futures.scope(ident) and ident['competition']=='NCAAB':reason=reason or ncaab_gaps.get((source,e['id']))
+                h1=bool(ident and ident['competition'] in ('NFL','NCAAF','NBA','NCAAB') and ident['period']=='first_half' and ident['family'] in ('moneyline','spread','total'))
+                segment=bool(ident and score_periods.scope(ident))
+                is_line=futures.scope(ident or {}) or h1 or segment or bool(ident and ident['competition'] in ('NBA','NCAAB','NFL','NCAAF','MLB','NHL') and ident['family'] in ('spread','total'))
+                if is_line and ident['competition']=='NHL':reason=reason or nhl_line_gaps.get((source,e['id']))
                 if is_line and ident['competition']=='NFL':reason=reason or nfl_line_gaps.get((source,e['id']))
-                if ident and ((ident['family']!='moneyline' and not is_line) or ident['period']!='full_game'): reason=reason or 'unsupported family or period (B5)'
+                if ident and ((ident['family']!='moneyline' and not is_line) or (ident['period']!='full_game' and not h1 and not segment and not futures.scope(ident))): reason=reason or 'unsupported family or period (B5)'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
                 record=dict(source_id=source,event_id=m['event_id'],market_id=m['id'],identity=ident,title=(e or {}).get('title'),reason=reason,health=deepcopy(self.health.get(key)),native=deepcopy(m))
                 if 'display_prices' in m:
@@ -188,24 +203,35 @@ class SessionProjection:
                         key_fn={'NFL':nfl_lines.event_key,'MLB':mlb.event_key,'NBA':nba.event_key,'NCAAF':ncaaf.event_key,'NCAAB':ncaab.event_key}.get(ident['competition'],event_key)
                         if is_line:
                             from app.normalization.score_lines import review as review_fn
+                            if ident['competition']=='NHL':key_fn=nhl_lines.event_key
+                            if futures.scope(ident):key_fn=futures.event_key
                         review=review_fn(e,m,meta,source,self.spec.get('mode'))
                         # Additive projection only: retained event/native IDs are untouched.
                         canonical=key_fn(e)
                         ident=dict(ident,event=canonical,sport={'NFL':'american_football','MLB':'baseball','NBA':'basketball','NHL':'ice_hockey','NCAAF':'american_football','NCAAB':'basketball'}[ident['competition']],scheduled_start=canonical[3])
                         if is_line:
                             ident.update(line=review['canonical']['threshold'],subject=e['home'] if ident['family']=='spread' else 'combined',rules={'version':'score-lines-1','unit':review['descriptor']['unit'],'domain':review['canonical']['domain'],'overtime':'included','completion':review['terms']['completion']})
-                        if is_line and ident['competition']=='NFL':
+                        if is_line and not futures.scope(ident) and ident['competition']=='NFL':
                             ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','tied_score','normal_completion')})
-                        if is_line and ident['competition']=='NCAAF':
+                        if segment:
+                            ident['rules'].update(overtime='excluded',settlement_score=ident['period']+'_only',offered='pregame')
+                            if ident['family']=='moneyline':ident.update(line=None,subject=e['home'])
+                        if h1:
+                            ident['rules'].update(overtime='excluded',settlement_score='first_half_only',offered='pregame')
+                            if ident['family']=='moneyline':ident.update(line=None,subject=e['home'])
+                        if is_line and not futures.scope(ident) and ident['competition']=='NCAAF':
                             ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','overtime_scoring','tied_score','normal_completion','subdivision_scope')})
-                        if is_line and ident['competition']=='MLB':
+                        if is_line and not futures.scope(ident) and ident['competition']=='MLB':
                             ident['rules'].update({k:review['descriptor'][k] for k in ('extra_innings','pitcher_conditions','normal_completion','tied_score','completion_scope')})
+                        if is_line and not futures.scope(ident) and ident['competition']=='NHL':
+                            ident['rules'].update({k:review['descriptor'][k] for k in ('overtime_format','settlement_score','normal_completion','tied_score')})
+                        if futures.scope(ident):ident['rules'].update(states=e['states'],field=e['field'],field_structure=e['field_structure'],settlement_score='championship_award',overtime='not_applicable')
                         record['identity']=ident
                     except (ValueError,KeyError,TypeError,AttributeError,IndexError,StopIteration) as exc:
                         record['reason']=str(exc);continue
                 try: sides=self.sides(source,e,m,meta)
                 except (KeyError,ValueError,StopIteration,TypeError): record['reason']='unsupported outcome identity'; continue
-                if len(sides)!=2: record['reason']='unsupported outcome set'; continue
+                if len(sides)!=2 and not (is_line and len(sides)==3): record['reason']='unsupported outcome set'; continue
                 book=self.books.get(key); age=None if not book else str(Decimal(str((stamp(at)-stamp(book['book']['raw']['received_at'])).total_seconds())))
                 connection=self.health.get(key,{}).get('state','awaiting_snapshot')
                 if key in self.invalid and connection=='connected': connection='resynchronization_required'
@@ -223,26 +249,38 @@ class SessionProjection:
             for a,b in combinations(values,2):
                 if a[0]==b[0] or self.inventory[a[0]].get('origin_id',a[0])==self.inventory[b[0]].get('origin_id',b[0]): continue
                 sides={**a[3],**b[3]}; teams=sorted(set(s['participant'] for s in sides.values()))
-                is_line=a[6]['family'] in ('spread','total')
+                is_line=futures.scope(a[6]) or score_periods.scope(a[6]) or a[6]['family'] in ('spread','total') or (a[6]['competition'] in ('NFL','NCAAF','NBA','NCAAB') and a[6]['period']=='first_half')
                 if not is_line and len(teams)!=2: continue
                 def winner(s): return next(t for t in teams if t!=s['participant']) if s['predicate']=='not_win' else s['participant']
                 candidates=[]
                 for x,y in product(a[3],b[3]):
                     if is_line or winner(sides[x])!=winner(sides[y]): candidates.append((stable([x,y]),winner(sides[x])+' + '+winner(sides[y]),(x,y)))
+                if is_line and any(len(x[3])==3 for x in (a,b)):
+                    from app.normalization.score_lines import market_partitions,payout
+                    parts=market_partitions(a[6])
+                    for keys in combinations(sides,3):
+                        if len({k.split(':')[0] for k in keys})<2:continue
+                        pays=[[payout(sides[k],p) for k in keys] for p in parts]
+                        if all(all(v not in (None,'refund') for v in ps) and sum(Decimal(v) for v in ps)==1 for ps in pays):candidates.append((stable(list(keys)),'Three-outcome portfolio',keys))
                 if not candidates: continue
                 if len(games)>=64:
                     truncated+=1;continue
                 gid=stable([group,sorted([list((x[0],x[1]['id'],x[2]['id'])) for x in (a,b)])])
                 if is_line:gid=stable([gid,[(x[0],x[2]['score_review']) for x in (a,b)]])
-                game=dict(id=gid,title=a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period']+(' · including OT/shootout' if a[6]['competition']=='NHL' and a[6]['stage']=='regular_season' else ' · including playoff OT' if a[6]['competition']=='NHL' else ' · including extra innings · action · game '+str(a[1]['game_number']) if a[6]['competition']=='MLB' else ' · including overtime' if a[6]['competition']=='NBA' else ' · including college overtime · '+a[1]['subdivisions'][a[1]['home']]+'/'+a[1]['subdivisions'][a[1]['away']]+' · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAF' else ' · men Division I · two 20-minute halves + overtime · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAB' else ''),scheduled_start=a[1]['scheduled_start'],teams=teams,sides=sides,
+                game=dict(id=gid,title=(a[1]['title']+' · '+a[6]['category']+' · '+a[6]['horizon'] if futures.scope(a[6]) else a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period']+(' · including OT/shootout' if a[6]['competition']=='NHL' and a[6]['stage']=='regular_season' else ' · including playoff OT' if a[6]['competition']=='NHL' else ' · including extra innings · action · game '+str(a[1]['game_number']) if a[6]['competition']=='MLB' else ' · including overtime' if a[6]['competition']=='NBA' and a[6]['period']=='full_game' else ' · including college overtime · '+a[1]['subdivisions'][a[1]['home']]+'/'+a[1]['subdivisions'][a[1]['away']]+' · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAF' and a[6]['period']=='full_game' else ' · men Division I · two 20-minute halves + overtime · site: '+a[1]['neutral_site'] if a[6]['competition']=='NCAAB' and a[6]['period']=='full_game' else '')),scheduled_start=a[1]['scheduled_start'],teams=teams,sides=sides,
                     sources={x[0]:dict(event_id=x[1]['id'],market_id=x[2]['id']) for x in (a,b)},candidates=candidates,product_identity=a[6])
                 if is_line:
                     game['score_reviews']={x[0]:deepcopy(x[2]['score_review']) for x in (a,b)}
                     game['product_identity']=dict(game['product_identity'],outcome_set={x[0]:deepcopy(x[2]['score_review']['descriptor']) for x in (a,b)})
-                    if a[6]['competition']=='NFL':game['title']+=' · including overtime · '+a[6]['stage']
-                    game['title']+=' · line '+a[6]['line']+' '+a[6]['rules']['unit']
+                    if score_periods.scope(a[6]):game['title']=a[1]['title']+' · '+a[6]['family']+' · '+a[6]['period']+' · pregame · specified segment only; later scoring excluded'
+                    if a[6]['competition']=='NCAAB' and a[6]['period']=='first_half':game['title']+=' · First half · first 20-minute half · men Division I · pregame · ties included; no second half or OT · '+a[6]['stage']+' · site: '+a[1]['neutral_site']
+                    if a[6]['competition']=='NBA' and a[6]['period']=='first_half':game['title']+=' · First half · end of second quarter · pregame · ties included; no second half or OT · '+a[6]['stage']
+                    if a[6]['competition']=='NFL' and not futures.scope(a[6]):game['title']+=(' · First half · pregame · ties included; no second half or OT' if a[6]['period']=='first_half' else ' · including overtime')+' · '+a[6]['stage']
+                    if a[6]['competition']=='NCAAF' and a[6]['period']=='first_half':game['title']+=' · First half · pregame · ties included; no second half or OT · '+a[6]['stage']+' · '+a[1]['subdivisions'][a[1]['home']]+'/'+a[1]['subdivisions'][a[1]['away']]+' · site: '+a[1]['neutral_site']
+                    if a[6]['competition']=='NHL' and not score_periods.scope(a[6]) and not futures.scope(a[6]):game['title']+=' · '+('shootout: one winner goal, counted once' if a[6]['stage']=='regular_season' else 'no shootout; all OT goals')
+                    if a[6]['line'] is not None:game['title']+=' · line '+a[6]['line']+' '+a[6]['rules']['unit']
                 games.append(game); points[gid]=dict(id=token,at=at,cards=[a[4],b[4]],label='Durable cutoff')
-                if a[6]['competition']=='NHL':
+                if a[6]['competition']=='NHL' and not is_line:
                     game['nhl_reviews']={x[0]:deepcopy(x[2]['nhl_review']) for x in (a,b)}
                 if a[6]['competition']=='MLB' and not is_line:
                     game['mlb_reviews']={x[0]:deepcopy(x[2]['mlb_review']) for x in (a,b)}
@@ -255,13 +293,16 @@ class SessionProjection:
                 rows_by_game[gid]=[a[5],b[5]]
         paired={(v,ids['market_id']) for g in games for v,ids in g['sources'].items()}
         for record in catalog:
-            if ((record.get('identity') or {}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') or ((record.get('identity') or {}).get('competition')=='NFL' and (record.get('identity') or {}).get('family') in ('spread','total'))) and not record['reason'] and (record['source_id'],record['market_id']) not in paired:
+            if ((record.get('identity') or {}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') or ((record.get('identity') or {}).get('competition')=='NFL' and ((record.get('identity') or {}).get('family') in ('spread','total') or (record.get('identity') or {}).get('period')=='first_half'))) and not record['reason'] and (record['source_id'],record['market_id']) not in paired:
                 record['reason']='No other source has matching reviewed '+record['identity']['competition']+' event and settlement terms'
         from app.reference.product import at_cutoff
         refs=at_cutoff(self.references.values(),at)
         sources=[dict(source_id=s,venue_id=s,provider_id=self.inventory.get(s,{}).get('provider_id',s),origin_id=self.inventory.get(s,{}).get('origin_id',s),label=LABELS.get(s,s),role='prediction',state=self.inventory.get(s,{}).get('state','configured' if s in self.inventory else 'not_configured'),coverage=deepcopy(self.coverage_status.get(s)),catalog=deepcopy(self.inventory.get(s))) for s in dict.fromkeys([*LABELS,*self.inventory])]
         for source in sources:
             config=self.spec.get('native_sources',{}).get(source['source_id'],{})
+            if self.qualification_failure and config.get('state')=='enabled':
+                source['state']='discovery_failed'
+                source['discovery_failure']={k:deepcopy(self.qualification_failure.get(k)) for k in ('reason','traversals','responses')}
             source['selected']=config.get('selected')
             source['environment']='synthetic ('+config.get('environment','unspecified')+' shape)' if self.spec.get('mode')=='mock' and config.get('environment') else config.get('environment')
             source['update_path']=self.inventory.get(source['source_id'],{}).get('update_path')
@@ -271,6 +312,8 @@ class SessionProjection:
             started_at=self.started,stopped_at=self.finished,stop_reason=self.stop_reason,durable_cursor=token,projection_revision=REVISION,mapping_revision=self.spec.get('mapping_revision'),
             last_update=self.last,sources=sources,market_catalog=catalog,references=refs,refresh=self.refresh,generation=self.generation,
             games=games,points=points,rows_by_game=rows_by_game,comparison_groups_beyond_limit=truncated)
+        if self.spec.get('two_source_qualification'):result['qualification_fee_policy']='native-evidence-required'
+        if self.resolutions:result['resolutions']=deepcopy(list(self.resolutions.values()))
         from app.dashboard.bounds import retained_bytes
         if retained_bytes(result)>32*1024*1024:raise ValueError('snapshot byte bound')
         return deepcopy(result)

@@ -1,0 +1,4372 @@
+{
+  "aliases": [
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.nfl.com/teams/",
+      "targets": [
+        "NFL"
+      ],
+      "text": "NFL",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.nfl.com/teams/",
+      "targets": [
+        "NFL"
+      ],
+      "text": "National Football League",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "text": "Arizona Cardinals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "text": "ARI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "text": "Arizona",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "text": "Cardinals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "text": "NFL:ARI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "text": "Atlanta Falcons",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "text": "ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "text": "Atlanta",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "text": "Falcons",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "text": "NFL:ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "text": "Baltimore Ravens",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "text": "BAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "text": "Baltimore",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "text": "Ravens",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "text": "NFL:BAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "text": "Buffalo Bills",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "text": "BUF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "text": "Buffalo",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "text": "Bills",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "text": "NFL:BUF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "text": "Carolina Panthers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "text": "CAR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "text": "Carolina",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "text": "Panthers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "text": "NFL:CAR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "text": "Chicago Bears",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "text": "CHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "text": "Chicago",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "text": "Bears",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "text": "NFL:CHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "text": "Cincinnati Bengals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "text": "CIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "text": "Cincinnati",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "text": "Bengals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "text": "NFL:CIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "text": "Cleveland Browns",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "text": "CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "text": "Cleveland",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "text": "Browns",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "text": "NFL:CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "text": "Dallas Cowboys",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "text": "DAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "text": "Dallas",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "text": "Cowboys",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "text": "NFL:DAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "text": "Denver Broncos",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "text": "DEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "text": "Denver",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "text": "Broncos",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "text": "NFL:DEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DET"
+      ],
+      "text": "Detroit Lions",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DET"
+      ],
+      "text": "DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DET"
+      ],
+      "text": "Detroit",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DET"
+      ],
+      "text": "Lions",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:DET"
+      ],
+      "text": "NFL:DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:GB"
+      ],
+      "text": "Green Bay Packers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:GB"
+      ],
+      "text": "GB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:GB"
+      ],
+      "text": "Green Bay",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:GB"
+      ],
+      "text": "Packers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:GB"
+      ],
+      "text": "NFL:GB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "text": "Houston Texans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "text": "HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "text": "Houston",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "text": "Texans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "text": "NFL:HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:IND"
+      ],
+      "text": "Indianapolis Colts",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:IND"
+      ],
+      "text": "IND",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:IND"
+      ],
+      "text": "Indianapolis",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:IND"
+      ],
+      "text": "Colts",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:IND"
+      ],
+      "text": "NFL:IND",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "Jacksonville Jaguars",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "JAX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "Jacksonville",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "Jaguars",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "NFL:JAX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:KC"
+      ],
+      "text": "Kansas City Chiefs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:KC"
+      ],
+      "text": "KC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:KC"
+      ],
+      "text": "Kansas City",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:KC"
+      ],
+      "text": "Chiefs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:KC"
+      ],
+      "text": "NFL:KC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LV"
+      ],
+      "text": "Las Vegas Raiders",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LV"
+      ],
+      "text": "LV",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LV"
+      ],
+      "text": "Las Vegas",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LV"
+      ],
+      "text": "Raiders",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LV"
+      ],
+      "text": "NFL:LV",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "Los Angeles Chargers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "LAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAC",
+        "NFL:LAR"
+      ],
+      "text": "Los Angeles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "Chargers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "NFL:LAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "Los Angeles Rams",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "LAR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "Rams",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "NFL:LAR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "text": "Miami Dolphins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "text": "MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "text": "Miami",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "text": "Dolphins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "text": "NFL:MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "text": "Minnesota Vikings",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "text": "MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "text": "Minnesota",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "text": "Vikings",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "text": "NFL:MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NE"
+      ],
+      "text": "New England Patriots",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NE"
+      ],
+      "text": "NE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NE"
+      ],
+      "text": "New England",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NE"
+      ],
+      "text": "Patriots",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NE"
+      ],
+      "text": "NFL:NE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NO"
+      ],
+      "text": "New Orleans Saints",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NO"
+      ],
+      "text": "NO",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NO"
+      ],
+      "text": "New Orleans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NO"
+      ],
+      "text": "Saints",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NO"
+      ],
+      "text": "NFL:NO",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "New York Giants",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "NYG",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYG",
+        "NFL:NYJ"
+      ],
+      "text": "New York",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "Giants",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "NFL:NYG",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "New York Jets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "NYJ",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "Jets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "NFL:NYJ",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "text": "Philadelphia Eagles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "text": "PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "text": "Philadelphia",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "text": "Eagles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "text": "NFL:PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "text": "Pittsburgh Steelers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "text": "PIT",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "text": "Pittsburgh",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "text": "Steelers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "text": "NFL:PIT",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SF"
+      ],
+      "text": "San Francisco 49ers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SF"
+      ],
+      "text": "SF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SF"
+      ],
+      "text": "San Francisco",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SF"
+      ],
+      "text": "49ers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SF"
+      ],
+      "text": "NFL:SF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "text": "Seattle Seahawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "text": "SEA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "text": "Seattle",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "text": "Seahawks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "text": "NFL:SEA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "Tampa Bay Buccaneers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "TB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "Tampa Bay",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "Buccaneers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "NFL:TB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "text": "Tennessee Titans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "text": "TEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "text": "Tennessee",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "text": "Titans",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "text": "NFL:TEN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "Washington Commanders",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "WAS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "Washington",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "Commanders",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "https://www.nfl.com/teams/; curated explicit shorthand v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "NFL:WAS",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.mlb.com/team",
+      "targets": [
+        "MLB"
+      ],
+      "text": "MLB",
+      "venue": null
+    },
+    {
+      "kind": "league",
+      "league": null,
+      "source": "https://www.mlb.com/team",
+      "targets": [
+        "MLB"
+      ],
+      "text": "Major League Baseball",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ARI"
+      ],
+      "text": "Arizona Diamondbacks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ARI"
+      ],
+      "text": "ARI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ARI"
+      ],
+      "text": "Arizona",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ARI"
+      ],
+      "text": "Diamondbacks",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ARI"
+      ],
+      "text": "MLB:ARI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATL"
+      ],
+      "text": "Atlanta Braves",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATL"
+      ],
+      "text": "ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATL"
+      ],
+      "text": "Atlanta",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATL"
+      ],
+      "text": "Braves",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATL"
+      ],
+      "text": "MLB:ATL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BAL"
+      ],
+      "text": "Baltimore Orioles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BAL"
+      ],
+      "text": "BAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BAL"
+      ],
+      "text": "Baltimore",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BAL"
+      ],
+      "text": "Orioles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BAL"
+      ],
+      "text": "MLB:BAL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "text": "Boston Red Sox",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "text": "BOS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "text": "Boston",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "text": "Red Sox",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "text": "MLB:BOS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CHC"
+      ],
+      "text": "Chicago Cubs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CHC"
+      ],
+      "text": "CHC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CHC",
+        "MLB:CWS"
+      ],
+      "text": "Chicago",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CHC"
+      ],
+      "text": "Cubs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CHC"
+      ],
+      "text": "MLB:CHC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CWS"
+      ],
+      "text": "Chicago White Sox",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CWS"
+      ],
+      "text": "CWS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CWS"
+      ],
+      "text": "White Sox",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CWS"
+      ],
+      "text": "MLB:CWS",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CIN"
+      ],
+      "text": "Cincinnati Reds",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CIN"
+      ],
+      "text": "CIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CIN"
+      ],
+      "text": "Cincinnati",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CIN"
+      ],
+      "text": "Reds",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CIN"
+      ],
+      "text": "MLB:CIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CLE"
+      ],
+      "text": "Cleveland Guardians",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CLE"
+      ],
+      "text": "CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CLE"
+      ],
+      "text": "Cleveland",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CLE"
+      ],
+      "text": "Guardians",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:CLE"
+      ],
+      "text": "MLB:CLE",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:COL"
+      ],
+      "text": "Colorado Rockies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:COL"
+      ],
+      "text": "COL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:COL"
+      ],
+      "text": "Colorado",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:COL"
+      ],
+      "text": "Rockies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:COL"
+      ],
+      "text": "MLB:COL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:DET"
+      ],
+      "text": "Detroit Tigers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:DET"
+      ],
+      "text": "DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:DET"
+      ],
+      "text": "Detroit",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:DET"
+      ],
+      "text": "Tigers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:DET"
+      ],
+      "text": "MLB:DET",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:HOU"
+      ],
+      "text": "Houston Astros",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:HOU"
+      ],
+      "text": "HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:HOU"
+      ],
+      "text": "Houston",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:HOU"
+      ],
+      "text": "Astros",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:HOU"
+      ],
+      "text": "MLB:HOU",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:KC"
+      ],
+      "text": "Kansas City Royals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:KC"
+      ],
+      "text": "KC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:KC"
+      ],
+      "text": "Kansas City",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:KC"
+      ],
+      "text": "Royals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:KC"
+      ],
+      "text": "MLB:KC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAA"
+      ],
+      "text": "Los Angeles Angels",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAA"
+      ],
+      "text": "LAA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAA",
+        "MLB:LAD"
+      ],
+      "text": "Los Angeles",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAA"
+      ],
+      "text": "Angels",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAA"
+      ],
+      "text": "MLB:LAA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAD"
+      ],
+      "text": "Los Angeles Dodgers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAD"
+      ],
+      "text": "LAD",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAD"
+      ],
+      "text": "Dodgers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:LAD"
+      ],
+      "text": "MLB:LAD",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIA"
+      ],
+      "text": "Miami Marlins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIA"
+      ],
+      "text": "MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIA"
+      ],
+      "text": "Miami",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIA"
+      ],
+      "text": "Marlins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIA"
+      ],
+      "text": "MLB:MIA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIL"
+      ],
+      "text": "Milwaukee Brewers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIL"
+      ],
+      "text": "MIL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIL"
+      ],
+      "text": "Milwaukee",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIL"
+      ],
+      "text": "Brewers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIL"
+      ],
+      "text": "MLB:MIL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIN"
+      ],
+      "text": "Minnesota Twins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIN"
+      ],
+      "text": "MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIN"
+      ],
+      "text": "Minnesota",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIN"
+      ],
+      "text": "Twins",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:MIN"
+      ],
+      "text": "MLB:MIN",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYM"
+      ],
+      "text": "New York Mets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYM"
+      ],
+      "text": "NYM",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYM",
+        "MLB:NYY"
+      ],
+      "text": "New York",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYM"
+      ],
+      "text": "Mets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYM"
+      ],
+      "text": "MLB:NYM",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "text": "New York Yankees",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "text": "NYY",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "text": "Yankees",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "text": "MLB:NYY",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATH"
+      ],
+      "text": "Athletics",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATH"
+      ],
+      "text": "ATH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:ATH"
+      ],
+      "text": "MLB:ATH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PHI"
+      ],
+      "text": "Philadelphia Phillies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PHI"
+      ],
+      "text": "PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PHI"
+      ],
+      "text": "Philadelphia",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PHI"
+      ],
+      "text": "Phillies",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PHI"
+      ],
+      "text": "MLB:PHI",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PIT"
+      ],
+      "text": "Pittsburgh Pirates",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PIT"
+      ],
+      "text": "PIT",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PIT"
+      ],
+      "text": "Pittsburgh",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PIT"
+      ],
+      "text": "Pirates",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:PIT"
+      ],
+      "text": "MLB:PIT",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SD"
+      ],
+      "text": "San Diego Padres",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SD"
+      ],
+      "text": "SD",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SD"
+      ],
+      "text": "San Diego",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SD"
+      ],
+      "text": "Padres",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SD"
+      ],
+      "text": "MLB:SD",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SF"
+      ],
+      "text": "San Francisco Giants",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SF"
+      ],
+      "text": "SF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SF"
+      ],
+      "text": "San Francisco",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SF"
+      ],
+      "text": "Giants",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SF"
+      ],
+      "text": "MLB:SF",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SEA"
+      ],
+      "text": "Seattle Mariners",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SEA"
+      ],
+      "text": "SEA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SEA"
+      ],
+      "text": "Seattle",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SEA"
+      ],
+      "text": "Mariners",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:SEA"
+      ],
+      "text": "MLB:SEA",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:STL"
+      ],
+      "text": "St. Louis Cardinals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:STL"
+      ],
+      "text": "STL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:STL"
+      ],
+      "text": "St. Louis",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:STL"
+      ],
+      "text": "Cardinals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:STL"
+      ],
+      "text": "MLB:STL",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TB"
+      ],
+      "text": "Tampa Bay Rays",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TB"
+      ],
+      "text": "TB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TB"
+      ],
+      "text": "Tampa Bay",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TB"
+      ],
+      "text": "Rays",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TB"
+      ],
+      "text": "MLB:TB",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TEX"
+      ],
+      "text": "Texas Rangers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TEX"
+      ],
+      "text": "TEX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TEX"
+      ],
+      "text": "Texas",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TEX"
+      ],
+      "text": "Rangers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TEX"
+      ],
+      "text": "MLB:TEX",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TOR"
+      ],
+      "text": "Toronto Blue Jays",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TOR"
+      ],
+      "text": "TOR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TOR"
+      ],
+      "text": "Toronto",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TOR"
+      ],
+      "text": "Blue Jays",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:TOR"
+      ],
+      "text": "MLB:TOR",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:WSH"
+      ],
+      "text": "Washington Nationals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:WSH"
+      ],
+      "text": "WSH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:WSH"
+      ],
+      "text": "Washington",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:WSH"
+      ],
+      "text": "Nationals",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "https://www.mlb.com/team; curated explicit shorthand v1",
+      "targets": [
+        "MLB:WSH"
+      ],
+      "text": "MLB:WSH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "text": "JAC",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "text": "WSH",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "LA Chargers",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:LAC"
+      ],
+      "text": "Los Angeles C",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "LA Rams",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:LAR"
+      ],
+      "text": "Los Angeles R",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "NY Jets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:NYJ"
+      ],
+      "text": "New York J",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "NY Giants",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:NYG"
+      ],
+      "text": "New York G",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "text": "NY Yankees",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "MLB:NYM"
+      ],
+      "text": "NY Mets",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "Tampa Bay Bucs",
+      "venue": null
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "source": "curated-explicit-shorthand:v1",
+      "targets": [
+        "NFL:TB"
+      ],
+      "text": "Bucs",
+      "venue": null
+    }
+  ],
+  "entities": [
+    {
+      "id": "NFL",
+      "kind": "league",
+      "name": "National Football League",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:ARI",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Arizona Cardinals",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:ATL",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Atlanta Falcons",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:BAL",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Baltimore Ravens",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:BUF",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Buffalo Bills",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:CAR",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Carolina Panthers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:CHI",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Chicago Bears",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:CIN",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Cincinnati Bengals",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:CLE",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Cleveland Browns",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:DAL",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Dallas Cowboys",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:DEN",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Denver Broncos",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:DET",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Detroit Lions",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:GB",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Green Bay Packers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:HOU",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Houston Texans",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:IND",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Indianapolis Colts",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:JAX",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Jacksonville Jaguars",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:KC",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Kansas City Chiefs",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:LV",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Las Vegas Raiders",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:LAC",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Los Angeles Chargers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:LAR",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Los Angeles Rams",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:MIA",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Miami Dolphins",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:MIN",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Minnesota Vikings",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:NE",
+      "kind": "team",
+      "league": "NFL",
+      "name": "New England Patriots",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:NO",
+      "kind": "team",
+      "league": "NFL",
+      "name": "New Orleans Saints",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:NYG",
+      "kind": "team",
+      "league": "NFL",
+      "name": "New York Giants",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:NYJ",
+      "kind": "team",
+      "league": "NFL",
+      "name": "New York Jets",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:PHI",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Philadelphia Eagles",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:PIT",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Pittsburgh Steelers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:SF",
+      "kind": "team",
+      "league": "NFL",
+      "name": "San Francisco 49ers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:SEA",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Seattle Seahawks",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:TB",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Tampa Bay Buccaneers",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:TEN",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Tennessee Titans",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "NFL:WAS",
+      "kind": "team",
+      "league": "NFL",
+      "name": "Washington Commanders",
+      "source": "https://www.nfl.com/teams/"
+    },
+    {
+      "id": "MLB",
+      "kind": "league",
+      "name": "Major League Baseball",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:ARI",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Arizona Diamondbacks",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:ATL",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Atlanta Braves",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:BAL",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Baltimore Orioles",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:BOS",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Boston Red Sox",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:CHC",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Chicago Cubs",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:CWS",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Chicago White Sox",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:CIN",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Cincinnati Reds",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:CLE",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Cleveland Guardians",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:COL",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Colorado Rockies",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:DET",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Detroit Tigers",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:HOU",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Houston Astros",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:KC",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Kansas City Royals",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:LAA",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Los Angeles Angels",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:LAD",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Los Angeles Dodgers",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:MIA",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Miami Marlins",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:MIL",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Milwaukee Brewers",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:MIN",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Minnesota Twins",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:NYM",
+      "kind": "team",
+      "league": "MLB",
+      "name": "New York Mets",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:NYY",
+      "kind": "team",
+      "league": "MLB",
+      "name": "New York Yankees",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:ATH",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Athletics",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:PHI",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Philadelphia Phillies",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:PIT",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Pittsburgh Pirates",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:SD",
+      "kind": "team",
+      "league": "MLB",
+      "name": "San Diego Padres",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:SF",
+      "kind": "team",
+      "league": "MLB",
+      "name": "San Francisco Giants",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:SEA",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Seattle Mariners",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:STL",
+      "kind": "team",
+      "league": "MLB",
+      "name": "St. Louis Cardinals",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:TB",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Tampa Bay Rays",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:TEX",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Texas Rangers",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:TOR",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Toronto Blue Jays",
+      "source": "https://www.mlb.com/team"
+    },
+    {
+      "id": "MLB:WSH",
+      "kind": "team",
+      "league": "MLB",
+      "name": "Washington Nationals",
+      "source": "https://www.mlb.com/team"
+    }
+  ],
+  "native_mappings": [
+    {
+      "environment": "production",
+      "kind": "league",
+      "league": null,
+      "native_id": "1",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/league",
+      "target": "NFL",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "77",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/0/teams/0",
+      "target": "NFL:TB",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "54",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/0/teams/1",
+      "target": "NFL:CIN",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "49",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/1/teams/0",
+      "target": "NFL:ATL",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "74",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/1/teams/1",
+      "target": "NFL:PIT",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "50",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/2/teams/0",
+      "target": "NFL:BAL",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "61",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/2/teams/1",
+      "target": "NFL:IND",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "53",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/3/teams/0",
+      "target": "NFL:CHI",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "52",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/3/teams/1",
+      "target": "NFL:CAR",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "72",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/4/teams/0",
+      "target": "NFL:NYJ",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "78",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/4/teams/1",
+      "target": "NFL:TEN",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "70",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/5/teams/0",
+      "target": "NFL:NO",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "58",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/5/teams/1",
+      "target": "NFL:DET",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "51",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/6/teams/0",
+      "target": "NFL:BUF",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "60",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/6/teams/1",
+      "target": "NFL:HOU",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "55",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/7/teams/0",
+      "target": "NFL:CLE",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "62",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/7/teams/1",
+      "target": "NFL:JAX",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "59",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/8/teams/0",
+      "target": "NFL:GB",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "68",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/8/teams/1",
+      "target": "NFL:MIN",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "48",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/9/teams/0",
+      "target": "NFL:ARI",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "production",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "65",
+      "source": "evidence/phase-0/pmus-nfl-events.json#/events/9/teams/1",
+      "target": "NFL:LAC",
+      "venue": "polymarket_us"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "league",
+      "league": null,
+      "native_id": "31",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/tournament_id",
+      "target": "NFL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "5",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/competitors/0",
+      "target": "NFL:CAR",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "6",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/0/competitors/1",
+      "target": "NFL:CHI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "7",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/1/competitors/0",
+      "target": "NFL:CIN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "33",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/1/competitors/1",
+      "target": "NFL:TB",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005098",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/2/competitors/0",
+      "target": "NFL:PIT",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005093",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/2/competitors/1",
+      "target": "NFL:ATL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "13",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/3/competitors/0",
+      "target": "NFL:HOU",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "4",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/3/competitors/1",
+      "target": "NFL:BUF",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "15",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/4/competitors/0",
+      "target": "NFL:JAX",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "8",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/4/competitors/1",
+      "target": "NFL:CLE",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005082",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/5/competitors/0",
+      "target": "NFL:CIN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005092",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/5/competitors/1",
+      "target": "NFL:TB",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "28",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/6/competitors/0",
+      "target": "NFL:PIT",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "2",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/6/competitors/1",
+      "target": "NFL:ATL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "14",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/0",
+      "target": "NFL:IND",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "3",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/7/competitors/1",
+      "target": "NFL:BAL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005104",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/8/competitors/0",
+      "target": "NFL:HOU",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005089",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/8/competitors/1",
+      "target": "NFL:BUF",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005078",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/9/competitors/0",
+      "target": "NFL:TEN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005081",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/9/competitors/1",
+      "target": "NFL:NYJ",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005097",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/10/competitors/0",
+      "target": "NFL:JAX",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005095",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/10/competitors/1",
+      "target": "NFL:CLE",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005094",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/11/competitors/0",
+      "target": "NFL:CAR",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005086",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/11/competitors/1",
+      "target": "NFL:CHI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "34",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/12/competitors/0",
+      "target": "NFL:TEN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "24",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/12/competitors/1",
+      "target": "NFL:NYJ",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005096",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/13/competitors/0",
+      "target": "NFL:IND",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005079",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/13/competitors/1",
+      "target": "NFL:BAL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005100",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/14/competitors/0",
+      "target": "NFL:DET",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005103",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/14/competitors/1",
+      "target": "NFL:NO",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "25",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/15/competitors/0",
+      "target": "NFL:LV",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "19",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/15/competitors/1",
+      "target": "NFL:MIA",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005077",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/16/competitors/0",
+      "target": "NFL:PHI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005106",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/16/competitors/1",
+      "target": "NFL:WAS",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "29",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/17/competitors/0",
+      "target": "NFL:LAC",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/17/competitors/1",
+      "target": "NFL:ARI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005076",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/18/competitors/0",
+      "target": "NFL:LV",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005101",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/18/competitors/1",
+      "target": "NFL:MIA",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005080",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/19/competitors/0",
+      "target": "NFL:LAC",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005088",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/19/competitors/1",
+      "target": "NFL:ARI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "26",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/0",
+      "target": "NFL:PHI",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "35",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/20/competitors/1",
+      "target": "NFL:WAS",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005102",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/21/competitors/0",
+      "target": "NFL:MIN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005084",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/21/competitors/1",
+      "target": "NFL:GB",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "20",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/22/competitors/0",
+      "target": "NFL:MIN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "12",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/22/competitors/1",
+      "target": "NFL:GB",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005091",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/23/competitors/0",
+      "target": "NFL:NYG",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005083",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/23/competitors/1",
+      "target": "NFL:DAL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "23",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/24/competitors/0",
+      "target": "NFL:NYG",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "9",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/24/competitors/1",
+      "target": "NFL:DAL",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "16",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/25/competitors/0",
+      "target": "NFL:KC",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "10",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/25/competitors/1",
+      "target": "NFL:DEN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005090",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/26/competitors/0",
+      "target": "NFL:KC",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "1700005075",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/26/competitors/1",
+      "target": "NFL:DEN",
+      "venue": "prophetx"
+    },
+    {
+      "environment": "sandbox",
+      "kind": "team",
+      "league": "NFL",
+      "native_id": "11",
+      "source": "evidence/slice-3/sandbox-qualification-20260912/attempt-1/sandbox-20260912T005720Z/market-002.json#/data/sport_events/28/competitors/1",
+      "target": "NFL:DET",
+      "venue": "prophetx"
+    }
+  ],
+  "planned_leagues": [
+    "NFL",
+    "NCAAF",
+    "MLB",
+    "NBA",
+    "NHL"
+  ],
+  "schema_version": 1,
+  "verified_at": "2026-09-12",
+  "version": "2026-09-12.1"
+}

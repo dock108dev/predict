@@ -1,0 +1,26 @@
+'use strict';
+window.PredictResolution=(()=>{
+ let sequence=0,options=[],base=null;
+ const keys=['resolution_session','resolution_cutoff','resolution_asof'];
+ const el=id=>document.getElementById(id);
+ const safe=x=>String(x??'Unknown').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const payoutText=p=>!p?'Payout not established':p.kind==='fraction'?'Pays $'+p.value+' per $1 contract':(p.kind==='stake_refund'||p.kind==='refund')?'Returns the original purchase stake':'Unsupported payout';
+ const recordHTML=r=>{const p=r.payload;return `<p>${safe(p.source)} · ${safe(p.status)}${r.kind==='sporting'?(p.target?.market_identity?.family==='futures'?' · Championship state: '+safe(p.winning_state||p.eliminated?.join(', ')||'pending'):' · '+safe(p.home_score)+' – '+safe(p.away_score)):''}<br>Source time ${safe(p.source_at)} · published ${safe(p.published_at)} · received ${safe(r.received_at)}<br>${safe(r.evidence_mode)} evidence</p>`;};
+ function render(v){
+  const sport=v.sporting;
+  el('resolution-output').innerHTML=`<p>Resolution as of ${safe(v.as_of)}. Prediction cutoff remains ${safe(v.prediction_cutoff)}.</p><h3>Sporting result · ${safe(sport.state)}</h3>${['mlb-resolution-view-1','nhl-resolution-view-1'].includes(v.version)?'<p>Score scope: '+safe(sport.selected?.payload.score_scope)+' · Original score basis: '+safe(sport.selected?.payload.score_basis||sport.selected?.payload.score_representation)+'</p>':''}${v.version==='ncaab-resolution-view-1'?'<p>Men’s college basketball score period: '+safe(sport.selected?.payload.score_scope||sport.selected?.payload.period||'not established')+'</p>':''}${v.version==='ncaaf-resolution-view-1'?'<p>College football score period: '+safe(sport.selected?.payload.score_scope||sport.selected?.payload.period||'not established')+'</p>':''}${v.version==='nba-resolution-view-1'?'<p>NBA score period: '+safe(sport.selected?.payload.score_scope||sport.selected?.payload.period||'not established')+'</p>':''}${['ncaaf-resolution-view-1','ncaab-resolution-view-1'].includes(v.version)&&sport.selected?'<p>Revision: '+safe(sport.selected.payload.revision_type)+'</p>':''}${sport.selected?recordHTML(sport.selected):'<p>No unambiguous supported sporting result.</p>'}`+v.venues.map(x=>`<article class="panel"><h3>${safe(x.source)} · ${safe(x.label)}</h3><h4>Expected payout under the reviewed rule</h4><p>${safe(x.expected.state)} · ${safe(x.expected.payout?payoutText(x.expected.payout):x.expected.reason)}</p>${x.expected.cashflow?'<details><summary>Hypothetical cashflow at original size and fee assumptions</summary><pre>'+safe(JSON.stringify(x.expected.cashflow,null,2))+'</pre><p>This is not an executed trade or realized profit.</p></details>':''}<h4>Venue-reported settlement · ${safe(x.observed.state)}</h4>${x.observed.selected?recordHTML(x.observed.selected)+'<p>Reported payout: '+safe(payoutText(x.observed.selected.payload.payout))+' · Fees: '+safe(x.observed.selected.payload.payout?.fee_treatment||'unknown')+'</p>':'<p>Missing, unsupported or conflicting decision evidence.</p>'}${x.disagrees_with_rule?'<p class="warning">Venue report differs from the rule-derived expectation. Neither replaces the other.</p>':''}<details><summary>Retained decisions and corrections</summary><pre>${safe(JSON.stringify(x.observed.records,null,2))}</pre></details></article>`).join('')+`<details><summary>Sporting revisions and unbound evidence</summary><pre>${safe(JSON.stringify({sporting:sport.records,unbound:v.unbound},null,2))}</pre></details><p>${safe(v.limitation)}</p>`;
+ }
+ async function load(q){
+  base=new URLSearchParams(q);const n=++sequence;el('resolution-output').replaceChildren();
+  try{const res=await fetch('/api/resolution?'+base);const data=await res.json();if(n!==sequence)return;
+   if(!res.ok)throw Error(data.error);el('resolution-panel').hidden=!!data.unsupported;if(data.unsupported)return;
+   options=data.options;el('resolution-choice').innerHTML='<option value="">Choose saved resolution evidence</option>'+options.map((o,i)=>`<option value="${i}">${safe(o.as_of)} · ${safe(o.label)} · ${safe(o.cutoff.split('-')[0])}</option>`).join('');
+   const selected=options.findIndex(o=>o.session===base.get('resolution_session')&&o.cutoff===base.get('resolution_cutoff'));el('resolution-choice').value=selected<0?'':String(selected);
+   el('resolution-asof').value=base.get('resolution_asof')||'';el('resolution-status').textContent=options.length?'Choose an immutable resolution cutoff and as-of time.':'Missing resolution evidence for this prediction cutoff.';
+   if(data.view)render(data.view);
+  }catch(e){if(n!==sequence)return;el('resolution-panel').hidden=false;el('resolution-status').textContent=e.message;el('resolution-output').replaceChildren();}
+ }
+ el('resolution-choice').onchange=()=>{const o=options[Number(el('resolution-choice').value)];if(el('resolution-choice').value!==''&&o)el('resolution-asof').value=o.as_of;};
+ el('resolution-load').onclick=()=>{if(!base)return;const o=options[Number(el('resolution-choice').value)];const q=new URLSearchParams(location.search);keys.forEach(k=>q.delete(k));if(el('resolution-choice').value!==''&&o){q.set(keys[0],o.session);q.set(keys[1],o.cutoff);q.set(keys[2],el('resolution-asof').value);}history.replaceState(null,'','?'+q);load(q);};
+ return {load};
+})();

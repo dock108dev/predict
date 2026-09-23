@@ -353,7 +353,7 @@ class TransportSession:
                 if not self.stop_event.is_set():self.request_stop('producer_ended')
         try:
             # Deadline includes bounded discovery, connections and backoff.
-            seconds=min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
+            seconds=self.spec['duration'] if self.spec.get('two_source_qualification') else min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
             if getattr(self, 'started_monotonic', None) is not None:
                 import time
                 seconds=max(0, seconds-(time.monotonic()-self.started_monotonic))

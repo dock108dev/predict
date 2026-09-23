@@ -60,12 +60,12 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def guard(request,handler):
         try:
             check_browser(request)
-            if request.method=='POST' and request.path!='/api/references' and (request.content_length or 0)>4096:raise web.HTTPRequestEntityTooLarge(max_size=4096,actual_size=request.content_length)
+            if request.method=='POST' and request.path not in ('/api/references','/api/resolutions') and (request.content_length or 0)>4096:raise web.HTTPRequestEntityTooLarge(max_size=4096,actual_size=request.content_length)
             if request.path in ('/api/dashboard','/api/calculate'):
                 q=request.query
                 calculation_inputs(q)
                 if any(len(q.getall(k))!=1 for k in q):raise ValueError('Duplicate selection')
-                choices={'view':('arb','ev','research'),'sort':('roi','dollars'),
+                choices={'period':('','full_game','first_half','second_half','quarter_1','quarter_2','quarter_3','quarter_4','first_3','first_5','first_6','regulation_9','period_1','period_2','period_3','season'),'family':('','moneyline','spread','total','futures'),'view':('arb','ev','research'),'sort':('roi','dollars'),
                          'scenario':('cent','direct','unknown'),
                          'freshness':('','usable','unavailable'),'positive':('true','false')}
                 for key,values in choices.items():
@@ -96,12 +96,52 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         await owner.stop()
         return web.json_response(owner.status())
     async def import_references(req):
+        if owner.spec_factory().get('two_source_qualification'):raise ValueError('Reference imports excluded from this frozen prediction-only attempt')
         from app.reference.product import emit_references
         if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained references')
         refs=await req.json()
         emit_references(owner.session,refs)
         await owner.session.queue.join()
         return web.json_response(dict(imported=len(refs),session=owner.session.sid))
+    async def import_resolutions(req):
+        if owner.spec_factory().get('two_source_qualification'):raise ValueError('Result imports excluded from this frozen prediction-only attempt')
+        from app.resolution.core import emit_records
+        if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained resolution evidence')
+        records=await req.json();emit_records(owner.session,records)
+        await owner.session.queue.join()
+        return web.json_response(dict(imported=len(records),session=owner.session.sid))
+    async def resolution(req):
+        from app.dashboard import session_history
+        from app.resolution.core import resolve
+        q=req.query
+        if any(len(q.getall(k))!=1 for k in q):raise ValueError('Duplicate resolution selection')
+        calculation_inputs(q)
+        sid,gid=q['session'].split('~',1);d=datasets()[sid]
+        if q['hash']!=sid or 'product' not in d:raise ValueError('Unbound prediction snapshot')
+        snap=product_cutoff(sid,d,q['cutoff']);game=next(g for g in snap['games'] if g['id']==gid)
+        if (game['product_identity'].get('competition'),game['product_identity'].get('season')) not in (('NFL','2026'),('NBA','2026-2027'),('NCAAF','2026'),('NCAAB','2026-2027'),('MLB','2026'),('NHL','2026-2027')):return web.json_response(dict(options=[],unsupported='Resolution mapping unavailable for this competition/season'))
+        paths=owner.history_paths() if hasattr(owner,'history_paths') else {};options=[];unavailable=[]
+        # Only completed saved sessions expose resolution history; ongoing imports
+        # become reviewable after Stop, keeping acknowledged history authoritative.
+        for rsid,folder in paths.items():
+            if owner.active() and owner.session and rsid==owner.session.sid:continue
+            try:hist=session_history.resolution_history(folder)
+            except (ValueError,OSError,KeyError):
+                unavailable.append(rsid);continue
+            if hist['state']!='complete':continue
+            for option in hist['options']:
+                if any(t and t.get('session_id')==sid and t.get('game_id')==gid and t.get('prediction_cutoff')==q['cutoff'] for t in option['targets']):
+                    options.append(dict(session=rsid,**{k:v for k,v in option.items() if k!='targets'}))
+        result=dict(options=options,unavailable_sessions=unavailable,limitation='Choose a saved resolution cutoff. Original prediction calculations stay frozen.')
+        requested=[q.get(k) for k in ('resolution_session','resolution_cutoff','resolution_asof')]
+        if any(requested):
+            if not all(requested):raise ValueError('Explicit resolution session, cutoff and as-of required')
+            rsid,rcut,asof=requested
+            if not any(o['session']==rsid and o['cutoff']==rcut for o in options):raise ValueError('Unknown bound resolution selection')
+            hist=session_history.resolution_history(paths[rsid],rcut)
+            result['view']=resolve(hist['records'],snap,game,asof,q)
+            result['view'].update(resolution_session=rsid,resolution_cutoff=rcut)
+        return web.json_response(result)
     async def catalog(req):
         items=[]
         for sid,d in datasets().items():
@@ -144,7 +184,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         if 'product' in d:
             from app.dashboard import product_view
             p=d['product'];items=product_view.dashboard(p,q,assumptions)
-            result.update(rows=items,total_candidates=len(items),live=p['view_mode']=='current',state=p['state'],data_mode=p['data_mode'],capture_time=p['started_at'],last_update=p['last_update'],sources=p['sources'],references=p['references'],market_catalog=p['market_catalog'],durable_cursor=p['durable_cursor'],coverage=dict(selected=len(p['games']),excluded=[m for m in p['market_catalog'] if m.get('reason')],truncated_by_limit=p['comparison_groups_beyond_limit'],sources=p['sources'],generation=p['generation'],refresh=p['refresh']))
+            result.update(fee_scenario_locked=bool(p.get('qualification_fee_policy')),rows=items,total_candidates=len(items),live=p['view_mode']=='current',state=p['state'],data_mode=p['data_mode'],capture_time=p['started_at'],last_update=p['last_update'],sources=p['sources'],references=p['references'],market_catalog=p['market_catalog'],durable_cursor=p['durable_cursor'],coverage=dict(selected=len(p['games']),excluded=[m for m in p['market_catalog'] if m.get('reason')],truncated_by_limit=p['comparison_groups_beyond_limit'],sources=p['sources'],generation=p['generation'],refresh=p['refresh']))
             return web.json_response(result)
         result.update(coverage=d['coverage'],live=d['live'],last_update=d['rows'][-1]['observed_at'],capture_time=d['rows'][0]['observed_at'],data_mode=d['rows'][0]['spec']['mode'])
         view=q.get('view','arb');items=[]
@@ -174,7 +214,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     async def game(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/index.html')
     async def style(req):return web.FileResponse(ROOT/'app/dashboard/static/style.css')
     async def shared(req):return web.FileResponse(ROOT/'app/dashboard/e5_static/state.js')
-    app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
+    app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
     app.router.add_static('/view/',ROOT/'app/dashboard/opportunity_static')
     async def cleanup(app):await owner.close()
     app.on_cleanup.append(cleanup)

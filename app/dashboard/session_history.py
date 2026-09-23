@@ -30,6 +30,9 @@ def verified(folder):
         rows=reader.rows(allow_interrupted=not bool(manifest))
         state='complete' if manifest else 'interrupted'
     else:
+        # Legacy flat reopening materializes records; refuse oversized input before allocation.
+        # Existing segmented history remains the normal long-session path. No files are changed.
+        if (folder/(folder.name+'.jsonl')).stat().st_size>64*1024*1024:raise ValueError('Flat saved session exceeds the 64 MiB read limit; original file preserved. Use segmented storage for new long sessions.')
         saved=reopen(folder/(folder.name+'.jsonl')); rows=iter(saved['rows']); state=saved['state']
         if manifest and (saved['sha256']!=manifest['journal_chain'] or state!='complete'): raise ValueError('coverage journal identity mismatch')
     if not manifest: state='interrupted'
@@ -67,3 +70,29 @@ def list_sessions(roots):
         for p in sorted(Path(root).glob('*/run-spec.json'),key=lambda p:p.stat().st_mtime):
             found[p.parent.name]=p.parent
     return found
+
+
+def resolution_history(folder,through_cursor=None):
+    """Read the existing verified journal, without reprojecting postgame books.
+
+    Prefix token uses the same durable cursor algorithm as SessionProjection.
+    No sidecar journal or mutation of completed packages is involved.
+    """
+    from app.dashboard.session_projection import stable
+    from app.resolution.core import validate,MAX_RECORDS
+    data=verified(folder);chain='0'*64;records={};options=[];selected=None;sid=None;mode=None;finished=False
+    for cursor,row in enumerate(data['rows'],1):
+        if finished:raise ValueError('Observation after terminal')
+        if row['type']=='session_started':sid=row['session_id'];mode=row['spec']['mode']
+        if row['session_id']!=sid or sid!=Path(folder).name:raise ValueError('Resolution journal identity mismatch')
+        chain=stable([chain,row]);token=str(cursor)+'-'+chain
+        if row['type']=='product_resolution':
+            r=row['resolution'];validate(r)
+            if mode!='mock' and r['evidence_mode']=='synthetic':raise ValueError('Synthetic resolution in real session')
+            if r['id'] not in records:records[r['id']]=dict(record=r,observed_at=row['observed_at'],cursor=cursor)
+            if len(records)>MAX_RECORDS:raise ValueError('Resolution bound')
+            options.append(dict(cutoff=token,as_of=row['observed_at'],label=r['kind']+' · '+str(r['payload'].get('status','unknown'))+(' · correction' if r['payload']['supersedes'] else ''),targets=[v['record']['payload'].get('target') for v in records.values()]))
+        if token==through_cursor:selected=list(records.values())
+        if row['type']=='session_finished':finished=True
+    if through_cursor and selected is None:raise ValueError('Unknown resolution cutoff')
+    return dict(records=selected if through_cursor else list(records.values()),options=options,state=data['state'])

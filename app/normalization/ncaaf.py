@@ -30,7 +30,8 @@ def event_key(event):
         raise ValueError('NCAAF start outside declared fall / January season')
     if event.get('stage') not in ('regular_season','conference_championship','bowl','playoffs'):
         raise ValueError('Explicit NCAAF single-game stage required')
-    registry=Registry.load();mapping=event.get('participants',{})
+    from app.normalization.college_registry import for_event
+    registry=for_event(event);mapping=event.get('participants',{})
     if len(mapping)!=2 or len(set(mapping.values()))!=2:
         raise ValueError('Two distinct reviewed NCAAF schools required')
     for name,cid in mapping.items():

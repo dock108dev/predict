@@ -1,4 +1,5 @@
 """Ordinary dashboard payload from the shared durable projection."""
+from app.normalization import score_periods
 from app.dashboard.multi_game import game_calculation, rank_filter
 
 
@@ -9,7 +10,7 @@ def references_for(snapshot,game,key=None):
 
 
 def usable(r):
-    if r.get('market_identity',{}).get('family') in ('spread','total') and (r.get('parser')!='score_distribution' or r.get('schema_version')!='b4-reference-1'):return False
+    if (r.get('market_identity',{}).get('family') in ('spread','total','futures') or r.get('market_identity',{}).get('period')=='first_half' or score_periods.scope(r.get('market_identity',{}))) and (r.get('parser')!='score_distribution' or r.get('schema_version')!='b4-reference-1'):return False
     if r.get('market_identity',{}).get('competition') in ('NHL','MLB','NBA','NCAAF','NCAAB') and r.get('schema_version')!='b4-reference-1':return False
     return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind') in ('probability','partition_distribution') and r.get('conversion_method') and r.get('value') is not None
 
@@ -21,6 +22,8 @@ def reference_for(snapshot,game,key):
 
 
 def calculate(snapshot,game,q):
+    locked=snapshot.get('qualification_fee_policy')=='native-evidence-required'
+    if locked:q=dict(q,scenario='unknown')
     point=snapshot['points'][game['id']]
     reference=None
     if q.get('reference'):
@@ -32,10 +35,13 @@ def calculate(snapshot,game,q):
         result['ev']['probability_source']=reference['role']+' · '+reference['provider_id']+' / '+reference.get('origin_id','unknown')+' · received '+reference['received_at']
         result['ev'].update(reference=reference,unconditional_ev=None,exceptional_probabilities=reference.get('exceptional_probabilities'),reference_limitation=reference.get('reason') or 'Published probability used in a normal-winner two-state what-if; no exceptional-outcome renormalization. Unconditional EV unavailable.')
     if game.get('score_reviews') and reference:
-        result['ev']['reference_limitation']='Explicit completed-game partition distribution; exceptional probabilities unknown. Unconditional EV unavailable.'
+        result['ev']['reference_limitation']=('Explicit first-half partition distribution including tie / equality; no later scoring. Exceptional probabilities unknown.' if game['product_identity']['period']=='first_half' else 'Explicit completed-game partition distribution; exceptional probabilities unknown. Unconditional EV unavailable.')
     result['reference_id']=reference['id'] if reference else None
     if not game.get('score_reviews'):result['assumptions']='Normal winner comparison; fees apply only where retained source terms and the pinned source handler support them. Unknown fee, settlement or depth inputs leave net dollars unavailable. '+('Synthetic integration inputs.' if snapshot['data_mode']=='synthetic' else 'Retained observation inputs.')
     result.update(references=references_for(snapshot,game),data_mode=snapshot['data_mode'],view_mode=snapshot['view_mode'],state=snapshot['state'],frozen_cutoff=True)
+    if locked:
+        result['fee_scenario_locked']=True
+        result['assumptions']='Native fee applicability and settlement charges are unresolved in this qualification. Net dollars remain unavailable; hypothetical fee assumptions cannot qualify real economics.'
     return result
 
 
@@ -43,6 +49,9 @@ def dashboard(snapshot,q,assumptions):
     items=[];sid=snapshot['session_id'];view=q.get('view','arb')
     if view=='research':return [] # Retrospective research remains on its original saved packages.
     for game in snapshot['games']:
+        if any(q.get(k) and game['product_identity'].get(k)!=q[k] for k in ('competition','season')):continue
+        if q.get('period') and game['product_identity']['period']!=q['period']:continue
+        if q.get('family') and game['product_identity']['family']!=q['family']:continue
         r=calculate(snapshot,game,{k:v for k,v in q.items() if k!='reference'});point=snapshot['points'][game['id']]
         common=dict(game_id=game['id'],game_title=game['title'],start=game['scheduled_start'],session=sid+'~'+game['id'],hash=sid,cutoff=point['id'],at=point['at'],historical=snapshot['view_mode']!='current',references=references_for(snapshot,game),market_identity=game['product_identity'])
         if view=='arb':

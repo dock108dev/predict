@@ -322,6 +322,12 @@ class CapturedMoneylineTests(unittest.TestCase):
         self.assertEqual({p['settlement']['status'] for p in self.result['pairs'].values()},{'UNKNOWN'})
         self.assertFalse(any(p['qualification']['eligible_for_fee_arb_evaluation'] for p in self.result['pairs'].values()))
 
+    def test_retained_registry_does_not_weaken_current_registry_binding(self):
+        from app.normalization import Registry
+        _,rows,_,coverage=captured_inputs(registry=Registry.load())
+        self.assertTrue(all('normalization-registry-disagreement' in row['reasons'] for row in rows))
+        self.assertFalse(any(c['captured_full_game_moneylines'] for c in coverage))
+
     def test_actual_sources_and_native_sides(self):
         self.assertTrue(self.excluded)
         self.assertTrue(all(x['reason'].startswith('non-moneyline') for x in self.excluded))

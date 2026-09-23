@@ -2,6 +2,7 @@
 from hashlib import sha256
 import json
 from app.normalization.registry import Registry
+from app.normalization.college_registry import for_event
 from app.reference.product import time
 
 def winner_review(config,event,market,meta,source,mode):
@@ -52,7 +53,7 @@ def winner_review(config,event,market,meta,source,mode):
     sides=market.get('product_outcomes',[])
     if sides!=r.get('outcomes') or len(sides)!=2 or len({s.get('native_id') for s in sides})!=2:
         raise ValueError(f'{league} native outcome orientation missing or conflicting')
-    names={Registry.load().entities[c]['name'] for c in event['participants'].values()}
+    names={for_event(event).entities[c]['name'] for c in event['participants'].values()}
     winners=[]
     for s in sides:
         if s.get('participant') not in names or s.get('predicate') not in ('win','not_win') or not s.get('native_id'):
@@ -64,7 +65,7 @@ def winner_review(config,event,market,meta,source,mode):
     if source in ('kalshi','polymarket_us'):
         matched=[m for m in markets if str(m.get('ticker' if source=='kalshi' else 'id'))==market['id']]
         if len(matched)!=1:raise ValueError(f'Missing or duplicate native {league} listing')
-        nm=matched[0];registry=Registry.load()
+        nm=matched[0];registry=for_event(event)
         if source=='kalshi' and (nm.get('event_ticker')!=event['id'] or nm.get('series_ticker') not in getattr(config,'NATIVE_SERIES',(config.SERIES,))):
             raise ValueError(f'{league} native series / event association conflict')
         if source=='polymarket_us' and nm.get('eventId')!=event['id']:
@@ -148,7 +149,7 @@ def model_reason(config,binding,body):
         if key!=i['event'] or any(i[k]!=e[k] for k in ('season','stage','competition')) or time(i['scheduled_start'])!=time(e['scheduled_start']):
             return f'Model {league} event, season or start binding conflicts'
         if any(str(e[k]) not in body for k in ('game_id','scheduled_start','original_start','competition','season','stage')):return f'Model {league} game ID or start evidence missing'
-        registry=Registry.load()
+        registry=for_event(e)
         if r.get('published_outcome') not in ('home_win','away_win'):return 'Explicit published home-win or away-win output required'
         for field,cid in [('home_name',e['home']),('away_name',e['away'])]:
             if not r.get(field) or r[field] not in body or registry.resolve('team',r[field],league=league).canonical_id!=cid:

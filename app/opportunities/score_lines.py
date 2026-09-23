@@ -6,6 +6,7 @@ from app.opportunities.board import contracts,leg_value,textnum,total
 from app.fees.engine import number
 from app.settlement import profile
 from app.reference.product import time
+from app.normalization import score_periods
 
 
 def evaluate(point,rows,quantity,scenario,probability,selected,identity):
@@ -32,7 +33,7 @@ def _evaluate(point,rows,quantity,scenario,probability,selected,identity):
         if venue=='polymarket_us':assessment['pmus_coefficient']=r.get('fee_basis',{}).get('coefficient')
     cs=contracts(point,identity);legs={}
     for k,c in cs.items():
-        side=identity['sides'][k];c['contract']=side['label']+' · '+side['domain'].replace('_',' ')+' '+{'gt':'>','ge':'≥','lt':'<','le':'≤'}[side['operator']]+' '+side['threshold']+' · equality: '+side['equality'].replace('_',' ');pays={}
+        side=identity['sides'][k];c['contract']=side['label'] if side['domain']=='championship_states' else side['label']+' · '+side['domain'].replace('_',' ')+' '+{'gt':'>','ge':'≥','lt':'<','le':'≤','eq':'=','ne':'≠'}[side['operator']]+' '+side['threshold']+' · equality: '+side['equality'].replace('_',' ');pays={}
         for part in parts:
             v=payout(side,part)
             pays[part['id']]=dict(kind='unknown' if v is None else 'stake_refund' if v=='refund' else 'fraction',value=v)
@@ -48,13 +49,13 @@ def _evaluate(point,rows,quantity,scenario,probability,selected,identity):
     for cid,title,keys in identity['candidates']:
         ls=[legs[k] for k in keys];reasons=list(dict.fromkeys(v for l in ls for v in l['reasons']))
         receipts=[time(l['received_at']) for l in ls if l['received_at']]
-        if len(receipts)==2 and abs((receipts[0]-receipts[1]).total_seconds())>5:reasons.append('Books more than 5 seconds apart at cutoff')
+        if len(receipts)>=2 and (max(receipts)-min(receipts)).total_seconds()>5:reasons.append('Books more than 5 seconds apart at cutoff')
         flows={p['id']:total([None if not l['cashflows'].get(p['id']) else l['cashflows'][p['id']]['net_cashflow'] for l in ls]) for p in parts}
         net=None if reasons or any(v is None for v in flows.values()) else min(flows.values())
         cash=total([l['cash'] for l in ls]);raw=total([l['ask'] for l in ls])
         candidates.append(dict(id=cid,title=title,legs=ls,status='Conditional scenario' if net is not None else 'Unavailable',raw_combined_price=textnum(raw),raw_gap=None,
-            notional=textnum(total([l['notional'] for l in ls])),fees=textnum(total([l['fee'] for l in ls])),cash=textnum(cash),profit=textnum(net),return_pct=textnum(None if net is None or not cash else net/cash*100),normal_cashflows={k:textnum(v) for k,v in flows.items()},worst_case_all_outcomes=None,settlement={'normal':'completed full game including extra innings, action' if i['competition']=='MLB' else 'completed full game including overtime','exceptions':{v:r['terms'] for v,r in identity['score_reviews'].items()}},relationship='Exact reachable score partition',reasons=reasons,positive_normal_scenario=net is not None and net>0,current_executable=False,score_partitions=parts))
-    leg=legs[selected];ev=dict(probability=None,probability_source='Explicitly supplied score-partition scenario; manual input is not a forecast',conditional_on='Completed full-game score only; cancellation, suspension, void and other exceptions excluded',expected_payout=None,expected_profit=None,return_pct=None,break_even_pct=None,status='Assumption needed',leg=leg,score_partitions=parts,reasons=list(leg['reasons']))
+            notional=textnum(total([l['notional'] for l in ls])),fees=textnum(total([l['fee'] for l in ls])),cash=textnum(cash),profit=textnum(net),return_pct=textnum(None if net is None or not cash else net/cash*100),normal_cashflows={k:textnum(v) for k,v in flows.items()},worst_case_all_outcomes=None,settlement={'normal':'Explicit championship states; unknown exceptional states unavailable' if i['family']=='futures' else i['period']+' only; later scoring excluded' if score_periods.scope(i) else 'completed first half only; tie / equality included; no second half or overtime' if i['period']=='first_half' else i['rules']['settlement_score'] if i['competition']=='NHL' else 'completed full game including extra innings, action' if i['competition']=='MLB' else 'completed full game including overtime','exceptions':{v:r['terms'] for v,r in identity['score_reviews'].items()}},relationship='Exact reachable score partition',reasons=reasons,positive_normal_scenario=net is not None and net>0,current_executable=False,score_partitions=parts))
+    leg=legs[selected];ev=dict(probability=None,probability_source='Explicitly supplied score-partition scenario; manual input is not a forecast',conditional_on=(i['period']+' only; later scoring and exceptional payouts excluded' if score_periods.scope(i) else 'Completed first-half score only; tie / equality included; no second half or overtime; exceptional payouts excluded' if i['period']=='first_half' else 'Completed full-game score only; cancellation, suspension, void and other exceptions excluded'),expected_payout=None,expected_profit=None,return_pct=None,break_even_pct=None,status='Assumption needed',leg=leg,score_partitions=parts,reasons=list(leg['reasons']))
     if probability not in (None,''):
         try:
             dist=distribution(probability,parts,identity['sides'][selected]);ev['probability']=probability if isinstance(probability,str) else dist;ev['probability_distribution']=dist

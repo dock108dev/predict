@@ -75,7 +75,9 @@ def contracts(point, identity=None):
             levels=None;transform='native ask only'
             if o is not None and o['quote']['ask'] is not None:
                 ladder=o['depth']['asks']
-                if v=='kalshi':
+                if v=='kalshi' and len(b['outcomes'])!=2:
+                    ladder=None;transform='Unreviewed multi-outcome Kalshi depth; no arbitrary complement'
+                elif v=='kalshi':
                     other=next(x for x in b['outcomes'] if x['side']!=native)
                     ladder=other['depth']['bids'];transform='1 minus opposite Kalshi bid; same quantity'
                 if ladder is not None:
@@ -132,7 +134,12 @@ def leg_value(contract, assessment, at, quantity, scenario, identity=None, score
     fee_type='quadratic_with_maker_fees'
     if score_payouts is not None and v=='kalshi':
         series=basis.get('series_id')
-        allowed=('KXMLB' if sport=='MLB' else 'KXNBA' if sport=='NBA' else 'KXNFL' if sport=='NFL' else 'KXNCAAF' if sport=='NCAAF' else 'KXNCAAMB')+('SPREAD' if identity['product_identity']['family']=='spread' else 'TOTAL')
+        allowed=('KXNHL' if sport=='NHL' else 'KXMLB' if sport=='MLB' else 'KXNBA' if sport=='NBA' else 'KXNFL' if sport=='NFL' else 'KXNCAAF' if sport=='NCAAF' else 'KXNCAAMB')+('SPREAD' if identity['product_identity']['family']=='spread' else 'TOTAL')
+        from app.normalization import score_periods
+        if score_periods.scope(identity['product_identity']) or identity['product_identity']['family']=='futures':allowed=identity['score_reviews'][v]['descriptor']['series_id']
+        if sport in ('NFL','NCAAF','NBA','NCAAB') and identity['product_identity']['period']=='first_half':
+            from app.normalization.first_half import series as half_series
+            allowed=half_series(identity['product_identity'])
         if series!=allowed or basis.get('fee_type') not in ('quadratic','quadratic_with_maker_fees'):
             result['reasons'].append('Score-line native fee series/type unavailable');return result
         fee_type=basis['fee_type']

@@ -22,6 +22,9 @@ def time_value(value):
 def preflight(spec, now=None, *, supervised_live=False):
     if not isinstance(spec,dict):
         return dict(valid=False,activation_enabled=False,errors=['spec: object required'],economics='unavailable')
+    if 'two_source_qualification' in spec:
+        from .two_source_policy import preflight as bounded_preflight
+        return bounded_preflight(spec,now)
     now = now or datetime.now(timezone.utc)
     errors = []
     required = ('mode', 'event', 'participants', 'scheduled_start', 'start_after', 'start_before',
@@ -111,8 +114,8 @@ def preflight(spec, now=None, *, supervised_live=False):
         try:
             http = dict(spec.get('http'))
             for key in ('dollars','dollars_per_credit'): http[key]=Decimal(http[key])
-            policy=HTTPPolicy(**http)
-            if spec['mode']=='real' and (policy.credits>5 or policy.dollars!=0 or policy.dollars_per_credit!=0):
+            http_policy=HTTPPolicy(**http)
+            if spec['mode']=='real' and (http_policy.credits>5 or http_policy.dollars!=0 or http_policy.dollars_per_credit!=0):
                 errors.append('http: optional reference requires at most five free credits')
         except (ValueError, TypeError, KeyError, ArithmeticError):
             errors.append('http: complete explicit HTTPPolicy bounds, quota baseline and plan/cost assumptions required')

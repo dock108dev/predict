@@ -186,7 +186,7 @@ class PredictionProducer:
                 class NoRedirect(connect):
                     def process_redirect(self, exc): return exc
                 connector=NoRedirect
-            if self.real and self.spec.get('supervised_profile'):
+            if self.spec.get('two_source_qualification') or (self.real and self.spec.get('supervised_profile')):
                 # The isolated real profile never follows a credentialed redirect.
                 class NoLiveRedirect(connect):
                     def process_redirect(self, exc): return exc

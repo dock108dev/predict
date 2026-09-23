@@ -13,6 +13,7 @@ from app.models.core import EvidenceKind
 from app.matching import Matcher
 from app.moneyline import observe
 from app.settlement import profile, fact
+from app.normalization import Registry
 
 ROOT=Path(__file__).resolve().parents[1]
 ASSESSMENTS=ROOT/'app/fixtures/moneyline_rule_assessments.json'
@@ -54,7 +55,15 @@ def listing_profile(native,venue,source,assessments=None):
     return profile(sources=sources,dimensions=fields,payouts=payouts,actor=assessments['actor'])
 
 
-def captured_inputs(parents=None):
+def captured_inputs(parents=None, *, registry=None):
+    # These immutable Slice 7 parents were normalized with this exact registry.
+    # Replaying them with today's expanded registry is an identity conflict,
+    # even when a particular NFL alias happens to resolve to the same team.
+    # Keep observe()'s disagreement guard intact for all other callers.
+    if registry is None:
+        registry=Registry.load(ROOT/'app/fixtures/registry-20260912.json') if parents is None else Registry.load()
+        if parents is None and (registry.version,registry.fingerprint)!=('2026-09-12.1','c34ec6731ded967fe647759a8534b67806081ee90efe188f662a0ad3a7149cbf'):
+            raise ValueError('retained moneyline registry identity mismatch')
     parents=parents or Matcher.load(ROOT/'evidence/slice-7/captured-store.json')
     snapshot=parents.snapshot
     manifest=json.loads((ROOT/'evidence/phase-0/manifest.json').read_text())
@@ -89,7 +98,7 @@ def captured_inputs(parents=None):
                 continue
             response=(KR if venue=='kalshi' else PR)(texts[path],src['url'],datetime.fromisoformat(src['captured_at']),EvidenceKind.OBSERVATION)
             market=parse_k(response,native,eid,context['series_ticker']) if venue=='kalshi' else parse_p(response,native,eid)
-            row=observe(market,parent,listing_profile(native,venue,src),native=native,context=context,artifact=path)
+            row=observe(market,parent,listing_profile(native,venue,src),native=native,context=context,artifact=path,registry=registry)
             rows.append(row); count+=not bool(row['reasons'])
         coverage.append({'canonical_event_id':mapping['canonical_id'],'participants':parent['participants'],
                          'venue':venue,'native_event_id':eid,'captured_full_game_moneylines':count,
