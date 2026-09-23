@@ -51,7 +51,7 @@ def format_book(row, sides):
 class SessionProjection:
     def __init__(self):
         self.cursor=0; self.chain='0'*64; self.last=None; self.started=None; self.finished=None; self.stop_reason=None
-        self.sid=None; self.spec={}; self.inventory={}; self.generation=None
+        self.qualification_contexts={}; self.sid=None; self.spec={}; self.inventory={}; self.generation=None
         self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}; self.resolutions={}
         self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.legacy=None; self.last_row_hash=None; self.sizes={}; self.safety={}
 
@@ -75,6 +75,12 @@ class SessionProjection:
         if typ=='session_started':
             if self.started: raise ValueError('duplicate session start')
             self.sid=row['session_id']; self.started=at; self.spec=deepcopy(row['spec'])
+        elif typ=='qualification_context':
+            if self.spec.get('future_qualification_policy')!='native-prerequisites-1':raise ValueError('Unversioned qualification context')
+            context=deepcopy(row['context']); key=context['book_id']
+            if key in self.qualification_contexts:raise ValueError('Qualification context cannot be rewritten')
+            if len(self.qualification_contexts)>=64 or len(json.dumps(context).encode())>32768:raise ValueError('Qualification context bound')
+            self.qualification_contexts[key]=context
         elif typ=='multi_game_selection': self.legacy=deepcopy(row)
         elif typ=='coverage_inventory':
             if row.get('previous_generation')!=self.generation: raise ValueError('inventory dependency mismatch')
@@ -238,6 +244,9 @@ class SessionProjection:
                 try: formatted=format_book(book,{source:{s['native_id']:(s['participant'],s.get('native_label',s['native_id'])) for s in sides.values()}}) if book else None
                 except (ValueError,KeyError,StopIteration,TypeError):
                     record['reason']='unsupported book packet';continue
+                if formatted and self.spec.get('future_qualification_policy'):
+                    formatted['native_qualification_scope']={'venue':source,'event_id':e['id'],'market_id':m['id']}
+                    formatted['connection_epoch']=book.get('connection_epoch')
                 card=dict(venue=source,label=LABELS.get(source,source),book=formatted,
                     connection=connection,age_seconds=age,receipt_stale=age is not None and Decimal(age)>30)
                 if card['book'] and card['book']['market_state']=='unknown' and not self.spec.get('native_sources'): card['book']['market_state']=meta['market']['state']
@@ -312,6 +321,9 @@ class SessionProjection:
             started_at=self.started,stopped_at=self.finished,stop_reason=self.stop_reason,durable_cursor=token,projection_revision=REVISION,mapping_revision=self.spec.get('mapping_revision'),
             last_update=self.last,sources=sources,market_catalog=catalog,references=refs,refresh=self.refresh,generation=self.generation,
             games=games,points=points,rows_by_game=rows_by_game,comparison_groups_beyond_limit=truncated)
+        if self.spec.get('future_qualification_policy'):
+            if self.spec['future_qualification_policy']!='native-prerequisites-1':raise ValueError('Unsupported future qualification policy')
+            result['future_qualification_contexts']=deepcopy(self.qualification_contexts)
         if self.spec.get('two_source_qualification'):result['qualification_fee_policy']='native-evidence-required'
         if self.resolutions:result['resolutions']=deepcopy(list(self.resolutions.values()))
         from app.dashboard.bounds import retained_bytes

@@ -1,43 +1,35 @@
 # B1 — working source, sport and market coverage matrix
 
-**September23 public investigation and supported independent engineering COMPLETE (review7).**
-Owner authorized execution/reruns without another routine approval loop. Prepared public
-package executed, then newly established official US references followed in separately
-recorded bounded runs. Six direct HTTP attempts: three200, two explicit302 and Kalshi
-filings429. Four official-domain navigation queries did not establish the missing
-Kalshi amendment. No challenge bypass. Direct request deadlines/cleanup passed; prior
-10.876s failure remains FAIL. All original attempts and evidence preserved.
+**September23 public acquisition COMPLETE and consumed; native review3 COMPLETE.**
+The owner approved the frozen package on demand. Six successful GETs in18.964s;
+conditional exact US contract slot unused because no qualifying link was established.
+No retries/credentials/credits/streams, no blocked-PDF request, no source failures.
+Original bytes/timestamps/URLs/hashes preserved. Automation remains PAUSED.
 
-**Resolved:** US Market Settlement guide follows native Settlement Description; official
-September14 rulebook Rule1.5 explicitly orders Contract Terms > Product Specifications >
-Rulebook. Rule3.8 separates fee authority/posted rates and private/account charges.
-Rule1.4/3.10(e) show why cover date or missing public notice cannot prove historical
-applicability. Rules10.3/10.4 preserve modification/review discretion. No blanket zero
-settlement charge inferred. Kalshi type/multiplier and US theta0.0695/bounds unchanged.
+**Resolved:** explicitly dated September17 exchange-wide US theta0.0695 matches the
+retained779756 coefficient and supersedes prior July1 theta0.06. Native cumulative
+rounding supports conditional US entry commission bounds[0,1.43] or[0,1.45]USD per
+modeled100-contract new all-taker order despite unknown resting-order split. These
+exclude Kalshi/private/settlement charges and later rebates; they are not net results.
+Current Kalshi terms clarify overtime and exceptional branches, but lack an effective
+date establishing historical applicability. Source/state docs do not establish
+historical active state, clock bounds or continuous state validity.
 
-Ordinary saved Details now includes scoped conditional priority and new rulebook
-provenance.184 tests PASS; original and reviews1–7 reopen exactly;18-Arb/96-EV preserved.
-All four net comparisons remain unavailable. C3/C4 historical failures and missing old
-state/clock evidence remain CLOSED historical gaps, not new research targets.
+**Still unavailable:** all four total net comparisons. Kalshi applicable schedule,
+account limitations, exact US contract/settlement rules and charges, historical state
+and clocks remain unresolved. C3/C4 stale/alignment FAIL remains. Original captures,
+results, reviews1/2 and18-Arb/96-EV reconciliation unchanged. Review3 runs through
+ordinary saved Details;155 regressions and exact original/v1/v2/v3 reopening pass.
 
-[Review7 and public closeout](../evidence/b6-native-review-20260923-v7/review.md) ·
-[Verification](../evidence/b6-native-review-20260923-v7/verification.json) ·
-[Final provider inquiries, NOT SENT](../evidence/b6-native-review-20260923-v7/provider-inquiries.md).
-**No new approval request or further public-acquisition package queued.** Next actor:
-exchanges supply authoritative effective amendment/schedule and exact contract coverage.
-Engineering evaluates replies; owner need not interpret legal/technical documents.
-Public-run/rerun authorization does not instruct provider outreach; drafts remain unsent.
-
-| Remaining requirement | Next actor / exact evidence |
-|---|---|
-| Kalshi historical suspension and fee priority | Exchange effective FOOTBALLGAMEWIN amendment/notice for KXNFLGAME-26SEP24ATLGB-ATL/-GB at exact cutoff; effective schedule/rounding/settlement-charge scope |
-| US historical coverage and mandatory charges | Exchange effective rule/contract modification coverage for108683/779756 and additional mandatory settlement charge or explicit exemption; hierarchy/theta need no reconfirmation |
-| Exact private economics if needed later | Owner clearing route, debit precision/private surcharge dates and optional rebate entitlement; no current owner-input question |
-| Useful future qualification | Engineering requires supported native fee/material settlement branches, active-state continuity and measured timestamp/clock intervals;15s/5s limits unchanged; no new book run proposed |
-| Broader actual coverage and beta | Novig/ProphetX pending; KenPom deferred; NHL analytics missing; engineering actual-source/model/reference qualification and owner validation remain open |
-
-Automation PAUSED; no credentials, credits, streams, trading, outreach, commits or
-publication. Historical Pinnacle separate. Full qualification and beta signoff OPEN.
+[Review3: evidence, calculations, remaining gaps](../evidence/b6-native-review-20260923-v3/review.md) ·
+[Verification](../evidence/b6-native-review-20260923-v3/verification.json).
+**Next actor: engineering resolves remaining public rule/fee references and historical
+applicability before another streaming proposal would be useful.** No further external
+request or retry is authorized by the consumed allowance. Owner-only optional facts
+remain precision/private terms/rebate eligibility; public document gathering is not
+an owner prerequisite. No approval is pending for the completed package.
+Novig/ProphetX pending; KenPom deferred; NHL analytics missing; historical Pinnacle
+separate. Full actual-source qualification and beta signoff OPEN.
 
 **Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Independent B5 and B6 offline integration are complete; NHL analytics remains an actual-data gap. KenPom remains deferred; Novig/ProphetX replies remain pending.
 

@@ -469,6 +469,10 @@ class Venue:
     def emit(self, group, source, row):
         guard = getattr(self.session, 'guard_scope', None)
         if guard: guard(source, row)  # Before acknowledgement, books or usable-state mutation.
+        if getattr(self.session, 'spec', {}).get('future_qualification_policy')=='native-prerequisites-1':
+            g=self.groups[group]
+            if row['type']=='prediction_command':g['qualification_epoch']=g.get('qualification_epoch',0)+1
+            row=dict(row,connection_epoch=str(group)+':'+str(g.get('qualification_epoch',0)))
         segmented = getattr(self.session, 'segmented_history', False)
         error = None; result = None
         if segmented:

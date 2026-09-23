@@ -1,43 +1,39 @@
 # Predict — expanded beta delivery plan
 
-**September23 public investigation and supported independent engineering COMPLETE (review7).**
-Owner authorized execution/reruns without another routine approval loop. Prepared public
-package executed, then newly established official US references followed in separately
-recorded bounded runs. Six direct HTTP attempts: three200, two explicit302 and Kalshi
-filings429. Four official-domain navigation queries did not establish the missing
-Kalshi amendment. No challenge bypass. Direct request deadlines/cleanup passed; prior
-10.876s failure remains FAIL. All original attempts and evidence preserved.
+**September 23 native review v2 COMPLETE; authorized acquisition consumed.**
+Three of eight permitted GET attempts at 11:41:21 EDT: Kalshi series metadata and
+complete empty event fee-history response succeeded; fee PDF returned HTTP429.
+Stopped immediately, no retries; five slots unused. Zero credentials/credits/streams.
+Current native fee type `quadratic_with_maker_fees`, multiplier1 and exact Kalshi
+contract-terms URL are established. Metadata update time is not a fee-effective date;
+historical schedule applicability, US0.0695 conflict, rounding/account terms,
+settlement, historical state and clock uncertainty remain unresolved.
 
-**Resolved:** US Market Settlement guide follows native Settlement Description; official
-September14 rulebook Rule1.5 explicitly orders Contract Terms > Product Specifications >
-Rulebook. Rule3.8 separates fee authority/posted rates and private/account charges.
-Rule1.4/3.10(e) show why cover date or missing public notice cannot prove historical
-applicability. Rules10.3/10.4 preserve modification/review discretion. No blanket zero
-settlement charge inferred. Kalshi type/multiplier and US theta0.0695/bounds unchanged.
+Collection/scope PASS remains preserved. All four net comparisons are unavailable;
+C3/C4 historical age/alignment FAIL remains. Before-fee margins −$1.00/−$0.50 per100
+contracts/leg are conditional arithmetic, not qualified net results. Original captures,
+results, review1 and18-Arb/96-EV reconciliation remain intact. Review2 runs through
+ordinary saved Details, with exact fresh reopening and137 focused tests passing.
+No new independent engineering remains for the available evidence.
 
-Ordinary saved Details now includes scoped conditional priority and new rulebook
-provenance.184 tests PASS; original and reviews1–7 reopen exactly;18-Arb/96-EV preserved.
-All four net comparisons remain unavailable. C3/C4 historical failures and missing old
-state/clock evidence remain CLOSED historical gaps, not new research targets.
+[Review, compact evidence table and next owner action](../evidence/b6-native-review-20260923-v2/review.md) ·
+[Acquisition ledger](../evidence/b6-native-acquisition-20260923-v1/requests.json) ·
+[Verification](../evidence/b6-native-review-20260923-v2/verification.json).
+**Next actor: owner supplies one existing dated fee/rule evidence packet and account
+precision/fee/rebate values (no secrets), as specified in the review.** Known access
+references, IDs and approved decisions need no reconfirmation. Agent then binds only
+supported historical applicability in a new review. No repeat acquisition or book
+collection is queued; another book run cannot repair the remaining document gaps.
+All attempts consumed; automation PAUSED. Full actual-source qualification and beta
+signoff OPEN. Novig/ProphetX provisioning pending; KenPom deferred; NHL analytics
+missing; historical Pinnacle separate.
 
-[Review7 and public closeout](../evidence/b6-native-review-20260923-v7/review.md) ·
-[Verification](../evidence/b6-native-review-20260923-v7/verification.json) ·
-[Final provider inquiries, NOT SENT](../evidence/b6-native-review-20260923-v7/provider-inquiries.md).
-**No new approval request or further public-acquisition package queued.** Next actor:
-exchanges supply authoritative effective amendment/schedule and exact contract coverage.
-Engineering evaluates replies; owner need not interpret legal/technical documents.
-Public-run/rerun authorization does not instruct provider outreach; drafts remain unsent.
-
-| Remaining requirement | Next actor / exact evidence |
-|---|---|
-| Kalshi historical suspension and fee priority | Exchange effective FOOTBALLGAMEWIN amendment/notice for KXNFLGAME-26SEP24ATLGB-ATL/-GB at exact cutoff; effective schedule/rounding/settlement-charge scope |
-| US historical coverage and mandatory charges | Exchange effective rule/contract modification coverage for108683/779756 and additional mandatory settlement charge or explicit exemption; hierarchy/theta need no reconfirmation |
-| Exact private economics if needed later | Owner clearing route, debit precision/private surcharge dates and optional rebate entitlement; no current owner-input question |
-| Useful future qualification | Engineering requires supported native fee/material settlement branches, active-state continuity and measured timestamp/clock intervals;15s/5s limits unchanged; no new book run proposed |
-| Broader actual coverage and beta | Novig/ProphetX pending; KenPom deferred; NHL analytics missing; engineering actual-source/model/reference qualification and owner validation remain open |
-
-Automation PAUSED; no credentials, credits, streams, trading, outreach, commits or
-publication. Historical Pinnacle separate. Full qualification and beta signoff OPEN.
+Earlier valid on-demand authorization and failures are preserved: the discovery
+attempt found no shared event; the next attempt failed because nine extra US markets
+entered subscription scope. The repaired guard subsequently passed the exact bounded
+[Atlanta–Green Bay collection](../evidence/b6-two-source-scope-184493b2-9bc6-471c-9085-2f73390c7841/final-report.md).
+[Scope-failure report](../evidence/b6-two-source-corrected-72967ba6-7b2f-419c-9ecd-16283c9868bf/final-report.md).
+No earlier failed run is relabeled as a pass.
 
 **Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Independent B5 and finite B6 offline integration are complete; missing NHL analytics remains an actual-data gap. KenPom remains deferred; Novig/ProphetX replies remain pending.
 

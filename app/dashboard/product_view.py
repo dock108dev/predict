@@ -25,6 +25,9 @@ def calculate(snapshot,game,q):
     locked=snapshot.get('qualification_fee_policy')=='native-evidence-required'
     if locked:q=dict(q,scenario='unknown')
     point=snapshot['points'][game['id']]
+    if q.get('review'):
+        from .native_retained_review import point_for
+        point=point_for(snapshot,point,q['review'])
     reference=None
     if q.get('reference'):
         reference=next((r for r in references_for(snapshot,game,q['contract']) if r['id']==q['reference']),None)
@@ -42,6 +45,12 @@ def calculate(snapshot,game,q):
     if locked:
         result['fee_scenario_locked']=True
         result['assumptions']='Native fee applicability and settlement charges are unresolved in this qualification. Net dollars remain unavailable; hypothetical fee assumptions cannot qualify real economics.'
+    if q.get('review'):
+        from .native_retained_review import annotate
+        result=annotate(result,point,q['review'])
+    if 'future_qualification_contexts' in snapshot:
+        from .future_qualification import apply as apply_prerequisites
+        result=apply_prerequisites(result,point,snapshot['future_qualification_contexts'])
     return result
 
 

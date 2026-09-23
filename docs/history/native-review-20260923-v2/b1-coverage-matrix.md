@@ -1,43 +1,39 @@
 # B1 — working source, sport and market coverage matrix
 
-**September23 public investigation and supported independent engineering COMPLETE (review7).**
-Owner authorized execution/reruns without another routine approval loop. Prepared public
-package executed, then newly established official US references followed in separately
-recorded bounded runs. Six direct HTTP attempts: three200, two explicit302 and Kalshi
-filings429. Four official-domain navigation queries did not establish the missing
-Kalshi amendment. No challenge bypass. Direct request deadlines/cleanup passed; prior
-10.876s failure remains FAIL. All original attempts and evidence preserved.
+**September23 retained native review COMPLETE.** Collection/scope PASS is preserved;
+four candidate comparisons still have zero qualified net results. Original-input
+purchase sides/units/visible-depth arithmetic and exact reopening pass. Versioned
+review fixes unknown-state wording and the saved30s versus approved15s freshness
+threshold; original captures/results unchanged. C1/C2 receipt limits pass, C3/C4
+fail receipt age and skew. All four need native fee/state/settlement evidence;
+clock uncertainty remains unmeasured. Conditional before-fee margins are −$1.00
+or −$0.50 per100 contracts/leg, not qualified net returns.
 
-**Resolved:** US Market Settlement guide follows native Settlement Description; official
-September14 rulebook Rule1.5 explicitly orders Contract Terms > Product Specifications >
-Rulebook. Rule3.8 separates fee authority/posted rates and private/account charges.
-Rule1.4/3.10(e) show why cover date or missing public notice cannot prove historical
-applicability. Rules10.3/10.4 preserve modification/review discretion. No blanket zero
-settlement charge inferred. Kalshi type/multiplier and US theta0.0695/bounds unchanged.
+[Compact evidence table and completed engineering](../evidence/b6-native-review-20260923-v1/review.md) ·
+[One minimal acquisition proposal](../evidence/b6-native-review-20260923-v1/acquisition-proposal.md).
+Next actor: owner authorizes the consolidated≤8-GET fee/rule acquisition or supplies
+existing authoritative documents; agent binds historical applicability and reruns
+the versioned assessment. Another book scan would not resolve these document gaps.
+No external acquisition occurred in this review; attempt consumed, automation PAUSED.
+Novig/ProphetX pending; KenPom deferred; NHL analytics missing. Historical Pinnacle
+separate. Full actual-source qualification and beta signoff OPEN.
 
-Ordinary saved Details now includes scoped conditional priority and new rulebook
-provenance.184 tests PASS; original and reviews1–7 reopen exactly;18-Arb/96-EV preserved.
-All four net comparisons remain unavailable. C3/C4 historical failures and missing old
-state/clock evidence remain CLOSED historical gaps, not new research targets.
 
-[Review7 and public closeout](../evidence/b6-native-review-20260923-v7/review.md) ·
-[Verification](../evidence/b6-native-review-20260923-v7/verification.json) ·
-[Final provider inquiries, NOT SENT](../evidence/b6-native-review-20260923-v7/provider-inquiries.md).
-**No new approval request or further public-acquisition package queued.** Next actor:
-exchanges supply authoritative effective amendment/schedule and exact contract coverage.
-Engineering evaluates replies; owner need not interpret legal/technical documents.
-Public-run/rerun authorization does not instruct provider outreach; drafts remain unsent.
+**September 23 approved single-use run COMPLETE: bounded collection and scope PASS.**
+One Atlanta–Green Bay event, exact two Kalshi contracts/one US market; no extra
+subscriptions or admitted markets. Automatic Stop60.240s, cleanup and exact fresh
+reopening PASS. Four candidate pairs; zero qualified economics. Native fees,
+settlement, state and freshness gaps remain explicit. Attempt consumed; automation
+PAUSED. Earlier failures preserved. Full actual-source qualification and beta OPEN.
+[Execution report](../evidence/b6-two-source-scope-184493b2-9bc6-471c-9085-2f73390c7841/final-report.md).
 
-| Remaining requirement | Next actor / exact evidence |
-|---|---|
-| Kalshi historical suspension and fee priority | Exchange effective FOOTBALLGAMEWIN amendment/notice for KXNFLGAME-26SEP24ATLGB-ATL/-GB at exact cutoff; effective schedule/rounding/settlement-charge scope |
-| US historical coverage and mandatory charges | Exchange effective rule/contract modification coverage for108683/779756 and additional mandatory settlement charge or explicit exemption; hierarchy/theta need no reconfirmation |
-| Exact private economics if needed later | Owner clearing route, debit precision/private surcharge dates and optional rebate entitlement; no current owner-input question |
-| Useful future qualification | Engineering requires supported native fee/material settlement branches, active-state continuity and measured timestamp/clock intervals;15s/5s limits unchanged; no new book run proposed |
-| Broader actual coverage and beta | Novig/ProphetX pending; KenPom deferred; NHL analytics missing; engineering actual-source/model/reference qualification and owner validation remain open |
+Next actor: agent reconciles retained native terms/state/fee gaps and prepares the
+smallest missing-evidence acquisition. This run is already approved and completed;
+no approval is pending for it, no repeated attempt is authorized or scheduled.
 
-Automation PAUSED; no credentials, credits, streams, trading, outreach, commits or
-publication. Historical Pinnacle separate. Full qualification and beta signoff OPEN.
+
+
+**September 23 actual-run update:** corrected discovery matched a shared game, but US subscription scope expanded improperly; bounded qualification FAIL. Cleanup/replay pass. The guard is repaired and tested offline, not live-qualified. [Final report](../evidence/b6-two-source-corrected-72967ba6-7b2f-419c-9ecd-16283c9868bf/final-report.md) supersedes the generic initial PASS. Both attempts consumed; automation paused; full actual-source qualification and beta signoff OPEN.
 
 **Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Independent B5 and B6 offline integration are complete; NHL analytics remains an actual-data gap. KenPom remains deferred; Novig/ProphetX replies remain pending.
 
@@ -174,7 +170,7 @@ B4 fixture integration, local key setup and one authorized sample are complete. 
 | B5 futures | Current-season conference/league championship engineering complete | Resolved; other categories/horizons not selected | Season/category/participant/settlement horizon and multi-outcome rules mapped |
 | B5 NCAAB | Engineering inspects each source's competition IDs | Resolved September 21: owner selected men’s Division I; 365-program 2026–2027 identity registry is not native venue qualification | Distinct competition IDs/period rules with evidence; no inferred universal college coverage |
 | B5 results and settlements | Bounded NFL/NBA/NCAAF/NCAAB linkage engineering complete; MLB/NHL and pending futures now complete offline; actual source qualification open | No initial owner action | Results and payout/void records independently linked, seasonal gaps retained |
-| B6 practical session | Offline integration COMPLETE: ten unchanged 180-second segments; see B6 report for actual measurements and limitations | Public research attempt consumed; review3 complete; remaining public gaps owned by engineering, account-only values optional | Actual joint source readiness remains open; fixture success is not live qualification |
+| B6 practical session | Offline integration COMPLETE: ten unchanged 180-second segments; see B6 report for actual measurements and limitations | No remaining fixture-setup approval; real-data package needs separate approval | Actual joint source readiness remains open; fixture success is not live qualification |
 
 B2 implementation and fixture acceptance are complete; these remain B3–B6 dependencies. B2 acceptance demonstrated two simultaneously comparable events, at least three venue IDs and two different venue combinations, with a fourth unavailable and both reference roles visible. This is an integration threshold, not beta breadth acceptance. Keep current finite bounds; UI refresh may retain 1.5 seconds and discovery its configured cadence. Reference refresh must respect free quotas. B6 offline segmented scope is complete; actual sustained source duration/cadence still needs its own bounded approval.
 
