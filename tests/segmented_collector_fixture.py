@@ -19,7 +19,7 @@ class Fixture:
         self.connections = []; self.rest_calls = []; self.changed = asyncio.Event()
         self.schedule = (datetime.now(timezone.utc)+timedelta(days=3)).isoformat()
         self.books = 0; self.frames = 0; self.rows = 0; self.sequence = sha256()
-        self.owner = None; self.last_record = None
+        self.owner = None; self.last_record = None; self.server = None
 
     def us_market(self, mid):
         m=pm(mid);m.update(slug=mid,description='Synthetic fixture full-game winner terms',gameStartTime=self.schedule)
@@ -58,6 +58,15 @@ class Fixture:
         return socket
 
     async def start(self, output, *, duration=180, profile_name=None, product_mode=False, segmented=True):
+        try:
+            return await self._start(output, duration=duration, profile_name=profile_name,
+                                     product_mode=product_mode, segmented=segmented)
+        except BaseException:
+            # Callers cannot enter their try/finally until start returns.
+            await self.close()
+            raise
+
+    async def _start(self, output, *, duration, profile_name, product_mode, segmented):
         app=web.Application();app.router.add_get('/ws',self.ws);app.router.add_get('/{path:.*}',self.rest)
         self.server=TestServer(app);await self.server.start_server()
         url=str(self.server.make_url('/')).rstrip('/')
@@ -146,7 +155,8 @@ class Fixture:
             cs=self.active();await self.send(cs[i%len(cs)]);i+=1
 
     async def close(self):
-        if self.owner and self.owner.active():await self.owner.stop()
         try:
+            if self.owner and self.owner.active():await self.owner.stop()
             if self.owner and self.owner.finalizer:await asyncio.wait_for(self.owner.finalizer,30)
-        finally:await self.server.close()
+        finally:
+            if self.server:await self.server.close()

@@ -11,6 +11,8 @@ from app.collection.transport_session import reopen
 from app.reference.page_estimate import for_saved_game
 from app.reference.multi_page import research_row, rank_research
 
+OWNER_KEY = web.AppKey('owner', object)
+
 
 def create_app(output=OUTPUT,owner=None,sessions=None):
     if owner is None:
@@ -81,7 +83,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             r=web.json_response({'error':'Local data unavailable'},status=503)
         r.headers.update(HEADERS)
         return r
-    app=web.Application(middlewares=[guard],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app['owner']=owner
+    app=web.Application(middlewares=[guard],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/coverage.html')
     app.router.add_get('/coverage',coverage_page)

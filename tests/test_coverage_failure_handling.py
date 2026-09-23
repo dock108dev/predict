@@ -15,6 +15,27 @@ from tests.segmented_collector_fixture import Fixture
 
 
 class CoverageFailures(unittest.IsolatedAsyncioTestCase):
+    async def test_fixture_start_memory_failure_closes_server(self):
+        from app.collection.odds_http import BudgetStop
+        from app.collection.segmented import POLICY
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture()
+            with patch('app.collection.segmented.rss', return_value=POLICY['rss']):
+                with self.assertLogs('app.dashboard.coverage_owner', level='ERROR'):
+                    with self.assertRaisesRegex(BudgetStop, 'offline_rss_cap'):
+                        await fixture.start(tmp)
+            self.assertTrue(fixture.server.closed)
+            self.assertIsNone(fixture.owner.owner_lock)
+            await fixture.close()
+
+    async def test_fixture_cancelled_start_closes_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture()
+            with patch.object(CoverageOwner, 'start', side_effect=asyncio.CancelledError):
+                with self.assertRaises(asyncio.CancelledError):
+                    await fixture.start(tmp)
+            self.assertTrue(fixture.server.closed)
+
     async def test_direct_start_rejects_unconfirmed_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
             owner = CoverageOwner(tmp, pilot_output=Path(tmp)/'pilot', product_mode=True)

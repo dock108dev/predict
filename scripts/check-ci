@@ -5,12 +5,14 @@ python -m compileall -q app tests
 for source in app/dashboard/opportunity_static/*.js; do
     node --check "$source"
 done
+# Collector budgets measure process-lifetime peak RSS. Keep failure-injection
+# fixtures separate from the retained dashboard/replay tests below.
+python -m unittest tests.test_coverage_failure_handling -q
 python -m unittest \
     tests.test_multi_game \
     tests.test_opportunity_board \
     tests.test_personal_beta \
     tests.test_failure_handling \
-    tests.test_coverage_failure_handling \
     tests.test_dashboard_security \
     tests.test_ssot_policy \
     tests.test_page_estimate \
