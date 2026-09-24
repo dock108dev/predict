@@ -1,11 +1,6 @@
 # Current sources of truth
 
-September 23, 2026. Inspected HEAD:
-`1f7c1ce1950194a2b230e40cf93417f851f2cc30`, with the uncommitted error-handling,
-security, SSOT, cleanup, CI and documentation passes preserved. These changes affect working source, not running
-processes or retained qualification candidates. The [beta definition](product-roadmap-review.md),
-[delivery plan](data-coverage-plan.md) and [Desktop tracker](../../prediction_arb_next_steps.md)
-own product scope and acquisition authority. Full beta signoff remains open.
+This guide maps current behavior to its authoritative modules. See [configuration](configuration.md) for source setup and collection limits.
 
 ## Authoritative domains
 

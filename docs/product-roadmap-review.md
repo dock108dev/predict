@@ -1,6 +1,6 @@
 # Predict — beta product definition
 
-Updated September 22, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) owns engineering order and the [Desktop tracker](../../prediction_arb_next_steps.md) owns status/next action. Older implementation reports are evidence for their recorded work, not competing roadmaps.
+Updated September 22, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) describes engineering order and implementation status. Older implementation reports are evidence for their recorded work, not competing roadmaps.
 
 ## Product goal
 

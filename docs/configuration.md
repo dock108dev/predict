@@ -1,7 +1,7 @@
 # Configuration and operation
 
 Use the [README](../README.md) for installation and [development guide](development.md)
-for offline checks. The supported owner workflow is a local macOS source checkout,
+for offline checks. The supported live workflow is a local macOS source checkout,
 Python 3.11+, the `stream` extra and existing dedicated Keychain credentials.
 CI targets offline behavior on Ubuntu/Python 3.11; it does not test Linux credential
 access. Current hosted verification limits are in the [development guide](development.md#pull-request-ci).
@@ -29,8 +29,7 @@ The default factory selects `CoverageOwner(product_mode=True)` and starts idle.
 Default source configuration is not an approval package: ordinary startup does not
 enable real collection. Native/two-source previews supply an explicit spec, output
 root and approval through the same router; isolated fixtures use mock endpoints.
-Preserve consumed-attempt and candidate bindings. The current tracker governs
-execution, not an old setup example.
+Approval and candidate bindings are run-specific; an already consumed attempt cannot be reused.
 
 `ContinuousSession` and native-source configuration bound discovery, subscriptions,
 requests, frames, storage and cutoffs. The bootstrap six-game limit in

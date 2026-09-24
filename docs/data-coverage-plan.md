@@ -1,8 +1,7 @@
 # Delivery plan
 
 Predict is not ready for beta signoff. The [product definition](product-roadmap-review.md)
-sets the required scope; the [Desktop tracker](../../prediction_arb_next_steps.md)
-records current status and authorization.
+sets the required scope. This plan describes implementation status; real collection requires a run-specific specification and approval.
 
 ## What works
 

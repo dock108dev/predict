@@ -1,10 +1,6 @@
 # Architecture and data
 
-The current product is a local, file-backed sports prediction dashboard.
-[SSOT](ssot.md) owns module and retention decisions; the [Desktop tracker](../../prediction_arb_next_steps.md)
-owns current scope and execution authority. Engineering supports six sports and
-multiple market families; actual venue/model qualification and beta signoff remain
-open. Historical reports do not establish current live readiness.
+The product is a local, file-backed sports prediction dashboard. [Module ownership](ssot.md) documents authoritative components and retained subsystems. Venue and market support varies; inspect source coverage and calculation blockers before interpreting a result.
 
 ## Current request and collection flow
 

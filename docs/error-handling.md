@@ -1,10 +1,6 @@
 # Failure handling and recovery
 
-Current source behavior, updated September 23, 2026 from clean commit
-`1f7c1ce`. These are uncommitted source changes; running processes and retained
-qualification candidates are unchanged. Product scope and authorization remain in
-[SSOT](ssot.md) and the [Desktop tracker](../../prediction_arb_next_steps.md).
-Earlier validation below is explicitly historical.
+This guide describes collection cleanup, saved-session failures and recovery. See [configuration](configuration.md) for run prerequisites and [module ownership](ssot.md) for authoritative components. Dated validation records below describe their original candidates.
 
 ## Current coverage-owner maintenance
 
