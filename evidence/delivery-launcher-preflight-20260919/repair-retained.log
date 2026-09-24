@@ -1,7 +1,0 @@
-test_original_exact_with_bounded_native_state (tests.test_supervised.Retained.test_original_exact_with_bounded_native_state) ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 2.801s
-
-OK
-{"suite": "retained", "tests": 1, "passed": true, "wall_seconds": 2.8066972910019103, "cpu_seconds": 2.979449, "peak_rss_bytes": 87113728, "external_and_keyring_guard": true, "memory_pass": true}

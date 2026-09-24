@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 5, in <module>
-  File "evidence/upstream-diagnostic-offline-20260919/audit_runs.py", line 27, in direct
-    assert v['analysis']==analyze(p/'history') and v['analysis']['complete']
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError

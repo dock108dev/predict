@@ -1,9 +1,0 @@
-waiting for server to start.... done
-server started
-Running synthetic 4 markets/venue burst40 timing=True
-{"gates": true, "counts": {"offered": 40, "accepted": 40, "rejected": 0, "processed": 40, "unprocessed": 0, "retained_per_side_observations": 96, "committed_receipts": 96, "attempted_receipt_writes": 96, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 4.3148903339752}
-Running synthetic 4 markets/venue ordinary timing=True
-{"gates": true, "counts": {"offered": 17, "accepted": 17, "rejected": 0, "processed": 17, "unprocessed": 0, "retained_per_side_observations": 48, "committed_receipts": 48, "attempted_receipt_writes": 48, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "elapsed": 8.478669916046783}
-Bounded accounting checks passed; view cadence requires separate gate analysis.
-waiting for server to shut down.... done
-server stopped

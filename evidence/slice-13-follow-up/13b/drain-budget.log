@@ -1,6 +1,0 @@
-waiting for server to start.... done
-server started
-{"markets": 2, "counts": {"offered": 56, "accepted": 48, "rejected": 8, "processed": 36, "unprocessed": 12, "retained_per_side_observations": 80, "committed_receipts": 80, "attempted_receipt_writes": 82, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "shutdown_seconds": 8.522386750031728, "state": "failed"}
-{"markets": 4, "counts": {"offered": 56, "accepted": 48, "rejected": 8, "processed": 37, "unprocessed": 11, "retained_per_side_observations": 90, "committed_receipts": 90, "attempted_receipt_writes": 91, "wire_messages": null, "upstream_offered": null, "upstream_lost": null}, "shutdown_seconds": 8.551114332978614, "state": "failed"}
-waiting for server to shut down.... done
-server stopped

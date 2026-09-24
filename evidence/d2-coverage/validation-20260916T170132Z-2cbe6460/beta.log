@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/d2-coverage/validation-20260916T170132Z-2cbe6460/serve-beta.py", line 5, in <module>
-    import psycopg
-ModuleNotFoundError: No module named 'psycopg'

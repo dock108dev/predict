@@ -1,9 +1,0 @@
-test_all_checkpoints_and_terminal (__main__.DiagnosisChecks.test_all_checkpoints_and_terminal) ... ok
-test_loss_evidence_and_threshold (__main__.DiagnosisChecks.test_loss_evidence_and_threshold) ... ok
-test_native_replay_and_historical_behavior_identity (__main__.DiagnosisChecks.test_native_replay_and_historical_behavior_identity) ... ok
-test_busy_other_market_defers_quiet_market_expiry_until_timeout (__main__.TimerCharacterization.test_busy_other_market_defers_quiet_market_expiry_until_timeout) ... ok
-
-----------------------------------------------------------------------
-Ran 4 tests in 0.052s
-
-OK

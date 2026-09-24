@@ -1,7 +1,0 @@
-/Users/michaelfuscoletti/Desktop/prediction-arb/app/dashboard/server.py:39: NotAppKeyWarning: It is recommended to use web.AppKey instances for keys.
-https://docs.aiohttp.org/en/stable/web_advanced.html#application-s-config
-  app=web.Application(middlewares=[guard],client_max_size=4096);app['controller']=ctl
-----------------------------------------------------------------------
-Ran 36 tests in 8.988s
-
-OK
