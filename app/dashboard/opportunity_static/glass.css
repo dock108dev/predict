@@ -24,3 +24,107 @@ details{border-color:var(--line);padding-top:14px;margin-top:14px}summary{color:
 .metrics.primary{background:transparent;border:0;box-shadow:none;padding:0;color:var(--ink)}
 .metrics strong.negative{color:#b0354b}.metrics strong.positive{color:#087263}
 @media(min-width:1000px){.panel{padding:14px 18px;margin-bottom:14px}.heading{margin:22px 2px 18px}.panel p{margin:7px 0}.panel details{margin-top:10px;padding-top:10px}}
+
+/* Task-first layout, shared by the ordinary list and saved-game view. */
+main{padding:20px 24px 36px}
+header{padding:10px 16px;border-radius:20px}
+.heading{margin:16px 2px 12px}
+h1{font-size:28px;line-height:1.2;letter-spacing:-.7px;margin:0}
+.panel,.candidate{padding:14px 18px;margin-bottom:12px}
+button,input,select{font-size:14px;min-height:44px}
+label,small,.muted,td small,summary,details p,footer summary{font-size:13px}
+summary{line-height:1.5;min-height:28px;padding:3px 0}
+.tag,.badge{font-size:12px}
+nav{margin:0;flex-shrink:0}
+nav button{font-size:14px}
+.scan-summary{display:flex;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;margin-top:8px}
+.scan-summary p{margin:0}
+#scan-state,#updated,#explanation,#count{font-size:13px;line-height:1.5}
+.scan-details{margin-top:8px;padding-top:6px}
+.scan label:has(input){width:120px}
+.comparison-main{display:flex;align-items:end;gap:16px;flex-wrap:wrap}
+.quick-inputs{flex:1;max-width:none;grid-template-columns:140px minmax(160px,1fr);gap:12px}
+.comparison-tools details{margin-top:8px;padding-top:6px}
+#explanation{margin:10px 2px 6px}
+#count{margin:6px 2px}
+#product-coverage:not(:empty){padding:10px 16px}
+.source-summary{display:flex;flex-wrap:wrap;gap:4px 20px;margin:0 0 6px;font-size:13px}
+#product-coverage>details{display:inline-block;vertical-align:top;margin:0 20px 0 0;padding:0;border:0}
+#product-coverage>details[open]{display:block;margin-bottom:12px}
+.retained-reference{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+th,td{padding:12px 14px}
+th{font-size:12px;letter-spacing:0;text-transform:none}
+td{font-size:14px}
+td[data-label="Game"]{width:27%}
+td[data-label="Net profit ($)"]{width:22%;white-space:normal}
+td[data-label="Buy / top price"]{width:28%}
+td small{margin-top:4px;line-height:1.45}
+td .warning{font-size:13px}
+td details{min-width:100px}
+td a{display:inline-block;padding:2px 0}
+.game-page .heading{display:block}
+#back{display:inline-block;padding:6px 0;margin-bottom:4px;min-height:32px;font-size:14px}
+#game-context{margin:6px 0 0;line-height:1.5;font-size:14px}
+#cutoff-label{font-size:13px;margin:6px 2px 10px}
+.game-page nav{margin:12px 0}
+.game-page .inputs{grid-template-columns:160px minmax(200px,1fr) auto;gap:10px 16px}
+.game-page .input-details{padding-top:6px}
+.candidate h3{font-size:17px}
+.candidate-heading{margin-bottom:12px}
+.metrics.primary{margin:10px 0 12px;max-width:none}
+.metrics span{font-size:13px}
+.metrics strong{margin:4px 0;font-size:26px;overflow-wrap:anywhere}
+.candidate .legs{gap:12px;margin:12px 0}
+.leg strong{font-size:14px;line-height:1.5}
+.leg p{font-size:13px}
+.candidate details{margin-top:10px;padding-top:8px}
+.candidate .warning{font-size:13px}
+.controls{background:transparent;padding:0;border:0}
+.game-page .freshness{margin:0}
+.game-page .ev-inputs{gap:12px 16px;margin-top:12px}
+footer{margin-top:20px}
+footer details{padding:8px 2px;margin-top:8px}
+pre{font-size:12px}
+@media(max-width:900px){
+ .comparison-main{display:block}
+ .comparison-main nav{margin-bottom:12px}
+}
+@media(max-width:650px){
+ main{padding:12px 14px 28px}
+ header{padding:10px 14px;gap:8px}
+ .brand{flex-wrap:wrap;max-width:100%;gap:4px 12px}
+ h1{font-size:24px}
+ .heading{margin:14px 2px 10px}
+ .panel,.candidate{padding:12px 14px;border-radius:20px}
+ .scan{gap:8px}
+ .scan>button{flex:1 1 calc((100% - 16px)/3)}
+ .scan label:has(input){flex:0 0 110px;width:110px}
+ .scan label:has(select){flex:1 1 180px}
+ .scan-summary{gap:4px;margin-top:8px}
+ .quick-inputs{grid-template-columns:120px minmax(0,1fr);gap:10px}
+ nav{flex-wrap:wrap}
+ nav button{font-size:13px;padding:8px 10px;white-space:normal;flex:1 0 75px;max-width:100%}
+ .scan>button{flex:1 0 90px;white-space:normal;max-width:100%}
+ .quick-inputs{grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr))}
+ .source-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:4px 12px}
+ #product-coverage:not(:empty){padding:10px 14px;margin-bottom:10px}
+ #product-coverage>details{margin-right:0;display:block}
+ tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 16px;padding:14px;margin-bottom:10px}
+ td{padding:0;min-width:0}
+ td[data-label="Game"],td[data-label="Buy / top price"],td[data-label=""],td[data-label="Game / purchase"],td[data-label="Assumptions"]{grid-column:1/-1;width:auto}
+ td[data-label="Net profit ($)"]{width:auto;font-size:18px}
+ td:before{font-size:12px;letter-spacing:0;text-transform:none;line-height:1.5}
+ td a{font-size:16px}
+ td small,td .warning{font-size:13px}
+ td details{max-width:none}
+ .game-page .inputs{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px}
+ #calculate{grid-column:1/-1}
+ .game-page .input-details{grid-column:1/-1;margin-top:0}
+ .candidate-heading{display:flex;flex-wrap:wrap;gap:8px}
+ .candidate-heading .badge{margin:0}
+ .metrics strong{font-size:24px}
+ .metrics,.metrics.primary{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr))}
+ .candidate .legs{grid-template-columns:1fr;gap:8px}
+ #page-research .metrics.primary{grid-template-columns:1fr 1fr}
+ .game-page,.source-summary{overflow-wrap:anywhere}
+}

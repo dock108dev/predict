@@ -1,5 +1,9 @@
 # Saved-page probability and outcome research
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Implemented September 16, 2026. File-only; no new requests, feed scan, credential access, service/database changes or beta restart.
 
 **Page-derived estimate — bookmaker update time and delay unknown.**

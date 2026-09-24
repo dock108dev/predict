@@ -14,7 +14,7 @@ const sandbox = {
   location: {search: ''},
   URLSearchParams,
   E5State: {select: () => undefined},
-  BoardView: {status: () => 'Unavailable', reasons: () => []},
+  BoardView: {...require('../app/dashboard/opportunity_static/presentation.js'), status: () => 'Unavailable', reasons: () => []},
   fetch: async () => ({json: async () => [{id: attack, label: attack}]})
 };
 vm.createContext(sandbox);

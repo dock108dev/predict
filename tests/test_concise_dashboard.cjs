@@ -12,7 +12,7 @@ assert(visible.filter(x=>x.profit!==null).every(x=>Number(x.profit)<0));
 assert.equal(view.status({status:'Conditional scenario'},'0'),'Conditional');
 assert.equal(view.status({status:'Conditional scenario'},'-2'),'Conditional');
 assert.equal(view.status({status:'Unavailable'},null),'Unavailable');
-assert(view.reasons(visible.find(x=>x.reasons.includes('Books more than 5 seconds apart at cutoff'))).includes('Books >5s apart'));
+assert(view.reasons(visible.find(x=>x.reasons.includes('Books more than 5 seconds apart at cutoff'))).includes('Prices were recorded more than 5 seconds apart'));
 // Exercise the real persistence functions with distinct event and outcome keys.
 const source=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');
 const fields={probability:{value:'0',validity:{valid:true}},basis:{value:'explicit local test'},contract:{value:'kalshi:yes'}};

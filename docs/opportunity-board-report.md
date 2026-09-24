@@ -1,5 +1,9 @@
 # Personal opportunity-board POC
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 15, 2026 EDT (September 16 UTC). Open **[the board](http://127.0.0.1:8782/)**. The isolated instance is running, and its browser tab is left open.
 
 ## What works

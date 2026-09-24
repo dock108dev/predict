@@ -1,5 +1,9 @@
 # Multi-game saved-page research
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 16, 2026. [Open saved research list](http://127.0.0.1:8783/?view=research&capture=5c9b7dca-a813-4d77-80f5-0691d06068eb&quantity=100&scenario=cent&sort=dollars). **All six saved games are covered** by exact same-column DraftKings full-game moneyline pairs; no missing or ambiguous pairs in this retained page. No new source or target data was fetched.
 
 ## Results and independent arithmetic

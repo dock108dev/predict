@@ -1,5 +1,9 @@
 # Concise cross-venue dashboard
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 15, 2026 EDT (September 16 UTC). [Open beta](http://127.0.0.1:8783/). Left open and idle on the original six-game real capture, session `5c9b7dca-a813-4d77-80f5-0691d06068eb`.
 
 The ordinary dashboard shows **12 cross-venue pairs**, including six unavailable alternatives. Game detail shows only its two cross-venue pairs. The six same-venue pairs remain in the unchanged calculation API and regression oracle. Primary content is game, actual purchases/top prices, conditional net dollars and modeled size. ROI, fee/depth explanations, cashflows and provenance are behind Details. Filters/sorting remain available in a disclosure; requested size, Start/Stop, bounds, saved selection and return state remain intact. Material unavailable reasons, saved/current status and capture time remain visible. The EV tool is explicitly a user-entered what-if with event/outcome-bound assumptions and no estimated fair probability.

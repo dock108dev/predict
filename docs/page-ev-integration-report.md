@@ -1,5 +1,9 @@
 # One-game page-derived EV integration
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 16, 2026 UTC. [Open Detroit–Buffalo saved details](http://127.0.0.1:8783/game?session=5c9b7dca-a813-4d77-80f5-0691d06068eb%7EKXNFLGAME-26SEP17DETBUF__101466&hash=5c9b7dca-a813-4d77-80f5-0691d06068eb&cutoff=22e4cd98-7081-4a27-bd89-00c60e35b313&quantity=10&scenario=cent&probability=&basis=&contract=kalshi%3Ayes&view=arb&candidate=cross-yes). Board left open and idle; manual probability/basis blank.
 
 **Conditional ordinary-winner EV is supported.** The [separate dated assessment](../evidence/page-ev-integration/ordinary-winner-assessment.json) binds the exact saved page, bookmaker, event, Buffalo YES contract, book and retained rules. Both refer to the ordinary completed-game winner, including overtime. This narrow semantic conclusion does not establish full settlement equivalence, a historical sportsbook ticket's jurisdictional terms, current fair value or fee applicability.

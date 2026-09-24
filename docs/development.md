@@ -64,7 +64,17 @@ node --check app/dashboard/opportunity_static/dashboard.js
 node tests/test_dashboard_failures.cjs
 node tests/test_board_security.cjs
 node tests/test_concise_dashboard.cjs
+node tests/test_source_details.cjs
+node tests/test_multi_page_ui.cjs
 ```
+
+The source-details check covers disclosure identity and keyboard focus across
+replacement markup, changed links, removed/hidden controls and deliberate focus
+changes. For polling/render changes, also inspect a real browser at desktop and
+narrow widths: keep a row summary or link focused during refresh, reorder/remove
+rows, switch saved scans, and move focus while a request is pending. Follow the
+[local UI requirements](ui-design-requirements.md); historical review screenshots
+are not evidence for current source.
 
 Use `git diff --check` after edits. There is no configured formatter/linter.
 Prefer small readable edits consistent with nearby code; avoid repository-wide

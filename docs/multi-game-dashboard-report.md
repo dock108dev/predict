@@ -1,5 +1,9 @@
 # Multi-game quick-look dashboard
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 15, 2026 EDT (September 16 UTC). **[Open the saved dashboard](http://127.0.0.1:8783/).** The existing opportunity board now opens on a multi-game table, with its game board and EV explorer as drilldown. The beta instance is idle; feeds are stopped.
 
 ## Coverage and real results

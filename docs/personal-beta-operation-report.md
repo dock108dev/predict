@@ -1,5 +1,9 @@
 # Repeatable owner-started personal beta
 
+Historical implementation report. UI labels, counts and process-state statements
+below describe the recorded checkpoint, not the current interface or a running
+instance. See [current UI design](ui-design.md) and [verification](ui-verification.md).
+
 Completed September 15, 2026 EDT (September 16 UTC). [Open the beta](http://127.0.0.1:8783/). It is idle on the original six-game real capture, with Start enabled. **No new real collection, credential lookup or provider request occurred during implementation.**
 
 Personal-beta mode now creates a distinct session directory and run record for each explicit Start. The historical consumed one-attempt markers are unchanged. Startup, reload and restart remain idle; a second Start is rejected while collection or saving is active. Status polling ends when the scan finishes. No scheduler, automatic retry or automatic restart was added.

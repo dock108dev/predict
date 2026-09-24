@@ -16,7 +16,7 @@ window.PredictResolution=(()=>{
    if(!res.ok)throw Error(data.error);el('resolution-panel').hidden=!!data.unsupported;if(data.unsupported)return;
    options=data.options;el('resolution-choice').innerHTML='<option value="">Choose saved resolution evidence</option>'+options.map((o,i)=>`<option value="${i}">${safe(o.as_of)} · ${safe(o.label)} · ${safe(o.cutoff.split('-')[0])}</option>`).join('');
    const selected=options.findIndex(o=>o.session===base.get('resolution_session')&&o.cutoff===base.get('resolution_cutoff'));el('resolution-choice').value=selected<0?'':String(selected);
-   el('resolution-asof').value=base.get('resolution_asof')||'';el('resolution-status').textContent=options.length?'Choose an immutable resolution cutoff and as-of time.':'Missing resolution evidence for this prediction cutoff.';
+   el('resolution-asof').value=base.get('resolution_asof')||'';el('resolution-status').textContent=options.length?'Choose saved evidence and the time you want to review.':'No saved result or settlement is linked to this prediction.';
    if(data.view)render(data.view);
   }catch(e){if(n!==sequence)return;el('resolution-panel').hidden=false;el('resolution-status').textContent=e.message;el('resolution-output').replaceChildren();}
  }

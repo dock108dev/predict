@@ -65,7 +65,7 @@ file is needed for ordinary dashboard setup.
 
 ## Interpretation
 
-Arb, manually entered what-if EV, and Page-derived research stay separate. Missing
+Arbitrage, manually entered What-if EV, and Saved-page research stay separate. Missing
 probability, fees or exceptional settlement remain unknown. Negative, zero and
 unavailable results are valid. Saved-page research is retrospective/time-mismatched
 and never enters live ranking or prospective scoring. See the
@@ -94,4 +94,8 @@ planning versions and their historical reuse notes are preserved in
 
 ## Shared UI design
 
-See [UI design and templates](docs/ui-design.md) before changing this interface. The shared Desktop `UI Templates` folder defines the glass design baseline for future contributors; this repository keeps its own runtime styles and a portable copy of the requirements.
+See [UI design and templates](docs/ui-design.md) before changing this interface,
+and [current UI verification](docs/ui-verification.md) for reviewed behavior and
+limits. The repository's [portable requirements](docs/ui-design-requirements.md)
+and local runtime styles are authoritative for this checkout. The historical
+Desktop `UI Templates` gallery is unavailable and is not a runtime dependency.

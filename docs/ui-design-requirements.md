@@ -1,5 +1,10 @@
 # Shared UI design requirements
 
+Local adaptation updated September 23, 2026. The historical shared gallery is not
+included in this repository. Use [Predict's design note](ui-design.md) and
+`app/dashboard/opportunity_static/glass.css` as the available implementation;
+the `assets/glass.css` reference below describes the original shared template.
+
 ## Direction
 
 Use a light iOS Liquid Glass-inspired appearance: cool white surfaces, restrained translucency, subtle blue/lavender ambient background, soft depth, rounded controls, and native system typography. This is the user's requested baseline for our Desktop products. Adapt layouts to each product. Do not recreate the former beige, forest-green, yellow-tinted dashboard theme.
@@ -22,6 +27,7 @@ Use compact tables on desktop, deliberate horizontal scrolling or readable recor
 ## Interaction and accessibility
 
 - Use native buttons, links, labels, inputs, and dialog semantics. Provide visible keyboard focus and accessible names. Aim for at least 44px primary touch targets.
+- Refreshing data must preserve open disclosures and keyboard focus by record/control identity, including when rows reorder or their links change. Capture focus immediately before replacing markup. Do not steal focus moved during a request, focus a different record when one disappears, or scroll merely to restore focus.
 - Body text should meet 4.5:1 contrast; large text and meaningful component boundaries should meet applicable 3:1 contrast requirements. Check actual composited colors because transparency changes contrast.
 - Honor reduced motion and reduced transparency; provide opaque fallback surfaces when blur is unsupported. Do not animate large backgrounds or use glass effects that impair reading.
 - Distinguish loading, empty, error, disabled, selected, and successful states in words. Do not make a control look active when unavailable.
@@ -33,3 +39,11 @@ Use compact tables on desktop, deliberate horizontal scrolling or readable recor
 Every adopting project must link its local design note from its README and mention this shared template folder for future contributors. Include the source version/date and local adaptations. Copy assets into the repository; do not rely on a machine-specific link at runtime. Keep project-specific instructions and verification boundaries intact.
 
 Before calling a rollout complete, inspect representative desktop and phone views and verify the affected interactions. Record what was checked and what remains unverified. Visual implementation does not imply owner acceptance, release approval, or real-data qualification.
+
+For Predict, the active HTML templates are `dashboard.html` (Compare games) and
+`index.html` (Game details) under `app/dashboard/opportunity_static/`. Keep their
+IDs, accessible labels and display-only focus keys consistent with their renderers.
+The three views are Arbitrage, What-if EV and Saved-page research. Keep saved/demo
+context, current blockers and material assumptions visible; put original inputs
+and diagnostics in named disclosures. Preserve negative, zero and unavailable
+values and the existing calculation, source and persistence contracts.
