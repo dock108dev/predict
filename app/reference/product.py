@@ -1,4 +1,4 @@
-"""B4 retained-input adapters. No network, credential discovery or startup hooks.
+"""Retained reference-input adapters. No network, credential discovery or startup hooks.
 
 Annotated published-page extraction is a local import format, NOT a provider API.
 Every extraction retains the entire bounded original plus exact literal offsets.
@@ -176,7 +176,7 @@ def at_cutoff(refs,at):
                 reason=cutoff_reason(x)
                 if reason:x.update(availability='unsupported',reason=reason)
             if not score_line and (i['family']!='moneyline' or i['period']!='full_game' or i.get('line') is not None or i.get('horizon') or i.get('category')):
-                x.update(availability='unsupported',reason='Reference does not describe an unlined full-game winner (B5)')
+                x.update(availability='unsupported',reason='Reference does not describe an unlined full-game winner')
             if i.get('scheduled_start') and time(x['received_at'])>=time(i['scheduled_start']):
                 x.update(availability='unsupported',reason='First received after scheduled start; retrospective reference only')
             if i['competition']=='NHL' and not score_line:
@@ -207,7 +207,7 @@ def at_cutoff(refs,at):
             age=(time(at)-time(x['source_at'] or x['received_at'])).total_seconds()
             x.update(age_seconds=str(age),freshness='refresh_due' if age>x['refresh_after_seconds'] else 'within_refresh_plan')
         elif (x.get('market_identity',{}).get('competition')=='NHL' and x.get('market_identity',{}).get('family') in ('spread','total')) or x.get('market_identity',{}).get('competition') in ('MLB','NBA','NCAAF','NCAAB') or (x.get('market_identity',{}).get('competition')=='NFL' and (x.get('market_identity',{}).get('family') in ('spread','total') or x.get('market_identity',{}).get('period')=='first_half')):
-            x.update(availability='unsupported',reason=x['market_identity']['competition']+' reference requires an original-input B4 receipt and reviewed game binding')
+            x.update(availability='unsupported',reason=x['market_identity']['competition']+' reference requires an original-input reference receipt and reviewed game binding')
         result.append(x)
     # Same source revision with conflicting values is never resolved by insertion order.
     groups={}

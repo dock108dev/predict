@@ -1,4 +1,4 @@
-"""Offline Slice 7 demonstration. Optional --store writes a local mapping snapshot."""
+"""Offline event-matching demonstration. Optional --store writes a local mapping snapshot."""
 import argparse
 import asyncio
 from collections import Counter

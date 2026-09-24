@@ -1,4 +1,4 @@
-"""Native source extensions for the existing bounded collector and B2 projection.
+"""Native source extensions for the existing bounded collector and shared session projection.
 
 Configuration contains references only. Authentication is lazy, only after an
 explicit approved Start. REST observations are dated snapshots, never stream claims.
@@ -44,7 +44,7 @@ def validate_sources(spec):
             if type(c.get(k)) is not int or not lo<=c[k]<=hi: raise ValueError('invalid native bound')
         if venue=='novig' and (not c.get('leagues') or any(x not in ('NFL','NBA','MLB','NHL','NCAAF','NCAAB') for x in c['leagues'])): raise ValueError('explicit leagues required')
         if venue=='prophetx' and (not c.get('tournament_ids') or len(c['tournament_ids'])>6 or any(not str(x).isdigit() for x in c['tournament_ids'])): raise ValueError('native tournament IDs required')
-    if spec.get('reference_enabled'): raise ValueError('B4 acquisition remains separate')
+    if spec.get('reference_enabled'): raise ValueError('Reference acquisition remains separate')
     if sum(len(c.get('leagues',[])) for c in sources.values() if c['state']=='enabled')>2: raise ValueError('bounded Novig league count')
 
 
@@ -122,7 +122,7 @@ def catalog_from(events,markets,environment,*,at=None):
                  status=m.state.value,exclusion=None,product_outcomes=outcomes,terms={},
                  listing_association=listing_association(m),native_metadata=json.loads(m.raw.json_text),provenance=dict(source=m.raw.source,received_at=m.raw.received_at.isoformat(),sha256=sha256(m.raw.json_text.encode()).hexdigest()),
                  sides=[dict(id=o.native_id,label=o.label,purchase_support='supported' if outcomes else 'unknown') for o in m.outcomes])
-        if m.market_type.value!='moneyline' or period!='full_game':row['exclusion']='unsupported family or period (B5)'
+        if m.market_type.value!='moneyline' or period!='full_game':row['exclusion']='unsupported family or period'
         elif not outcomes:row['exclusion']='unresolved native participants'
         elif m.state.value!='active':row['exclusion']='inactive or unknown market state'
         cat['markets'].append(row);objects[row['id']]=m

@@ -1,6 +1,6 @@
-"""Slice 8 matching layer. Native ingestion remains in venue adapters.
+"""Moneyline market matching. Native ingestion remains in venue adapters.
 
-update() takes an authoritative complete market snapshot and a current Slice 7
+update() takes an authoritative complete market snapshot and a current event
 Matcher. report() requires that current parent matcher too, so historical linkage
 cannot accidentally stand in for confirmation. Revisions retain all input evidence.
 """
@@ -167,7 +167,7 @@ class MoneylineMatcher:
         return self.report(parents)
 
     def report(self, parents):
-        if not isinstance(parents,Matcher): raise ValueError('current Slice 7 Matcher required')
+        if not isinstance(parents,Matcher): raise ValueError('current event Matcher required')
         p=parents.snapshot
         # Exact source bodies already live in the event store/capture artifacts.
         def source_refs(value):

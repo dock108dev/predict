@@ -75,7 +75,7 @@ class Stream:
         self.adapter, self.market_ids = adapter, market_ids
         self.event_ids = tuple(dict.fromkeys(adapter.markets[x][0] for x in market_ids))
         if len(self.event_ids) != 1:
-            raise ValueError('Slice 3 stream is bounded to one event')
+            raise ValueError('ProphetX stream is bounded to one event')
         self.connector = connector
         self.duration, self.message_budget, self.byte_budget = duration, message_budget, byte_budget
         self.reconnects, self.receipt_seconds = reconnects, receipt_seconds

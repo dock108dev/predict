@@ -1,4 +1,4 @@
-"""Offline Slice 10 production exclusions and synthetic conditional arithmetic."""
+"""Offline arbitrage production exclusions and synthetic conditional arithmetic."""
 from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone, timedelta
@@ -133,7 +133,7 @@ def examples():
         assert Decimal(selected(rows[name])['conditional_calculation']['worst_case_profit'])==Decimal(profit),(name,selected(rows[name])['conditional_calculation']['worst_case_profit'])
     return {'description':'Offline diagnostics; all positive examples remain conditional under existing fee evidence. No synthetic or historical result is a current production opportunity.',
             'historical_production':historical(),'synthetic':rows,'independent_expected_worst_profits':expected,
-            'next':'Slice 11 — full-depth arbitrage calculation and sizing; not implemented'}
+            'next':'Full-depth calculation and sizing are separate; see app.depth'}
 
 if __name__=='__main__':
     print(json.dumps(examples(),indent=2))

@@ -96,7 +96,7 @@ def consume(levels, quantity, *, partial_final=True):
 
 def size_depth(parents, matcher, ladders, fee_contexts, *, evaluation_time,
                search=None, policy=None, registry=None):
-    """Refresh matching and Slice 10 diagnostics, then size each candidate independently."""
+    """Refresh matching and top-of-book diagnostics, then size each candidate independently."""
     search=search or Search(); policy=policy or Policy(); registry=registry or load_registry()
     with localcontext(Context(prec=100)):
         ladders=list(ladders)
@@ -256,7 +256,7 @@ def _allocation(qs, domains, snapshot, registry, cache):
 
 def _solve(original):
     snapshot=deepcopy(original); base=snapshot['base']; search=Search(**snapshot['search'])
-    # Slice 10 was called without a fill assumption: retain qualification, remove
+    # Top-of-book diagnostics were called without a fill assumption: retain qualification, remove
     # only the unrequested top-size choice and replace it with depth-domain checks.
     reasons=[x for x in base['reasons'] if x not in ('explicit-fill-grouping-required','no-common-visible-quantity')]
     reasons.extend(snapshot['problems'])

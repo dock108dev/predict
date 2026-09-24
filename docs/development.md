@@ -110,15 +110,7 @@ Failures remain in the Actions step logs; no owner captures are uploaded.
 The retained-regression group prints individual test names so a timeout identifies
 the test in progress.
 
-The exact evidence exceptions in [.gitignore](../.gitignore) are immutable inputs
-read by the existing offline tests and saved-review code. Include these files in
-the same pull request as the source changes: they were previously present only
-in the local ignored archive. Their bytes and historical failure/consumption
-states are unchanged. Approvals and unrelated acquisitions remain ignored. The
-consumed-attempt regression resolves its retained marker within this checkout,
-without following an owner's absolute output path. To check fixture portability,
-export tracked and nonignored files to a temporary checkout and run the affected
-retained-review tests there; a pass in the full local archive is insufficient.
+The exact evidence exceptions in [.gitignore](../.gitignore) are immutable inputs read by offline tests and saved-review code. Keep required retained fixtures tracked so a clean checkout can run those checks. Preserve their original bytes and historical failure/consumption states. Approvals and unrelated acquisitions remain ignored. The consumed-attempt regression resolves its retained marker within this checkout without following an owner’s absolute output path. To check fixture portability, export tracked and nonignored files to a temporary checkout and run the affected retained-review tests there; a pass in the full local archive is insufficient.
 
 [requirements-ci.txt](../requirements-ci.txt) locks runtime, stream and build
 dependencies with hashes and platform markers. CI caches only pip downloads and
@@ -148,4 +140,8 @@ than appending run histories to this guide.
 Name files, tests and documents for their feature or behavior, such as
 `test_nba_first_half.py` or `reference-integration.md`. Use descriptive headings
 and link labels. Keep historical identifiers only where needed to locate original
-evidence or read an existing saved format.
+evidence or read an existing saved format. Keep slice/task chronology in the
+[implementation history](implementation-history.md), dated handoffs and planning records,
+not in module comments or current setup instructions. Retained authorization labels,
+reviewer provenance and hash-bearing fixture text are compatibility/evidence inputs;
+rewriting them requires a separate migration or regenerated-evidence decision.

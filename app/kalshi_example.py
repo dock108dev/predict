@@ -1,4 +1,4 @@
-"""Offline replay of the preserved Slice 4 public capture. No account access."""
+"""Offline replay of the preserved Kalshi public capture. No account access."""
 import asyncio
 from datetime import datetime
 import json

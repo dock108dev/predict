@@ -1,4 +1,4 @@
-"""Explicit one-request owner-approved B4 sample. No startup hook, retries or fallback."""
+"""Explicit one-request owner-approved Pinnacle sample. No startup hook, retries or fallback."""
 import asyncio
 from datetime import datetime,timezone
 from hashlib import sha256

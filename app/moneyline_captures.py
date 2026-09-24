@@ -56,7 +56,7 @@ def listing_profile(native,venue,source,assessments=None):
 
 
 def captured_inputs(parents=None, *, registry=None):
-    # These immutable Slice 7 parents were normalized with this exact registry.
+    # These immutable event-matching parents were normalized with this exact registry.
     # Replaying them with today's expanded registry is an identity conflict,
     # even when a particular NFL alias happens to resolve to the same team.
     # Keep observe()'s disagreement guard intact for all other callers.

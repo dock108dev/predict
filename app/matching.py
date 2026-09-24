@@ -72,7 +72,7 @@ def instant(value):
 
 def observation(normalized: NormalizedEvent, *, artifact=None, schedule_status=None,
                 game_number=None, evidence_source=None):
-    """Consume Slice 6 output. Optional schedule/game labels need explicit provenance.
+    """Consume normalized participant and league records. Optional schedule/game labels need explicit provenance.
 
     Start always comes from Event.scheduled_start, never an unrelated timestamp.
     Unknown native lifecycle/game-number formats must be translated by a caller

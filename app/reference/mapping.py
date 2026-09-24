@@ -30,7 +30,7 @@ def scope_match(source,target,*,source_teams,target_teams,team_bindings,reviewed
     except (KeyError,TypeError,ValueError,AttributeError):reasons.append('scheduled_start')
     if len(source_teams)!=2 or len(set(source_teams))!=2 or len(target_teams)!=2 or len(set(target_teams))!=2 or set(team_bindings)!=set(source_teams) or set(team_bindings.values())!=set(target_teams):reasons.append('reviewed participant binding')
     if not source.get('rules') or not target.get('rules') or reviewed_rules!=(source.get('rules'),target.get('rules')):reasons.append('reviewed settlement equivalence')
-    if source.get('family')!='moneyline' or source.get('period')!='full_game' or source.get('line') is not None:reasons.append('B5 market semantics')
+    if source.get('family')!='moneyline' or source.get('period')!='full_game' or source.get('line') is not None:reasons.append('unsupported market semantics')
     from app.normalization.nhl import RULES
     nhl=source.get('competition')=='NHL' and source.get('rules')==RULES and source.get('outcome_set')=='two_way' and source.get('stage') in ('regular_season','playoffs')
     return dict(compatible=not reasons,reasons=reasons,ordinary_ev_supported=not reasons and (source.get('competition')=='NFL' or nhl),

@@ -1,4 +1,4 @@
-"""Slice 10: finite, ask-only, equal-quantity acquisition diagnostics.
+"""Finite, ask-only, equal-quantity acquisition diagnostics.
 
 The public entry point refreshes decisions from the current event and market
 matchers. No saved pair dictionary alone can establish current confirmation.

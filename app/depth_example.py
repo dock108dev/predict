@@ -80,6 +80,6 @@ def examples():
     assert unequal['solutions']['max_profit']['allocation']['quantities']==['4','3']
     assert Decimal(unequal['solutions']['max_profit']['allocation']['worst_case_profit'])==Decimal('1.52')
     return dict(description='Offline invented depth and payout scenarios using real versioned fee models; no current opportunities or actual fill guarantees.',
-        synthetic=rows,historical_production=historical_depth(),next='Slice 12 — PostgreSQL historical capture; stop before implementation')
+        synthetic=rows,historical_production=historical_depth(),next='PostgreSQL historical capture is separate; see app.storage.workflow')
 
 if __name__=='__main__': print(json.dumps(examples(),indent=2))

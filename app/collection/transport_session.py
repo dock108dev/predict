@@ -241,7 +241,7 @@ class TransportSession:
 
     async def start(self):
         if self.spec.get('native_sources') and self.spec['mode']=='real' and not getattr(self,'native_authorized',False):
-            raise ValueError('B3 requires approved bounded qualification')
+            raise ValueError('Native collection requires approved bounded qualification')
         result=preflight(self.spec, supervised_live=True) if getattr(self,'supervised_live',False) else preflight(self.spec)
         if not result['valid']:raise ValueError(packed(result['errors']))
         if datetime.now(timezone.utc)<time_value(self.spec['start_after']):raise ValueError('before explicit start window')

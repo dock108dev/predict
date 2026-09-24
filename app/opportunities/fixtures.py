@@ -1,4 +1,4 @@
-"""New identified synthetic receipts of the existing Slice 11 NFL book fixture.
+"""New identified synthetic receipts of the existing synthetic NFL depth-book fixture.
 
 Prices/rules remain invented; these are NOT relabeled historical observations.
 """

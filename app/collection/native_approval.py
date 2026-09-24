@@ -1,4 +1,4 @@
-"""Exact, once-consumed B3 qualification. No credentials or network in validation."""
+"""Exact, once-consumed native qualification. No credentials or network in validation."""
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -17,11 +17,11 @@ def implementation():
 
 def validate_approval(spec,endpoints,path,output,*,consume=False):
     marker=Path(output)/'b3-attempt.json'
-    if marker.exists():raise ValueError('B3 allowance consumed; no automatic repeat')
-    if not path:raise ValueError('explicit B3 approval required')
+    if marker.exists():raise ValueError('Native qualification allowance consumed; no automatic repeat')
+    if not path:raise ValueError('explicit native qualification approval required')
     value=json.loads(Path(path).read_text())
     validate_sources(spec)
-    if spec['mode']!='real' or endpoints!=ENDPOINTS or not preflight(spec)['valid']:raise ValueError('invalid B3 qualification configuration')
+    if spec['mode']!='real' or endpoints!=ENDPOINTS or not preflight(spec)['valid']:raise ValueError('invalid native qualification configuration')
     if value.get('approved') is not True or value.get('spec_sha256')!=digest(spec) or value.get('implementation_sha256')!=digest(implementation()):raise ValueError('approval does not bind this candidate and scope')
     if value.get('output')!=str(Path(output).resolve()):raise ValueError('approval output mismatch')
     if spec.get('two_source_qualification'):

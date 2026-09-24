@@ -1,4 +1,4 @@
-"""Offline Slice 8 demonstration from preserved captures; no prices or ROI."""
+"""Offline moneyline matching demonstration from preserved captures; no prices or ROI."""
 import argparse
 from collections import Counter
 import json
@@ -27,7 +27,7 @@ def report(store=None):
             'synthetic_results':synthetic_reports(),
             'separate_dependencies':['ProphetX sizing/clock/live-selection limitations unchanged',
                                      'Novig issued credentials and live qualification unchanged'],
-            'next_project_action':'Slice 9 — fee engine; not implemented in Slice 8'}
+            'next_project_action':'Fee evaluation is separate; see app.fees for the implemented engine'}
 
 
 def synthetic_reports():

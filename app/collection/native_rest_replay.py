@@ -1,4 +1,4 @@
-"""Offline B3 REST price/quantity reconstruction; no access or clock invention."""
+"""Offline native REST price/quantity reconstruction; no access or clock invention."""
 import base64
 from dataclasses import asdict
 from datetime import datetime

@@ -1,4 +1,4 @@
-"""B3 purchase interpretation, separate from immutable legacy replay semantics."""
+"""Native purchase interpretation, separate from immutable legacy replay semantics."""
 from dataclasses import replace
 from decimal import Decimal, localcontext
 from app.models.core import BookLevel, Ladder, Probability, Quantity
