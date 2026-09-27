@@ -1,6 +1,6 @@
 # Native product integration — engineering progress, qualification blocked
 
-**Current access status (September 21):** owner sent both Novig and ProphetX requests; provider responses are pending. No duplicate request is needed. Credentials/production access remain unconfirmed. [Access status](venue-access-status.md) · [Next independent work: reference integration](reference-integration.md).
+**Current disposition (September 27):** Novig/ProphetX requests were reported sent; replies and provisioning remain unconfirmed. Supported integration paths were audited; no evidence-backed adapter gap was found. [Current native readiness handoff](four-venue-readiness-handoff.md) supersedes earlier next-action instructions. No executable qualification package or approval request exists. [Access status](venue-access-status.md).
 
 September 21, 2026. **venue integration IN PROGRESS. NOT COMPLETE. Beta NOT READY FOR SIGNOFF.** [Bounded proposal](native-qualification-proposal.md) · [Evidence](../evidence/b3-native-integration-20260920/final-report.md).
 

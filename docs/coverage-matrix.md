@@ -165,6 +165,8 @@ Product integration COMPLETE: [implementation and acceptance](product-integratio
 
 ## Current engineering and qualification state
 
+September 27: [Current path audit, exact candidate, dependency actions and non-executable qualification disposition](four-venue-readiness-handoff.md). Supported native engineering is already implemented; no provider evidence or coverage cell is upgraded by this offline audit.
+
 September 21, 2026: [implementation and explicit six-column per-venue evidence matrix](native-integration.md#per-source-evidence-state). Venue integration IN PROGRESS, not complete. US Short and Novig payout-cent purchase conversions are offline verified; native REST supports shared flat and segmented history with offline and ordinary fixture verification. Historical sandbox/production cells above keep their original meaning. No fresh venue integration QA/production samples exist. ProphetX selection is resolved; Novig provisioning and ProphetX production access remain unverified; [one bounded proposal](native-qualification-proposal.md) awaits those exact references before approval. Beta NOT READY FOR SIGNOFF.
 
 Continuation: [GraphQL assessment](novig-graphql-assessment.md) supports a small display-only bridge, not executable quotes. [Evidence](../evidence/b3-continuation-20260921/final-report.md) and [setup instructions](venue-access-setup.md). NBX and ProphetX production provisioning remain unconfirmed; no fresh source collection.

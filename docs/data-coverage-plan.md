@@ -43,7 +43,7 @@ KenPom and NHL analytics remain deferred; MoneyPuck remains dropped. No replacem
 
 September 23 public investigation and supported engineering are complete. US hierarchy is established; historical applicability and mandatory-charge gaps remain. All four retained net comparisons are unavailable. Prior C3/C4 state/clock failures remain closed historical gaps, not research targets. [Review7](../evidence/b6-native-review-20260923-v7/review.md) and [prepared inquiries — not sent](../evidence/b6-native-review-20260923-v7/provider-inquiries.md) remain unchanged. No further public-acquisition package is queued. Automation was recorded paused at closeout; its current installed state was not checked here. Prior public research authorization does not authorize outreach or collection.
 
-The card/workflow change above is complete locally and ready for formative owner review. Authoritative exchange clarification and unconfirmed Novig/ProphetX provisioning remain dependencies of real readiness.
+The card/workflow change above is complete locally. The September 27 [four-venue native readiness audit and external handoff](four-venue-readiness-handoff.md) is the current next-slice result; no owner walkthrough is started. Authoritative exchange clarification and unconfirmed Novig/ProphetX provisioning remain dependencies of real readiness.
 
 ## Later final beta review
 

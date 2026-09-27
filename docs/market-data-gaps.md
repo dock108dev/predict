@@ -14,6 +14,8 @@
 
 ## All-four-venue readiness
 
+September 27: [Current path audit, exact candidate, dependency actions and non-executable qualification disposition](four-venue-readiness-handoff.md). Supported native engineering is already implemented; no provider evidence or coverage cell is upgraded by this offline audit.
+
 Updated September 26, 2026. Delivery requires **100% real data from all four selected venues** through ordinary Predict. This ledger describes evidence, not authorization to collect. Historical samples and offline adapters do not establish current production qualification. [Native evidence by source](native-integration.md#per-source-evidence-state) · [review7](../evidence/b6-native-review-20260923-v7/review.md).
 
 | Venue | Implemented and evidenced | Missing evidence / blocker | Concrete next action and actor | Useful ordinary-app completion condition |
