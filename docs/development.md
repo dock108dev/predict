@@ -145,3 +145,7 @@ evidence or read an existing saved format. Keep slice/task chronology in the
 not in module comments or current setup instructions. Retained authorization labels,
 reviewer provenance and hash-bearing fixture text are compatibility/evidence inputs;
 rewriting them requires a separate migration or regenerated-evidence decision.
+
+## Opportunity-card preview and focused checks
+
+[Local candidate handoff](opportunity-card-handoff.md) documents the isolated ordinary-app simulation. Run `.venv/bin/python -m unittest tests.test_opportunity_feed -v` for percentage grouping, no-model comparisons, original-input math, frozen reopening and HTTP Stop. Run lifecycle modules in separate processes to keep process-wide peak RSS from earlier tests out of later bounded fixtures. The simulation launcher is `.venv/bin/python -m tests.opportunity_card_preview .local/opportunity-card-preview`; its optional local `pause-books` file pauses fixture updates for freshness checks, and must be removed after the check. No provider endpoints or credentials are used.

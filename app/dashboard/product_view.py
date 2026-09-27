@@ -28,7 +28,7 @@ def calculate(snapshot,game,q):
     if q.get('reference'):
         reference=next((r for r in references_for(snapshot,game,q['contract']) if r['id']==q['reference']),None)
         if not reference:raise ValueError('Reference unavailable at this cutoff')
-    probability=(reference['value'] if usable(reference) else None) if reference else q.get('probability') or None
+    probability=(reference['value'] if usable(reference) else None) if reference else (None if q.get('probability') in (None, '') else q.get('probability'))
     result=game_calculation(point,snapshot['rows_by_game'][game['id']],dict(game,assessment_at=point['at']),q.get('quantity','100'),q.get('scenario','cent'),probability,q.get('contract'))
     if reference:
         result['ev']['probability_source']=reference['role']+' · '+reference['provider_id']+' / '+reference.get('origin_id','unknown')+' · received '+reference['received_at']
@@ -77,5 +77,5 @@ def dashboard(snapshot,q,assumptions):
                     basis=assumption.get('basis') if assumption else (ref['role']+' · '+ref['provider_id']+' / '+ref.get('origin_id','unknown')+' · as of '+str(ref.get('source_at') or ref.get('model_as_of') or 'unknown')+' · '+ref.get('freshness','dated')) if ref else 'Assumption needed'
                     ev=calculate(snapshot,game,dict(q,contract=key,probability=probability,reference=ref['id'] if ref else ''))['ev'];leg=ev['leg'];v=leg['venue']
                     if ref and not usable(ref):basis+=' · '+(ref.get('reason') or 'Unsupported reference value')
-                    items.append(dict(**common,id=game['id']+'~'+key+('~'+ref['id'] if ref else ''),candidate='',contract=key,reference_id=ref['id'] if ref else None,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis,venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
+                    items.append(dict(**common,id=game['id']+'~'+key+('~'+ref['id'] if ref else ''),candidate='',contract=key,reference_id=ref['id'] if ref else None,reference_role=ref['role'] if ref else None,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis,venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
     return rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))

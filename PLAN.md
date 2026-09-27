@@ -2,6 +2,6 @@
 
 The active beta definition is [docs/product-roadmap-review.md](docs/product-roadmap-review.md). Use [docs/data-coverage-plan.md](docs/data-coverage-plan.md) for delivery order and implementation status.
 
-September 20 owner scope: Kalshi, Novig, Polymarket US and ProphetX; an independent power-index/model reference and free delayed Pinnacle; NFL, NBA, MLB, NHL, NCAAF and NCAAB; win/loss, spread, total, halftime and futures. Live/in-play is a stretch goal. **Not ready for beta signoff.**
+September 20 owner scope: Kalshi, Novig, Polymarket US and ProphetX; optional analytics/models and bookmaker lines (including Pinnacle), only if easily available; NFL, NBA, MLB, NHL, NCAAF and NCAAB; win/loss, spread, total, halftime and futures. Live/in-play is a stretch goal. **Not ready for beta signoff.**
 
 The original design is [archived](docs/history/beta-reset-20260920/PLAN.md), for historical context only. Its venue ordering and next steps are not current instructions.

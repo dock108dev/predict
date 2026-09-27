@@ -17,7 +17,7 @@ const BoardView = {
   const demo=['mock','synthetic'].includes(value);
   if(state==='saving')return demo?'Saving demo…':'Saving observations…';
   if(state==='incomplete')return demo?'Incomplete demo':'Incomplete saved observations';
-  return demo?(live?'Demo scan':'Saved demo'):value==='real'?(live?'Live observations':'Saved observations'):(value||'Saved observations');
+  return demo?(live?'Simulation · current test':'Simulation · saved'):value==='real'?(live?'Current observations':'Historical observations'):(value||'Saved observations');
  },
  sourceState(value) { return ({configured:'Configured',enabled:'Enabled',stopped:'Stopped',connected:'Connected',receiving:'Receiving',disconnected:'Disconnected',failed:'Failed',unconfigured:'Setup needed',selected:'Selected',resynchronization_required:'Needs resync',unavailable:'Unavailable'})[value]||String(value||'Status unknown').replaceAll('_',' '); },
  scanStatus(s) {

@@ -171,23 +171,34 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         r.update(session=q['session'],hash=sid,live=False)
         r['page_estimate']=for_saved_game(sid,g,q.get('quantity','100'),q.get('scenario','cent'),live=d['live'])
         return web.json_response(r)
-    async def dashboard(req):
-        q=req.query
+    def dashboard_payload(q):
+        if q.get("view", "arb")=="feed":
+            from app.dashboard.opportunity_feed import combine
+            ev=dashboard_payload(dict(q,view="ev",sort="roi"))
+            arb=dashboard_payload(dict(q,view="arb",sort="roi",capture=ev["capture"] or ""))
+            ev["rows"]=combine(ev["rows"],arb["rows"])
+            ev["total_candidates"]=len(ev["rows"])
+            return ev
         assumptions=validate_assumptions(json.loads(q.get('assumptions','{}')))
         ds=datasets();sid=q.get('capture') or (list(ds)[-1] if ds else None)
         result=dict(status=owner.status(),captures=[dict(id=s,label=d['label']) for s,d in ds.items()],capture=sid,rows=[],coverage=None)
-        if not sid:return web.json_response(result)
+        if not sid:return result
         d=ds[sid]
         if d.get('error'):
-            result.update(state='incomplete',error=d['error']);return web.json_response(result)
+            result.update(state='incomplete',error=d['error']);return result
         if 'product' in d:
             from app.dashboard import product_view
             p=d['product'];items=product_view.dashboard(p,q,assumptions)
+            if q.get('view')=='ev':
+                from app.dashboard.opportunity_feed import combine
+                items=combine(items,[])
             result.update(fee_scenario_locked=bool(p.get('qualification_fee_policy')),rows=items,total_candidates=len(items),live=p['view_mode']=='current',state=p['state'],data_mode=p['data_mode'],capture_time=p['started_at'],last_update=p['last_update'],sources=p['sources'],references=p['references'],market_catalog=p['market_catalog'],durable_cursor=p['durable_cursor'],coverage=dict(selected=len(p['games']),excluded=[m for m in p['market_catalog'] if m.get('reason')],truncated_by_limit=p['comparison_groups_beyond_limit'],sources=p['sources'],generation=p['generation'],refresh=p['refresh']))
-            return web.json_response(result)
+            return result
         result.update(coverage=d['coverage'],live=d['live'],last_update=d['rows'][-1]['observed_at'],capture_time=d['rows'][0]['observed_at'],data_mode=d['rows'][0]['spec']['mode'])
         view=q.get('view','arb');items=[]
         for g in d['games']:
+            identity=g.get('product_identity',dict(competition='NFL',season='2026',family='moneyline',period='full_game'))
+            if any(q.get(k) and identity.get(k)!=q[k] for k in ('competition','season','family','period')):continue
             timeline,rows=project_game(d['rows'],g,d['live']);point=timeline[-1] if d['live'] else default_point(timeline)
             # Drilldown freezes an actual retained cutoff, never the moving current projection.
             retained=timeline[-2] if d['live'] else point
@@ -206,8 +217,13 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                     ev=game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),p,key)['ev'];leg=ev['leg'];v=leg['venue']
                     items.append(dict(**common,id=g['id']+'~'+key,candidate='',contract=key,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis or 'Assumption needed',venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
         result['rows']=rank_research(items,q.get('sort','roi'),q.get('search','')) if view=='research' else rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))
+        if view=='ev':
+            from app.dashboard.opportunity_feed import combine
+            result['rows']=combine(result['rows'],[])
         result['total_candidates']=len(items)
-        return web.json_response(result)
+        return result
+    async def dashboard(req):
+        return web.json_response(dashboard_payload(req.query))
     async def page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/dashboard.html')
     async def game(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/index.html')
     async def style(req):return web.FileResponse(ROOT/'app/dashboard/static/style.css')

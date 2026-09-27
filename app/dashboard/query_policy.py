@@ -6,7 +6,7 @@ CHOICES = {
                'quarter_3', 'quarter_4', 'first_3', 'first_5', 'first_6', 'regulation_9',
                'period_1', 'period_2', 'period_3', 'season'),
     'family': ('', 'moneyline', 'spread', 'total', 'futures'),
-    'view': ('arb', 'ev', 'research'),
+    'view': ('feed', 'arb', 'ev', 'research'),
     'sort': ('roi', 'dollars'),
     'scenario': ('cent', 'direct', 'unknown'),
     'freshness': ('', 'usable', 'unavailable'),
