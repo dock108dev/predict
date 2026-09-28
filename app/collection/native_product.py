@@ -258,7 +258,8 @@ class NativeVenue:
 
     async def aclose(self):
         self.closed=True
-        for a in self.adapters:await a.aclose()
+        from app.cleanup import close_all
+        await close_all(self.adapters)
         if self.config['state']=='enabled':
             self.state='disconnected';self.reason='source stopped'
             self.session.health[self.venue]='disconnected'

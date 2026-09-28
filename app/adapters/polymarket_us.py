@@ -420,8 +420,6 @@ class PolymarketUSAdapter(ReadOnlyAdapter):
             self.streams.discard(stream)
 
     async def aclose(self):
-        if not self.closed:
-            self.closed = True
-            for stream in tuple(self.streams):
-                await stream.aclose()
-            await self.client.aclose()
+        self.closed = True
+        from app.cleanup import close_all
+        await close_all([*self.streams, self.client])

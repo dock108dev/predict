@@ -1,5 +1,6 @@
 """Offline browser-boundary regressions; owner cannot collect or read credentials."""
 import json
+import asyncio
 import unittest
 from decimal import Decimal
 from unittest.mock import AsyncMock, Mock, patch
@@ -12,6 +13,7 @@ from app.dashboard.query_policy import decimal_input
 class BrowserBoundary(AioHTTPTestCase):
     async def get_application(self):
         self.owner = Mock()
+        self.owner.start_controls = frozenset({'duration'})
         self.owner.session = None
         self.owner.active.return_value = False
         self.owner.saved.return_value = []
@@ -40,6 +42,63 @@ class BrowserBoundary(AioHTTPTestCase):
         port=self.client.server.port
         await self.assert_response(await self.client.get('/api/status', headers={'Host':f'localhost:{port}'}),200)
 
+    async def test_updates_head_does_not_start_subscription(self):
+        self.owner.active.reset_mock()
+        response=await self.client.head('/api/updates')
+        await self.assert_response(response,200)
+        self.assertEqual(await response.read(),b'')
+        self.owner.active.assert_not_called()
+        await self.assert_response(await self.client.get('/api/status'),200)
+
+    async def test_updates_limit_preserves_controls_and_releases_disconnects(self):
+        responses=[]
+        with patch('app.dashboard.multi_game_server.MAX_UPDATE_CLIENTS',2):
+            try:
+                for _ in range(2):
+                    response=await self.client.get('/api/updates');responses.append(response)
+                    self.assertEqual(response.status,200)
+                    self.assertTrue((await response.content.readline()).startswith(b'data: '))
+                rejected=await self.client.get('/api/updates')
+                await self.assert_response(rejected,429)
+                self.assertEqual(rejected.headers['Retry-After'],'1')
+                # Metadata and Stop do not share the notification quota.
+                await self.assert_response(await self.client.head('/api/updates'),200)
+                await self.assert_response(await self.client.get('/api/status'),200)
+                await self.assert_response(await self.client.post('/api/stop',json={},
+                    headers={'Origin':self.origin()}),200)
+                self.owner.stop.assert_awaited_once()
+                responses.pop().close()
+                async with asyncio.timeout(1):
+                    while True:
+                        replacement=await self.client.get('/api/updates')
+                        if replacement.status==200:
+                            responses.append(replacement)
+                            break
+                        await replacement.read()
+                        await asyncio.sleep(.01)
+                self.assertTrue((await replacement.content.readline()).startswith(b'data: '))
+            finally:
+                for response in responses:response.close()
+
+    async def test_failed_stream_prepare_releases_capacity(self):
+        from aiohttp import web
+        prepare=web.StreamResponse.prepare
+        async def fail_stream(response,request):
+            if response.content_type=='text/event-stream':raise RuntimeError('SECRET')
+            return await prepare(response,request)
+        with patch('app.dashboard.multi_game_server.MAX_UPDATE_CLIENTS',1):
+            with patch.object(web.StreamResponse,'prepare',fail_stream):
+                for _ in range(2):
+                    with self.assertLogs('app.dashboard.multi_game_server',level='ERROR') as logs:
+                        response=await self.client.get('/api/updates')
+                    await self.assert_response(response,503)
+                    self.assertNotIn('SECRET',' '.join(logs.output)+await response.text())
+            response=await self.client.get('/api/updates')
+            try:
+                self.assertEqual(response.status,200)
+                self.assertTrue((await response.content.readline()).startswith(b'data: '))
+            finally:response.close()
+
     async def test_mutations_require_origin_json_and_small_valid_body(self):
         await self.assert_response(await self.client.post('/api/start', json={}), 403)
         headers={'Origin': self.origin()}
@@ -51,8 +110,8 @@ class BrowserBoundary(AioHTTPTestCase):
         await self.assert_response(await self.client.post('/api/stop',json={'unexpected':1},headers=headers),422)
         self.owner.start.assert_not_awaited()
         self.owner.stop.assert_not_awaited()
-        await self.assert_response(await self.client.post('/api/start',json={'max_games':2,'duration':5},headers=headers),200)
-        self.owner.start.assert_awaited_once_with(max_games=2,duration=5)
+        await self.assert_response(await self.client.post('/api/start',json={'duration':5},headers=headers),200)
+        self.owner.start.assert_awaited_once_with(duration=5)
         await self.assert_response(await self.client.post('/api/stop',json={},headers=headers),200)
         self.owner.stop.assert_awaited_once()
 

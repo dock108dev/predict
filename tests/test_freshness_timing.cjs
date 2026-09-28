@@ -1,0 +1,13 @@
+const assert=require('assert'),fs=require('fs'),vm=require('vm');
+let now=10000;const c=vm.createContext({Set,Number,JSON,Date,performance:{timeOrigin:0,now:()=>now},document:{visibilityState:'visible'},requestAnimationFrame:f=>f()});
+vm.runInContext(fs.readFileSync('app/dashboard/opportunity_static/comparisons.js','utf8')+'\nthis.api=PriceComparisons;',c);
+const leg=(market,at,id)=>({venue:'kalshi',native_identity:{market_id:market},application_received_at:new Date(at).toISOString(),book_id:id,contract:'yes'});
+const result=(legs,session='one')=>({capture:session,live:true,calculated_at:new Date(now-20).toISOString(),browser_received_at:now-10,comparisons:[{legs}]});
+c.api.measure(result([leg('a',1000,'a1'),leg('b',2000,'b1')]));
+assert.equal(c.api.samples.length,2);assert(c.api.samples.every(s=>s.sample_kind==='initial_state'));assert.equal(c.api.samples[0].receipt_to_visible_ms,9000);
+c.api.measure(result([leg('a',1000,'health-only')]));assert.equal(c.api.samples.length,2);
+now+=100;c.api.measure(result([leg('a',10050,'a2')]));assert.equal(c.api.samples[2].sample_kind,'subsequent_update');assert.equal(c.api.samples[2].market_id,'a');
+c.api.measure(result([leg('a',10050,'a2')],'two'));assert.equal(c.api.samples[3].sample_kind,'initial_state');
+c.document.visibilityState='hidden';c.api.measure(result([leg('b',10060,'b2')]));assert.equal(c.api.observer.hidden_calls,1);assert.equal(c.api.samples.length,4);
+c.document.visibilityState='visible';c.api.measure({...result([leg('b',10060,'b2')]),live:false});assert.equal(c.api.samples.length,4);
+console.log('Initial, subsequent, health-only, session, hidden and historical timing: PASS');

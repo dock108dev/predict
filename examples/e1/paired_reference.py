@@ -13,7 +13,8 @@ def paired_rows(event, outcomes):
     """Keep both slots and stable book/market keys, reject ambiguous outcomes.
 
     Demonstrates the useful event -> book -> market -> outcome traversal only.
-    E2 must provide source identity, exact rules, receipt time and mapping.
+    A collecting adapter must provide source identity, exact rules, receipt time
+    and mapping.
     """
     result = []
     for book in event.get('bookmakers', ()):

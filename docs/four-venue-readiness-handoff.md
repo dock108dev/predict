@@ -1,5 +1,7 @@
 # Four-venue native readiness — September 27, 2026
 
+**Current work order — September 27 owner update:** the immediate next milestone is the [live Kalshi / Polymarket US comparison in ordinary Predict](live-two-venue-comparison-next-steps.md). Complete local integration and prepare its separately approved live check first. All-four readiness and unresolved net-economics evidence below remain scoped later requirements; they do not block useful raw two-venue price display. Preserve provisional fee decisions; no further Kalshi/US outreach is pending. Earlier audit/dispatch statements below are retained dated context, not the current next action. This update authorizes no credential access or collection.
+
 Local audit and supported integration work are complete; four-venue production qualification and owner acceptance remain open. No card redesign or owner walkthrough was performed. The existing adapters, shared calculation/projection, card feed and saved history are preserved. No concrete supported adapter omission was found: unresolved native meanings require evidence, not guessed mappings.
 
 ## Exact candidate and verification

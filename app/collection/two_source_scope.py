@@ -15,9 +15,10 @@ def violation(source, record, selection):
                 if set(c)!= {'id','cmd','params'} or c['cmd']!='subscribe' or set(c['params'])!={'channels','market_tickers'} or c['params']['channels']!=['orderbook_delta']:return 'unsupported_subscription_command'
                 ids=c['params']['market_tickers']
             else:
-                if set(c)!={'subscribe'} or set(c['subscribe'])!={'requestId','subscriptionType','marketSlugs'} or c['subscribe']['subscriptionType']!='SUBSCRIPTION_TYPE_MARKET_DATA':return 'unsupported_subscription_command'
+                if set(c)!={'subscribe'} or set(c['subscribe']) not in ({'requestId','subscriptionType','marketSlugs'}, {'requestId','subscriptionType','marketSlugs','responsesDebounced'}) or c['subscribe']['subscriptionType']!='SUBSCRIPTION_TYPE_MARKET_DATA':return 'unsupported_subscription_command'
+                if 'responsesDebounced' in c['subscribe'] and c['subscribe']['responsesDebounced'] is not False:return 'unsupported_subscription_command'
                 ids=c['subscribe']['marketSlugs']
-            if not isinstance(ids,list) or not ids or len(ids)>2 or len(set(ids))!=len(ids) or set(ids)!=set(allowed):return 'subscription_outside_frozen_selection'
+            if not isinstance(ids,list) or not ids or len(ids)>(8 if 'market_events' in selection else 2) or len(set(ids))!=len(ids) or set(ids)!=set(allowed):return 'subscription_outside_frozen_selection'
         elif kind=='prediction_frame':
             c=json.loads(base64.b64decode(record['body_b64'],validate=True))
             # Native adapters support single objects only. Reject the whole batch before parsing.
@@ -35,6 +36,7 @@ def violation(source, record, selection):
                 if c['marketData'].get('marketSlug') not in allowed:return 'unsolicited_market'
         else:
             ref=record['book' if kind=='prediction_book' else 'market']['raw']['ref']
-            if ref['market_id'] not in mids or ref['event_id']!=selection[source]:return 'book_or_market_outside_frozen_selection'
+            expected=selection['market_events'][source].get(ref['market_id']) if 'market_events' in selection else selection[source]
+            if ref['market_id'] not in mids or ref['event_id']!=expected:return 'book_or_market_outside_frozen_selection'
     except (KeyError,ValueError,TypeError,AttributeError):return 'unverifiable_scope'
     return None

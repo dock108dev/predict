@@ -1,5 +1,7 @@
 """Native prediction adapters and stream engines owned by E6, never old controller."""
 import asyncio
+import sys
+from app.diagnostics import failure
 import base64
 from dataclasses import asdict, replace
 from hashlib import sha256
@@ -153,13 +155,16 @@ class PredictionProducer:
                     producer.budget.charge_bytes(self.wire_limit)
                     pending=True
                     body=await self.socket.recv()
+                    producer.application_received_at=utc()
+                    producer.application_received_monotonic=asyncio.get_running_loop().time()
                     raw=body.encode() if isinstance(body,str) else body
+                    producer.application_wire_sha256=sha256(raw).hexdigest()
                     producer.budget.bytes-=self.wire_limit-len(raw)
                     pending=False
                     producer.bytes+=len(raw)
                     if producer.bytes>limits['session_bytes']: raise BudgetStop('prediction_session_byte_cap')
                     if producer.credential:producer.credential.check(raw,producer.handshake_headers)
-                    producer.emit(producer.venue,dict(type='prediction_frame',connection=producer.budget.connections,received_at=utc(),
+                    producer.emit(producer.venue,dict(type='prediction_frame',connection=producer.budget.connections,received_at=utc(),application_received_at=producer.application_received_at,
                         body_b64=base64.b64encode(raw).decode(),body_sha256=sha256(raw).hexdigest()))
                     return body
                 except asyncio.CancelledError:
@@ -213,15 +218,29 @@ class PredictionProducer:
                     row=packet(observation)
                     row['raw_b64']=base64.b64encode(row.pop('raw')).decode()
                     packets.append(row)
-                self.emit(self.venue,dict(type='prediction_book',book=data,packets=packets,
+                if not hasattr(self,'application_receipts'):self.application_receipts={}
+                mid=book.raw.ref.market_id
+                old=self.application_receipts.get(mid)
+                if old is None or old[0]!=data['raw']['received_at']:
+                    tick=getattr(self,'application_received_monotonic',None)
+                    timing=dict(reconstructed_at=utc(),wire_sha256=getattr(self,'application_wire_sha256',None),
+                        connection=self.budget.connections,receipt_to_reconstructed_ms=None if tick is None else (asyncio.get_running_loop().time()-tick)*1000)
+                    self.application_receipts[mid]=(data['raw']['received_at'],getattr(self,'application_received_at',None),timing)
+                self.emit(self.venue,dict(type='prediction_book',book=data,packets=packets,application_received_at=self.application_receipts[mid][1],local_timing=self.application_receipts[mid][2],
                     receipt_semantics='derived native book state; wire arrivals separately retained'))
                 self.health(self.venue,'connected' if book.sync.value=='synchronized' else ('disconnected' if self.stream.connection is None else 'ineligible'))
                 if getattr(self, 'after_book', None):
                     await self.after_book()
         finally:
-            await self.stream.aclose()
-            self.health(self.venue,'disconnected')
-            self.emit(self.venue,dict(type='native_stream_finished',diagnostics=self.stream.diagnostics,closed=self.stream.closed))
+            primary = sys.exception()
+            try:
+                await self.stream.aclose()
+                self.health(self.venue,'disconnected')
+                self.emit(self.venue,dict(type='native_stream_finished',diagnostics=self.stream.diagnostics,closed=self.stream.closed))
+            except Exception as exc:
+                failure(__name__, 'native_stream_finalize', exc)
+                if primary is None:
+                    raise
 
     async def interrupt_connection(self):
         """Explicit supervised fault; native stream owns invalidation and recovery."""
@@ -235,7 +254,5 @@ class PredictionProducer:
         await self.stream.connection.close()
 
     async def aclose(self):
-        try:
-            if self.stream: await self.stream.aclose()
-        finally:
-            if self.adapter: await self.adapter.aclose()
+        from app.cleanup import close_all
+        await close_all([resource for resource in (self.stream, self.adapter) if resource is not None])

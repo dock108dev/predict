@@ -18,6 +18,13 @@ def verify(package):
     for name,h in seal['files'].items():
         f=p/name
         if f.parent!=p or sha256(f.read_bytes()).hexdigest()!=h:raise ValueError('package file changed: '+name)
+    manifest=p/'source-manifest.json'
+    if manifest.exists():
+        root=Path(__file__).resolve().parents[2]
+        for name,h in json.loads(manifest.read_text())['files'].items():
+            f=(root/name).resolve()
+            if not f.is_relative_to(root) or sha256(f.read_bytes()).hexdigest()!=h:
+                raise ValueError('source manifest changed: '+name)
     spec=json.loads((p/'run-spec.template.json').read_text());validate(spec)
     a=json.loads((p/'approval.draft.json').read_text())
     candidate=json.loads((p/'candidate.json').read_text())

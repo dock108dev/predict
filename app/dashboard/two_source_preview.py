@@ -32,6 +32,7 @@ def check_package(spec,approval,output):
 def supervise(process,output,spec,*,clock=time.monotonic,sleep=time.sleep):
     """Independent hard collection guard; post-close offline saving may finish."""
     output=Path(output);marker=output/'b3-attempt.json';bad_since=None
+    deadline=spec['two_source_qualification']['hard_deadline_seconds']
     while process.poll() is None:
         if marker.exists():
             try:
@@ -47,11 +48,11 @@ def supervise(process,output,spec,*,clock=time.monotonic,sleep=time.sleep):
             safe=False
             if closed.exists():
                 try:
-                    c=json.loads(closed.read_text());safe=c.get('attempt_id')==attempt['attempt_id'] and c.get('monotonic',float('inf'))<=attempt['started_monotonic']+90
+                    c=json.loads(closed.read_text());safe=c.get('attempt_id')==attempt['attempt_id'] and c.get('monotonic',float('inf'))<=attempt['started_monotonic']+deadline
                 except (ValueError,TypeError):safe=False
-            if not safe and clock()>=attempt['started_monotonic']+90:
+            if not safe and clock()>=attempt['started_monotonic']+deadline:
                 process.kill();process.wait()
-                save_json(output/'supervisor-stop.json',dict(reason='hard_90_second_deadline',attempt_id=attempt['attempt_id'],state='incomplete; verified prefix only',cleanup='process terminated; no graceful cleanup claim'))
+                save_json(output/'supervisor-stop.json',dict(reason='hard_'+str(deadline)+'_second_deadline',attempt_id=attempt['attempt_id'],state='incomplete; verified prefix only',cleanup='process terminated; no graceful cleanup claim'))
                 return 1
         elif datetime.now(timezone.utc)>time_value(spec['start_before']):
             process.terminate()

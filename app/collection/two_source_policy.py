@@ -32,7 +32,12 @@ def specification(start_after, start_before, attempt_id, mode='real'):
 
 def validate(spec):
     q=spec['two_source_qualification'];UUID(q['attempt_id'])
-    if spec!=specification(spec['start_after'],spec['start_before'],q['attempt_id'],spec['mode']):
+    factory=specification
+    if q.get('version')=='live-comparison-nfl-1':
+        from .comparison_policy import specification as factory
+    if q.get('version')=='live-comparison-nfl-multi-1':
+        from .comparison_policy import multi_specification as factory
+    if spec!=factory(spec['start_after'],spec['start_before'],q['attempt_id'],spec['mode']):
         raise ValueError('two-source scope differs from frozen policy')
     after=datetime.fromisoformat(spec['start_after']);before=datetime.fromisoformat(spec['start_before'])
     if after.utcoffset() is None or before.utcoffset() is None or before-after!=timedelta(minutes=15):

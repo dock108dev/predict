@@ -149,6 +149,8 @@ class SessionProjection:
         if cutoff is not None and cutoff!=token: raise ValueError('cutoff requires verified prefix replay')
         at=(now or datetime.now(timezone.utc).isoformat()) if mode=='current' else self.last
         groups={}; catalog=[]; metadata=[]
+        from app.normalization.registry import Registry
+        registry=None
         from app.normalization.nhl import inventory_gaps, winner_review, event_key
         nhl_gaps=inventory_gaps(self.inventory)
         from app.normalization import mlb,nba,ncaaf,ncaab,nfl_lines
@@ -234,7 +236,9 @@ class SessionProjection:
                         record['identity']=ident
                     except (ValueError,KeyError,TypeError,AttributeError,IndexError,StopIteration) as exc:
                         record['reason']=str(exc);continue
-                try: sides=self.sides(source,e,m,meta)
+                try:
+                    if not m.get('product_outcomes') and registry is None:registry=Registry.load()
+                    sides=self.sides(source,e,m,meta,registry)
                 except (KeyError,ValueError,StopIteration,TypeError): record['reason']='unsupported outcome identity'; continue
                 if len(sides)!=2 and not (is_line and len(sides)==3): record['reason']='unsupported outcome set'; continue
                 book=self.books.get(key); age=None if not book else str(Decimal(str((stamp(at)-stamp(book['book']['raw']['received_at'])).total_seconds())))
@@ -243,6 +247,8 @@ class SessionProjection:
                 try: formatted=format_book(book,{source:{s['native_id']:(s['participant'],s.get('native_label',s['native_id'])) for s in sides.values()}}) if book else None
                 except (ValueError,KeyError,StopIteration,TypeError):
                     record['reason']='unsupported book packet';continue
+                if formatted and book.get('application_received_at'):formatted['application_received_at']=book['application_received_at']
+                if formatted and book.get('local_timing'):formatted['local_timing']=deepcopy(book['local_timing'])
                 if formatted and self.spec.get('future_qualification_policy'):
                     formatted['native_qualification_scope']={'venue':source,'event_id':e['id'],'market_id':m['id']}
                     formatted['connection_epoch']=book.get('connection_epoch')
@@ -330,14 +336,14 @@ class SessionProjection:
         return deepcopy(result)
 
     @staticmethod
-    def sides(source,event,market,meta):
+    def sides(source,event,market,meta,registry=None):
         explicit=market.get('product_outcomes')
         if explicit:
             sides=explicit
         else:
             raw=json.loads(meta['market']['raw']['json_text'])
             from app.normalization.registry import Registry
-            registry=Registry.load()
+            registry=registry or Registry.load()
             names={cid:registry.entities[cid]['name'] for cid in event['participants'].values()}
             if source=='kalshi':
                 native=next(m for m in raw['markets'] if m['ticker']==market['id'])

@@ -106,3 +106,53 @@ installed build, or physical phone.
 Template gallery search, form submit feedback, dialog opening, and Escape dismissal were exercised. Shared styles include keyboard focus, reduced-motion, and reduced-transparency handling. Native Godot is a basic translucent fallback, not a true blur material. Native games retain their desktop layout and illustrated artwork.
 
 See [design and future template use](ui-design.md). No owner acceptance or release qualification is inferred. Rebuild/relaunch the appropriate source application to see the change; installed or frozen copies remain their original versions.
+
+
+## September 28 presentation cleanup
+
+Current working-source verification, after the error-handling and security changes.
+Existing review builds and consumed live attempts remain unchanged. Used the
+ordinary application with `tests/comparison_feed_preview.py`, a fresh temporary
+output root and loopback-only synthetic providers. This was not an owner-data or
+live-source review. The prior screenshots in this document remain historical.
+
+Matched saved simulation: four games/eight price comparisons, same original saved
+session and cutoff. At 1440×900 the first dashboard price moved from y=813.7 to
+711.4; at 390×844 from y=1431.0 to 1212.2. The game-detail first price moved from
+y=563.4 to 441.2 on desktop. These are element positions, not usability percentages.
+All eight comparisons remain; prices, quantities and raw evidence are preserved.
+Narrow-screen prices still require scrolling past the visible controls. Secondary
+card text is 13px, and comparison disclosures now have 44px minimum touch height.
+
+| Screen | Before | After |
+| --- | --- | --- |
+| Dashboard, desktop | [Before](../evidence/ux-cleanup-20260928/before-desktop.png) | [After](../evidence/ux-cleanup-20260928/after-desktop.png) |
+| Dashboard, narrow | [Before](../evidence/ux-cleanup-20260928/before-narrow.png) | [After](../evidence/ux-cleanup-20260928/after-narrow.png) |
+| Game, desktop | [Before](../evidence/ux-cleanup-20260928/before-game-desktop.png) | [After](../evidence/ux-cleanup-20260928/after-game-desktop.png) |
+| Game, narrow | [Before](../evidence/ux-cleanup-20260928/before-game-narrow.png) | [After](../evidence/ux-cleanup-20260928/after-game-narrow.png) |
+
+Browser checks: populated and empty-filter states, invalid quantity and recovery
+through settings, initial loading/disabled controls, keyboard disclosure activation,
+open Details surviving Refresh, game navigation, and ordinary Start/Stop/save with
+only synthetic loopback feeds. No page-level horizontal overflow at either width,
+including expanded narrow Details. Existing focus-preservation tests passed.
+Browser zoom shortcuts had no observable effect in the in-app browser, so increased
+text/browser zoom and screen-reader behavior remain unverified; narrow reflow is
+not a substitute for those checks. No new owner acceptance is inferred.
+
+Validation: 15 Python tests (`test_dashboard_security`, `test_ssot_policy`), seven
+JavaScript suites (`test_price_comparison`, `test_concise_dashboard`,
+`test_dashboard_failures`, `test_source_details`, `test_board_security`,
+`test_session_controls`, `test_freshness_timing`), changed-script syntax, document
+links and `git diff --check` passed. The initial price-renderer assertion was updated
+for the intentional wording change while preserving assertions for raw evidence,
+saved/current context, zero-valued lines and safe link rendering. A mistakenly named
+nonexistent `test_opportunity_cards.cjs` command ran no test; it is not counted.
+No full CI, installed-build replacement, provider access, performance profiling,
+commit, push or release occurred.
+
+Remaining presentation boundary: moving the first narrow-screen price above the
+fold would require changing the arrangement of the still-visible filters. If
+further compactness is needed, compare one compact filter arrangement against this
+same synthetic state before changing the ordinary workflow. No redesign is implied
+by this maintenance.

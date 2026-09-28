@@ -16,7 +16,7 @@ def usable(r):
     return r.get('availability',r.get('state','available'))=='available' and r.get('value_kind') in ('probability','partition_distribution') and r.get('conversion_method') and r.get('value') is not None
 
 
-def calculate(snapshot,game,q):
+def calculate(snapshot,game,q,reuse=None):
     validate_choices(q)
     locked=snapshot.get('qualification_fee_policy')=='native-evidence-required'
     if locked:q=dict(q,scenario='unknown')
@@ -29,7 +29,7 @@ def calculate(snapshot,game,q):
         reference=next((r for r in references_for(snapshot,game,q['contract']) if r['id']==q['reference']),None)
         if not reference:raise ValueError('Reference unavailable at this cutoff')
     probability=(reference['value'] if usable(reference) else None) if reference else (None if q.get('probability') in (None, '') else q.get('probability'))
-    result=game_calculation(point,snapshot['rows_by_game'][game['id']],dict(game,assessment_at=point['at']),q.get('quantity','100'),q.get('scenario','cent'),probability,q.get('contract'))
+    result=game_calculation(point,snapshot['rows_by_game'][game['id']],dict(game,assessment_at=point['at']),q.get('quantity','100'),q.get('scenario','cent'),probability,q.get('contract'),reuse=reuse)
     if reference:
         result['ev']['probability_source']=reference['role']+' · '+reference['provider_id']+' / '+reference.get('origin_id','unknown')+' · received '+reference['received_at']
         result['ev'].update(reference=reference,unconditional_ev=None,exceptional_probabilities=reference.get('exceptional_probabilities'),reference_limitation=reference.get('reason') or 'Published probability used in a normal-winner two-state what-if; no exceptional-outcome renormalization. Unconditional EV unavailable.')
@@ -50,7 +50,7 @@ def calculate(snapshot,game,q):
     return result
 
 
-def dashboard(snapshot,q,assumptions):
+def dashboard(snapshot,q,assumptions,reuse=None):
     validate_choices(q)
     validate_assumptions(assumptions)
     items=[];sid=snapshot['session_id'];view=q.get('view','arb')
@@ -59,9 +59,10 @@ def dashboard(snapshot,q,assumptions):
         if any(q.get(k) and game['product_identity'].get(k)!=q[k] for k in ('competition','season')):continue
         if q.get('period') and game['product_identity']['period']!=q['period']:continue
         if q.get('family') and game['product_identity']['family']!=q['family']:continue
-        r=calculate(snapshot,game,{k:v for k,v in q.items() if k!='reference'});point=snapshot['points'][game['id']]
+        point=snapshot['points'][game['id']]
         common=dict(game_id=game['id'],game_title=game['title'],start=game['scheduled_start'],session=sid+'~'+game['id'],hash=sid,cutoff=point['id'],at=point['at'],historical=snapshot['view_mode']!='current',references=references_for(snapshot,game),market_identity=game['product_identity'])
         if view=='arb':
+            r=calculate(snapshot,game,{k:v for k,v in q.items() if k!='reference'},reuse=reuse)
             for c in r['candidates']:
                 venues=sorted({l['venue'] for l in c['legs']})
                 items.append(dict({**common,**c},id=game['id']+'~'+c['id'],candidate=c['id'],venues=venues,venue_pair='+'.join(venues),assumption=r['assumptions']))
@@ -75,7 +76,7 @@ def dashboard(snapshot,q,assumptions):
                 for ref,assumption in choices:
                     probability=assumption.get('probability') if assumption else None
                     basis=assumption.get('basis') if assumption else (ref['role']+' · '+ref['provider_id']+' / '+ref.get('origin_id','unknown')+' · as of '+str(ref.get('source_at') or ref.get('model_as_of') or 'unknown')+' · '+ref.get('freshness','dated')) if ref else 'Assumption needed'
-                    ev=calculate(snapshot,game,dict(q,contract=key,probability=probability,reference=ref['id'] if ref else ''))['ev'];leg=ev['leg'];v=leg['venue']
+                    ev=calculate(snapshot,game,dict(q,contract=key,probability=probability,reference=ref['id'] if ref else ''),reuse=reuse)['ev'];leg=ev['leg'];v=leg['venue']
                     if ref and not usable(ref):basis+=' · '+(ref.get('reason') or 'Unsupported reference value')
                     items.append(dict(**common,id=game['id']+'~'+key+('~'+ref['id'] if ref else ''),candidate='',contract=key,reference_id=ref['id'] if ref else None,reference_role=ref['role'] if ref else None,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis,venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
     return rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))

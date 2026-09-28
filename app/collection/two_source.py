@@ -39,7 +39,7 @@ def failure_reason(exc):
     return 'bounded_discovery_failed'
 
 
-def choose_event(cats, at):
+def choose_events(cats, at, limit=1):
     """Exact schedule and independently normalized participants; reject ambiguity."""
     coverage.match_catalogs(cats)
     candidates=[]
@@ -49,25 +49,30 @@ def choose_event(cats, at):
         peers=[p for p in cats['polymarket_us']['events'] if p['id'] in k['counterpart_event_ids'] and p['competition']=='NFL' and p['identity']=='resolved' and not p['exclusion'] and p['matching_status']=='matched']
         if len(peers)==1:candidates.append((k,peers[0]))
     if not candidates:raise BudgetStop('no_compatible_shared_pregame_event')
-    k,p=min(candidates,key=lambda pair:(pair[0]['scheduled_start'],pair[0]['id'],pair[1]['id']))
-    return dict(kalshi=k['id'],polymarket_us=p['id'],scheduled_start=k['scheduled_start'],
-                participants=sorted(k['participants'].values()),basis='Exact UTC schedule and independently resolved NFL participants; market rules/economics not inferred')
+    pairs=sorted(candidates,key=lambda pair:(pair[0]['scheduled_start'],pair[0]['id'],pair[1]['id']))[:limit]
+    return [dict(kalshi=k['id'],polymarket_us=p['id'],scheduled_start=k['scheduled_start'],
+                participants=sorted(k['participants'].values()),basis='Exact UTC schedule and independently resolved NFL participants; market rules/economics not inferred') for k,p in pairs]
+
+
+def choose_event(cats,at):
+    return choose_events(cats,at)[0]
+
 
 
 class QualificationDiscovery(Discovery):
     def __init__(self,session):
-        super().__init__(session);self.failure=None;self.traversals={}
+        super().__init__(session);self.policy=session.spec['two_source_qualification'];self.failure=None;self.traversals={}
 
     async def pages_for(self, venue, path, query, field, size):
         client=self.clients[venue];cursor='';seen=set();ids=set();result=[]
         traversal=dict(pages=0,rows=0,state='pending');self.traversals[venue+'/'+field]=traversal
-        maximum=POLICY['event_pages'] if field=='events' else POLICY['market_pages']
+        maximum=self.policy['event_pages'] if field=='events' else self.policy['market_pages']
         for page in range(maximum):
-            pagination=dict(limit=POLICY['page_size'],**({'cursor':cursor} if venue=='kalshi' else {'offset':page*POLICY['page_size']}))
+            pagination=dict(limit=self.policy['page_size'],**({'cursor':cursor} if venue=='kalshi' else {'offset':page*self.policy['page_size']}))
             response=await client.get(endpoints_for(self.session)[venue]['rest']+path,{**query,**pagination})
             if response.status_code!=200:raise BudgetStop('catalog_http_'+str(response.status_code))
             data=response.json();rows=data.get(field)
-            if not isinstance(rows,list) or len(rows)>POLICY['page_size']:raise BudgetStop('catalog_page_scope_exceeded')
+            if not isinstance(rows,list) or len(rows)>self.policy['page_size']:raise BudgetStop('catalog_page_scope_exceeded')
             native_ids=[str(r.get('event_ticker' if field=='events' else 'ticker')) if venue=='kalshi' else str(r.get('id')) for r in rows]
             if any(i in ('None','') for i in native_ids) or len(set(native_ids))!=len(native_ids) or ids.intersection(native_ids):
                 raise BudgetStop('duplicate_or_missing_catalog_identity')
@@ -78,7 +83,7 @@ class QualificationDiscovery(Discovery):
                 if not isinstance(cursor,str) or (cursor and cursor in seen):raise BudgetStop('invalid_catalog_cursor')
                 if not cursor:traversal['state']='exhausted';break
                 seen.add(cursor)
-            elif len(rows)<POLICY['page_size']:traversal['state']='exhausted';break
+            elif len(rows)<self.policy['page_size']:traversal['state']='exhausted';break
         return result
 
     async def venue(self, venue):
@@ -88,7 +93,7 @@ class QualificationDiscovery(Discovery):
         if venue not in self.clients:
             client=REST(endpoints_for(s)[venue]['rest'],s.spec['prediction'],lambda r:self.receipt(venue,r),5,
                         s.producers[venue].budget,venue=venue if s.spec['mode']=='real' else None,credential=(s.credentials or {}).get(venue))
-            client.session=s;client.request_ceiling=POLICY['rest_attempts'][venue];self.clients[venue]=client
+            client.session=s;client.request_ceiling=self.policy['rest_attempts'][venue];self.clients[venue]=client
         client=self.clients[venue]
         if venue=='kalshi':
             limits=[]
@@ -100,7 +105,7 @@ class QualificationDiscovery(Discovery):
             await self.pages_for(venue,'/trade-api/v2/events',dict(series_ticker='KXNFLGAME',status='open',with_milestones='true'),'events',5)
         else:
             await self.pages_for(venue,'/v1/events',dict(tagSlug='nfl',active='true',closed='false',orderBy='startTime',orderDirection='asc',
-                sportsMarketTypes=POLICY['us_event_filter'],startTimeMin=(now()+timedelta(seconds=POLICY['kickoff_margin_seconds'])).isoformat()),'events',5)
+                sportsMarketTypes=self.policy['us_event_filter'],startTimeMin=(now()+timedelta(seconds=self.policy['kickoff_margin_seconds'])).isoformat()),'events',5)
 
     async def discover(self, force=False):
         async with self.lock:
@@ -108,39 +113,44 @@ class QualificationDiscovery(Discovery):
             if self.session.stop_event.is_set():raise asyncio.CancelledError()
             if self.completed:return self.markets
             self.generation=1;self.refresh=dict(state='running',generation=1,started_at=now().isoformat())
-            remaining=POLICY['discovery_seconds']-(time.monotonic()-self.session.started_monotonic)
+            remaining=self.policy['discovery_seconds']-(time.monotonic()-self.session.started_monotonic)
             try:
                 async with asyncio.timeout(max(0,remaining)):
                     # Cancel sibling discovery on any failure: no late catalog work.
                     async with asyncio.TaskGroup() as tg:
                         for v in self.venues:tg.create_task(self.venue(v))
                     cats=restrict_games({v:coverage.catalog(self.pages,v,now()) for v in coverage.VENUES})
-                    try:selected=choose_event(cats,now())
+                    try:events=choose_events(cats,now(),self.policy['events_selected'])
                     except BudgetStop:
                         if any(t['state']=='bounded_partial' for k,t in self.traversals.items() if k.endswith('/events')):
                             raise BudgetStop('event_page_limit_without_shared_game') from None
                         raise
+                    selected=deepcopy(events[0]) if len(events)==1 else dict(events=events)
                     self.session.selected_event=selected
-                    us=next(e for e in cats['polymarket_us']['events'] if e['id']==selected['polymarket_us'])
-                    game_id=us.get('_native',{}).get('gameId')
-                    if not game_id:raise BudgetStop('selected_us_game_id_missing')
-                    async with asyncio.TaskGroup() as tg:
-                        tg.create_task(self.pages_for('kalshi','/trade-api/v2/markets',dict(event_ticker=selected['kalshi']),'markets',5))
-                        tg.create_task(self.pages_for('polymarket_us','/v1/markets',dict(gameId=str(game_id),active='true',closed='false'),'markets',5))
+                    # Serial per venue preserves pacing and each event's bounded traversal.
+                    for event in events:
+                        us=next(e for e in cats['polymarket_us']['events'] if e['id']==event['polymarket_us'])
+                        game_id=us.get('_native',{}).get('gameId')
+                        if not game_id:raise BudgetStop('selected_us_game_id_missing')
+                        async with asyncio.TaskGroup() as tg:
+                            tg.create_task(self.pages_for('kalshi','/trade-api/v2/markets',dict(event_ticker=event['kalshi']),'markets',5))
+                            tg.create_task(self.pages_for('polymarket_us','/v1/markets',dict(gameId=str(game_id),active='true',closed='false'),'markets',5))
                     cats,markets=super().project()
                     for v in coverage.VENUES:
-                        eligible=[m for m in cats[v]['markets'] if m['event_id']==selected[v] and not m.get('subscription_exclusion') and not m.get('parse_exclusion') and m['market_type']=='moneyline' and m['period']=='full_game' and m['status']=='active']
-                        ids=[m['id'] for m in sorted(eligible,key=lambda m:m['id'])[:POLICY['markets_per_venue']]]
+                        eligible=[m for m in cats[v]['markets'] if m['event_id'] in {e[v] for e in events} and not m.get('subscription_exclusion') and not m.get('parse_exclusion') and m['market_type']=='moneyline' and m['period']=='full_game' and m['status']=='active']
+                        ids=[m['id'] for event in events for m in sorted((m for m in eligible if m['event_id']==event[v]),key=lambda m:m['id'])[:2]][:self.policy['markets_per_venue']]
                         if not ids:raise BudgetStop('selected_winner_market_missing_'+v)
                         cats[v]['selection']=dict(ids=ids,eligible=len(eligible))
                         cats[v]['qualification_ids']=ids
                         markets[v]={mid:markets[v][mid] for mid in ids}
                         for m in cats[v]['markets']:
-                            if m['id'] not in ids:m['subscription_exclusion']='outside_one_event_qualification_selection'
+                            if m['id'] not in ids:m['subscription_exclusion']='outside_bounded_qualification_selection'
                     # Both source bindings must exist before any subscription.
                     selected['markets']={v:list(cats[v]['selection']['ids']) for v in coverage.VENUES}
+                    if self.policy['events_selected']>1:
+                        selected['market_events']={v:{m['id']:m['event_id'] for m in cats[v]['markets'] if m['id'] in selected['markets'][v]} for v in coverage.VENUES}
                     selected['subscription_ids']={v:[m['id'] if v=='kalshi' else m['native_slug'] for m in cats[v]['markets'] if m['id'] in selected['markets'][v]] for v in coverage.VENUES}
-                    self.session.emit('session',dict(type='qualification_selection',selection=selected,policy=POLICY))
+                    self.session.emit('session',dict(type='qualification_selection',selection=selected,policy=self.policy))
                     at=now().isoformat()
                     admitted,error=self.admission('session',dict(type='coverage_inventory',generation=1,published_at=at,inventory=cats,previous_generation=None,discovery_error=None))
                     if error:raise error
@@ -170,7 +180,8 @@ class QualificationSession(ContinuousSession):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         validate(self.spec)
-        self.sid=self.spec['two_source_qualification']['attempt_id']
+        self.policy=self.spec['two_source_qualification']
+        self.sid=self.policy['attempt_id']
 
     async def start(self):
         validate(self.spec)
@@ -217,9 +228,9 @@ class QualificationSession(ContinuousSession):
                 if ended:
                     self.request_stop('qualification_source_ended_'+ended);break
                 elapsed=time.monotonic()-self.started_monotonic
-                if elapsed>=POLICY['cleanup_start_seconds']:
+                if elapsed>=self.policy['cleanup_start_seconds']:
                     self.request_stop('qualification_deadline');break
-                if elapsed>=POLICY['target_stop_seconds'] and all(self.producers[v].snapshot()['usable']>0 for v in coverage.VENUES):
+                if elapsed>=self.policy['target_stop_seconds'] and all(self.producers[v].snapshot()['usable']>0 for v in coverage.VENUES):
                     self.request_stop('qualification_observation_target');break
                 await self.pause(.1)
         finally:
@@ -233,18 +244,18 @@ class QualificationSession(ContinuousSession):
 
 
 class QualificationOwner(CoverageOwner):
-    async def start(self,max_games=None,duration=90):
-        if duration!=90:raise ValueError('Frozen qualification requires 90-second duration')
+    async def start(self,duration=90):
         value=self.spec_factory()
+        if duration!=value['duration']:raise ValueError('Frozen qualification duration required')
         if value['mode']=='mock':
             validate(value)
             marker=self.pilot_output/'fixture-attempt.json'
             if marker.exists():raise ValueError('Fixture qualification allowance consumed')
             save_json(marker,dict(attempt_id=value['two_source_qualification']['attempt_id'],mode='synthetic'))
-        return await super().start(max_games=max_games,duration=duration)
+        return await super().start(duration=duration)
 
     def status(self):
-        result=super().status();result.update(fixed_duration=90,qualification_scope='One pregame NFL event; bounded discovery; two prediction sources only')
+        result=super().status();result.update(fixed_duration=self.spec_factory()['duration'],qualification_scope=f"Up to {self.spec_factory()['two_source_qualification']['events_selected']} pregame NFL events; bounded discovery; two prediction sources only")
         if (self.pilot_output/'fixture-attempt.json').exists():result['start_available']=False
         return result
 

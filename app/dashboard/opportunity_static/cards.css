@@ -25,3 +25,46 @@
 .dashboard-page .heading{margin:16px 0 10px}
 .dashboard-page #product-coverage{padding:10px 16px}
 @media(max-width:650px){.dashboard-page .comparison-tools nav{display:grid;grid-template-columns:1fr 1fr;gap:4px}.dashboard-page .comparison-tools nav button{width:100%;white-space:normal}.dashboard-page .comparison-main{display:block}.dashboard-page .scan button{white-space:nowrap}.dashboard-page .scan{gap:8px}}
+
+.price-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem}
+.price-pair section{min-width:0;padding:.65rem;border:1px solid #74839b55;border-radius:.6rem}
+.price-pair .buy-price{display:block;font-size:1.4rem;font-weight:650;margin:.4rem 0}
+.comparison-card pre{max-height:24rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.comparison-card small{overflow-wrap:anywhere}
+.dashboard-page .comparison-card{grid-column:1/-1;display:grid;grid-template-columns:minmax(140px,1fr) minmax(0,3fr);gap:16px}
+.dashboard-page .comparison-card td:last-child{grid-column:1/-1;margin-top:0}
+@media(max-width:650px){.dashboard-page .comparison-card{display:flex}.price-pair{gap:.5rem}}
+
+.comparison-card small{font-variant-numeric:tabular-nums}.comparison-card details{overflow-anchor:none}
+
+/* Compact the controls around the existing card layout, without shrinking text. */
+.dashboard-page header .page-title{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dashboard-page header h1{font-size:24px;line-height:1.25;letter-spacing:-.4px}
+.dashboard-page header{margin-bottom:12px}
+.dashboard-page .secondary-controls{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.dashboard-page .secondary-controls>summary{min-height:44px;display:list-item;align-content:center}
+.dashboard-page .secondary-controls:not([open]){padding-top:0}
+.dashboard-page .comparison-card small{font-size:13px}
+.dashboard-page .group-heading p{margin:6px 0 10px;font-size:13px}
+#empty{font-size:15px;line-height:1.5}
+.game-page .heading{display:flex;justify-content:space-between;align-items:start;gap:16px}
+.game-page .heading>div{min-width:0}
+.game-page .heading>div:last-child{flex-shrink:0;max-width:260px}
+.game-page #same-outcome>h2{margin:0 0 8px}
+@media(max-width:650px){
+ .dashboard-page main{padding:12px 12px 28px}
+ .dashboard-page header .page-title{gap:8px}
+ .dashboard-page header h1{font-size:22px}
+ .dashboard-page header{padding:10px 12px;gap:8px;flex-wrap:wrap}
+ .dashboard-page .scan-panel,.dashboard-page .comparison-tools{padding:10px 12px}
+ .dashboard-page .comparison-tools nav button{font-size:14px}
+ .dashboard-page .filter-grid{gap:8px;margin-top:8px}
+ .dashboard-page .comparison-card{padding:14px}
+ .game-page .heading{display:block}
+ .game-page .heading>div:last-child{max-width:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+}
+
+.source-summary:empty{display:none}
+.dashboard-page #product-coverage:not(:empty){padding:4px 16px}
+.dashboard-page #product-coverage summary{min-height:44px;align-content:center}
+.comparison-card summary{min-height:44px;align-content:center}

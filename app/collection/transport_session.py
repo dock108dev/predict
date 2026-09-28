@@ -215,12 +215,23 @@ class TransportSession:
             self.request_stop('queue_capacity');raise
 
     def save_observed(self, row):
+        from time import perf_counter
+        tick=perf_counter()
         self.journal.save(row)
+        acknowledged=perf_counter()
+        acknowledged_at=utc()
         observer=getattr(self,'acknowledged_observer',None)
         if observer:
             try: observer(row)
             except Exception as exc:
                 self.projection_error=type(exc).__name__
+                failure(__name__, 'acknowledged_projection', exc)
+        if row.get('type')=='prediction_book':
+            if not hasattr(self,'local_book_timings'):self.local_book_timings={}
+            self.local_book_timings[row['ingress_id']]=dict(journal_ack_ms=(acknowledged-tick)*1000,
+                projection_apply_ms=(perf_counter()-acknowledged)*1000,
+                acknowledged_at=acknowledged_at,projection_completed_at=utc(),queue_pending=self.queue.qsize())
+            while len(self.local_book_timings)>512:self.local_book_timings.pop(next(iter(self.local_book_timings)))
 
     def set_health(self, source, value):
         if self.persistence_error:return
@@ -325,6 +336,7 @@ class TransportSession:
         try:await self.references()
         except asyncio.CancelledError:raise
         except Exception as exc:
+            failure(__name__, 'optional_reference', exc)
             self.set_health('reference','unavailable')
             self.emit('reference',dict(type='reference_stopped',reason=type(exc).__name__))
 

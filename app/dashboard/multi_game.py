@@ -29,6 +29,7 @@ def configuration():
 
 
 class MultiOwner(Owner):
+    start_controls = frozenset({'max_games', 'duration'})
 
     def __init__(self, *args, personal_beta=False, session_factory=MultiSession, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,6 +112,7 @@ class MultiOwner(Owner):
         return dict(
             state=('saving' if active and s and (s.state == 'stopped') else s.state) if s else 'idle',
             active=active,
+            start_controls=sorted(self.start_controls),
             operating_mode='personal-beta' if self.personal_beta else 'one-attempt',
             start_available=not active and (not getattr(s, 'cleanup_errors', [])) and (self.personal_beta or (s is None and (not (self.output / 'attempt.json').exists()))),
             error=self.error or getattr(s, 'persistence_error', None),
@@ -172,20 +174,20 @@ def default_point(timeline):
     return (usable or timeline)[-1]
 
 
-def game_calculation(point,rows,game,quantity,scenario,probability=None,contract=None):
+def game_calculation(point,rows,game,quantity,scenario,probability=None,contract=None,reuse=None):
     selected=contract or next((k for k,s in game['sides'].items() if s.get('native_label')=='Long'),next(iter(game['sides'])))
-    r=evaluate(point,rows,quantity,scenario,probability,selected,game)
+    r=evaluate(point,rows,quantity,scenario,probability,selected,game,reuse=reuse)
     cs=contracts(point,game);q=Decimal(quantity)
     # One visible requested basis; actual modeled quantity is capped by real depth.
     for c in r['candidates']:
         capacities=[Decimal(cs[l['id']]['visible_size'] or '0') for l in c['legs']]
         actual=min([q,*capacities]).to_integral_value(rounding=ROUND_FLOOR)
         if 0<actual<q:
-            adjusted=evaluate(point,rows,str(actual),scenario,None,selected,game)
+            adjusted=evaluate(point,rows,str(actual),scenario,None,selected,game,reuse=reuse)
             c.update(next(x for x in adjusted['candidates'] if x['id']==c['id']))
         c.update(requested_quantity=quantity,modeled_quantity=str(actual),depth_limited=actual<q,usable=actual>0 and not any(l['warnings'] for l in c['legs']) and 'Books more than 5 seconds apart at cutoff' not in c['reasons'])
     cap=Decimal(cs[selected]['visible_size'] or '0');actual=min(q,cap).to_integral_value(rounding=ROUND_FLOOR)
-    if 0<actual<q:r['ev']=evaluate(point,rows,str(actual),scenario,probability,selected,game)['ev']
+    if 0<actual<q:r['ev']=evaluate(point,rows,str(actual),scenario,probability,selected,game,reuse=reuse)['ev']
     r['ev'].update(modeled_quantity=str(actual),depth_limited=actual<q,usable=actual>0 and not r['ev']['leg']['warnings'])
     r.update(game=game,coverage=dict(limitation='Bounded native books; selected cutoffs only. No claim of complete upstream history.',completeness='Historical results are never currently executable.'))
     return r

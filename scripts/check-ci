@@ -81,3 +81,13 @@ python -m unittest \
 python -m unittest \
     tests.test_moneyline \
     -q
+
+# Same-outcome cards and the fresh bounded observation policy.
+python -m unittest tests.test_price_comparison tests.test_multi_comparison tests.test_opportunity_feed tests.test_polymarket_us_stream -q
+node tests/test_price_comparison.cjs
+python -m unittest tests.test_freshness_repair tests.test_calculation_reuse -q
+node tests/test_freshness_timing.cjs
+
+# Browser-independent supervision and ordinary Stop on Game Details.
+python -m unittest tests.test_supervised_observer tests.test_supervised_observer_integration tests.test_observer_capacity -q
+node tests/test_session_controls.cjs

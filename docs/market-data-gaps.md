@@ -1,5 +1,7 @@
 # Market data gaps
 
+**Current work order — September 27 owner update:** the immediate next milestone is the [live Kalshi / Polymarket US comparison in ordinary Predict](live-two-venue-comparison-next-steps.md). Complete local integration and prepare its separately approved live check first. All-four readiness and unresolved net-economics evidence below remain scoped later requirements; they do not block useful raw two-venue price display. Preserve provisional fee decisions; no further Kalshi/US outreach is pending. Earlier audit/dispatch statements below are retained dated context, not the current next action. This update authorizes no credential access or collection.
+
 **Independent market support engineering COMPLETE, offline verified. Actual prediction-market qualification remains IN PROGRESS; optional reference qualification is not a beta gate. Beta NOT READY FOR SIGNOFF.** [Handoff](sports-integration.md) · [acceptance and exact identity](../evidence/b5-independent-20260922/final-report.md).
 
 | Product capability | Independent engineering state | Remaining qualification |

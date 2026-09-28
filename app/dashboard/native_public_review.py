@@ -1,6 +1,5 @@
 """Third opt-in interpretation; newly acquired documents never rewrite prior reviews."""
 from datetime import datetime
-from decimal import Decimal,localcontext,ROUND_HALF_EVEN
 from pathlib import Path
 import hashlib,json
 VERSION='atl-gb-native-review-3'
@@ -40,16 +39,9 @@ def us_entry_bound(fills,at,coefficient):
     when=datetime.fromisoformat(at.replace('Z','+00:00'))
     if when.utcoffset() is None or when<datetime.fromisoformat(EFFECTIVE) or when>datetime.fromisoformat(AS_OF) or coefficient!='0.0695' or not fills:
         return dict(unavailable,reason='Dated schedule/coefficient or modeled fills unsupported')
-    with localcontext() as ctx:
-        ctx.prec=100
-        raw=Decimal(0);quantity=Decimal(0)
-        for fill in fills:
-            if not isinstance(fill.get('price'),str) or not isinstance(fill.get('quantity'),str):raise ValueError('decimal strings required')
-            p=Decimal(fill['price']);q=Decimal(fill['quantity'])
-            if not p.is_finite() or not q.is_finite() or not Decimal('.01')<=p<=Decimal('.99') or q<=0:raise ValueError('unsupported price/quantity')
-            if len(p.as_tuple().digits)>24 or len(q.as_tuple().digits)>24 or abs(q.as_tuple().exponent)>12:raise ValueError('bounded decimal required')
-            raw+=Decimal('.0695')*q*p*(1-p);quantity+=q
-        cap=raw.quantize(Decimal('.01'),rounding=ROUND_HALF_EVEN)
+    from app.fees.entry_bounds import us_taker_bound
+    bound=us_taker_bound(fills)
+    cap=bound['upper'];raw=bound['raw_model_fee'];quantity=bound['quantity']
     return dict(available=True,lower='0.00',upper=str(cap),exact_fee=None,raw_model_fee=str(raw),quantity=str(quantity),
         coefficient='0.0695',effective_from=EFFECTIVE,fee_document_sha256=HASHES['03-response.bin'],
         qualification='Conditional gross US entry commission bound for these modeled all-taker purchases as one new order. Unknown counterparty split; lower bound intentionally loose. Excludes Kalshi fees, private charges, settlement and optional later rebates. Not qualified net profit.')

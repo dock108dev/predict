@@ -23,7 +23,7 @@ The dashboard is file-backed and needs no PostgreSQL or Node.js service. Run it 
 
 ## Interpreting results
 
-Arbitrage, manually entered What-if EV and Saved-page research are separate views. Missing probabilities, fees or settlement terms remain unknown. Negative, zero and unavailable results are valid. Saved-page research is retrospective and does not enter live ranking.
+All opportunities combines raw price comparisons and supported return calculations in distinct groups. Arbitrage, manually entered What-if EV and Saved-page research are separate views. Missing probabilities, fees or settlement terms remain unknown. Negative, zero and unavailable results are valid. Saved-page research is retrospective and does not enter live ranking.
 
 Venue, sport and market coverage is incomplete. A displayed calculation is conditional on its source data and terms; it does not establish executable liquidity or verified support for every venue. See [sports integration](docs/sports-integration.md) and [configuration](docs/configuration.md).
 

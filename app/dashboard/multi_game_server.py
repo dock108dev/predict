@@ -1,5 +1,7 @@
 """Routes for the existing board's multi-game landing page and drilldown."""
 import json
+import asyncio
+from datetime import datetime, timezone
 from app.diagnostics import failure
 from aiohttp import web
 from app.dashboard.local_security import HEADERS,check_browser,read_json,body_limit,IMPORT_BODY_LIMIT
@@ -12,6 +14,7 @@ from app.reference.page_estimate import for_saved_game
 from app.reference.multi_page import research_row, rank_research
 
 OWNER_KEY = web.AppKey('owner', object)
+MAX_UPDATE_CLIENTS = 8
 
 
 def create_app(output=OUTPUT,owner=None,sessions=None):
@@ -19,7 +22,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         from app.dashboard.coverage_owner import CoverageOwner
         owner=CoverageOwner(output,spec_factory=configuration,product_mode=True,pilot_output=ROOT/'evidence/product-sessions')
     retained_sessions=load_sessions() if sessions is None else sessions
-    def datasets():
+    from app.dashboard.saved_snapshot_cache import SavedSnapshotCache
+    saved_cache=SavedSnapshotCache()
+    def datasets(selected=None, catalog_all=True):
         values={}
         for sid,(p,rows) in retained_sessions.items():
             spec=rows[0]['spec'];src=spec['sources']
@@ -35,10 +40,16 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                 values[sid]=dict(games=[],error='Incomplete saved package; inspect the local log',label='Incomplete · '+sid)
         from app.dashboard import session_history
         if hasattr(owner,'history_paths'):
-            for sid,folder in owner.history_paths().items():
+            paths=owner.history_paths()
+            if not catalog_all and not selected:
+                selected=owner.session.sid if owner.active() and owner.session else next(reversed(paths),None)
+            for sid,folder in paths.items():
                 if sid in values or (owner.active() and owner.session and sid==owner.session.sid):continue
+                if not catalog_all and sid!=selected:
+                    values[sid]=dict(games=[],folder=folder,label='Saved · '+sid+' · select to verify')
+                    continue
                 try:
-                    snapshot=session_history.load(folder)
+                    snapshot=saved_cache.load(folder,session_history.load)
                     values[sid]=dict(product=snapshot,folder=folder,games=snapshot['games'],label=snapshot['data_mode']+' · '+snapshot['state']+' · '+str(snapshot['started_at']))
                 except (ValueError,OSError,KeyError) as exc:
                     failure(__name__, 'saved_history_read', exc)
@@ -73,7 +84,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             r=await handler(request)
         except web.HTTPException as exc:
             r=web.json_response({'error':exc.reason},status=exc.status)
-            if 'Allow' in exc.headers:r.headers['Allow']=exc.headers['Allow']
+            for header in ('Allow','Retry-After'):
+                if header in exc.headers:r.headers[header]=exc.headers[header]
         except (ValueError,ArithmeticError) as exc:
             r=web.json_response({'error':str(exc)},status=422)
         except (KeyError,StopIteration):
@@ -89,7 +101,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
     app.router.add_get('/coverage',coverage_page)
     async def start(req):
         options=await read_json(req)
-        if not isinstance(options,dict) or set(options)-{'max_games','duration'}:raise ValueError('Unknown scan controls')
+        if not isinstance(options,dict) or set(options)-owner.start_controls:raise ValueError('Unknown scan controls')
         return web.json_response(dict(session=await owner.start(**options)))
     async def stop(req):
         if await read_json(req)!={}:raise ValueError('Stop does not accept options')
@@ -114,7 +126,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         from app.dashboard import session_history
         from app.resolution.core import resolve
         q=req.query
-        sid,gid=q['session'].split('~',1);d=datasets()[sid]
+        sid,gid=q['session'].split('~',1);d=datasets(sid,catalog_all=False)[sid]
         if q['hash']!=sid or 'product' not in d:raise ValueError('Unbound prediction snapshot')
         snap=product_cutoff(sid,d,q['cutoff']);game=next(g for g in snap['games'] if g['id']==gid)
         if (game['product_identity'].get('competition'),game['product_identity'].get('season')) not in (('NFL','2026'),('NBA','2026-2027'),('NCAAF','2026'),('NCAAB','2026-2027'),('MLB','2026'),('NHL','2026-2027')):return web.json_response(dict(options=[],unsupported='Resolution mapping unavailable for this competition/season'))
@@ -156,14 +168,15 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
                 items.append(dict(id=sid+'~'+g['id'],hash=sid,label=g['title']+' · '+d['label'],game=g,data_mode=d['rows'][0]['spec']['mode'],default_cutoff=timeline.index(point),timeline=[dict(id=p['id'],at=p['at'],label=p['label']) for p in timeline]))
         return web.json_response(items)
     async def calculation(req):
-        q=req.query;sid,gid=q['session'].split('~',1);d=datasets()[sid];g=next((g for g in d['games'] if g['id']==gid),None)
+        q=req.query;sid,gid=q['session'].split('~',1);d=datasets(sid,catalog_all=False)[sid];g=next((g for g in d['games'] if g['id']==gid),None)
         if g is None and 'product' not in d:raise ValueError('Unknown game')
         if q['hash']!=sid:raise ValueError('session identity mismatch')
         if 'product' in d:
             from app.dashboard import session_history,product_view
             snapshot=product_cutoff(sid,d,q['cutoff'])
             g=next(g for g in snapshot['games'] if g['id']==gid)
-            r=present(product_view.calculate(snapshot,g,q));r.update(session=q['session'],hash=sid,live=False,page_estimate=None)
+            from app.dashboard.price_comparison import comparisons
+            r=present(product_view.calculate(snapshot,g,q));r['comparisons']=[c for c in comparisons(snapshot,dict(quantity=q.get('quantity','100'))) if c['game_id']==gid or any(a['game_id']==gid for a in c.get('alternatives',[]))];r.update(session=q['session'],hash=sid,live=False,page_estimate=None)
             return web.json_response(r)
         timeline,rows=project_game(d['rows'],g);point=next((p for p in timeline if p['id']==q['cutoff']),None)
         if point is None:raise ValueError('Unknown cutoff')
@@ -171,16 +184,19 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         r.update(session=q['session'],hash=sid,live=False)
         r['page_estimate']=for_saved_game(sid,g,q.get('quantity','100'),q.get('scenario','cent'),live=d['live'])
         return web.json_response(r)
-    def dashboard_payload(q):
+    def dashboard_payload(q, ds=None, reuse=None):
+        if reuse is None:reuse={}
+        validate_assumptions(json.loads(q.get('assumptions','{}')))
+        ds=datasets(q.get('capture'),catalog_all=False) if ds is None else ds
         if q.get("view", "arb")=="feed":
             from app.dashboard.opportunity_feed import combine
-            ev=dashboard_payload(dict(q,view="ev",sort="roi"))
-            arb=dashboard_payload(dict(q,view="arb",sort="roi",capture=ev["capture"] or ""))
+            ev=dashboard_payload(dict(q,view="ev",sort="roi"),ds,reuse)
+            arb=dashboard_payload(dict(q,view="arb",sort="roi",capture=ev["capture"] or ""),ds,reuse)
             ev["rows"]=combine(ev["rows"],arb["rows"])
             ev["total_candidates"]=len(ev["rows"])
             return ev
         assumptions=validate_assumptions(json.loads(q.get('assumptions','{}')))
-        ds=datasets();sid=q.get('capture') or (list(ds)[-1] if ds else None)
+        sid=q.get('capture') or (list(ds)[-1] if ds else None)
         result=dict(status=owner.status(),captures=[dict(id=s,label=d['label']) for s,d in ds.items()],capture=sid,rows=[],coverage=None)
         if not sid:return result
         d=ds[sid]
@@ -188,7 +204,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
             result.update(state='incomplete',error=d['error']);return result
         if 'product' in d:
             from app.dashboard import product_view
-            p=d['product'];items=product_view.dashboard(p,q,assumptions)
+            p=d['product'];items=product_view.dashboard(p,q,assumptions,reuse=reuse)
+            from app.dashboard.price_comparison import comparisons
+            result['comparisons']=comparisons(p,q) if q.get('view')=='ev' else []
             if q.get('view')=='ev':
                 from app.dashboard.opportunity_feed import combine
                 items=combine(items,[])
@@ -223,7 +241,43 @@ def create_app(output=OUTPUT,owner=None,sessions=None):
         result['total_candidates']=len(items)
         return result
     async def dashboard(req):
-        return web.json_response(dashboard_payload(req.query))
+        started=datetime.now(timezone.utc).isoformat()
+        tick=asyncio.get_running_loop().time()
+        payload=dashboard_payload(req.query)
+        payload['calculated_at']=datetime.now(timezone.utc).isoformat()
+        if payload.get('live'):
+            timings=getattr(owner.session,'local_book_timings',{})
+            payload['book_pipeline']={l['book_id']:timings[l['book_id']] for c in payload.get('comparisons',[]) for l in c['legs'] if l.get('book_id') in timings}
+        payload['request_started_at']=started
+        payload['calculation_duration_ms']=(asyncio.get_running_loop().time()-tick)*1000
+        payload['publication_prepared_at']=datetime.now(timezone.utc).isoformat()
+        return web.json_response(payload)
+    update_clients=set()
+    async def updates(req):
+        # HEAD must not write event bytes or allocate a long-lived subscription.
+        headers={'Content-Type':'text/event-stream',**HEADERS}
+        if req.method=='HEAD':return web.Response(headers=headers)
+        if len(update_clients)>=MAX_UPDATE_CLIENTS:
+            raise web.HTTPTooManyRequests(headers={'Retry-After':'1'})
+        token=object();update_clients.add(token)
+        response=web.StreamResponse(headers=headers)
+        previous=None;last_sent=0;loop=asyncio.get_running_loop()
+        try:
+            await response.prepare(req)
+            while req.transport is not None and not req.transport.is_closing():
+                session=owner.session
+                projection=getattr(session,'projection',None)
+                revision=(getattr(session,'sid',None),getattr(projection,'cursor',None),owner.active())
+                if revision!=previous or (owner.active() and loop.time()-last_sent>=1):
+                    await response.write(('data: '+json.dumps(revision)+'\n\n').encode())
+                    previous=revision;last_sent=loop.time()
+                elif loop.time()-last_sent>=10:
+                    await response.write(b': keepalive\n\n');last_sent=loop.time()
+                await asyncio.sleep(.025)
+        except ConnectionError:pass  # Browser disconnected; release its slot below.
+        finally:update_clients.discard(token)
+        return response
+    app.router.add_get('/api/updates',updates)
     async def page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/dashboard.html')
     async def game(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/index.html')
     async def style(req):return web.FileResponse(ROOT/'app/dashboard/static/style.css')

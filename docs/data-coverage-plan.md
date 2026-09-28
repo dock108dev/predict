@@ -1,6 +1,12 @@
 # Delivery plan
 
-Updated September 26, 2026. **Beta NOT READY FOR SIGNOFF.** The [product definition](product-roadmap-review.md) preserves the six sports and required market families. The card/workflow package is complete locally with isolated simulation and offline verification. [Exact candidate handoff](opportunity-card-handoff.md). No real collection, credentials, credits, outreach, recurring jobs, commit, push or publication.
+Updated September 27, 2026. **Beta NOT READY FOR SIGNOFF.** The [product definition](product-roadmap-review.md) preserves the six sports and required market families. The card/workflow package is complete locally with isolated simulation and offline verification. [Exact candidate handoff](opportunity-card-handoff.md). No real collection, credentials, credits, outreach, recurring jobs, commit, push or publication.
+
+## Immediate next milestone — live two-venue comparison
+
+**First deliver an easy ordinary-app comparison of the same market on Kalshi and Polymarket US, with real prices visible together and automatic streaming updates.** [Milestone contract and ordered next steps](live-two-venue-comparison-next-steps.md) govern the immediate work. Inspect and complete the existing app integration, verify locally, then prepare a concrete two-venue read-only live package for separate approval. Show prices, quantities, lower-price indication, supported fees, source age/health and direct venue links; valid comparisons must remain visible without arbitrage or model EV.
+
+Novig/ProphetX access and further fee outreach do not block this intermediate product milestone. Preserve provisional fee assumptions and label unsupported net results. Complete real ordinary-app evidence and focused owner review before claiming this milestone delivered. The four-venue requirements below remain the later beta target; they do not gate starting two-venue engineering. This documentation update grants no live collection or credential access.
 
 ## Completed work to preserve
 
@@ -19,7 +25,7 @@ B1/B2, independent native/reference/sport engineering, B6 offline integration an
 
 **Completion evidence:** exact changed-candidate identity; focused shared-math/ranking checks; ordinary browser evidence for cards, filters, labels, Details and secondary controls; exact saved reopening; affected Start/Stop, stale/failure and recovery behavior. Review all affected flows together. A later focused owner card review is formative and does not close beta gates. Original navigation completion and the remaining workflows have not been observed in owner review.
 
-## All-four-venue readiness and core math workstream
+## Later all-four-venue readiness and core math workstream
 
 **Next actors: engineering evaluates and maps evidence; providers clarify/provision; owner supplies missing status and separately decides outreach/run authorization.** Delivery requires 100% real data from Kalshi, Polymarket US, Novig and ProphetX, useful comparable overlap and supported price, fee, size/depth, settlement and arbitrage math. Analytics/models and bookmaker lines (including Pinnacle) are optional beta extras only when easily available, for owner review. Missing extras do not block beta and need no exclusion decision. Core requirements are the four real prediction-market feeds and their supported math. Two-source results, four configured logos, unmatched samples and synthetic previews are insufficient.
 
@@ -34,16 +40,16 @@ B1/B2, independent native/reference/sport engineering, B6 offline integration an
 ## Outstanding owner inputs
 
 - Novig/ProphetX: only current reply/provisioning status and nonsecret API/environment/documentation references. Requests were reported sent; do not duplicate them or request secrets in chat.
-- Kalshi/Polymarket US: explicit dispatch instruction for the prepared unsent clarification inquiries, if outreach is to proceed. Providers supply answers; engineering evaluates them.
+- Kalshi/Polymarket US: no outreach action pending. The original US inquiry was sent and its supplied reply reconciled; its follow-up and Kalshi outreach are withdrawn. Preserve the owner-authorized provisional economics in [provider decisions](provider-evidence-action-package.md).
 - Later: approval of a concrete real-run package, any genuinely necessary acquisition or scope proposal, and the final beta decision. Do not repeat resolved EV%, venue, sport or market questions.
 
 KenPom and NHL analytics remain deferred; MoneyPuck remains dropped. No replacement search or purchase is queued. These optional omissions do not conflict with beta scope and need no exclusion decision. Focus engineering on the prediction feeds and their math.
 
 ## Current handoff
 
-September 23 public investigation and supported engineering are complete. US hierarchy is established; historical applicability and mandatory-charge gaps remain. All four retained net comparisons are unavailable. Prior C3/C4 state/clock failures remain closed historical gaps, not research targets. [Review7](../evidence/b6-native-review-20260923-v7/review.md) and [prepared inquiries — not sent](../evidence/b6-native-review-20260923-v7/provider-inquiries.md) remain unchanged. No further public-acquisition package is queued. Automation was recorded paused at closeout; its current installed state was not checked here. Prior public research authorization does not authorize outreach or collection.
+Next: [complete the live two-venue comparison](live-two-venue-comparison-next-steps.md) through ordinary Predict. Existing streams and card/shared calculation paths provide the starting point; their complete real-time product behavior still requires verification. Finish concrete local gaps and prepare the exact live-check package before requesting collection approval.
 
-The card/workflow change above is complete locally. The September 27 [four-venue native readiness audit and external handoff](four-venue-readiness-handoff.md) is the current next-slice result; no owner walkthrough is started. Authoritative exchange clarification and unconfirmed Novig/ProphetX provisioning remain dependencies of real readiness.
+The [four-venue audit](four-venue-readiness-handoff.md), September 23 review7, original source evidence and consumed attempts remain retained evidence for their recorded candidates. Historical applicability/clock gaps do not become universal prerequisites for a new basic price view. Later all-four readiness still needs actual Novig/ProphetX provisioning and supported native economics. No further Kalshi/US outreach is pending, and no real run is authorized by this documentation change.
 
 ## Later final beta review
 

@@ -113,139 +113,35 @@ uses explicit reference IDs; it does not recalculate financial values.
 Known callers: list/details, saved research routes and browser controls.
 Research ranking shares only selection validation with ordinary ranking.
 
+## Start control contract
+
+Domain: Start controls and browser requests
+
+SSOT module/file: `multi_game.MultiOwner.start_controls` and
+`coverage_owner.CoverageOwner.start_controls`
+
+Why this is authoritative: status publishes the selected owner's accepted fields.
+The router rejects unsupported fields before calling Start; the browser uses the
+same declaration for visibility and request construction. Signature tests guard
+against drift. CoverageOwner and QualificationOwner accept duration only;
+MultiOwner also applies a game limit. Owners enforce numeric and frozen-run limits.
+
+Known callers: Start/status/dashboard routes, `dashboard.js`, qualification and
+native previews, and synthetic fixtures.
+
 ## Conflicts removed and retained paths
 
-| Candidate | Usage evidence / action |
-| --- | --- |
-| Route-local choice dictionary and resolution duplicate/numeric checks | Replaced with `query_policy.validate_http_query` at all four selection routes. |
-| Direct invalid view/sort/freshness fallback | Rejected using the same choice catalog in direct product and ranking callers. |
-| Separate product/retained manual-basis checks | Replaced with shared assumptions validation; whitespace-only basis fails consistently. |
-| Repeated control/import byte limits | Routed through `local_security.body_limit`; strict security behavior retained. |
-| `product_view.reference_for` | Only three test call sites, no application/script caller. Deleted; tests now exercise explicit reference IDs or absent selection. |
-| `SessionProjection.legacy` | Assigned on selection rows, never read anywhere. Deleted state and assignment; row accounting is unchanged. |
-| Retained single-game and multi-game readers | Kept: default catalog, saved calculations and page research use them. No migration of evidence. |
-| `MultiOwner`, old one-attempt/supervised modes | Kept: current owner inherits lifecycle/status helpers; qualification and offline entry points use distinct policies. |
-| Historical SQL, research and collection previews, all-outcome audit engines | Kept: independent entry points and shared imported helpers remain. These contracts are not interchangeable with conditional product calculations. |
-| Native Novig/ProphetX and separate reference acquisition | Kept: current collector has native-source branches; pending real qualification is not proof of dead code. |
-| Launcher instance names and reference environment setting | Kept: `poc/beta` select different process records; historical optional reference transport reads `ODDS_API_KEY`. Neither grants collection authority. |
+The compatibility factory delegates to the current router. Query validation and
+manual assumptions use `query_policy`; body limits use `local_security`.
+Unsupported choices fail explicitly instead of selecting a fallback.
 
-Risky follow-up: extract shared collection preview lifecycle/book formatting helpers and identify
-which historical executable workflows can be retired before deleting their modules.
-Keep consumed-attempt guards, original records and exact replay versions.
-`CoverageOwner.start(max_games=...)` remains a legacy request-shape compatibility
-parameter with no coverage-limit effect; the current UI hides it. A later control
-contract cleanup should stop sending it from current clients and reject it on that
-owner while retaining it for the explicitly supported historical MultiOwner path.
-Do not unify sporting/qualification policy or conditional/all-outcome math merely
-because some branches look alike.
+Older saved readers remain dependencies of catalog and research views. MultiOwner
+provides inherited lifecycle helpers and a supported bounded multi-game path.
+Historical SQL, all-outcome audit engines and reference acquisition have separate
+contracts and entry points. Native adapters remain implemented even where real
+source qualification is incomplete. Instance names select process records, not
+collection permissions. Do not replace these distinct contracts with conditional
+product calculations or remove shared helpers without checking their callers.
 
-## September 23 validation
-
-61 tests passed:
-
-```sh
-.venv/bin/python -m unittest tests.test_ssot_policy tests.test_dashboard_security tests.test_session_projection tests.test_reference_integration tests.test_multi_game tests.test_multi_page tests.test_math_reconciliation tests.test_score_lines -q
-```
-
-Four new guard tests cover direct fallback rejection, duplicate selectors,
-nonblank assumption basis, shared route rejection before loading data, and removal
-of the unused helper/state. Existing reference tests now exercise explicit
-selection; they were not deleted. Checks also cover saved reopening, exact original
-math and supported partition-distribution inputs. The CI script includes
-`tests.test_ssot_policy`.
-
-Changed-module Python compilation, shell syntax, local documentation links and
-`git diff --check` passed. Existing aiohttp AppKey and asyncio timing warnings
-remained visible. No full CI matrix, live collection, credential lookup, service
-restart, database migration, browser walkthrough, commit or publication.
-
-## Historical records
-
-The following sections retain earlier candidate-specific observations. They are
-not the current product contract or authorization to execute a run.
-
-## Historical SSOT verification
-
-Passed 37 focused tests:
-
-```sh
-.venv/bin/python -m unittest tests.test_opportunity_board tests.test_multi_game tests.test_personal_beta tests.test_page_estimate tests.test_multi_page tests.test_math_reconciliation -q
-```
-
-Coverage includes both factory paths, absent probability, explicit EV arithmetic,
-unsupported/duplicate selections, unknown cutoffs, two local-producer Start/Stop
-cycles with disposable output, per-game isolation, six-game research/list detail
-consistency, independent arithmetic and equality with the retained 18-candidate /
-96-scenario baseline. Existing aiohttp AppKey and asyncio timing warnings appeared;
-there were no failures.
-
-`python3 -m compileall -q` over the three changed application modules and four
-changed test modules, and `git diff --check`, also pass. After the successful
-37-test run, `.venv` disappeared from the workspace; the attempted virtualenv
-compile command therefore failed before running. System Python supplied the
-syntax check. At that checkpoint, restoring the development environment was needed before
-rerunning the command. The current cleanup pass has verified that `.venv` is
-available again; use the development guide for current commands. An existing owner-try `app-start.log` gained two
-lines during this pass; it was not edited or reverted by this work. No provider requests,
-credential lookup, database work, application restart, packaging, full CI matrix,
-commit or publishing was performed. Browser/live checks were not run; this pass
-claims focused source validation only.
-
-## Inventory projection independent coverage projection — September 16, 2026
-
-`app/collection/coverage.py` owns offline catalog completeness/accounting and report
-projection, before intersection or scan selection. It shares native adapter
-`parse_event`/`parse_market` conversion and `prediction_discovery.participant_mapping`
-with the existing normalization registry. It never replaces the collection owner,
-matching/settlement qualification or calculation engines. Retained market absence
-is unknown coverage, not a zero venue denominator. See [inventory projection](data-coverage-d1-report.md).
-
-sustained collection's chosen persistence direction is to extend `ObservationJournal`/native replay
-with bounded segments and manifests; the historical SQL API remains separate.
-This decision performs no migration or new collection.
-
-
-## Bounded collection evidence boundary — September 16, 2026
-
-The sole authorized pilot failed in local discovery after 2.434 seconds. Its
-immutable journal/manifest and frozen pilot source are under `evidence/d2-coverage/`.
-The repaired candidate has 67 focused offline checks; no replacement live run
-occurred. Current denominators, wider subscriptions and live browser/Stop evidence
-are unestablished. [bounded collection report](data-coverage-d2-report.md) owns those observations;
-the Desktop tracker/coverage plan retain incomplete status. This does not authorize
-sustained collection, another pilot, indefinite collection or migration.
-
-bounded collection offline journal-efficiency candidate uses versioned, lossless per-row compression inside the existing hash-chain journal; `reopen` restores identical rows for native replay. Logical record, expanded queue, memory and terminal-reserve accounting remain explicit. Legacy journals are untouched. This candidate is not live-validated; the unchanged record ceiling still limits the measured workload. See [efficiency report](data-coverage-d2-journal-efficiency-report.md).
-
-
-## Segmented history offline segmented history — September 16, 2026
-
-`collection/segmented.py` extends `ObservationJournal` with the separately versioned
-`d3a-offline-segments-1` file mode, cumulative policy, seals, atomic manifests and
-read-only interrupted-prefix indexes. `NativeVerifier` shares the legacy native
-parsers/converter; `GroupedNativeVerifier` keeps sequential stream state across
-segments without a whole-run list. Metadata, command and native image dependencies
-must precede a usable book. No checkpoints or external payload store are used.
-
-`dashboard/coverage_owner.py:OfflineHistoryOwner` handles retained-input admission,
-expanded queue accounting and offline Stop/finalization; `replay_segmented` verifies
-completed histories. The production factory still selects legacy `CoverageOwner`.
-bounded collection transport, 2,048 lifetime ingress allowance and original recovery identity checks
-are unchanged. Mock collector integration is delivered through an explicitly isolated path; there is no
-live segmented route or daily collection authorization. See [segmented history results, storage
-format and recovery limits](data-coverage-d3a-report.md). bounded collection and full sustained collection are incomplete.
-
-
-## Mock-only segmented collector integration — September 16, 2026
-
-`CoverageOwner(mock_segmented=True)` requires an isolated output root and explicit
-numeric-loopback fixture endpoints. It runs the existing `ContinuousSession`,
-discovery and native producers, using `SegmentedTransportJournal` and sequential
-finalization. Production construction does not select this option. No credential
-resolution, reference feed or external redirect is permitted in the mock path.
-Published catalog generations, producer-applied generations and usable books are
-separate; shared lifecycle cleanup creates the terminal only after producer joins
-and queue accounting. Failure cannot manufacture completion. segmented history policy and bounded collection
-limits/attempt protection remain unchanged. Busy local Stop passes; resource
-pressure still exhausts four segments at 4,092 ingress. See [integration report](data-coverage-d3-mock-integration-report.md).
-Next is an offline sustained-capacity policy/experiment, not a live pilot.
+Candidate-specific changes and test results are retained in the
+[engineering record](history/maintenance-20260928/ssot.md).

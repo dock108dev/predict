@@ -1,6 +1,12 @@
 # Predict — beta product definition
 
-Updated September 26, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) describes engineering order and implementation status. Older implementation reports are evidence for their recorded work, not competing roadmaps.
+Updated September 27, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) describes engineering order and implementation status. Older implementation reports are evidence for their recorded work, not competing roadmaps.
+
+## Immediate product milestone
+
+Owner-selected next delivery: **open ordinary Predict and easily compare the same market on Kalshi and Polymarket US side by side, with automatically updating real prices, quantity, lower-price indication, supported fee effects, individual update age/health and direct venue links.** [Exact milestone and completion evidence](live-two-venue-comparison-next-steps.md). A comparison remains useful with zero arbitrage or unavailable model EV. Current status: planned; end-to-end live behavior remains unverified.
+
+Deliver and verify this two-venue experience before the later four-venue beta qualification. Novig/ProphetX provisioning and optional models must not block the immediate milestone. Preserve all-four/six-sport beta scope below, the ordinary shared app and existing provisional economics. Further Kalshi/US outreach is withdrawn. Local engineering and later separately approved live verification are distinct steps; this scope update starts no collection.
 
 ## Product goal
 
@@ -77,7 +83,7 @@ dependencies](market-data-gaps.md) remain open.
 One historical NFL Pinnacle sample contains 16 side references, with delay unknown.
 Compatible prediction observations, native settlement and independent model inputs
 remain unqualified. MoneyPuck is dropped; NHL analytics and KenPom are deferred.
-Novig/ProphetX requests were reported sent; current replies and provisioning are unconfirmed. Kalshi/US clarification drafts remain unsent. Request only missing status/nonsecret details; engineering interprets exchange answers. NHL/KenPom and other analytics/bookmaker gaps are optional-data limitations, not beta blockers; no exclusion decision is needed. Owner feedback on September 26 is formative only; the navigation task and remaining workflows were not reviewed.
+Novig/ProphetX requests were reported sent; current replies and provisioning are unconfirmed. The original US inquiry was sent and its supplied reply reconciled; US follow-up and Kalshi outreach are withdrawn. Use the owner-authorized provisional economics in [provider decisions](provider-evidence-action-package.md). Request only missing status/nonsecret details; engineering interprets exchange answers. NHL/KenPom and other analytics/bookmaker gaps are optional-data limitations, not beta blockers; no exclusion decision is needed. Owner feedback on September 26 is formative only; the navigation task and remaining workflows were not reviewed.
 
 See the [delivery plan](data-coverage-plan.md) for the current handoff and
 [retained planning snapshots](history/beta-reset-20260920/README.md) for earlier records.

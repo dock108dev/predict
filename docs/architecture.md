@@ -28,6 +28,9 @@ The product is a local, file-backed sports prediction dashboard. [Module ownersh
    references and selects an explicitly requested reference ID. It calls
    `multi_game.game_calculation` and shared board/score-line engines. Depth, fees,
    settlement and ranking remain server-side; browser code presents the results.
+   `price_comparison.comparisons` builds same-outcome venue comparisons separately
+   from net-return calculations. `saved_snapshot_cache` reuses verified saved
+   snapshots; cutoff loading still validates the requested retained point.
 7. Older saved captures still use `project_game` and `saved_rows`.
    `reference.multi_page` binds retrospective comparisons to their original games.
    Research keeps separate timing/ranking semantics and never supplies an earlier
@@ -43,6 +46,7 @@ The product is a local, file-backed sports prediction dashboard. [Module ownersh
 | `GET /api/status`, `/api/sessions` | Owner state and available session catalog |
 | `GET /api/dashboard`, `/api/calculate`, `/api/resolution` | Filtered rows, detailed calculations and saved result views |
 | `POST /api/start`, `/api/stop` | Explicit bounded collection and stop request |
+| `GET /api/updates` | Bounded server-sent update notifications; HEAD returns headers only |
 | `POST /api/references`, `/api/resolutions` | Validate and append retained records to an active product session |
 
 Import routes require an active session with a projection; they do not edit a

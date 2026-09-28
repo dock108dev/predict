@@ -347,6 +347,6 @@ class NovigAdapter(ReadOnlyAdapter):
 
     async def aclose(self):
         self.closed=True
-        for stream in tuple(self.streams): await stream.aclose()
         self.token=None; self.client_secret=''
-        await self.client.aclose()
+        from app.cleanup import close_all
+        await close_all([*self.streams, self.client])

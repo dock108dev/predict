@@ -52,9 +52,14 @@ def assess(rows, cutoff, identity=None):
         else:
             candidates=native.get('markets',[])+[m for e in native.get('events',[]) if str(e['id'])==(identity['sources'][venue]['event_id'] if identity else '101466') for m in e['markets']]
             m=next(m for m in candidates if str(m['id'])==(identity['sources'][venue]['market_id'] if identity else '657964'))
-            text=m['description'];coefficient=str(m.get('feeCoefficient'))
-            if (not identity and 'Detroit Lions vs Buffalo Bills' not in text) or 'rescheduled to a date within two days' not in text or '$0.50' not in text:raise ValueError('unrecognized retained US terms')
-            postpone='rescheduled date within two days; otherwise last fair market price'
+            text=m['description'];coefficient=None if m.get('feeCoefficient') is None else str(m['feeCoefficient'])
+            if (not identity and 'Detroit Lions vs Buffalo Bills' not in text) or '$0.50' not in text:raise ValueError('unrecognized retained US terms')
+            if 'rescheduled to a date within two days' in text:
+                postpone='rescheduled date within two days; otherwise last fair market price'
+            elif identity and 'rescheduled to a date within two weeks' in text:
+                # Exact retained listing wording, not a universal venue rule or a fee finding.
+                postpone='rescheduled date within two weeks; otherwise last fair market price'
+            else:raise ValueError('unrecognized retained US terms')
         h=sha256(text.encode()).hexdigest();source=dict(url=raw['source'],sha256=h,text=text,priority='market-specific',received_at=raw['received_at'])
         profiles[venue]=profile(sources=[source],actor='Codex bounded retrospective assessment',
             dimensions={'tie':fact('fraction-0.50',evidence=h),'postponement':fact(postpone,evidence=h)},
@@ -189,7 +194,7 @@ def expected(leg, probability, quantity, identity=None):
                           break_even_pct=textnum(-y/(x-y)*100),status='Conditional scenario')
     return result
 
-def evaluate(point, rows, quantity='100', scenario='cent', probability=None, selected='polymarket_us:1315440', identity=None):
+def evaluate(point, rows, quantity='100', scenario='cent', probability=None, selected='polymarket_us:1315440', identity=None, reuse=None):
     if identity and identity.get('score_reviews'):
         from app.opportunities.score_lines import evaluate as evaluate_lines
         return evaluate_lines(point,rows,quantity,scenario,probability,selected,identity)
@@ -202,18 +207,29 @@ def evaluate(point, rows, quantity='100', scenario='cent', probability=None, sel
         if p is not None and not 0<=p<=1:raise ValueError('Probability must be from 0 to 1')
         if scenario not in ('unknown','cent','direct'):raise ValueError('Unknown fee scenario')
         if selected not in sides:raise ValueError('Unknown selected contract')
-        if identity and identity.get('product_identity'):
-            assessment=dict(assessed_at=point['at'],observation_cutoff=point['at'],profiles={},sources={},pmus_coefficient=None,note='Retained product metadata; unsupported rules remain unavailable')
-            for row in rows:
-                try: partial=assess([row],point['at'],identity)
-                except (ValueError,KeyError,StopIteration): continue
-                assessment['profiles'].update(partial['profiles']);assessment['sources'].update(partial['sources'])
-                for key in ('nhl_fee_bases','mlb_fee_bases','nba_fee_bases','ncaaf_fee_bases','ncaab_fee_bases'):
-                    if key in partial:assessment.setdefault(key,{}).update(partial[key])
-                if partial['pmus_coefficient'] is not None: assessment['pmus_coefficient']=partial['pmus_coefficient']
-        else: assessment=assess(rows,point['at'],identity)
-        cs=contracts(point,identity)
-        legs={k:leg_value(c,assessment,point['at'],q,scenario,identity) for k,c in cs.items()}
+        # Request-local reuse only. The complete identity, point and metadata
+        # participate in the key; no value survives a dashboard request. Validation
+        # above still runs for every selected contract and probability.
+        cache_key = None if reuse is None else (json.dumps([point, rows, identity], sort_keys=True), str(q), scenario)
+        if reuse is not None and cache_key in reuse:
+            from copy import deepcopy
+            assessment, cs, legs = deepcopy(reuse[cache_key])
+        else:
+            if identity and identity.get('product_identity'):
+                assessment=dict(assessed_at=point['at'],observation_cutoff=point['at'],profiles={},sources={},pmus_coefficient=None,note='Retained product metadata; unsupported rules remain unavailable')
+                for row in rows:
+                    try: partial=assess([row],point['at'],identity)
+                    except (ValueError,KeyError,StopIteration): continue
+                    assessment['profiles'].update(partial['profiles']);assessment['sources'].update(partial['sources'])
+                    for key in ('nhl_fee_bases','mlb_fee_bases','nba_fee_bases','ncaaf_fee_bases','ncaab_fee_bases'):
+                        if key in partial:assessment.setdefault(key,{}).update(partial[key])
+                    if partial['pmus_coefficient'] is not None: assessment['pmus_coefficient']=partial['pmus_coefficient']
+            else: assessment=assess(rows,point['at'],identity)
+            cs=contracts(point,identity)
+            legs={k:leg_value(c,assessment,point['at'],q,scenario,identity) for k,c in cs.items()}
+            if reuse is not None:
+                from copy import deepcopy
+                reuse[cache_key] = deepcopy((assessment, cs, legs))
         candidates=[]
         for cid,title,keys in candidate_defs:
             ls=[legs[k] for k in keys];raw=total([l['ask'] for l in ls]);notional=total([l['notional'] for l in ls]);cash=total([l['cash'] for l in ls]);fees=total([l['fee'] for l in ls])

@@ -5,6 +5,9 @@ messages, for the native aggregated image. Not source freshness, tradability,
 exchange-wide liquidity or proof that every historical change was received.
 """
 import asyncio
+import sys
+from app.diagnostics import failure
+from app.cleanup import close_outcome
 import base64
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -274,6 +277,7 @@ class MarketStream:
         self.reconnect_after_messages = reconnect_after_messages
         self.connection, self.closed, self.transport_health = None, False, 'not_started'
         self._receive_task = None
+        self.cleanup_errors = []
         self.diagnostics, self.reason, self.message_count = [], 'not_started', 0
         if policy: bound_native(self)
 
@@ -284,16 +288,37 @@ class MarketStream:
             await asyncio.gather(receive, return_exceptions=True)
         connection, self.connection = self.connection, None
         if connection is not None:
+            def failed(exc):
+                self.cleanup_errors.append(type(exc).__name__)
+                self.closed = True  # Never reconnect over an unconfirmed close.
+                failure(__name__, 'stream_connection_close', exc)
+            # Stop may arrive while a rejected frame is already closing the socket.
+            # Finish that bounded close before propagating cancellation to the owner.
+            closing = asyncio.create_task(close_outcome(connection, 3))
             try:
-                await asyncio.wait_for(connection.close(), 3)
-            except (Exception,):
-                pass
+                try:
+                    error = await asyncio.shield(closing)
+                except asyncio.CancelledError:
+                    error = await closing
+                    if error is not None:
+                        failed(error)
+                    raise
+                if error is not None:
+                    failed(error)
+                    if isinstance(error, asyncio.CancelledError):
+                        raise error
+            finally:
+                self.transport_health = 'disconnected'
+                self.engine.invalidate()
+
         self.transport_health = 'disconnected'
         self.engine.invalidate()
 
     async def aclose(self):
         self.closed = True
         await self._close_connection()
+        if self.cleanup_errors:
+            raise OSError('Native stream resource closure unconfirmed')
 
     async def run(self):
         loop = asyncio.get_running_loop()
@@ -373,4 +398,11 @@ class MarketStream:
                     await self.sleep(min(2 ** attempt, max(0, deadline - loop.time())))
             self.reason = 'bounded_complete'
         finally:
-            await self.aclose()
+            primary = sys.exception()
+            try:
+                await self.aclose()
+            except OSError:
+                # Close failures are sticky and logged; preserve cancellation or
+                # an active primary failure until the owner closes resources.
+                if primary is None:
+                    raise

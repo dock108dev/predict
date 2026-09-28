@@ -1,6 +1,6 @@
 """Review7: explicit US hierarchy, without inventing historical effective coverage."""
 from pathlib import Path
-import hashlib,json
+import hashlib
 VERSION='atl-gb-native-review-7'
 ROOT=Path(__file__).resolve().parents[2]
 SOURCES={

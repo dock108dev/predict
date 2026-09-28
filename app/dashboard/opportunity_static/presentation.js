@@ -1,6 +1,15 @@
 /* Presentation only: the calculation API retains every candidate. */
 'use strict';
 const BoardView = {
+ externalLink(value, label, esc) {
+  // Attribute escaping does not validate schemes. Keep rejected evidence as text.
+  if(typeof value!=='string'||!/^https?:\/\//i.test(value)||/[\x00-\x20\x7f\\]/.test(value))return esc(label);
+  try {
+   const url=new URL(value);
+   if(!['https:','http:'].includes(url.protocol)||!url.hostname||url.username||url.password)return esc(label);
+  } catch {return esc(label);}
+  return `<a href="${esc(value)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+ },
  crossVenue: c => new Set(c.legs.map(l=>l.venue)).size > 1,
  // Translate display text only; saved identities and calculation inputs stay intact.
  words(value) {
@@ -19,12 +28,12 @@ const BoardView = {
   if(state==='incomplete')return demo?'Incomplete demo':'Incomplete saved observations';
   return demo?(live?'Simulation · current test':'Simulation · saved'):value==='real'?(live?'Current observations':'Historical observations'):(value||'Saved observations');
  },
- sourceState(value) { return ({configured:'Configured',enabled:'Enabled',stopped:'Stopped',connected:'Connected',receiving:'Receiving',disconnected:'Disconnected',failed:'Failed',unconfigured:'Setup needed',selected:'Selected',resynchronization_required:'Needs resync',unavailable:'Unavailable'})[value]||String(value||'Status unknown').replaceAll('_',' '); },
+ sourceState(value) { return ({configured:'Configured',enabled:'Enabled',stopped:'Stopped',connected:'Connected',receiving:'Receiving',disconnected:'Disconnected',failed:'Failed',unconfigured:'Setup needed',selected:'Selected',resynchronization_required:'Waiting for fresh prices',unselected:'Not selected',unavailable:'Unavailable'})[value]||String(value||'Status unknown').replaceAll('_',' '); },
  scanStatus(s) {
-  if(s.cleanup_errors?.length)return 'Cleanup failed. Resource closure is unconfirmed; a new scan is unavailable.';
+  if(s.cleanup_errors?.length)return 'The previous scan could not close all connections. Restart the app before starting another scan.';
   if(s.active)return ['stopping','saving','finalizing'].includes(s.state)?'Stopping and saving observations…':'Scanning. Stop saves the observations collected so far.';
   if(s.state==='failed'||s.error)return 'Scan ended with an error. Saved data may be incomplete; review the error and use Refresh.';
-  if(!s.start_available)return s.operating_mode==='product-session'?'Start unavailable: no valid run approval is configured. You can still review saved scans.':'Start unavailable: this scan allowance has been used. You can still review saved scans.';
+  if(!s.start_available)return s.operating_mode==='product-session'?'Start needs an approved run. Choose a saved scan under Saved scans and settings.':'This run has been used. Choose a saved scan under Saved scans and settings.';
   return s.state==='stopped'?'Scan stopped. Observations saved.':'Choose a saved scan or start a new scan.';
  },
  reasons(c) {

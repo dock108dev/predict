@@ -1,5 +1,11 @@
 """Selection policy is shared by HTTP routes and direct product callers."""
 import unittest
+import inspect
+import tempfile
+from pathlib import Path
+from app.dashboard.multi_game import MultiOwner
+from app.dashboard.coverage_owner import CoverageOwner
+from app.collection.two_source import QualificationOwner
 from unittest.mock import AsyncMock, Mock
 from multidict import MultiDict
 from aiohttp.test_utils import AioHTTPTestCase
@@ -13,6 +19,18 @@ from app.reference.multi_page import rank_research
 
 
 class DirectPolicy(unittest.TestCase):
+    def test_owner_controls_match_start_signatures_and_status(self):
+        for owner_type in (MultiOwner, CoverageOwner, QualificationOwner):
+            with self.subTest(owner=owner_type.__name__):
+                parameters = set(inspect.signature(owner_type.start).parameters) - {'self'}
+                self.assertEqual(parameters, owner_type.start_controls)
+        with tempfile.TemporaryDirectory() as tmp:
+            owner = CoverageOwner(Path(tmp)/'saved', pilot_output=Path(tmp)/'pilot')
+            self.assertEqual(owner.status()['start_controls'], ['duration'])
+            with self.assertRaises(TypeError):
+                owner.start(max_games=2)
+            self.assertFalse((owner.pilot_output/'attempt.json').exists())
+
     def test_invalid_choices_do_not_fall_through_in_direct_callers(self):
         for call in (
             lambda: rank_filter([], sort='typo'),
@@ -53,6 +71,8 @@ class DirectPolicy(unittest.TestCase):
 class RoutePolicy(AioHTTPTestCase):
     async def get_application(self):
         self.owner = Mock()
+        self.owner.start_controls = CoverageOwner.start_controls
+        self.owner.start = AsyncMock(return_value='synthetic')
         self.owner.session = None
         self.owner.active.return_value = False
         self.owner.saved.return_value = []
@@ -67,3 +87,13 @@ class RoutePolicy(AioHTTPTestCase):
                     response = await self.client.get('/api/' + route + '?' + query)
                     self.assertEqual(response.status, 422, await response.text())
         self.owner.saved.assert_not_called()
+
+    async def test_start_rejects_ignored_fields_before_owner_is_called(self):
+        headers = {'Origin': str(self.client.make_url('/')).rstrip('/')}
+        for options in ({'max_games': 2}, {'duration': 5, 'max_games': None}, {'typo': 1}):
+            response = await self.client.post('/api/start', json=options, headers=headers)
+            self.assertEqual(response.status, 422, await response.text())
+        self.owner.start.assert_not_awaited()
+        response = await self.client.post('/api/start', json={'duration': 5}, headers=headers)
+        self.assertEqual(response.status, 200, await response.text())
+        self.owner.start.assert_awaited_once_with(duration=5)

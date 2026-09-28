@@ -38,10 +38,13 @@ def replay_groups(saved):
 
 
 class CoverageOwner(MultiOwner):
+    start_controls = frozenset({'duration'})
+
     def __init__(self, *args, pilot_output=OUTPUT, session_factory=ContinuousSession, mock_segmented=False, profile_name=None, supervised_live=False, product_mode=False, native_approval_path=None, **kwargs):
         from app.collection.supervised import profile
         self.profile=profile(profile_name) if profile_name else None
         self.cutoffs={}
+        self.cutoff_sizes={}
         self.product_mode=product_mode
         self.native_approval_path=native_approval_path
         if product_mode and (supervised_live or profile_name): raise ValueError('product mode cannot consume supervised allowances')
@@ -71,7 +74,7 @@ class CoverageOwner(MultiOwner):
                 retained = json.loads(report.read_text())
                 self.previous_pilot = {k:retained[k] for k in ('session','reason','collection_seconds','cleanup_complete')}
 
-    async def start(self, max_games=None, duration=180):
+    async def start(self, duration=180):
         if type(duration) is not int or not 1 <= duration <= (300 if self.profile else 180):
             raise ValueError('Duration must be 1 to 180 seconds')
         async with self.lock:
@@ -175,7 +178,7 @@ class CoverageOwner(MultiOwner):
             await self.session.task
             session = self.session
             # Both transports close before export/replay. No duplicate raw export:
-            # D3 segmentation remains deferred, primary journal remains authoritative.
+            # The flat journal remains authoritative; segmented mode finalizes separately.
             if session.persistence_error or session.cleanup_errors:
                 raise ValueError('collector cleanup or persistence incomplete')
             # Reserve expansion before materializing a JSON journal for native replay.
@@ -262,10 +265,15 @@ class CoverageOwner(MultiOwner):
             for row in reopen(s.journal.path)['rows'][:s.journal.count]: rebuilt.apply(row)
             s.projection=rebuilt;s.acknowledged_observer=rebuilt.apply;s.projection_error=None
         state=self.status()['state']
-        frozen=s.projection.snapshot(mode='saved')
-        self.cutoffs[frozen['durable_cursor']]=frozen
-        from app.dashboard.bounds import retained_bytes
-        while len(self.cutoffs)>8 or retained_bytes(self.cutoffs)>32*1024*1024:self.cutoffs.pop(next(iter(self.cutoffs)))
+        token=str(s.projection.cursor)+'-'+s.projection.chain
+        if token not in self.cutoffs:
+            frozen=s.projection.snapshot(mode='saved')
+            self.cutoffs[token]=frozen
+            from app.dashboard.bounds import retained_bytes
+            # Charge each immutable cutoff once. Summation is conservative for shared objects.
+            self.cutoff_sizes[token]=retained_bytes(frozen)+retained_bytes(token)+1024
+            while len(self.cutoffs)>8 or sum(self.cutoff_sizes.values())>32*1024*1024:
+                oldest=next(iter(self.cutoffs));self.cutoffs.pop(oldest);self.cutoff_sizes.pop(oldest,None)
         return s.projection.snapshot(mode='current' if state=='running' else 'saved',state='saving' if self.active() and state!='running' else 'current' if state=='running' else 'incomplete' if self.error else 'saved')
 
     async def finish_mock_segmented(self, folder):

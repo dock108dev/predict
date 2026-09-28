@@ -35,7 +35,8 @@ def scope_check(rows,selections):
             if reason:violations.append(dict(source=v,type='received_frame',direction='incoming',reason=reason))
         elif row['type'] in ('market_selected','prediction_book'):
             value=row.get('market',row.get('book'));ref=value['raw']['ref'];mid=ref['market_id'];observed[v].add(mid)
-            if mid not in expected.get(v,[]) or ref['event_id']!=selected.get(v):violations.append(dict(source=v,type=row['type'],market_id=mid,event_id=ref['event_id']))
+            event=selected.get('market_events',{}).get(v,{}).get(mid) if 'market_events' in selected else selected.get(v)
+            if mid not in expected.get(v,[]) or ref['event_id']!=event:violations.append(dict(source=v,type=row['type'],market_id=mid,event_id=ref['event_id']))
         elif row['type']=='prediction_command':
             c=json.loads(row['body']);ids=c.get('params',{}).get('market_tickers') if v=='kalshi' else c.get('subscribe',{}).get('marketSlugs')
             from .two_source_scope import violation

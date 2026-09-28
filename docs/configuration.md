@@ -13,7 +13,7 @@ access. Current hosted verification limits are in the [development guide](develo
 | HTTP listener | `app.dashboard.opportunity_board` binds `127.0.0.1`, default port 8783; `--port` overrides it |
 | Launcher | `scripts/opportunity-board start\|status\|stop --port 8783 --instance beta`; start searches upward if the port is occupied |
 | Instance | `beta` (default) uses `.local/opportunity-board-beta`; `poc` uses `.local/opportunity-board`. Both launch the same personal-beta factory; instance names only separate process records/logs |
-| Scan controls | Current CoverageOwner uses bounded duration and run-spec limits; ordinary UI duration defaults to 175 seconds. The hidden `max_games` control only has an effect with historical MultiOwner |
+| Scan controls | Current CoverageOwner accepts duration only and uses run-spec coverage limits; ordinary UI duration defaults to 175 seconds. Historical MultiOwner also accepts `max_games` |
 | Saved sessions | Default product root `evidence/product-sessions`, older `evidence/multi-game/sessions`, and two original captures; qualification owners use their explicit output root |
 | Run policy | `multi_game.configuration()` extends `e6_live.configuration()` and its retained run-spec; it is source configuration, not an environment override |
 
@@ -34,8 +34,11 @@ Approval and candidate bindings are run-specific; an already consumed attempt ca
 `ContinuousSession` and native-source configuration bound discovery, subscriptions,
 requests, frames, storage and cutoffs. The bootstrap six-game limit in
 `multi_game.configuration()` belongs to historical MultiOwner/MultiSession;
-CoverageOwner does not apply the hidden `max_games` request field. See
-[SSOT](ssot.md) for the control-contract follow-up.
+CoverageOwner rejects `max_games` requests. Owners publish `start_controls` in
+status; the router validates and the browser sends only those fields. The historical
+MultiOwner game-limit control remains supported. See [SSOT](ssot.md) for ownership
+and validation. Load updated Python and browser source together at the next explicit
+server restart.
 
 `query_policy` owns selection validation: unsupported choices and duplicate
 selectors fail explicitly, and manual probability assumptions need a nonblank
@@ -65,7 +68,7 @@ an environment key alone does not enable a beta feature. Native Novig/ProphetX
 branches are implemented in `collection/native_product.py`, with dedicated
 credential references. Actual access/qualification remain pending; credentials do
 not bypass spec/approval gates. Public Novig GraphQL is display-only. See
-[architecture](architecture.md) and the current tracker.
+[architecture](architecture.md) for shared collection paths and support limits.
 
 Environment settings in separate tools are not dashboard setup requirements:
 

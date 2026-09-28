@@ -109,6 +109,10 @@ PostgreSQL service, live verifier, packaging or release is part of this job.
 Failures remain in the Actions step logs; no owner captures are uploaded.
 The retained-regression group prints individual test names so a timeout identifies
 the test in progress.
+For socket shutdown changes, use `tests.test_failure_handling`,
+`tests.test_kalshi`, `tests.test_polymarket_us_stream` and
+`tests.test_two_source_qualification`; these cover cancellation during close and
+rejected-frame finalization. Keep both success and genuine cleanup-failure cases.
 
 The exact evidence exceptions in [.gitignore](../.gitignore) are immutable inputs read by offline tests and saved-review code. Keep required retained fixtures tracked so a clean checkout can run those checks. Preserve their original bytes and historical failure/consumption states. Approvals and unrelated acquisitions remain ignored. The consumed-attempt regression resolves its retained marker within this checkout without following an owner’s absolute output path. To check fixture portability, export tracked and nonignored files to a temporary checkout and run the affected retained-review tests there; a pass in the full local archive is insufficient.
 
@@ -134,6 +138,27 @@ retiring historical entry points; some helpers still have current callers.
 See [failure handling](error-handling.md#limits-and-separate-follow-up) for
 cleanup and recovery behavior. Record validation results with the change rather
 than appending run histories to this guide.
+
+## Tracked inputs and local output
+
+Ignore rules exclude new evidence, process state, caches, browser reports and build
+output; exact evidence exceptions preserve required offline inputs. An ignored file
+can still be tracked. Inspect `git ls-files -ci --exclude-standard` before deciding
+whether any artifact can leave the index. Do not remove that entire list: saved
+packages, replay fixtures, frozen sources and authored acquisition tools may still
+have supported callers.
+
+Generated test/browser transcripts are local-only where removed from tracking.
+Historical reports may refer to that retained local evidence; a fresh checkout
+includes only the tracked fixtures needed by supported offline tests. Preserve
+required saved inputs, frozen sources and authored tools when cleaning artifacts.
+
+For artifact removal, verify local hashes before and after index changes, check
+that paths are ignored and no longer tracked, and test affected code in a temporary
+export of tracked plus nonignored working files. This includes unfinished source
+changes while excluding local-only evidence. Keep that export distinct from a
+released or qualified candidate. Index removal changes the proposed current tree;
+it neither deletes local files nor purges Git history.
 
 ## Naming
 

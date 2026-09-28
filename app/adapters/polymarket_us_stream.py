@@ -5,6 +5,9 @@ image. It says nothing about total exchange depth, receipt/exchange freshness, o
 receipt of every intervening change. Missing arrays never qualify as empty arrays.
 """
 import asyncio
+import sys
+from app.diagnostics import failure
+from app.cleanup import close_outcome
 import base64
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -23,7 +26,7 @@ def subscription(slugs, request_id, dialect='camel'):
     if not 1 <= len(slugs) <= 100 or len(set(slugs)) != len(slugs) or any(not isinstance(s, str) or not s for s in slugs):
         raise ValueError('requires 1-100 unique market slugs')
     if dialect == 'camel':
-        return {'subscribe': {'requestId': request_id, 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketSlugs': list(slugs)}}
+        return {'subscribe': {'requestId': request_id, 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketSlugs': list(slugs), 'responsesDebounced': False}}
     if dialect == 'snake':
         return {'subscribe': {'request_id': request_id, 'subscription_type': 1, 'market_slugs': list(slugs)}}
     raise ValueError('explicit camel or snake dialect required')
@@ -92,6 +95,7 @@ class MarketStream:
         self.max_messages, self.max_connections = max_messages, max_connections
         self.stale_seconds, self.duration = stale_seconds, duration
         self.last = {}
+        self.cleanup_errors = []
         self.diagnostics = []  # No exception strings, credentials or handshake material.
         self.responses = []
         self.connection = None
@@ -259,21 +263,50 @@ class MarketStream:
                         break
                     await self.sleep(min(2**attempt, remaining))
         finally:
+            primary = sys.exception()
             self.invalidate('stopped')
-            await self.aclose()
+            try:
+                await self.aclose()
+            except OSError:
+                # Close failures are sticky and logged; preserve cancellation or
+                # an active primary failure until the owner closes resources.
+                if primary is None:
+                    raise
 
     async def _close_connection(self):
         connection, self.connection = self.connection, None
         if connection is not None:
-            try:
-                await asyncio.wait_for(connection.close(), 2)
-                self.record("connection_closed")
-            except Exception:
+            def failed(exc):
                 self.diagnostics.append('close_failed')
+                self.cleanup_errors.append(type(exc).__name__)
+                self.closed = True  # Never reconnect over an unconfirmed close.
+                failure(__name__, 'stream_connection_close', exc)
+                self.invalidate('close_failed')
+            # Stop may arrive while a rejected frame is already closing the socket.
+            # Finish that bounded close before propagating cancellation to the owner.
+            closing = asyncio.create_task(close_outcome(connection, 2))
+            try:
+                error = await asyncio.shield(closing)
+            except asyncio.CancelledError:
+                error = await closing
+                if error is not None:
+                    failed(error)
+                raise
+            if error is not None:
+                failed(error)
+                if isinstance(error, asyncio.CancelledError):
+                    raise error
+            else:
+                self.record("connection_closed")
+
 
     async def aclose(self):
-        if self.closed:
+        if self.closed and self.connection is None:
+            if self.cleanup_errors:
+                raise OSError('Native stream resource closure unconfirmed')
             return
         self.closed = True
         self.invalidate('closed')
         await self._close_connection()
+        if self.cleanup_errors:
+            raise OSError('Native stream resource closure unconfirmed')

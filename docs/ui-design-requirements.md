@@ -28,7 +28,7 @@ Use compact tables on desktop, deliberate horizontal scrolling or readable recor
 - Honor reduced motion and reduced transparency; provide opaque fallback surfaces when blur is unsupported. Do not animate large backgrounds or use glass effects that impair reading.
 - Distinguish loading, empty, error, disabled, selected, and successful states in words. Do not make a control look active when unavailable.
 - A light theme is included. Do not claim dark-mode support without implementing and checking it.
-- Demo interactions are local-only. Real apps must retain their existing behavior, confirmation rules, persistence, math, data boundaries, and source labels.
+- Preserve Predict's calculation, persistence and source-label contracts when changing controls or rendering.
 
 ## Maintaining the interface
 

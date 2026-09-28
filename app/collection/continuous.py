@@ -610,7 +610,9 @@ class Venue:
                     if self.session.spec.get('native_sources'):
                         self.health(next(n for n,g in self.groups.items() if g is group), 'disconnected')
                         try: await group['task']
-                        except Exception: pass
+                        except Exception as exc:
+                            from app.diagnostics import failure
+                            failure(__name__, 'native_stream_task', exc)
                         await self.session.stop_event.wait()
                         return
                     await group['task']
@@ -622,11 +624,12 @@ class Venue:
         tasks = [g['task'] for g in self.groups.values() if 'task' in g]
         for task in tasks: task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-        for group in self.groups.values():
-            await group['producer'].aclose()
+        from app.cleanup import close_all
+        resources = [group['producer'] for group in self.groups.values()]
         client = self.session.discovery.clients.get(self.venue)
         if client:
-            await client.aclose()
+            resources.append(client)
+        await close_all(resources)
 
 
 class ContinuousSession(TransportSession):

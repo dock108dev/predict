@@ -1,5 +1,7 @@
 # Provider evidence and qualification preparation — September 27, 2026
 
+**Current work order — September 27 owner update:** the immediate next milestone is the [live Kalshi / Polymarket US comparison in ordinary Predict](live-two-venue-comparison-next-steps.md). Complete local integration and prepare its separately approved live check first. All-four readiness and unresolved net-economics evidence below remain scoped later requirements; they do not block useful raw two-venue price display. Preserve provisional fee decisions; no further Kalshi/US outreach is pending. Earlier audit/dispatch statements below are retained dated context, not the current next action. This update authorizes no credential access or collection.
+
 **Original Polymarket US inquiry SENT; its follow-up withdrawn. Kalshi inquiry withdrawn, NOT SENT. Use owner-authorized provisional assumptions. Qualification specification remains unfrozen.** This continues the [completed four-venue audit](four-venue-readiness-handoff.md) and current Desktop tracker. Cards, adapters, audit results, historical evidence and consumed attempts are preserved. At preparation closeout, no owner walkthrough, new runtime tests, credentials, API collection, credits, outreach, recurring jobs, commits, pushes or publication occurred. The later authorized US dispatch is recorded below. Public contact-route lookup only was performed; no provider account or inbox was inspected.
 
 ## Owner decision — September 27, 2026

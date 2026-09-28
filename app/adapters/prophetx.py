@@ -454,6 +454,5 @@ class ProphetXAdapter(ReadOnlyAdapter):
         return self.stream.updates()
 
     async def aclose(self):
-        if self.stream:
-            await self.stream.aclose()
-        await self.client.aclose()
+        from app.cleanup import close_all
+        await close_all([self.stream, self.client] if self.stream else [self.client])
