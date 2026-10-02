@@ -104,12 +104,13 @@ node tests/test_commercial_ui.cjs
 # Required market cells through shared feed, sizing, watch and exact history.
 python -m unittest tests.test_full_scope_engineering -v
 
-# Historical aggregate ingestion and ordinary saved app paths.
-python -m unittest tests.test_aggregate_ingestion -v
+# Synthetic saved packages run the shared aggregate guards without local archives.
+# Archive oracles remain opt-in: tests.test_aggregate_ingestion / assessment.
+python -m unittest tests.test_aggregate_portable -v
 node tests/test_aggregate_ui.cjs
 
-# Versioned actual H1 rule research; independent of acquisition and native execution.
-python -m unittest tests.test_aggregate_assessment -v
+# Versioned H1 rule-analysis mechanics with fictional, hash-checked source bytes.
+python -m unittest tests.test_aggregate_assessment_portable -v
 node tests/test_aggregate_assessment_ui.cjs
 
 # Full mathematical package, versioned hypothetical paths and retained reference sets.

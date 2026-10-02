@@ -134,6 +134,24 @@ fixture with a pinned SHA256. Its exact ignore exception makes it a checkout
 input; sibling approvals, outputs and acquisition records remain local. Including
 the specification does not authorize any provider request.
 
+Aggregate CI checks use small synthetic packages generated in temporary folders
+by `tests/aggregate_fixture.py`. The ingestion and H1 assessment suites reuse the
+archive tests' guards, including source-role isolation, exact identity, malformed
+quotes, timestamps, cutoff reopening, ordinary routes and unavailable economics.
+Fictional rule-source bytes exercise hash validation and exact record bindings;
+they do not establish actual source contracts. Math and source-session checks use
+the same portable packages. No aggregate acquisition archive is a CI prerequisite.
+
+The original acquisition counts, frozen feed and actual public-source hashes
+remain opt-in local checks when the ignored archives are available:
+
+```sh
+.venv/bin/python -m unittest tests.test_aggregate_ingestion tests.test_aggregate_assessment -v
+```
+
+Keep those archives ignored and local. Their original bytes are not regenerated,
+copied into synthetic fixtures, or replaced by the CI results.
+
 The ignored `app/reviews/native` catalog is an optional local archive. Its absence
 contributes no historical paths or accepted native judgments, and does not prevent
 ordinary saved-scan reads. Invalid existing catalogs, missing indexed records and

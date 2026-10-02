@@ -133,7 +133,7 @@ if __name__=='__main__':unittest.main()
 
 class ReferenceIntegration(unittest.TestCase):
     def test_retained_sets_and_missing_cross_cutoff_line_period_isolation(self):
-        from tests.test_aggregate_ingestion import FOLDER
+        from tests.aggregate_fixture import FOLDER
         from app.dashboard.session_history import load
         s=load(FOLDER);g=next(g for g in s['games'] if g['product_identity']['family']=='moneyline')
         refs=reference_sets(s,g);self.assertTrue(refs['estimates'])
@@ -161,7 +161,7 @@ class MathRoutes(unittest.IsolatedAsyncioTestCase):
         from aiohttp.test_utils import TestClient,TestServer
         from app.dashboard.coverage_owner import CoverageOwner
         from app.dashboard.multi_game_server import create_app
-        from tests.test_aggregate_ingestion import FOLDER
+        from tests.aggregate_fixture import FOLDER
         class Owner(CoverageOwner):
             def history_paths(self):return {FOLDER.name:FOLDER}
             async def start(self,**kwargs):raise AssertionError('No collection')

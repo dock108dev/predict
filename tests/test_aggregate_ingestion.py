@@ -30,6 +30,10 @@ def fixture(records):
 
 
 class Aggregate(unittest.TestCase):
+    record_count = 3302
+    comparison_count = 218
+    reference_count = 2300
+    invalid_price_count = 11
     @classmethod
     def setUpClass(cls):
         cls.records=sample_records(); cls.snapshot=load(FOLDER)
@@ -42,8 +46,8 @@ class Aggregate(unittest.TestCase):
         s=self.snapshot; rows=comparisons(s,{})
         self.assertEqual(len(s['aggregate_coverage']),63)
         self.assertEqual(sum(c['identity']['period']!='full_game' for c in s['aggregate_coverage']),45)
-        self.assertEqual(len(self.records),3302);self.assertEqual(len(rows),218)
-        self.assertEqual(len(s['references']),2300)
+        self.assertEqual(len(self.records),self.record_count);self.assertEqual(len(rows),self.comparison_count)
+        self.assertEqual(len(s['references']),self.reference_count)
         self.assertEqual({l['venue'] for c in rows for l in c['legs']},{'novig','prophetx'})
         self.assertEqual({r['origin_id'] for r in s['references']},{'pinnacle','draftkings','betmgm'})
         self.assertTrue(all(not product_view.usable(r) for r in s['references']))
@@ -60,7 +64,7 @@ class Aggregate(unittest.TestCase):
             self.assertEqual(len({l['provenance']['response'] for l in c['legs']}),1)
             for l in c['legs']:
                 self.assertIsNone(l['top_size']);self.assertFalse(l['levels']);self.assertIsNone(l['entry']['upper'])
-        self.assertEqual(sum(r['price_issue'] is not None for r in bind(self.records)),11)
+        self.assertEqual(sum(r['price_issue'] is not None for r in bind(self.records)),self.invalid_price_count)
 
     def test_line_orientation_missing_books_and_outcomes(self):
         pair=self.pair('spreads')
@@ -135,11 +139,11 @@ class Aggregate(unittest.TestCase):
 
     def test_watch_history_exact_reopening_and_live_isolation(self):
         s=self.snapshot;w=watch();obs=observations(s,w)
-        self.assertEqual(len(obs),218);self.assertTrue(all(not o['qualifies'] for o in obs))
+        self.assertEqual(len(obs),self.comparison_count);self.assertTrue(all(not o['qualifies'] for o in obs))
         p=fixture(self.pair());current=p.snapshot(mode='current')
         self.assertFalse(Signals().update(current,[w],running=True)['events'])
         for metric in ('ev','arb_return'):
-            values=observations(s,watch(metric));self.assertEqual(len(values),218)
+            values=observations(s,watch(metric));self.assertEqual(len(values),self.comparison_count)
             self.assertTrue(all(v['metric'] is None and not v['qualifies'] for v in values))
         report=build_history(FOLDER,[w]);self.assertFalse(report['events']);self.assertTrue(report['coverage']['complete'])
         signals=Signals();first=signals.update(s,[w]);second=signals.update(s,[w])
@@ -158,6 +162,7 @@ class Aggregate(unittest.TestCase):
 
 
 class Routes(unittest.IsolatedAsyncioTestCase):
+    comparison_count = 218
     async def test_ordinary_feed_details_watch_download_exact(self):
         from app.dashboard.coverage_owner import CoverageOwner
         from app.dashboard.multi_game_server import create_app
@@ -172,7 +177,7 @@ class Routes(unittest.IsolatedAsyncioTestCase):
             try:
                 response=await c.get('/api/dashboard?view=feed&capture='+FOLDER.name)
                 self.assertEqual(response.status,200);feed=await response.json()
-                self.assertEqual(len(feed['comparisons']),218);self.assertFalse(feed['live']);self.assertFalse(feed['rows'])
+                self.assertEqual(len(feed['comparisons']),self.comparison_count);self.assertFalse(feed['live']);self.assertFalse(feed['rows'])
                 row=feed['comparisons'][0];q={k:row[k] for k in ('session','hash','cutoff','contract')}
                 url='/api/calculate?'+urlencode(q)
                 detail=await c.get(url);self.assertEqual(detail.status,200);saved=await detail.json()

@@ -298,9 +298,9 @@ class Projection(unittest.TestCase):
         self.assertEqual(len(p.aggregates),count)
         p.apply(dict(type='aggregate_inventory',session_id=p.sid,observed_at='2026-09-29T12:00:05Z',sport='NFL',event_ids=[]))
         self.assertFalse(p.aggregates);self.assertFalse(p.snapshot()['aggregate_comparisons']);self.assertEqual(len(p.snapshot()['aggregate_coverage']),63)
-    def test_retained_actual_timestamps_never_rebased(self):
+    def test_saved_source_timestamps_never_rebased(self):
         from app.dashboard.session_history import verified
-        from tests.test_aggregate_ingestion import FOLDER
+        from tests.aggregate_fixture import FOLDER
         original=next(r for r in verified(FOLDER)['rows'] if r['type']=='product_aggregate' and r['sport']=='NFL')
         p=self.projection()
         events={r['original']['source_event_id'] for r in original['records']}
