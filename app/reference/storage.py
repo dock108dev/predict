@@ -87,7 +87,7 @@ class ReferenceStore:
         with self.db.transaction():
             if any(self.db.execute(sql.SQL('SELECT 1 FROM {} LIMIT 1').format(sql.Identifier(t))).fetchone() for t in TABLES.values()):
                 raise ValueError('reference restore requires empty reference tables')
-            # E2 owns no production session state; recreate explicit synthetic provenance.
+            # Reference-bundle restoration recreates synthetic provenance, not production state.
             for session_id in sorted({r.session_id for r in records if hasattr(r, 'session_id')}):
                 if self.db.execute('SELECT 1 FROM capture_session WHERE id=%s', (session_id,)).fetchone():
                     raise ValueError('restore requires fresh session identities')

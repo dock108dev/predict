@@ -208,7 +208,14 @@ reads a specific historical archive, named in its `build_status` function. Those
 local-only inputs are not installation requirements or assumed present in a fresh
 clone. Use a disposable `--output` when verifying it; it does not enable collection
 or change workflow acceptance. Generated guidance points to repository-local
-configuration rather than an external tracker.
+configuration.
+
+The optional `scripts/us_metadata_package/build.py` prepares inert, sealed
+diagnostic packages and also requires its retained baseline inputs. Its
+`--authority-file` argument identifies an explicit provenance file; non-offline
+preparation fails before writing when it is absent. Offline rehearsals use
+synthetic provenance. Preparation does not activate a package or grant permission
+to execute it; existing seals, approval and consumed-attempt checks still apply.
 
 ## Opportunity-card preview and focused checks
 

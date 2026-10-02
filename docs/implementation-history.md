@@ -21,6 +21,8 @@ The [October 2 CI readiness pass](history/maintenance-20261002-ci.md) records
 Python 3.14 selection, clean-checkout fixes and the hosted-validation boundary.
 The subsequent [repository cleanup](history/cleanup-20261002.md) records shared
 game selection and preserved local copies of untracked test transcripts.
+The [documentation accuracy pass](history/documentation-20261002.md) records
+portable public guides and explicit provenance inputs for package preparation.
 
 ## Slice 2 — bounded US retail ingestion (complete)
 

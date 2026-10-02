@@ -1,4 +1,4 @@
-"""Local E1-E5 acceptance: no credential access or external traffic."""
+"""Local comparison, sizing, watch and history checks without credential access or external traffic."""
 import json
 import tempfile
 import unittest

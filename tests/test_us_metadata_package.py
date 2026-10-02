@@ -12,15 +12,44 @@ import unittest
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-from scripts.us_metadata_package.build import build, authorization
+from scripts.us_metadata_package.build import build, authorization, authority_record
 from app.collection.native_approval import digest
 from app.collection.run_spec import preflight
+
+
+class AuthorityRecordTests(unittest.TestCase):
+    def test_non_offline_build_requires_explicit_provenance_before_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp)/'package'
+            with self.assertRaisesRegex(ValueError, 'authority_file is required'):
+                build(destination)
+            self.assertFalse(destination.exists())
+
+    def test_offline_provenance_needs_no_external_file(self):
+        record = authority_record(offline=True)
+        self.assertEqual(record['tracker'], 'synthetic:offline-rehearsal')
+        self.assertEqual(len(record['tracker_sha256']), 64)
+
+    def test_explicit_file_is_hashed_without_modification(self):
+        from hashlib import sha256
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'authority.txt'
+            body = b'Synthetic provenance; not permission to execute'
+            path.write_bytes(body)
+            record = authority_record(path)
+            self.assertEqual(record['tracker_sha256'], sha256(body).hexdigest())
+            self.assertEqual(Path(record['tracker']), path.resolve())
+            self.assertEqual(path.read_bytes(), body)
 
 
 class PackageTests(unittest.TestCase):
     def setUp(self):
         self.folder = ROOT/'evidence'/('OFFLINE-package-unit-'+str(uuid.uuid4()))
-        self.identity = build(self.folder)
+        self.authority = tempfile.TemporaryDirectory()
+        self.addCleanup(self.authority.cleanup)
+        record = Path(self.authority.name)/'authority.txt'
+        record.write_text('Synthetic provenance only; no live execution authority')
+        self.identity = build(self.folder, authority_file=record)
 
     def tearDown(self):
         # Only the folder freshly created by this test; no attempt destination exists.

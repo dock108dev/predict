@@ -52,10 +52,22 @@ def authorization(identity, expires):
             "Dispatch consumes this attempt on success, failure, interruption or uncertainty; do not repeat it.\n").encode()
 
 
-def build(folder, attempt_id=None, *, offline=False, validity_seconds=7200, now=None):
+def authority_record(authority_file=None, *, offline=False):
+    """Record explicit provenance; neither a file nor synthetic text grants execution."""
+    if authority_file is None:
+        if not offline:
+            raise ValueError('An explicit authority_file is required for a non-offline package')
+        body = b'Isolated offline rehearsal; no provider execution authority'
+        return dict(tracker='synthetic:offline-rehearsal', tracker_sha256=sha256(body).hexdigest())
+    path = Path(authority_file).resolve()
+    return dict(tracker=str(path), tracker_sha256=sha256(path.read_bytes()).hexdigest())
+
+
+def build(folder, attempt_id=None, *, offline=False, validity_seconds=7200, now=None, authority_file=None):
     folder = Path(folder).resolve()
     if folder.exists():
         raise ValueError('Package destination exists; preserve it and choose a fresh destination')
+    authority = authority_record(authority_file, offline=offline)
     if type(validity_seconds) is not int or not 33 <= validity_seconds <= 86400:
         raise ValueError('Independent finite diagnostic validity required')
     attempt_id = attempt_id or str(uuid.uuid4())
@@ -132,8 +144,7 @@ def build(folder, attempt_id=None, *, offline=False, validity_seconds=7200, now=
               'window.json':dict(prepared_at=start,sealed_at=start,expires_at=expires,latest_activation_and_dispatch=latest_start,
                                 validity_seconds=validity_seconds,basis=WINDOW_BASIS,
                                 expired_paired_spec_extended=False),
-              'authority.json':dict(tracker='/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md',
-                    tracker_sha256=sha256(Path('/Users/michaelfuscoletti/Desktop/prediction_arb_next_steps.md').read_bytes()).hexdigest(),
+              'authority.json':dict(**authority,
                     completed_repair='evidence/us-metadata-delivery-repair-20260930-v1/engineering-seal.json',
                     repair_seal_sha256=sha256((ROOT/'evidence/us-metadata-delivery-repair-20260930-v1/engineering-seal.json').read_bytes()).hexdigest())}
     folder.mkdir(parents=True,exist_ok=False)
@@ -186,5 +197,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder')
     parser.add_argument('--offline',action='store_true')
+    parser.add_argument('--authority-file',type=Path,help='Explicit provenance file; required unless --offline; does not authorize execution')
     args=parser.parse_args()
-    print(json.dumps(build(args.folder,offline=args.offline),indent=2))
+    print(json.dumps(build(args.folder,offline=args.offline,authority_file=args.authority_file),indent=2))

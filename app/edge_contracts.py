@@ -1,4 +1,4 @@
-"""E1 immutable reference/pricing/signal contracts, not a pricing or strategy engine.
+"""Immutable reference/pricing/signal contracts, not a pricing or strategy engine.
 
 JSON replay is isolated from capture-bundle-1 and never opens a database.
 Core units and settlement validation remain owned by their existing modules.
