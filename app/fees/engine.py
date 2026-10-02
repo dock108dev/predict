@@ -125,6 +125,9 @@ def calculate(context, registry=None):
     reject_float(c)
     canonical(c)
     with localcontext(Context(prec=100, rounding=ROUND_HALF_EVEN)):
+        if registry is None and c.get('public_binding_version') == 'public-contract-bindings-1':
+            from app.fees.public_bindings import registry as public_registry
+            registry = public_registry()
         return _calculate(c, registry or load_registry())
 
 
@@ -179,13 +182,24 @@ def _calculate(c, registry):
         p=number(f['price']); q=number(f['quantity'])
         if not ZERO<p<ONE or q<=ZERO: raise ValueError('price must be between 0 and 1, quantity positive')
         unit=f.get('unit')
-        if unit=='payout_cents' and venue=='novig':
+        if venue=='novig' and c.get('api_regime')=='v3' and unit!='novig_v3_contracts':
+            raise ValueError('Novig v3 requires explicit one-cent native contract units')
+        if unit=='novig_v3_contracts' and venue=='novig' and c.get('api_regime')=='v3':
+            if q!=q.to_integral_value(): raise ValueError('Novig v3 one-cent contracts must be integral')
+            q=q/Decimal('100')
+        elif unit=='payout_cents' and venue=='novig':
             if q!=q.to_integral_value(): raise ValueError('payout cents must be integral')
             q=q/Decimal('100')
         elif unit!='contracts': raise ValueError('unknown quantity convention; no automatic native conversion')
         if venue=='polymarket_us' and not D('.01')<=p<=D('.99'):
             issues.append('PMUS documented price range .01 through .99'); return result
-        if venue=='polymarket_us' and q!=q.to_integral_value():
+        if venue=='polymarket_us' and c.get('public_binding_version')=='public-contract-bindings-1' and c.get('quantity_scale'):
+            from app.fees.public_bindings import integer_scale
+            scale=integer_scale(c['quantity_scale'])
+            evidence=c.get('quantity_scale_evidence',{})
+            if evidence.get('market_id')!=c['market_id'] or not evidence.get('source') or q*scale!=(q*scale).to_integral_value():
+                issues.append('US fractional size conflicts with exact instrument scale'); return result
+        elif venue=='polymarket_us' and q!=q.to_integral_value():
             issues.append('PMUS retail documentation only supports whole contracts; fractional execution applicability unsupported'); return result
         parsed.append((f,p,q))
     cost=sum((p*q for _,p,q in parsed),ZERO); quantity=sum((q for _,_,q in parsed),ZERO)
@@ -225,6 +239,8 @@ def _calculate(c, registry):
     elif venue=='polymarket_us':
         for f,p,q in parsed:
             raw=D(s['maker_coefficient'] if f['role']=='maker' else s['coefficient'])*q*p*(ONE-p)
+            if f['role']=='taker' and s.get('combo_coefficient') is not None:
+                raw += D(s['combo_coefficient'])*q*p*(ONE-p)**4
             amount=rounded(raw,D('.01'),ROUND_HALF_EVEN)
             if f['role']=='maker':
                 credits+=amount
@@ -240,43 +256,68 @@ def _calculate(c, registry):
             assumptions.append('supplied prior-month/accelerated rebate eligibility; later payout rounding unverified')
         result['credits'].append(dict(kind='volume_rebate',unrounded=None if tier is None else str(fee*D(tier)),amount=None,timing='weekly',conditional=True))
     elif venue=='novig':
-        if c['product']=='parlay':
-            if c.get('channel')=='api' and any(f['role']=='taker' for f,_,_ in parsed):
-                issues.append('Novig API cannot take parlays'); return result
-            if c.get('channel')!='api' and (c.get('channel') not in ('app','web') or c.get('price_basis')!='pre_fee'):
-                issues.append('app parlay fee embedded in quote; explicit pre_fee price basis required'); return result
-        coefficient=D(s['coefficient'])
-        if c['product']=='futures' and c.get('sport') in ('golf','tennis'):
-            if stamp(c['trade_time']).date().isoformat()<'2026-09-10':
-                issues.append('golf/tennis exemption not established before September 10'); return result
-            coefficient=ZERO
-            assumptions.append('help-page golf/tennis futures exemption; effective instant not documented')
-        policy=c.get('aggregation')
-        if len(parsed)>1 and coefficient and any(f['role']=='taker' for f,_,_ in parsed):
-            if policy not in ('per_fill','match_vwap'):
-                result['rounding_qualification']='unresolved_aggregation'
-                issues.append('Novig sources conflict: supply per_fill or match_vwap scenario'); return result
-            assumptions.append('Novig aggregation conflict; supplied '+policy+' scenario')
-            result['rounding_qualification']='conditional_aggregation'
-        groups={}
-        for f,p,q in parsed:
-            key=f['fill_id']
-            if policy=='match_vwap':
-                if not f.get('match_id'): raise ValueError('match_vwap needs match_id')
-                key=(f['order_id'],f['match_id'],f['role'])
-            groups.setdefault(key,[]).append((f,p,q))
-        for group in groups.values():
-            q=sum((x[2] for x in group),ZERO); stake=sum((x[1]*x[2] for x in group),ZERO); p=stake/q
-            raw=coefficient*p*(ONE-p)*q if group[0][0]['role']=='taker' else ZERO
-            amount=rounded(raw,D('.00001'),ROUND_HALF_UP); fee+=amount
-            result['trace'].append(dict(fill_ids=[x[0]['fill_id'] for x in group],contracts=str(q),vwap=str(p),raw=str(raw),amount=str(amount)))
-        if any(f['role']=='maker' for f,_,_ in parsed) and coefficient:
-            rate=D('.70') if c['product']=='futures' and c.get('sport') in ('nfl','ncaaf') else D('.50')
-            eligible=c.get('maker_credit_eligible') is True and (c['product']=='live' or (c['product']=='futures' and c.get('sport') in ('nfl','ncaaf')))
-            collected=c.get('counterparty_fee_retained')
-            value=None if not eligible or collected is None else number(collected)*rate
-            if value is not None and value<ZERO: raise ValueError('negative retained fee')
-            result['credits'].append(dict(kind='maker_credit',unrounded=None if value is None else str(value),amount=None,timing='cash within seven days, reversible',conditional=True))
+        if s.get('api_regime')=='v3':
+            native_fee=c.get('market_fee',{})
+            if c.get('api_regime')!='v3' or set(native_fee)!={'coefficient','makerCredit','charged'} or native_fee['charged'] not in ('ALWAYS','WHEN_LIVE'):
+                issues.append('Exact Novig v3 market.fee and regime required'); return result
+            coefficient=number(native_fee['coefficient'])
+            if coefficient<0: raise ValueError('Negative fee coefficient')
+            for f,p,q in parsed:
+                status=f.get('event_status_at_match')
+                if native_fee['charged']=='WHEN_LIVE' and status not in ('OPEN_PREGAME','OPEN_INGAME','DELAYED','FINAL','CANCELED'):
+                    issues.append('Novig match-time event status required'); return result
+                charged=native_fee['charged']=='ALWAYS' or status=='OPEN_INGAME'
+                raw=coefficient*p*(ONE-p)*q if f['role']=='taker' and charged else ZERO
+                amount=rounded(raw,D('.00001'),ROUND_HALF_UP); fee+=amount
+                result['trace'].append(dict(fill_ids=[f['fill_id']],contracts=str(q),raw=str(raw),amount=str(amount),charged=charged,regime='v3_one_cent_contracts'))
+            result['rounding_qualification']='documented_per_fill_millicent'
+            assumptions.append('Novig v3 one-cent contracts; native market.fee and match-time phase supplied; non-trading charges separate')
+            for f,p,q in parsed:
+                if f['role']!='maker':continue
+                retained=f.get('counterparty_fee_retained')
+                amount=None if retained is None else number(retained)*number(native_fee['makerCredit'])
+                if amount is not None and amount<ZERO:raise ValueError('Negative retained counterparty fee')
+                result['credits'].append(dict(kind='v3_same_fill_maker_credit',fill_id=f['fill_id'],
+                    unrounded=None if amount is None else str(amount),amount=None,
+                    timing='same fill fee entitlement; posted amount/rounding separate',conditional=True))
+        else:
+            if c['product']=='parlay':
+                if c.get('channel')=='api' and any(f['role']=='taker' for f,_,_ in parsed):
+                    issues.append('Novig API cannot take parlays'); return result
+                if c.get('channel')!='api' and (c.get('channel') not in ('app','web') or c.get('price_basis')!='pre_fee'):
+                    issues.append('app parlay fee embedded in quote; explicit pre_fee price basis required'); return result
+            coefficient=D(s['coefficient'])
+            if c['product']=='futures' and c.get('sport') in ('golf','tennis'):
+                if stamp(c['trade_time']).date().isoformat()<'2026-09-10':
+                    issues.append('golf/tennis exemption not established before September 10'); return result
+                coefficient=ZERO
+                assumptions.append('help-page golf/tennis futures exemption; effective instant not documented')
+            policy=c.get('aggregation')
+            if len(parsed)>1 and coefficient and any(f['role']=='taker' for f,_,_ in parsed):
+                if policy not in ('per_fill','match_vwap'):
+                    result['rounding_qualification']='unresolved_aggregation'
+                    issues.append('Novig sources conflict: supply per_fill or match_vwap scenario'); return result
+                assumptions.append('Novig aggregation conflict; supplied '+policy+' scenario')
+                result['rounding_qualification']='conditional_aggregation'
+            groups={}
+            for f,p,q in parsed:
+                key=f['fill_id']
+                if policy=='match_vwap':
+                    if not f.get('match_id'): raise ValueError('match_vwap needs match_id')
+                    key=(f['order_id'],f['match_id'],f['role'])
+                groups.setdefault(key,[]).append((f,p,q))
+            for group in groups.values():
+                q=sum((x[2] for x in group),ZERO); stake=sum((x[1]*x[2] for x in group),ZERO); p=stake/q
+                raw=coefficient*p*(ONE-p)*q if group[0][0]['role']=='taker' else ZERO
+                amount=rounded(raw,D('.00001'),ROUND_HALF_UP); fee+=amount
+                result['trace'].append(dict(fill_ids=[x[0]['fill_id'] for x in group],contracts=str(q),vwap=str(p),raw=str(raw),amount=str(amount)))
+            if any(f['role']=='maker' for f,_,_ in parsed) and coefficient:
+                rate=D('.70') if c['product']=='futures' and c.get('sport') in ('nfl','ncaaf') else D('.50')
+                eligible=c.get('maker_credit_eligible') is True and (c['product']=='live' or (c['product']=='futures' and c.get('sport') in ('nfl','ncaaf')))
+                collected=c.get('counterparty_fee_retained')
+                value=None if not eligible or collected is None else number(collected)*rate
+                if value is not None and value<ZERO: raise ValueError('negative retained fee')
+                result['credits'].append(dict(kind='maker_credit',unrounded=None if value is None else str(value),amount=None,timing='cash within seven days, reversible',conditional=True))
     elif venue=='prophetx':
         if fills:
             issues.append('ProphetX native quantity/value conversion unavailable; use explicit market stake/payout'); return result
@@ -286,7 +327,7 @@ def _calculate(c, registry):
         cost=number(market['stake_usd'])
         if cost<ZERO: raise ValueError('negative stake')
         if market.get('complete_market') is not True: assumptions.append('standalone scenario assumes no other market gains/losses')
-        assumptions.append('net gain modeled from explicit aggregate cashflows; detailed venue netting and settlement rounding unverified')
+        assumptions.append('net gain modeled from explicit aggregate market cashflows; settlement rounding unverified' if c.get('public_binding_version')=='public-contract-bindings-1' else 'net gain modeled from explicit aggregate cashflows; detailed venue netting and settlement rounding unverified')
         monthly=c.get('monthly_rebate_context')
         unrounded=None
         if monthly:
@@ -331,6 +372,11 @@ def _calculate(c, registry):
         elif venue=='polymarket_us' and not c.get('assume_no_settlement_fee',False):
             raw=None; settlement=None
         elif venue=='polymarket_us': assumptions.append('assumed no independent settlement fee; not established by trading schedule')
+        elif venue=='kalshi' and c.get('public_binding_version')=='public-contract-bindings-1' and c.get('settlement_contract_kind')=='scalar':
+            value=c.get('scalar_settlement_fee')
+            raw=settlement=None if value is None else number(value)
+            if settlement is not None and settlement<ZERO:raise ValueError('Negative scalar settlement charge')
+            assumptions.append('Scalar settlement fee needs explicit reported charge or hypothetical amount; no binary exemption inherited')
         result['outcomes'][name]=dict(gross_payout=str(gross),settlement_fee_unrounded=None if raw is None else str(raw),settlement_fee=None if settlement is None else str(settlement),net_payout=None if settlement is None else str(gross-settlement),net_cashflow=None if settlement is None else str(gross-settlement-D(result['entry_balance_debit'])))
     if any(v['settlement_fee'] is None for v in result['outcomes'].values()): assumptions.append('net payout unavailable where settlement charge is unresolved')
     result['assumptions']=list(dict.fromkeys(assumptions))
@@ -345,3 +391,47 @@ def replay(audit):
     rebuilt=calculate(audit['context'],Registry(audit['registry']))
     if rebuilt!=audit: raise ValueError('audit result mismatch')
     return rebuilt
+
+
+def arithmetic_number(value):
+    """Finite decimal wire value, including derived 100-digit probabilities."""
+    n=D(value)
+    if len(n.as_tuple().digits)>200 or abs(n.as_tuple().exponent)>200:
+        raise ValueError('Arithmetic value exceeds 200 digit / exponent bound')
+    return n
+
+
+def generic_fee(fills, policy, *, positions=None, outcomes=None):
+    """Source-independent fee algebra; never assigns a real venue fee regime.
+
+    Net-gain commission is incremental: fee(after)-fee(before), with the full
+    scoped baseline provided. Negative differences are explicit fee adjustments,
+    requiring caller support for offset/refund; not an assumed venue rebate.
+    """
+    with localcontext(Context(prec=100)):
+        if not isinstance(policy,dict): raise ValueError('Explicit fee policy required')
+        basis=policy.get('basis'); rate=arithmetic_number(policy['rate']); grid=arithmetic_number(policy['grid'])
+        modes={'ceiling':ROUND_CEILING,'floor':ROUND_FLOOR,'half_even':ROUND_HALF_EVEN,'half_up':ROUND_HALF_UP}
+        if rate<0 or grid<=0 or policy.get('rounding') not in modes: raise ValueError('Invalid fee terms')
+        mode=modes[policy['rounding']]
+        if basis not in ('notional','quantity','quadratic','net_gain'): raise ValueError('Unsupported fee basis')
+        if basis=='net_gain':
+            if not positions or positions.get('complete') is not True or not positions.get('account') or not positions.get('market'):
+                raise ValueError('Complete scoped account / market positions required')
+            if not outcomes or set(positions['net_before']) != set(outcomes): raise ValueError('Complete baseline state cashflows required')
+            before={k:arithmetic_number(v) for k,v in positions['net_before'].items()}
+            after={k:before[k]+arithmetic_number(v) for k,v in outcomes.items()}
+            fees={k:rounded(max(ZERO,after[k])*rate,grid,mode)-rounded(max(ZERO,before[k])*rate,grid,mode) for k in outcomes}
+            if any(v<0 for v in fees.values()) and policy.get('allow_fee_adjustment') is not True:
+                raise ValueError('Negative fee adjustment requires explicit support')
+            return dict(version='generic-fees-1',entry_fee='0',state_fees={k:str(v) for k,v in fees.items()},
+                        positions=deepcopy(positions),basis=basis,qualification='hypothetical mathematical policy')
+        if policy.get('aggregation') not in ('per_fill','order'): raise ValueError('Explicit fee aggregation required')
+        raw=[]
+        for fill in fills:
+            p,q=arithmetic_number(fill['price']),arithmetic_number(fill['quantity'])
+            if not 0<p<1 or q<=0: raise ValueError('Invalid normalized fill')
+            raw.append(rate*(p*q if basis=='notional' else q if basis=='quantity' else p*(1-p)*q))
+        fee=sum((rounded(v,grid,mode) for v in raw),ZERO) if policy['aggregation']=='per_fill' else rounded(sum(raw,ZERO),grid,mode)
+        return dict(version='generic-fees-1',entry_fee=str(fee),state_fees={},raw=[str(v) for v in raw],
+                    basis=basis,qualification='hypothetical mathematical policy')

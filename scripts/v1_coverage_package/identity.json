@@ -1,0 +1,24 @@
+{
+  "implementation_sha256": "22ae2fb1aafd6789e10a74c9bec90b6eded5fefc01f12c31f82e4d86c6e79ac0",
+  "spec_sha256": "6df2c2504745d840cb10ba1148b223050080a03de2a3d30c7548b20c75d8bd62",
+  "attempt_id": "713fd0fa-73ae-4beb-b446-3c7925eca6e5",
+  "output": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/LIVE-v1-coverage-713fd0fa-73ae-4beb-b446-3c7925eca6e5",
+  "file_hashes": {
+    "AUTHORIZATION.txt": "a138a0bb05152b46a4e8a4114df669d3eba3bf120601af846fd618305aa88912",
+    "LIMITS.json": "1c15a81c8593ba00fd85d9483d7cc295cd76318ee9e9028de32ce2926a96fd35",
+    "OPERATIONS.json": "b0a7b2d20025350cfad3015b583b95d9d9b5873803ac3e393206b5aafb3fa270",
+    "QUALIFICATION.json": "de8fbf215d636231e29b44aadd7f25587792cd142b22affca044cb93c3f00d5f",
+    "README.md": "7c0d2cddab1a506ab0b70573909133b941ffb1dea5125b3456b5348915d0fd17",
+    "SOURCE-COSTS.json": "4fd980c292465b142dd47ac477faecef3fd3173c41d99c7eaa3b9f2c69e4457a",
+    "SOURCE-MANIFEST.json": "733199184fd41370be762b87c3b33f6c9e10f2e6278b0b54bb4f50fc07936d87",
+    "SOURCE.zip": "dacc74a58328d26320853b25428387d1b8d7378280441567c9fa0fc687ef877a",
+    "TARGETS.json": "f45d14f89f8067d5e355ca37812b9e55fdb975de5630778ea3abed15ebf50b2d",
+    "attempt.json": "694c0c44d6fe6291f1c6f198688e7dda2083994f99d262b451b11244dce8ccd9",
+    "control.py": "2e94270901e1929df776543bcbe38f605a7f3167b6d894e43c606ba9c5f60e7d",
+    "coverage-request.json": "0e024e5fd1956d17726d24fbe832de43b4a51d4104cd99c478bbad81a2c571a4",
+    "execute.py": "8cab6d55c15054964b326090591494ab1908e609b03cf00d3968df664ed98fb4",
+    "launch.py": "737842b83cd930922450fcfd413cb4f8d37a4145e3b18f99821f6684491feb88",
+    "report.py": "98cad9d1bc486625c3ad0dd1db3024308ef64a6df49adfb88f782f7c93da8d6e",
+    "run-spec.json": "b5bb236e0c06308aa5e717151366d16e06bb968995a909cd6e9332e098d3c790"
+  }
+}

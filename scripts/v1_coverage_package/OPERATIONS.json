@@ -1,0 +1,47 @@
+{
+  "kalshi": {
+    "account": 2,
+    "milestone_pages_max": 6,
+    "observed_links_max": 17,
+    "link_dependencies_per_link": [
+      "exact_event",
+      "exact_returned_series_if_unseen",
+      "bounded_markets"
+    ],
+    "known_cells": 46,
+    "per_known_cell": [
+      "first_documented_series_events",
+      "one_selected_event_markets"
+    ],
+    "sum": 151,
+    "link_sport_share": 3,
+    "actual_unresolved_sports": [
+      "MLB",
+      "NHL"
+    ],
+    "unused_capacity_not_reassigned": true
+  },
+  "polymarket_us": {
+    "game_listings": 6,
+    "event_details": 6,
+    "market_details": 6,
+    "shared_typed_family_queries_excluding_full_winner": 27,
+    "FUTURE_listings": 6,
+    "sum": 51
+  },
+  "aggregate": {
+    "startup": 1,
+    "shared_game_discovery": 6,
+    "game_prices": 12,
+    "outright_prices": 12,
+    "sum": 31,
+    "credits": {
+      "game_market_sum": 45,
+      "game_cycles": 2,
+      "outright_queries": 12,
+      "outright_credit_each": 1,
+      "total": 102
+    }
+  },
+  "note": "Upper bounds on executable operations, not a promise of dispatch completion. Deadline, returned dependencies, pacing, byte and resource ceilings intersect."
+}

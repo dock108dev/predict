@@ -1,0 +1,41 @@
+{
+  "schema": "native-evidenced-priorities-1",
+  "basis": "docs/source-dependent-external-facts.md exact retained event-only associations; match current complete listings before any detail request",
+  "targets": [
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04DALHOU",
+      "polymarket_us": "118977"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04GBTB",
+      "polymarket_us": "118979"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04JACCIN",
+      "polymarket_us": "118982"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04LARPHI",
+      "polymarket_us": "118978"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04NEBUF",
+      "polymarket_us": "118975"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04NYJCHI",
+      "polymarket_us": "118976"
+    },
+    {
+      "sport": "NFL",
+      "kalshi": "KXNFLGAME-26OCT04TENBAL",
+      "polymarket_us": "118980"
+    }
+  ]
+}

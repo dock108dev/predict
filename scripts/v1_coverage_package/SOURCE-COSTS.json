@@ -1,0 +1,15 @@
+{
+  "checked": "2026-10-01",
+  "sources": [
+    "https://the-odds-api.com/liveapi/guides/v4/",
+    "https://the-odds-api.com/sports/golf-odds.html",
+    "https://docs.kalshi.com/api-reference/milestone/get-milestones"
+  ],
+  "ordinary_event_odds": "Returned unique markets * regions; reserve every requested market",
+  "outright": "Official V4 and current golf outright example: one market * one region = one credit",
+  "books": "Each group of up to ten books counts as one region; five requested books",
+  "reservation": "1 credit per outright request, no lower-charge refund; header contradiction stops source",
+  "prior_proposed_ceiling": 102,
+  "sealed_ceiling": 102,
+  "no_provider_acquisition": true
+}

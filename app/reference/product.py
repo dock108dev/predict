@@ -254,3 +254,94 @@ if __name__=='__main__':
     encoded=json.dumps(data,indent=2)
     if len(encoded.encode())>1024*1024:raise ValueError('Prepared import byte bound')
     with args.output.open('x') as f:f.write(encoded+'\n')
+
+
+def odds_cashflows(value, convention, *, stake=None, quantity=None, payout_unit='1'):
+    """Exact decimal conversions; native input retained, no implicit money rounding.
+
+    Quantity denotes payout units, not native venue contracts unless bound by caller.
+    Fractional odds are a numerator/denominator string. Endpoint probabilities have
+    no finite odds/stake conversion and are rejected here (EV permits endpoints).
+    """
+    from app.fees.engine import number as exact
+    with localcontext() as ctx:
+        ctx.prec = 100
+        unit = exact(payout_unit)
+        if unit <= 0 or (stake is None) == (quantity is None):
+            raise ValueError('Positive payout unit and exactly one of stake / quantity required')
+        if convention == 'fractional_odds':
+            a, b = value.split('/')
+            a, b = exact(a), exact(b)
+            if a <= 0 or b <= 0: raise ValueError('Positive fractional odds required')
+            decimal = 1 + a/b
+        elif convention == 'price':
+            price = exact(value)
+            if not 0 < price < unit: raise ValueError('Price outside payout unit')
+            decimal = unit/price
+        else:
+            v=exact(value)
+            if convention=='decimal_odds':
+                if v<=1: raise ValueError('Decimal odds must exceed one')
+                decimal=v
+            elif convention=='american_odds':
+                if abs(v)<100: raise ValueError('Invalid American odds')
+                decimal=1+v/100 if v>0 else 1-100/v
+            elif convention in ('probability','percent'):
+                p=v/100 if convention=='percent' else v
+                if not 0<p<1: raise ValueError('Finite odds require probability strictly between zero and one')
+                decimal=1/p
+            else: raise ValueError('Unknown odds convention')
+        p = 1/decimal
+        american = (decimal-1)*100 if decimal >= 2 else -100/(decimal-1)
+        q = exact(quantity) if quantity is not None else exact(stake)*decimal/unit
+        if q < 0: raise ValueError('Negative stake / quantity')
+        cost = q*unit/decimal if stake is None else exact(stake)
+        return dict(version='odds-cashflows-1', original=dict(value=value, convention=convention,
+                    stake=stake, quantity=quantity, payout_unit=payout_unit),
+                    decimal_odds=str(decimal), american_odds=str(american), fractional_profit_ratio=str(decimal-1),
+                    implied_probability=str(p), price=str(unit/decimal), quantity=str(q), stake=str(cost),
+                    gross_win_payout=str(q*unit), win_profit=str(q*unit-cost), loss_profit=str(-cost),
+                    rounding='100 decimal significant digits; no monetary rounding; original native input retained',
+                    interpretation='Raw implied probability; not calibrated fair probability or portfolio arbitrage')
+
+
+def devig(outcomes, expected_outcomes, *, method='multiplicative', identity, provenance, freshness):
+    """Complete mutually exclusive exhaustive quote set; conditional on quoted states.
+
+    No tie/push mass is inferred from two-way odds. Identity/conditioning and original
+    outcome list travel with the estimate; callers must bind it before using for EV.
+    """
+    from app.fees.engine import number as exact
+    with localcontext() as ctx:
+        ctx.prec = 100
+        if (not expected_outcomes or len(set(expected_outcomes)) != len(expected_outcomes)
+                or set(outcomes) != set(expected_outcomes)):
+            raise ValueError('Complete unique outcome set required')
+        if not identity or not provenance or not freshness:
+            raise ValueError('Identity, provenance and freshness required')
+        if method not in ('multiplicative','additive'): raise ValueError('Unsupported de-vig method')
+        odds = {k:exact(v) for k,v in outcomes.items()}
+        if any(v <= 1 for v in odds.values()): raise ValueError('Decimal odds must exceed one')
+        from fractions import Fraction
+        implied = {k:1/Fraction(v) for k,v in odds.items()}; rational_total = sum(implied.values())
+        rational = ({k:v/rational_total for k,v in implied.items()} if method=='multiplicative'
+                    else {k:v-(rational_total-1)/len(implied) for k,v in implied.items()})
+        p={k:Decimal(v.numerator)/Decimal(v.denominator) for k,v in rational.items()}
+        total=Decimal(rational_total.numerator)/Decimal(rational_total.denominator)
+        if any(not 0 <= v <= 1 for v in p.values()): raise ValueError('Additive estimate outside probability simplex')
+        # Decimal closure correction, disclosed and deterministic, never clipped.
+        last = expected_outcomes[-1]
+        exact_residual=1-sum(Fraction(v) for v in p.values())
+        with localcontext() as closure:
+            closure.prec=200
+            residual=Decimal(exact_residual.numerator)/Decimal(exact_residual.denominator)
+            p[last] += residual
+        if not 0 <= p[last] <= 1: raise ValueError('Invalid closure residual')
+        return dict(version='reference-devig-1', method=method, identity=deepcopy(identity),
+                    provenance=deepcopy(provenance), freshness=deepcopy(freshness),
+                    original_odds=deepcopy(outcomes), outcome_set=list(expected_outcomes),
+                    probabilities={k:str(v) for k,v in p.items()}, overround=str(total-1),
+                    decimal_closure_residual=str(residual), label='Reference-derived estimate',
+                    assumptions='Quoted outcomes assumed mutually exclusive and exhaustive within this conditioning set. '+
+                    ('Margin proportional to implied probability.' if method=='multiplicative' else 'Equal additive margin per outcome.')+
+                    ' Not a calibrated fair probability; unquoted push, void and exceptional mass unknown.')

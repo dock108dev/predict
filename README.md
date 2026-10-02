@@ -2,6 +2,8 @@
 
 A local, read-only dashboard for comparing sports prediction prices across venues, calculating conditional arbitrage and what-if expected value, and reopening saved scans. Trading is not implemented.
 
+**Beta/V1 supports data ingestion and comparison for manual trading. V2 covers automated trading and execution.** The owner places trades manually. Novig/ProphetX aggregate prices remain usable without native trading access; Pinnacle/DraftKings/BetMGM are reference-only. Missing account costs or probabilities withhold or label dependent calculations while preserving valid raw comparisons. Informational depth/sizing does not guarantee execution. See [current scope](docs/product-roadmap-review.md) and [remaining-gate reconciliation](docs/full-scope-engineering-reconciliation.md).
+
 ## Run locally
 
 Requires Python 3.11 or newer. From the repository root:

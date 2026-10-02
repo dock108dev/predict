@@ -131,7 +131,16 @@ def validate_rows(rows):
 def _inspect(path):
     from .journal_encoding import decode, MAX_EXPANDED
     body,identity=stable_read(path);offset=0;chain='0'*64;rows=[];expanded=0
-    for fragment in body.split(b'\n')[:-1]:
+    scan_body=body;confirmed=None
+    report_path=Path(path).parent/'storage-failure.json'
+    first=strict_json(body.split(b'\n',1)[0]).get('row',{}) if body else {}
+    if first.get('spec',{}).get('source_session') and report_path.exists():
+        report=strict_json(report_path.read_bytes());confirmed=report['accounting']
+        limit=confirmed['confirmed_byte_offset']
+        if type(limit) is not int or not 0<limit<=len(body):raise ValueError('Invalid acknowledged prefix')
+        scan_body=body[:limit]
+        if not scan_body.endswith(b'\n'):raise ValueError('Acknowledged prefix is incomplete')
+    for fragment in scan_body.split(b'\n')[:-1]:
         line=fragment+b'\n'
         if len(rows)>=4096:raise ValueError('record cap')
         item=strict_json(line)
@@ -141,18 +150,29 @@ def _inspect(path):
         chain=expected;row=decode(item['row']);expanded+=len(packed(row).encode())
         if expanded>MAX_EXPANDED:raise ValueError('saved expanded byte cap')
         rows.append(row);offset+=len(line)
-    spec=validate_rows(rows)
+    if confirmed and chain!=confirmed['confirmed_chain']:raise ValueError('Acknowledged prefix chain changed')
+    unified=bool(rows and rows[0].get('spec',{}).get('source_session'))
+    if unified:
+        from app.dashboard.session_projection import SessionProjection
+        from app.collection.source_session import validate
+        spec=rows[0]['spec'];validate(spec['source_session'])
+        projection=SessionProjection()
+        for row in rows:projection.apply(row)
+    else:spec=validate_rows(rows)
     terminal=rows[-1]['type']=='session_finished'
     if terminal and offset!=len(body):raise ValueError('bytes after terminal record')
     saved=dict(rows=rows,sha256=chain,state='complete' if terminal else 'interrupted')
     from app.dashboard.e6_live import verify_all_saved
-    replay=verify_all_saved(saved)
-    rejected={g['ingress_id'] for g in replay['gaps']};states={};frames={}
+    if unified:
+        from app.dashboard.coverage_owner import replay_groups
+        replay=replay_groups(saved)
+    else:replay=verify_all_saved(saved)
+    rejected={g['ingress_id'] for g in replay.get('gaps',[])};states={};frames={}
     for r in rows:
         v=r.get('source')
         if r['type']=='source_health':states[v]=r['state']
         if r['type']=='prediction_frame':frames[v]=r['ingress_id']
-        if r['type']=='prediction_book' and r['book']['sync']=='unsynchronized' and states.get(v) not in ('disconnected','ineligible') and frames.get(v) not in rejected:
+        if not unified and r['type']=='prediction_book' and r['book']['sync']=='unsynchronized' and states.get(v) not in ('disconnected','ineligible') and frames.get(v) not in rejected:
             raise ValueError('unsynchronized state lacks invalidation dependency')
     # Revalidation catches a noncooperating writer changing bytes during parsing/replay.
     _,after=stable_read(path)

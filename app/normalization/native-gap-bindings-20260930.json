@@ -1,0 +1,629 @@
+{
+  "version": "native-gap-captured-20260930-v1",
+  "entities": [
+    {
+      "id": "NCAAF:NCAA472",
+      "kind": "team",
+      "name": "New Mexico State University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:472",
+      "ncaa_org_id": 472,
+      "state": "NM",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA772",
+      "kind": "team",
+      "name": "Western Kentucky University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:772",
+      "ncaa_org_id": 772,
+      "state": "KY",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA497",
+      "kind": "team",
+      "name": "University of North Texas",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:497",
+      "ncaa_org_id": 497,
+      "state": "TX",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA719",
+      "kind": "team",
+      "name": "The University of Tulsa",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:719",
+      "ncaa_org_id": 719,
+      "state": "OK",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA355",
+      "kind": "team",
+      "name": "Liberty University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:355",
+      "ncaa_org_id": 355,
+      "state": "VA",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA180",
+      "kind": "team",
+      "name": "University of Delaware",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:180",
+      "ncaa_org_id": 180,
+      "state": "DE",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA545",
+      "kind": "team",
+      "name": "University of Pittsburgh",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:545",
+      "ncaa_org_id": 545,
+      "state": "PA",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA742",
+      "kind": "team",
+      "name": "Virginia Polytechnic Institute and State University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:742",
+      "ncaa_org_id": 742,
+      "state": "VA",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA539",
+      "kind": "team",
+      "name": "Pennsylvania State University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:539",
+      "ncaa_org_id": 539,
+      "state": "PA",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    },
+    {
+      "id": "NCAAF:NCAA509",
+      "kind": "team",
+      "name": "Northwestern University",
+      "league": "NCAAF",
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+      "school_id": "NCAA:509",
+      "ncaa_org_id": 509,
+      "state": "IL",
+      "academic_year": 2027,
+      "football_subdivisions": {
+        "2026": {
+          "value": "FBS",
+          "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB",
+          "reclassifying": false
+        }
+      }
+    }
+  ],
+  "aliases": [
+    {
+      "kind": "team",
+      "text": "Western Kentucky",
+      "league": "NCAAF",
+      "venue": "polymarket_us",
+      "targets": [
+        "NCAAF:NCAA772"
+      ],
+      "source": "captured-pages.json sha256=3acfe8a0bf04add290fc90c5b98480328263bc0f8e8065e2b5e72707f74d90cc event=116584 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "NM State",
+      "league": "NCAAF",
+      "venue": "polymarket_us",
+      "targets": [
+        "NCAAF:NCAA472"
+      ],
+      "source": "captured-pages.json sha256=3acfe8a0bf04add290fc90c5b98480328263bc0f8e8065e2b5e72707f74d90cc event=116584 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "Western Kentucky",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA772"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 milestone=027cd803-662b-46d2-a7b6-c2a47614c1f3 explicit away ID; school name and observed event/title/subtitle association"
+    },
+    {
+      "kind": "team",
+      "text": "New Mexico St.",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA472"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 milestone=027cd803-662b-46d2-a7b6-c2a47614c1f3 explicit home ID; school name and observed event/title/subtitle association"
+    },
+    {
+      "kind": "team",
+      "text": "Boston Red Sox",
+      "league": "MLB",
+      "venue": "polymarket_us",
+      "targets": [
+        "MLB:BOS"
+      ],
+      "source": "captured-pages.json sha256=159232d869ce8fe0174f475e6c2d1be7906a08efe9484d5a6d4a7412174410e9 event=129551 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "New York Yankees",
+      "league": "MLB",
+      "venue": "polymarket_us",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "source": "captured-pages.json sha256=159232d869ce8fe0174f475e6c2d1be7906a08efe9484d5a6d4a7412174410e9 event=129551 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "Penguins",
+      "league": "NHL",
+      "venue": "polymarket_us",
+      "targets": [
+        "NHL:PIT"
+      ],
+      "source": "captured-pages.json sha256=aeb3a5ec0c92044f5505dc8346dabbab43c79cebed25c587945583cfb7d4b57d event=127796 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "Flyers",
+      "league": "NHL",
+      "venue": "polymarket_us",
+      "targets": [
+        "NHL:PHI"
+      ],
+      "source": "captured-pages.json sha256=aeb3a5ec0c92044f5505dc8346dabbab43c79cebed25c587945583cfb7d4b57d event=127796 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "Islanders",
+      "league": "NHL",
+      "venue": "polymarket_us",
+      "targets": [
+        "NHL:NYI"
+      ],
+      "source": "captured-pages.json sha256=df4ba6cd2a8936b1b1807cc248399c6717a7b1eb18cb5975dad1fc1785a2af99 event=127804 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "text": "Maple Leafs",
+      "league": "NHL",
+      "venue": "polymarket_us",
+      "targets": [
+        "NHL:TOR"
+      ],
+      "source": "captured-pages.json sha256=df4ba6cd2a8936b1b1807cc248399c6717a7b1eb18cb5975dad1fc1785a2af99 event=127804 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "New Mexico State University",
+      "targets": [
+        "NCAAF:NCAA472"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "Western Kentucky University",
+      "targets": [
+        "NCAAF:NCAA772"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "league",
+      "text": "cfb",
+      "targets": [
+        "NCAAF"
+      ],
+      "source": "Complete native event 116584, CFB league id 7 and explicit FBS tag; family mapping only, individual division membership remains registry-scoped"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "University of North Texas",
+      "targets": [
+        "NCAAF:NCAA497"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "North Texas",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA497"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT01UNTTLSA milestone=a990a0e7-6edd-4c59-98c0-19835ca06845 exact role ID; reviewed school alias North Texas (UNT) -> existing University of North Texas NCAAF:NCAA497"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "The University of Tulsa",
+      "targets": [
+        "NCAAF:NCAA719"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Tulsa",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA719"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT01UNTTLSA milestone=a990a0e7-6edd-4c59-98c0-19835ca06845 exact role ID; reviewed school alias Tulsa (TLSA) -> existing The University of Tulsa NCAAF:NCAA719"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "Liberty University",
+      "targets": [
+        "NCAAF:NCAA355"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Liberty",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA355"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02LIBDEL milestone=0aadd1d6-dfc6-45c4-8faa-b362b5ec99bb exact role ID; reviewed school alias Liberty (LIB) -> existing Liberty University NCAAF:NCAA355"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "University of Delaware",
+      "targets": [
+        "NCAAF:NCAA180"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Delaware",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA180"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02LIBDEL milestone=0aadd1d6-dfc6-45c4-8faa-b362b5ec99bb exact role ID; reviewed school alias Delaware (DEL) -> existing University of Delaware NCAAF:NCAA180"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "University of Pittsburgh",
+      "targets": [
+        "NCAAF:NCAA545"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Pittsburgh",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA545"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PITTVT milestone=ccdff7e4-604d-4ba3-ad1a-3e6674c94e84 exact role ID; reviewed school alias Pittsburgh (PITT) -> existing University of Pittsburgh NCAAF:NCAA545"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "Virginia Polytechnic Institute and State University",
+      "targets": [
+        "NCAAF:NCAA742"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Virginia Tech",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA742"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PITTVT milestone=ccdff7e4-604d-4ba3-ad1a-3e6674c94e84 exact role ID; reviewed school alias Virginia Tech (VT) -> existing Virginia Polytechnic Institute and State University NCAAF:NCAA742"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "Pennsylvania State University",
+      "targets": [
+        "NCAAF:NCAA539"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Penn St.",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA539"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PSUNW milestone=34db6fe6-43c4-48b9-9469-9ff9dbece515 exact role ID; reviewed school alias Penn St. (PSU) -> existing Pennsylvania State University NCAAF:NCAA539"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "text": "Northwestern University",
+      "targets": [
+        "NCAAF:NCAA509"
+      ],
+      "source": "https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "text": "Northwestern",
+      "league": "NCAAF",
+      "venue": "kalshi",
+      "targets": [
+        "NCAAF:NCAA509"
+      ],
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PSUNW milestone=34db6fe6-43c4-48b9-9469-9ff9dbece515 exact role ID; reviewed school alias Northwestern (NW) -> existing Northwestern University NCAAF:NCAA509"
+    }
+  ],
+  "native_mappings": [
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "1167",
+      "target": "NCAAF:NCAA772",
+      "source": "captured-pages.json sha256=3acfe8a0bf04add290fc90c5b98480328263bc0f8e8065e2b5e72707f74d90cc event=116584 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "1309",
+      "target": "NCAAF:NCAA472",
+      "source": "captured-pages.json sha256=3acfe8a0bf04add290fc90c5b98480328263bc0f8e8065e2b5e72707f74d90cc event=116584 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "2eafddaf-140c-4c46-9a18-3a8a9d671964",
+      "target": "NCAAF:NCAA772",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 milestone=027cd803-662b-46d2-a7b6-c2a47614c1f3 explicit away ID; school name and observed event/title/subtitle association"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "7a77c54f-511d-4bcd-a4d5-7e84ea5eda89",
+      "target": "NCAAF:NCAA472",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 milestone=027cd803-662b-46d2-a7b6-c2a47614c1f3 explicit home ID; school name and observed event/title/subtitle association"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "3004",
+      "target": "MLB:BOS",
+      "source": "captured-pages.json sha256=159232d869ce8fe0174f475e6c2d1be7906a08efe9484d5a6d4a7412174410e9 event=129551 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "3019",
+      "target": "MLB:NYY",
+      "source": "captured-pages.json sha256=159232d869ce8fe0174f475e6c2d1be7906a08efe9484d5a6d4a7412174410e9 event=129551 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1497",
+      "target": "NHL:PIT",
+      "source": "captured-pages.json sha256=aeb3a5ec0c92044f5505dc8346dabbab43c79cebed25c587945583cfb7d4b57d event=127796 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1496",
+      "target": "NHL:PHI",
+      "source": "captured-pages.json sha256=aeb3a5ec0c92044f5505dc8346dabbab43c79cebed25c587945583cfb7d4b57d event=127796 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1494",
+      "target": "NHL:NYI",
+      "source": "captured-pages.json sha256=df4ba6cd2a8936b1b1807cc248399c6717a7b1eb18cb5975dad1fc1785a2af99 event=127804 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "polymarket_us",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1490",
+      "target": "NHL:TOR",
+      "source": "captured-pages.json sha256=df4ba6cd2a8936b1b1807cc248399c6717a7b1eb18cb5975dad1fc1785a2af99 event=127804 exact side.teamId/team.id/name/league; existing registry entity"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "6ef86191-9211-4ea4-bbe4-bb7cdc04ebf4",
+      "target": "NCAAF:NCAA497",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT01UNTTLSA milestone=a990a0e7-6edd-4c59-98c0-19835ca06845 exact role ID; reviewed school alias North Texas (UNT) -> existing University of North Texas NCAAF:NCAA497"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "8cd1c3b1-0e14-4583-b17b-939bb19d0589",
+      "target": "NCAAF:NCAA719",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT01UNTTLSA milestone=a990a0e7-6edd-4c59-98c0-19835ca06845 exact role ID; reviewed school alias Tulsa (TLSA) -> existing The University of Tulsa NCAAF:NCAA719"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "d005a394-c6bf-49d9-b5bb-e3695e0e95b4",
+      "target": "NCAAF:NCAA355",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02LIBDEL milestone=0aadd1d6-dfc6-45c4-8faa-b362b5ec99bb exact role ID; reviewed school alias Liberty (LIB) -> existing Liberty University NCAAF:NCAA355"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "05d451fc-a4f0-431f-bcf2-b73ac234ab47",
+      "target": "NCAAF:NCAA180",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02LIBDEL milestone=0aadd1d6-dfc6-45c4-8faa-b362b5ec99bb exact role ID; reviewed school alias Delaware (DEL) -> existing University of Delaware NCAAF:NCAA180"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "17b70f39-2dd0-4497-a8f2-d68baff1abc2",
+      "target": "NCAAF:NCAA545",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PITTVT milestone=ccdff7e4-604d-4ba3-ad1a-3e6674c94e84 exact role ID; reviewed school alias Pittsburgh (PITT) -> existing University of Pittsburgh NCAAF:NCAA545"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "58435bc1-489d-4661-b211-5037c934b192",
+      "target": "NCAAF:NCAA742",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PITTVT milestone=ccdff7e4-604d-4ba3-ad1a-3e6674c94e84 exact role ID; reviewed school alias Virginia Tech (VT) -> existing Virginia Polytechnic Institute and State University NCAAF:NCAA742"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "2a063f95-6320-451a-8175-1d85c9198790",
+      "target": "NCAAF:NCAA539",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PSUNW milestone=34db6fe6-43c4-48b9-9469-9ff9dbece515 exact role ID; reviewed school alias Penn St. (PSU) -> existing Pennsylvania State University NCAAF:NCAA539"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "e19d5795-1f4f-4034-a3ab-9960d0b0b279",
+      "target": "NCAAF:NCAA509",
+      "source": "captured-pages.json sha256=60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3 event=KXNCAAFGAME-26OCT02PSUNW milestone=34db6fe6-43c4-48b9-9469-9ff9dbece515 exact role ID; reviewed school alias Northwestern (NW) -> existing Northwestern University NCAAF:NCAA509"
+    }
+  ]
+}

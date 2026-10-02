@@ -1,0 +1,25 @@
+{
+  "version": "odds-ncaaf-aliases-1",
+  "aliases": [
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "New Mexico State Aggies",
+      "targets": [
+        "NCAAF:NCAA472"
+      ],
+      "source": "Retained Odds API response 84986f25-77fe-4f27-b72f-9b5d7723adab; exact school identity corroborated by https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Western Kentucky Hilltoppers",
+      "targets": [
+        "NCAAF:NCAA772"
+      ],
+      "source": "Retained Odds API response 84986f25-77fe-4f27-b72f-9b5d7723adab; exact school identity corroborated by https://web3.ncaa.org/directory/api/directory/memberList?type=12&division=I&sportCode=MFB"
+    }
+  ]
+}

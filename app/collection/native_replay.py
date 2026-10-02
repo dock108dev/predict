@@ -19,12 +19,17 @@ class NativeVerifier:
     def __init__(self, first, profile_name=None):
         self.profile_name=profile_name
         self.native_product=bool(first.get('spec',{}).get('native_sources'))
+        self.repaired_manual=first.get('spec',{}).get('v1_comparison_policy')=='manual-comparison-2'
+        from .native_books import enabled, Observations
+        self.book_evidence=Observations() if enabled(first.get('spec',{})) else None
         self.engines = {}; self.markets = {}; self.last = {}
         self.counts = {'kalshi': 0, 'polymarket_us': 0}; self.gaps = []
         if profile_name:
             from .supervised import Samples
             self.gaps=Samples()
         self.kind = EvidenceKind.OBSERVATION if first.get('spec', {}).get('mode') == 'real' else EvidenceKind.SYNTHETIC
+        from .native_payload import validate_transport
+        self.transport_policy = validate_transport(first.get('spec', {}))
 
     def feed(self, row):
         engines, markets, last = self.engines, self.markets, self.last
@@ -33,12 +38,19 @@ class NativeVerifier:
         venue=row.get('source')
         if row['type']=='market_selected' and venue not in engines:
             m=row['market'];raw=m['raw'];r=(KR if venue=='kalshi' else PR)(raw['json_text'],raw['source'],datetime.fromisoformat(raw['received_at']),kind)
-            payload=json.loads(raw['json_text']);mid=raw['ref']['market_id'];eid=raw['ref']['event_id']
+            if self.transport_policy:
+                from .native_payload import parse
+                payload=parse(raw['json_text'].encode(), limits=self.transport_policy,revised=self.repaired_manual)
+            else:payload=json.loads(raw['json_text'])
+            mid=raw['ref']['market_id'];eid=raw['ref']['event_id']
             if venue=='kalshi':
-                market=km(r,next(x for x in payload['markets'] if x['ticker']==mid),eid,'KXNFLGAME')
+                native=payload.get('markets')
+                if native is None:native=[x for event in payload.get('events',[]) if event.get('event_ticker')==eid for x in event.get('markets',[])]
+                series=next((event.get('series_ticker') for event in payload.get('events',[]) if event.get('event_ticker')==eid),'KXNFLGAME')
+                market=km(r,next(x for x in native if x['ticker']==mid),eid,series)
                 markets.setdefault(venue,{})[mid]=market
             else:
-                native = payload.get('markets') if 'markets' in payload else [x for e in payload['events'] for x in e.get('markets',[])]
+                native = ([payload['market']] if isinstance(payload.get('market'),dict) else payload.get('markets') if 'markets' in payload else [x for e in payload.get('events',[payload['event']] if isinstance(payload.get('event'),dict) else []) for x in e.get('markets',[])])
                 market=pm(r,next(x for x in native if str(x['id'])==mid),eid)
                 markets.setdefault(venue,{})[mid]=market
         elif row['type']=='prediction_command':
@@ -68,9 +80,14 @@ class NativeVerifier:
             book=last[venue]
             # Native parsers sample wall time after recv; that exact saved clock is replay input.
             book=replace(book,raw=replace(book.raw,received_at=datetime.fromisoformat(expected['raw']['received_at'])),receipt_freshness=ReceiptFreshness.RECENT)
+            if self.book_evidence:
+                actual=self.book_evidence.classify(book,row['local_timing']['connection'])
+                if actual!=row.get('native_observation'):raise ValueError('native observation classification replay mismatch')
             if self.native_product:
                 from .native_semantics import purchase_book
                 book=purchase_book(book)
+            if self.repaired_manual and venue=='kalshi' and book.state.value=='unknown':
+                book=replace(book,state=markets[venue][book.raw.ref.market_id].state)
             if dump(book)!=expected:raise ValueError('native book replay mismatch: '+venue)
             counts[venue]+=1
             # Verify derived quote packets too, using the existing converter.

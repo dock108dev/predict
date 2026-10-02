@@ -1,0 +1,352 @@
+{
+  "version": "native-wku-nmsu-review-2",
+  "scope": "Retained listings only; normal declared-winner correspondence, not settlement equivalence",
+  "event": [
+    "2026-10-02T00:00:00+00:00",
+    [
+      "NCAAF:NCAA472",
+      "NCAAF:NCAA772"
+    ]
+  ],
+  "participants": {
+    "NCAAF:NCAA472": "New Mexico State",
+    "NCAAF:NCAA772": "Western Kentucky"
+  },
+  "sources": {
+    "kalshi": {
+      "event_id": "KXNCAAFGAME-26OCT01WKUNMSU",
+      "market_id": "KXNCAAFGAME-26OCT01WKUNMSU-NMSU",
+      "native_metadata_sha256": "534e9e2ea28fec5049f079ae17378d82920a426bb06185171b6d6346b363aeba",
+      "event_metadata_sha256": "4688f01f685ec00379614991aa1433ac846b3932d1ccb5d8fac85a750935b526",
+      "provenance": [
+        {
+          "body_sha256": "6090e2b57432af787b2c6edf305d5d5c67cf400725a8f89a83d39838d166e287",
+          "inventory_row": 7,
+          "params": {
+            "cursor": "",
+            "event_ticker": "KXNCAAFGAME-26OCT01WKUNMSU",
+            "limit": 5
+          },
+          "path": "/trade-api/v2/markets",
+          "received_at": "2026-09-30T14:51:52.685803+00:00"
+        },
+        {
+          "body_sha256": "60bed1107936ebfe43bf2ab9304b849ae393cc2203adc3355940fcb489d538b3",
+          "inventory_row": 1,
+          "params": {
+            "cursor": "",
+            "limit": 5,
+            "series_ticker": "KXNCAAFGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "path": "/trade-api/v2/events",
+          "received_at": "2026-09-30T14:51:51.604084+00:00"
+        }
+      ],
+      "metadata": {
+        "can_close_early": true,
+        "close_time": "2026-10-04T00:00:00Z",
+        "created_time": "2026-09-18T01:04:04.293787Z",
+        "custom_strike": {
+          "football_team": "7a77c54f-511d-4bcd-a4d5-7e84ea5eda89"
+        },
+        "early_close_condition": "This market will close and expire after a winner is declared.",
+        "event_ticker": "KXNCAAFGAME-26OCT01WKUNMSU",
+        "exchange_index": 0,
+        "expected_expiration_time": "2026-10-02T03:00:00Z",
+        "expiration_time": "2026-10-04T00:00:00Z",
+        "expiration_value": "",
+        "last_price_dollars": "0.5600",
+        "latest_expiration_time": "2026-10-04T00:00:00Z",
+        "liquidity_dollars": "0.0000",
+        "market_type": "binary",
+        "no_ask_dollars": "0.4500",
+        "no_bid_dollars": "0.4400",
+        "no_sub_title": "New Mexico St.",
+        "notional_value_dollars": "1.0000",
+        "occurrence_datetime": "2026-10-02T03:00:00Z",
+        "open_interest_fp": "8195.96",
+        "open_time": "2026-09-18T01:07:00Z",
+        "previous_price_dollars": "0.5600",
+        "previous_yes_ask_dollars": "0.5600",
+        "previous_yes_bid_dollars": "0.5500",
+        "price_level_structure": "linear_cent",
+        "price_ranges": [
+          {
+            "end": "1.0000",
+            "start": "0.0000",
+            "step": "0.0100"
+          }
+        ],
+        "result": "",
+        "rules_primary": "If New Mexico St. wins the Western Kentucky vs New Mexico St. college football game originally scheduled for Oct 1, 2026, then the market resolves to Yes.",
+        "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is cancelled or not started within 48 hours of its originally scheduled start, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+        "settlement_timer_seconds": 90,
+        "status": "active",
+        "strike_type": "structured",
+        "ticker": "KXNCAAFGAME-26OCT01WKUNMSU-NMSU",
+        "title": "New Mexico St. wins",
+        "updated_time": "2026-09-18T01:07:01.138326Z",
+        "volume_24h_fp": "8142.29",
+        "volume_fp": "12204.97",
+        "yes_ask_dollars": "0.5600",
+        "yes_ask_size_fp": "133248.26",
+        "yes_bid_dollars": "0.5500",
+        "yes_bid_size_fp": "24685.91",
+        "yes_sub_title": "New Mexico St."
+      },
+      "outcomes": {
+        "yes": {
+          "participant": "New Mexico State",
+          "predicate": "win",
+          "normal_winner": "New Mexico State"
+        },
+        "no": {
+          "participant": "New Mexico State",
+          "predicate": "not_win",
+          "normal_winner": "Western Kentucky"
+        }
+      },
+      "orientation_evidence": {
+        "structured_team_id": "7a77c54f-511d-4bcd-a4d5-7e84ea5eda89",
+        "yes_rule": "If New Mexico St. wins the Western Kentucky vs New Mexico St. college football game originally scheduled for Oct 1, 2026, then the market resolves to Yes.",
+        "no": "Complement of this exact binary YES; normal opponent-win correspondence only. Duplicate subtitles ignored.",
+        "registry": "app/normalization/native-gap-bindings-20260930.json"
+      }
+    },
+    "polymarket_us": {
+      "event_id": "116584",
+      "market_id": "932924",
+      "native_metadata_sha256": "46f9ab60fecd020a0f12222b6a0572c75e12ed527c3d24077f7a5cf9291a5946",
+      "event_metadata_sha256": "4349ea4eba371cee4b29e196eb96e2dfb26bd15ba651c24e899bdf36880a4080",
+      "provenance": [
+        {
+          "body_sha256": "d82171fe0d006adeb5f458472da223a622bf3648cc922ae23c758648f92e0106",
+          "inventory_row": 2,
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "includeHidden": "false",
+            "includePopularPlayerProps": "false",
+            "limit": 1,
+            "marketTypes": "moneyline",
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "startTimeMax": "2026-10-07T14:51:50.414913+00:00",
+            "startTimeMin": "2026-09-30T14:56:50.414913+00:00",
+            "tagSlug": "cfb",
+            "tagSlugsAll": "games"
+          },
+          "path": "/v1/events",
+          "received_at": "2026-09-30T14:51:51.111124+00:00"
+        },
+        {
+          "body_sha256": "d82171fe0d006adeb5f458472da223a622bf3648cc922ae23c758648f92e0106",
+          "inventory_row": 1,
+          "params": {
+            "active": "true",
+            "closed": "false",
+            "includeHidden": "false",
+            "includePopularPlayerProps": "false",
+            "limit": 1,
+            "marketTypes": "moneyline",
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "startTimeMax": "2026-10-07T14:51:50.414913+00:00",
+            "startTimeMin": "2026-09-30T14:56:50.414913+00:00",
+            "tagSlug": "cfb",
+            "tagSlugsAll": "games"
+          },
+          "path": "/v1/events",
+          "received_at": "2026-09-30T14:51:51.111124+00:00"
+        }
+      ],
+      "metadata": {
+        "active": true,
+        "archived": false,
+        "assetPriceTerms": null,
+        "bestAskQuote": {
+          "currency": "USD",
+          "value": "0.4500"
+        },
+        "bestBidQuote": {
+          "currency": "USD",
+          "value": "0.4450"
+        },
+        "category": "sports",
+        "closed": false,
+        "comboEnabled": true,
+        "createdAt": "2026-09-18T06:30:26Z",
+        "description": "This market will settle to the winner of the Western Kentucky vs New Mexico State College Football game scheduled for Oct 1, 2026. Overtime is included if played. If a tied final score is reported and no official winner is declared, this market will not resolve automatically and will be reviewed against the official governing-body result. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from the relevant governing body.",
+        "endDate": "2026-10-16T04:00:00Z",
+        "ep3Status": "OPEN",
+        "ep3SyncedAt": "2026-09-25T11:46:48Z",
+        "feeCoefficient": 0.0695,
+        "gameStartTime": "2026-10-02T00:00:00Z",
+        "hidden": false,
+        "id": "932924",
+        "manualActivation": false,
+        "marketSides": [
+          {
+            "createdAt": "2026-09-18T06:30:26Z",
+            "description": "Hilltoppers",
+            "id": "1865332",
+            "identifier": "aec-cfb-wkent-nmxst-2026-10-01",
+            "long": true,
+            "marketId": 932924,
+            "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+            "price": "0.4450",
+            "quote": {
+              "currency": "USD",
+              "value": "0.4500"
+            },
+            "team": {
+              "abbreviation": "wkent",
+              "alias": "Hilltoppers",
+              "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us/ncaa/Polymarket_Western+Kentucky+Hilltoppers_L%40160x160%40160x160.png",
+              "color": {
+                "dark": "#D1251E",
+                "light": "#D12135"
+              },
+              "colorPrimary": "#C8102E",
+              "conference": "Conference USA",
+              "displayAbbreviation": "WKU",
+              "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us/ncaa/Polymarket_Western+Kentucky+Hilltoppers_R%40160x160%40160x160.png",
+              "id": 1167,
+              "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO",
+              "league": "cfb",
+              "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/team_logos/football/cfb/_wkent_50000144.png",
+              "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_Western-Kentucky-Hilltoppers_L@320x320.png",
+              "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_Western-Kentucky-Hilltoppers_L@320x320.png",
+              "name": "Western Kentucky",
+              "ordering": "away",
+              "providerId": 144,
+              "providerIds": [
+                {
+                  "provider": "PROVIDER_SPORTSDATAIO",
+                  "providerId": "144"
+                },
+                {
+                  "provider": "PROVIDER_SPORTRADAR",
+                  "providerId": "e65ef52d-6a34-426e-816e-040258d2f33b"
+                }
+              ],
+              "ranking": "0",
+              "record": "1-3",
+              "safeName": "Western Kentucky",
+              "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_Western-Kentucky-Hilltoppers_R@320x320.png",
+              "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_Western-Kentucky-Hilltoppers_R@320x320.png"
+            },
+            "teamId": 1167,
+            "tradable": true,
+            "updatedAt": "2026-09-18T06:30:26Z"
+          },
+          {
+            "createdAt": "2026-09-18T06:30:26Z",
+            "description": "Aggies",
+            "id": "1865333",
+            "identifier": "aec-cfb-wkent-nmxst-2026-10-01",
+            "long": false,
+            "marketId": 932924,
+            "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+            "price": "0.4500",
+            "quote": {
+              "currency": "USD",
+              "value": "0.555"
+            },
+            "team": {
+              "abbreviation": "nmxst",
+              "alias": "Aggies",
+              "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us/ncaa/Polymarket_New+Mexico+State+Aggies_L%40160x160.png",
+              "color": {
+                "dark": "#A63257",
+                "light": "#870631"
+              },
+              "colorPrimary": "#8F1538",
+              "conference": "Conference USA",
+              "displayAbbreviation": "NMSU",
+              "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us/ncaa/Polymarket_New+Mexico+State+Aggies_R%40160x160.png",
+              "id": 1309,
+              "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO",
+              "league": "cfb",
+              "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/team_logos/football/cfb/_nmxst_50000344.png",
+              "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_New-Mexico-State-Aggies_L@320x320.png",
+              "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_New-Mexico-State-Aggies_L@320x320.png",
+              "name": "NM State",
+              "ordering": "home",
+              "providerId": 344,
+              "providerIds": [
+                {
+                  "provider": "PROVIDER_SPORTSDATAIO",
+                  "providerId": "344"
+                },
+                {
+                  "provider": "PROVIDER_SPORTRADAR",
+                  "providerId": "f6f4a672-6368-45aa-98d0-3756da844114"
+                }
+              ],
+              "ranking": "0",
+              "record": "1-3",
+              "safeName": "NM State",
+              "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_New-Mexico-State-Aggies_R@320x320.png",
+              "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/CFB/Polymarket_CFB_New-Mexico-State-Aggies_R@320x320.png"
+            },
+            "teamId": 1309,
+            "tradable": true,
+            "updatedAt": "2026-09-18T06:30:26Z"
+          }
+        ],
+        "marketType": "moneyline",
+        "minimumTradeQty": 0.01,
+        "orderPriceMinTickSize": 0.005,
+        "outcomePrices": "[\"0.4450\",\"0.4500\"]",
+        "outcomes": "[\"Hilltoppers\",\"Aggies\"]",
+        "question": "Who will win in the upcoming football event Western Kentucky vs New Mexico State scheduled for October 2, 2026 at 12:00 AM UTC?",
+        "slug": "aec-cfb-wkent-nmxst-2026-10-01",
+        "sportsMarketType": "football_team_full_game_winner",
+        "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+        "startDate": "2026-09-18T06:30:26Z",
+        "status": "MARKET_STATUS_OPEN",
+        "tags": [],
+        "title": "Western Kentucky vs NM State",
+        "titleShort": "WKU vs NMSU",
+        "updatedAt": "2026-09-30T14:51:30Z"
+      },
+      "outcomes": {
+        "1865332": {
+          "participant": "Western Kentucky",
+          "predicate": "win",
+          "normal_winner": "Western Kentucky"
+        },
+        "1865333": {
+          "participant": "New Mexico State",
+          "predicate": "win",
+          "normal_winner": "New Mexico State"
+        }
+      },
+      "orientation_evidence": {
+        "1865332": {
+          "long": true,
+          "teamId": 1167,
+          "participant": "Western Kentucky"
+        },
+        "1865333": {
+          "long": false,
+          "teamId": 1309,
+          "participant": "New Mexico State"
+        },
+        "registry": "app/normalization/native-gap-bindings-20260930.json"
+      }
+    }
+  },
+  "retained_research": {
+    "evidence/b5-ncaaf-20260921/retained-native-audit.json": "e5117e3d49e37fd51c1f4684eef31edff8c6e90bfb9f5a3e76742691270a3ff7",
+    "evidence/provider-reply-us-20260927/reconciliation.md": "4e57d90224d956fb45a98cd85807877cccb84deddc7dea313ee51d6f84c40d90",
+    "app/normalization/native-gap-bindings-20260930.json": "2667ed7baf493b64fc06b3529d3a9d833046a7739508b0bd1bf2807b405e6be5",
+    "evidence/b5-ncaaf-20260921/public-document-manifest.json": "bb1951761e6af5216a0f3d71fbed5e07e4ed8ff8f4320772ad022b0a824113f9"
+  }
+}

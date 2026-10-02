@@ -1,12 +1,50 @@
+# Predict — current Beta/V1 and V2 scope
+
+**Current beta coverage acceptance — October 1 owner decision:** at least **48/63** exact eligible valid retained price pairs (76.19%), fixed denominator; 51/63 optional if straightforward. All four comparison venues must continue contributing useful comparisons. Sport/family/period distribution and separate freshness/runtime qualification remain visible. Once this gate and the ordinary V1 workflow pass, close beta coverage and carry remaining cells as visible post-beta limitations. Metadata, reference-only prices and synthetic fixtures never count. No collection authority changes. [Acceptance accounting and backlog](beta-coverage-acceptance.md). This decision supersedes older statements requiring all 63 before beta. Economics remains optional for dependent calculations; automated execution is V2.
+
+
+Updated October 1, 2026. **Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** The owner will place trades manually initially. Full V1 coverage/data qualification remains open; no beta signoff is claimed. [Current tracker](../../prediction_arb_next_steps.md) · [every remaining gate reconciled](full-scope-engineering-reconciliation.md).
+
+## Beta/V1 completion contract
+
+- Reliable data pulls and independent updates from Kalshi, Polymarket US, Novig and ProphetX. Kalshi/US use existing native integrations; Novig/ProphetX use existing aggregate observations without native trading access.
+- Correct event, outcome, period and line matching across NFL, NBA, MLB, NHL, NCAAF and men’s Division I NCAAB and 63 required cells: full-game W/S/T (18), football/basketball pregame H1 W/S/T (12), MLB cumulative F3/F5/F6/regulation9 W/S/T (12), NHL individual P1/P2/P3 W/S/T (9), current-season conference/league championships (12). Exact participants, season/stage, game number and award predicates apply where necessary. All venues need not list all cells; useful actual overlap is required, and exclusions/seasonal deferrals need explicit owner agreement.
+- Useful price comparisons, honest source and receipt timestamps, stale-data handling and source health. Source data timing/recovery matters for manual decisions; automated order-path timing is V2. Keep the existing freshness safeguards and accepted readable layout; no performance project without a concrete data problem.
+- Clear differences in settlement terms and supported fee estimates. Show effective public fee versions, ranges/assumptions and unknowns. Incompatible contracts may have useful price comparisons when their differences are explicit; unknown outcome/period/line identity cannot be presented as a valid match.
+- Details, filters, informational watches, explicit Start/Stop, history, downloads and exact reopening at the original cutoff. Watches never submit trades.
+- Informational depth/sizing where supported, with cutoff, native units, quantity domain, cost assumptions and limitations. Visible depth is not a promise of fills or guaranteed execution. Unsupported sizing is withheld without suppressing valid raw prices.
+
+Pinnacle, DraftKings and BetMGM remain optional reference-only sources, never comparison/trading legs. Models, sportsbook-derived estimates, manual scenarios and historical research retain separate labels. Preserve the EV%-first preference where supported EV exists; absent inputs leave EV unavailable, while valid raw comparisons remain usable. Guaranteed arbitrage, complete net economics, an EV model, profitable opportunities and actual account activity are not universal V1 gates.
+
+## Calculation-specific inputs
+
+Account classification, private/program rates, actual fills/positions, execution-specific charges, fractional scales and complete settlement cashflows are required only if a particular displayed calculation depends on them. Withhold or label that calculation and explain the missing input; keep otherwise valid comparisons, Details and lifecycle usable. Explicit hypothetical allocations/fills/positions remain supported scenario inputs and need no actual trade or account export. Unknown costs or incompatible contracts cannot support a guaranteed-profit claim.
+
+The account-document request is **stopped as a prerequisite** and preserved solely as [optional calculation qualification or V2 work](source-dependent-external-facts.md). No response or broad account access is requested.
+
+## V2 — deferred
+
+Automated order submission, execution orchestration, fills/positions synchronization, execution reconciliation and automated-trading timing qualification are outside Beta/V1. Direct Novig/ProphetX trading integrations remain deferred. Preserve existing implementation, decoders, tests and evidence; do not delete or requalify them merely to change scope.
+
+## Current completion boundary and next work
+
+No remaining reproduced defect exists in the October 1 verified supported paths. Completed math, transport, lifecycle, replay and accepted layout remain closed unless a concrete failure is found. Full six-sport/63-cell actual comparable coverage still has exact listing/locator/identity gaps; historical/offline evidence remains distinct from current provider evidence. Resolve these data/matching gaps through existing bindings, keeping unsupported offerings explicit. The [reconciliation](full-scope-engineering-reconciliation.md) splits all 15 fact categories referenced by the 252 source cells into V1, dependent calculations and V2.
+
+Owner walkthroughs and commercial validation remain deferred. Existing historical approvals and consumed attempts are preserved; no new collection, acquisition package, credentials, outreach, trading or recurring run is authorized by this documentation update.
+
+---
+
+## Preserved earlier product definitions — superseded by the scope above
+
 # Predict — beta product definition
 
-Updated September 27, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) describes engineering order and implementation status. Older implementation reports are evidence for their recorded work, not competing roadmaps.
+Updated September 29, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns current product scope; [delivery plan](data-coverage-plan.md) describes engineering order and implementation status. Older implementation reports are evidence for their recorded work, not competing roadmaps.
 
-## Immediate product milestone
+## First priority — engineering for paid usefulness
 
-Owner-selected next delivery: **open ordinary Predict and easily compare the same market on Kalshi and Polymarket US side by side, with automatically updating real prices, quantity, lower-price indication, supported fee effects, individual update age/health and direct venue links.** [Exact milestone and completion evidence](live-two-venue-comparison-next-steps.md). A comparison remains useful with zero arbitrage or unavailable model EV. Current status: planned; end-to-end live behavior remains unverified.
+September 29 owner update: complete [E1–E5](commercial-value-engineering.md) before another general owner walkthrough or fresh live qualification attempt. Deliver understandable comparability/economics, intended-size comparisons using existing fee/depth code, saved watchlists with in-app signals, and auditable opportunity history, then verify the integrated ordinary-app workflow. Status: planned, not implemented by this documentation update. Engineering completion does not prove profitable opportunities or customer demand.
 
-Deliver and verify this two-venue experience before the later four-venue beta qualification. Novig/ProphetX provisioning and optional models must not block the immediate milestone. Preserve all-four/six-sport beta scope below, the ordinary shared app and existing provisional economics. Further Kalshi/US outreach is withdrawn. Local engineering and later separately approved live verification are distinct steps; this scope update starts no collection.
+The September 28 two-venue supervised session already demonstrated four games/eight comparisons, ordinary Stop, event links and saved reopening; the [Desktop tracker](../../prediction_arb_next_steps.md) retains exact results. The earlier description of this experience as merely planned is superseded. Settlement/economics, real recovery and full beta qualification remain open. Preserve the accepted readable comparison experience and the existing all-four/six-sport scope below. Missing Novig/ProphetX evidence or optional models must not block independent local engineering. Further Kalshi/US outreach remains withdrawn; this update starts no collection.
 
 ## Product goal
 

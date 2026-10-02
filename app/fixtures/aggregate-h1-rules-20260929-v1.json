@@ -1,0 +1,379 @@
+{
+  "version": "aggregate-h1-rules-20260929-v1",
+  "reviewed_at": "2026-09-29",
+  "response_sha256": "7161a2408e1344b96fe52505707afb5ff07056894cdbc3e259ccdc93df71035b",
+  "scope": {
+    "sport": "NFL",
+    "market": "h2h_h1",
+    "event_id": "d55cb69fed50a09170560b5b75d8de86"
+  },
+  "sources": [
+    {
+      "id": "novig-filings",
+      "title": "Ludlow public filings index",
+      "url": "https://www.ludlowexchange.com/filings",
+      "sha256": "2d190ba06c58aa6c9becfc289134de8631116359ab67f29e4ad6a10c5b2261d5",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-filings.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-filings.txt",
+      "text_sha256": "6d632ca430d90c08ffa2c8528cc6223602f59dc14429f762f823b3fffa024d80",
+      "retrieved_at": "2026-09-29T21:51:00.469191+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "novig-nfl-anchor",
+      "title": "Novig NFL Winner anchor: Patriots-Seahawks full game",
+      "url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/nfl-winner-anchor-cl-a.pdf",
+      "sha256": "1d596f0222464b27cf36ad802c22634b758422e0f33a021dce5233dae2281a79",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-anchor.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-anchor.txt",
+      "text_sha256": "b140344b5bf8ea801602db323e78b518ab7bff02bb14040f1beb0a7db68d9040",
+      "retrieved_at": "2026-09-29T21:51:28.289087+00:00",
+      "date": "2026-07-23",
+      "date_kind": "filing date corroborated by class certification; distinct September 9 event"
+    },
+    {
+      "id": "novig-nfl-series",
+      "title": "Novig NFL Winner class certification",
+      "url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NFL%20Winner%20Class%20Certification.pdf",
+      "sha256": "737f70055a58cc4b288b4528f4715454f1521878564b894ad5d1d10244cababa",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-series.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-series.txt",
+      "text_sha256": "375d1484e900690b2ccfe8ecb2fa566f18daef344cb7245e4ea4002c09d1b685",
+      "retrieved_at": "2026-09-29T21:51:28.487822+00:00",
+      "date": "2026-07-24",
+      "date_kind": "filings index date; references July 23 submission 2607-2320-0650-63"
+    },
+    {
+      "id": "novig-nfl-winner",
+      "title": "Novig NFL Winner NFL-004",
+      "url": "https://novig.intercom-attachments-1.com/i/o/y5ui11zw/2574338241/138190d9b820637c62eaad1d0718/NFL+Winner+Series.pdf?expires=1790802000&signature=ed6514cc65502eeed316324206a8e2e6261c75f4019b938f174316ce9112f4e7&req=diUgEsp9lYNbWPMW3Hu4gWK9SUssZ0NE7CSYYqUqYH9cdBp9JVRdmMBA3SRn%0AuQ%3D%3D%0A",
+      "sha256": "3bf0c50678dc190d9f74d59d7ea19c46ce26d158c89dba9d4b9370da9f66b2cf",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-winner.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-nfl-winner.txt",
+      "text_sha256": "f84949e11e64f97f130ba6a84adfa6e2ec5a3924288e129c69a231da999d20c9",
+      "retrieved_at": "2026-09-29T21:45:04.774298+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "novig-v3-fees",
+      "title": "Novig v3 trading fees",
+      "url": "https://docs.novig.com/api/concepts/fees",
+      "sha256": "f18a1e46c90c9a143e6681779ce9409ed6283b252826349c55abd6d87efcf401",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-v3-fees.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-v3-fees.txt",
+      "text_sha256": "10fae2ace4b4d99606f82d800af2e633d379d3c0c0bb5f82ed96b9865c9bedc1",
+      "retrieved_at": "2026-09-29T21:45:26.044733+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "novig-fees",
+      "title": "Novig legacy/RFQ fees",
+      "url": "https://docs.novig.com/fees",
+      "sha256": "fdd4aad3d2b1449696bd79d5410830ef8eda88423f805deb3b51034c0fc817bf",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-fees.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-fees.txt",
+      "text_sha256": "8098fbc60b98591e4b82dcce110f3f4084c2c0a6dc4212d2b20a1e60ce491eb8",
+      "retrieved_at": "2026-09-29T21:44:16.720824+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "prophetx-nfl-mainline",
+      "title": "ProphetX NFL Mainline Appendix A",
+      "url": "https://framerusercontent.com/assets/3xBUPoodNIUMWAauxaaccjNRSo.pdf",
+      "sha256": "19b3914698c999f9ae3ee0007fda32967061b030316eab3865334837a816d3cc",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-nfl-mainline.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-nfl-mainline.txt",
+      "text_sha256": "0bba9e656c02c5fd82da4121c47cee13ca09afdd7af7e00b23903f22f4407ef1",
+      "retrieved_at": "2026-09-29T21:46:01.184866+00:00",
+      "date": "2026-07-14",
+      "date_kind": "filing date; listing window is not exact listing effectiveness"
+    },
+    {
+      "id": "prophetx-rulebook-pdf",
+      "title": "ProphetX Rulebook v3.0",
+      "url": "https://framerusercontent.com/assets/53Lhf2UbmDx79ZBvhNu9ZRwNF0.pdf",
+      "sha256": "527cfaf2eced79e379f22f1640e4b1e28c6680ace0faaa88bfb808c57178adfe",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-rulebook-pdf.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-rulebook-pdf.txt",
+      "text_sha256": "ad0a05d252492dd880710689623e350137d818954a1025d5471d535e97bd5542",
+      "retrieved_at": "2026-09-29T21:45:05.242265+00:00",
+      "date": "2026-07-29",
+      "date_kind": "explicit effective date"
+    },
+    {
+      "id": "prophetx-fees",
+      "title": "ProphetX trading fees v1.2",
+      "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+      "sha256": "6f9585c7e6be73f63333d40e74ec085de66348d9491e7c12632d1349d6129f19",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-fees.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-fees.txt",
+      "text_sha256": "1df3123c1d6ad3458bdcb8be1a44eedbd836aafc537f44b52910c6b99e0607d6",
+      "retrieved_at": "2026-09-29T21:44:41.297106+00:00",
+      "date": "2026-09-24",
+      "date_kind": "last updated date"
+    },
+    {
+      "id": "prophetx-fee-extension",
+      "title": "ProphetX fee program extension",
+      "url": "https://framerusercontent.com/assets/oNmtogNF4ucRmj5pymJVs4DLV4.pdf",
+      "sha256": "320a16d0655cf0ddb9406df31a357feba3f889da1a076b76e695b235409f5f18",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-fee-extension.pdf",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-fee-extension.txt",
+      "text_sha256": "feab880b7c09959329a0f7ef2cb9d86272c2ed303aa99920ef127c98e7ac1eaf",
+      "retrieved_at": "2026-09-29T21:46:01.503988+00:00",
+      "date": "2026-08-14",
+      "date_kind": "filing date; no earlier than ten business days, monthly review"
+    },
+    {
+      "id": "odds-api-docs",
+      "title": "The Odds API v4 includeSids/includeLinks",
+      "url": "https://the-odds-api.com/liveapi/guides/v4/",
+      "sha256": "37d800ec5826b290b7f7cf558145c9a74ce9c4a601a943e44867aace4aaa35d3",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/odds-api-docs.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/odds-api-docs.txt",
+      "text_sha256": "223cd96014d6e1e1c869505079cb34fe9eac78e2849addf0c60daa236e7d7ff7",
+      "retrieved_at": "2026-09-29T21:45:26.185625+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "novig-event",
+      "title": "Novig supplied event link",
+      "url": "https://novig.com/event-markets/01a0cabb-dbc3-7570-8e8a-f5762a02615c",
+      "sha256": "5d729756e1056cb8ac216f595e4cd4107c98c4785dcecf0ad2eb64c1e9f4fcef",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-event.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/novig-event.txt",
+      "text_sha256": "cb79a29fcd2b3613f9ac3acb03d41f9a4c2fd4a736b9b2f4dc8145b9d344f7ee",
+      "retrieved_at": "2026-09-29T21:44:41.838840+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    },
+    {
+      "id": "prophetx-event",
+      "title": "ProphetX supplied event link",
+      "url": "https://www.prophetx.co/american-football/nfl/pittsburgh-steelers-vs-cleveland-browns-1700008766?currency=cash",
+      "sha256": "af9f6aee190861e39dfc4f28f45095bf8d972bba93b6c7e85416661b6dc3981f",
+      "retained_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-event.html",
+      "text_path": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/h1-rules-identity-20260929/public/prophetx-event.txt",
+      "text_sha256": "56882bd0679668f23af3d007c6a1cb6dfe33a5b5cc3189002951f2f6dc4f89c2",
+      "retrieved_at": "2026-09-29T21:44:41.673420+00:00",
+      "date": null,
+      "date_kind": "not stated"
+    }
+  ],
+  "books": {
+    "novig": [
+      {
+        "topic": "first_half_scoring",
+        "summary": "Designated segments use points scored within that segment; a first half excludes overtime.",
+        "source_ids": [
+          "novig-nfl-winner"
+        ],
+        "locator": "Appendix A pp.2-4; PDF pp.5-7",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Native listing with explicit first-half time period and effective NFL-004 version."
+      },
+      {
+        "topic": "two_way_tie",
+        "summary": "The NFL Winner template pays each side 0.50 of its settlement value when the designated segment is tied. This is not a stake refund.",
+        "source_ids": [
+          "novig-nfl-winner",
+          "novig-nfl-series"
+        ],
+        "locator": "Appendix A p.2; Class Certification p.1",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Effective listing-to-class association; the anchor names a different full-game event. Aggregate decimal odds do not establish this payout."
+      },
+      {
+        "topic": "completion",
+        "summary": "A completed, recorded segment stands even if the full game is unfinished; an incomplete segment without a recorded result is void.",
+        "source_ids": [
+          "novig-nfl-winner"
+        ],
+        "locator": "Appendix A p.4",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Actual contract period and completion-rule association."
+      },
+      {
+        "topic": "postponement_cancellation",
+        "summary": "Scheduling-week, formal-rescheduling and 48-hour exceptions apply; postseason has separate 45-day provisions. Void uses a fair-value waterfall, not an automatic refund.",
+        "source_ids": [
+          "novig-nfl-winner"
+        ],
+        "locator": "Appendix A pp.4-6",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Effective listing schedule/week, exception precedence, cancellation determination and fair-value inputs."
+      },
+      {
+        "topic": "corrections",
+        "summary": "Revisions after Expiration Time are excluded; pre-settlement review and source hierarchy remain material.",
+        "source_ids": [
+          "novig-nfl-winner"
+        ],
+        "locator": "Appendix A pp.1,5,7",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Listing expiration and effective review rules."
+      },
+      {
+        "topic": "fees",
+        "summary": "Current v3 documentation uses market.fee and fill role/status, with a game schedule charged when live. Its 1-cent units differ from older API documentation; no effective date binds either to this quote.",
+        "source_ids": [
+          "novig-v3-fees",
+          "novig-fees"
+        ],
+        "locator": "Trading fees: formula, schedules and scope",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "API regime, native market.fee at receipt/fill, unit conversion, maker/taker, live status and other charges."
+      }
+    ],
+    "prophetx": [
+      {
+        "topic": "first_half_scoring",
+        "summary": "NFL moneyline may reference a specified period; first-half specifications are an exception to the default inclusion of overtime.",
+        "source_ids": [
+          "prophetx-nfl-mainline"
+        ],
+        "locator": "Appendix A moneyline Underlying and A",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Native first-half contract specification and effective version."
+      },
+      {
+        "topic": "two_way_tie",
+        "summary": "The void-and-return-collateral clause is worded after overtime. It does not unambiguously specify a first-half tie; no half-tie payout is assigned.",
+        "source_ids": [
+          "prophetx-nfl-mainline"
+        ],
+        "locator": "Appendix A moneyline D and D.1",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Explicit two-way first-half tie disposition and collateral/payout basis for these outcome IDs."
+      },
+      {
+        "topic": "completion",
+        "summary": "A designated quarter or half must finish unless its result is already unequivocally determined.",
+        "source_ids": [
+          "prophetx-nfl-mainline"
+        ],
+        "locator": "Appendix A D.1",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Listing association and precedence over general 55-minute NFL provisions."
+      },
+      {
+        "topic": "postponement_cancellation",
+        "summary": "General NFL suspension rules use 55 minutes and a Thursday-Wednesday window. Undetermined outcomes can void; Rule 5.2 permits disruption remedies.",
+        "source_ids": [
+          "prophetx-nfl-mainline",
+          "prophetx-rulebook-pdf"
+        ],
+        "locator": "Appendix A K; Rule 5.2",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "First-half-specific precedence, pre-start postponement/cancellation treatment and actual determination."
+      },
+      {
+        "topic": "corrections",
+        "summary": "Section S permits resettlement on additional official information; Rule 5.2 permits reversals for disruptions. The 48-hour statistics clause is for props, not an established winner deadline.",
+        "source_ids": [
+          "prophetx-nfl-mainline",
+          "prophetx-rulebook-pdf"
+        ],
+        "locator": "Appendix A I,S; Rule 5.2",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Effective winner-specific correction cutoff and listing association."
+      },
+      {
+        "topic": "fees",
+        "summary": "The September 24 v1.2 page states 2% on net gains per market; the program filing calculates at settlement. Rebates require account evidence; none is assumed.",
+        "source_ids": [
+          "prophetx-fees",
+          "prophetx-fee-extension"
+        ],
+        "locator": "Straight trades; Appendix A On-Platform Trading Fees",
+        "applicability": "documented_not_bound_to_observed_market",
+        "missing": "Applicable account/program terms, complete per-market net position, rounding and other charges; no fill is retained."
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "record_sha256": "e7cf2546d461333bcf0aaf8eb5351455a6bf22e9b21b22c6e8d81b1314d3b092",
+      "book": "novig",
+      "outcome": "Cleveland Browns",
+      "provider_event_id": "d55cb69fed50a09170560b5b75d8de86",
+      "book_event_id": "01a0cabb-dbc3-7570-8e8a-f5762a02615c",
+      "book_market_id": null,
+      "book_outcome_id": "01a0e573-d7a9-76e1-88dd-ccd03b35b57b",
+      "event_link": "https://novig.com/event-markets/01a0cabb-dbc3-7570-8e8a-f5762a02615c",
+      "outcome_link": "https://novig.com/events/01a0e573-d7a9-76e1-88dd-ccd03b35b57b/oddsapi/{wager}",
+      "link_disposition": "Retained only; outcome action/template link not opened or promoted to execution",
+      "identity_class": "provider_reported_bookmaker_ids",
+      "native_contract_verified": false,
+      "contemporaneous_native_observation": false,
+      "rule_binding_verified": false
+    },
+    {
+      "record_sha256": "7bb4055870c2aee19fe2a788e542c7940fa6716493ccd34a65b4159af33f6ce2",
+      "book": "novig",
+      "outcome": "Pittsburgh Steelers",
+      "provider_event_id": "d55cb69fed50a09170560b5b75d8de86",
+      "book_event_id": "01a0cabb-dbc3-7570-8e8a-f5762a02615c",
+      "book_market_id": null,
+      "book_outcome_id": "01a0e573-d7a9-76e1-88dd-cce8f3a807dc",
+      "event_link": "https://novig.com/event-markets/01a0cabb-dbc3-7570-8e8a-f5762a02615c",
+      "outcome_link": "https://novig.com/events/01a0e573-d7a9-76e1-88dd-cce8f3a807dc/oddsapi/{wager}",
+      "link_disposition": "Retained only; outcome action/template link not opened or promoted to execution",
+      "identity_class": "provider_reported_bookmaker_ids",
+      "native_contract_verified": false,
+      "contemporaneous_native_observation": false,
+      "rule_binding_verified": false
+    },
+    {
+      "record_sha256": "e67c67e64cc34610dfad5ecb77f1d334e39ba9d0ce0a8c0c3788de89d2644e05",
+      "book": "prophetx",
+      "outcome": "Cleveland Browns",
+      "provider_event_id": "d55cb69fed50a09170560b5b75d8de86",
+      "book_event_id": "1700008766",
+      "book_market_id": null,
+      "book_outcome_id": "4809c218abc6d70f610f2ba4847bc8aa",
+      "event_link": "https://www.prophetx.co/american-football/nfl/pittsburgh-steelers-vs-cleveland-browns-1700008766?currency=cash",
+      "outcome_link": "https://www.prophetx.co/?action=addtobetslip&lineID=4809c218abc6d70f610f2ba4847bc8aa&partner_id=theoddsapi&currency=cash",
+      "link_disposition": "Retained only; outcome action/template link not opened or promoted to execution",
+      "identity_class": "provider_reported_bookmaker_ids",
+      "native_contract_verified": false,
+      "contemporaneous_native_observation": false,
+      "rule_binding_verified": false
+    },
+    {
+      "record_sha256": "01106df18e3ffb393455cbb8b47618f067f63eb0da6838aa9ced2ec3ae72a4a6",
+      "book": "prophetx",
+      "outcome": "Pittsburgh Steelers",
+      "provider_event_id": "d55cb69fed50a09170560b5b75d8de86",
+      "book_event_id": "1700008766",
+      "book_market_id": null,
+      "book_outcome_id": "b89f0c7bde996fc707c2ecb78bfa159b",
+      "event_link": "https://www.prophetx.co/american-football/nfl/pittsburgh-steelers-vs-cleveland-browns-1700008766?currency=cash",
+      "outcome_link": "https://www.prophetx.co/?action=addtobetslip&lineID=b89f0c7bde996fc707c2ecb78bfa159b&partner_id=theoddsapi&currency=cash",
+      "link_disposition": "Retained only; outcome action/template link not opened or promoted to execution",
+      "identity_class": "provider_reported_bookmaker_ids",
+      "native_contract_verified": false,
+      "contemporaneous_native_observation": false,
+      "rule_binding_verified": false
+    }
+  ],
+  "summary": "Public NFL rule templates and source IDs reviewed; effective native listing association remains unverified. Raw winner comparisons remain available.",
+  "blockers": [
+    "Effective book-specific first-half listing-to-rule association is absent.",
+    "ProphetX first-half tie payout and exception precedence are not established.",
+    "Novig effective fee regime/units and ProphetX account netting/rounding remain unbound.",
+    "Execution, depth, quantity and actual fill terms remain unknown.",
+    "EV requires an independent probability for the exact outcome; raw implied probability is not fair probability."
+  ],
+  "native_lookup": "No retained current native listing establishes these IDs. Earlier ProphetX first_half_moneyline subtype 64 is sandbox template evidence, not this production market. Novig event page returned human verification; ProphetX returned event title only, with no first-half contract/rule body.",
+  "reuse": [
+    "evidence/b5-nfl-first-half-20260922/native-contract-audit.json",
+    "docs/slice-5.md",
+    "evidence/prophetx-focus-20260929/README.md"
+  ]
+}

@@ -16,6 +16,11 @@ from .odds_http import HTTPPolicy, OddsHTTP, BudgetStop, utc
 from .prediction_producer import PredictionProducer
 from .run_spec import preflight, time_value, reference_enabled
 
+OBSERVATION_JOURNAL_BYTES=32*1024*1024
+OBSERVATION_JOURNAL_RECORDS=4096
+TRANSPORT_QUEUE_BYTES=4*1024*1024
+TRANSPORT_QUEUE_RECORDS=48
+
 
 class StorageFailure(OSError):
     """Sanitized first failure; OS-visible bytes are not a durability receipt."""
@@ -48,11 +53,15 @@ class ObservationJournal:
     def save(self, row):
         if self.failed:raise self.failed
         original=row
+        from .journal_encoding import MAX_EXPANDED
+        expanded_size=len(packed(original).encode())
+        if self.expanded_bytes+expanded_size>MAX_EXPANDED:
+            raise BudgetStop('observation_expanded_storage_cap')
         row=self.encoded(row)
         payload=packed(row)
         digest=sha256((self.previous+payload).encode()).hexdigest()
         body=(packed(dict(previous=self.previous,sha256=digest,row=row))+'\n').encode()
-        if self.bytes+len(body)>32*1024*1024 or self.count>=4096:
+        if self.bytes+len(body)>OBSERVATION_JOURNAL_BYTES or self.count>=OBSERVATION_JOURNAL_RECORDS:
             raise BudgetStop('observation_storage_cap')
         self.attempted+=1
         try:
@@ -65,7 +74,7 @@ class ObservationJournal:
             raise self.failed from None
         self.stage='acknowledged' 
         self.previous=digest; self.bytes+=len(body); self.count+=1
-        self.expanded_bytes+=len(packed(original).encode())
+        self.expanded_bytes+=expanded_size
         self.terminal_acknowledged=original.get('type')=='session_finished'
     def close(self):
         try:self.file.close()
@@ -76,12 +85,12 @@ class ObservationJournal:
 
 def reopen(path):
     path=Path(path)
-    if path.stat().st_size>32*1024*1024: raise ValueError('saved byte cap')
+    if path.stat().st_size>OBSERVATION_JOURNAL_BYTES: raise ValueError('saved byte cap')
     from .journal_encoding import decode, MAX_EXPANDED
     previous='0'*64; rows=[]; expanded=0
     with path.open('rb') as stream:
         for line in stream:
-            if len(rows)>=4096 or not line.endswith(b'\n'):raise ValueError('incomplete or overbound journal')
+            if len(rows)>=OBSERVATION_JOURNAL_RECORDS or not line.endswith(b'\n'):raise ValueError('incomplete or overbound journal')
             value=json.loads(line); row=value['row']
             digest=sha256((previous+packed(row)).encode()).hexdigest()
             if value['previous']!=previous or value['sha256']!=digest:raise ValueError('saved hash chain mismatch')
@@ -132,8 +141,8 @@ class TransportSession:
         self.state='idle'; self.stop_event=asyncio.Event(); self.task=None; self.reason=None
         self.health={s:'idle' for s in ('reference','kalshi','polymarket_us')}
         if not reference_enabled(spec):self.health.pop('reference')
-        self.producers={}; self.reference=None; self.journal=None
-        self.queue=CaptureQueue(48,4*1024*1024); self.delivered=0; self.persisted=0; self.ingress_bytes=0
+        self.producers={}; self.reference=None; self.aggregate=None; self.journal=None
+        self.queue=CaptureQueue(TRANSPORT_QUEUE_RECORDS,TRANSPORT_QUEUE_BYTES); self.delivered=0; self.persisted=0; self.ingress_bytes=0
         self.sid=str(uuid4()); self.closing=False; self.persistence_error=None; self.last_reference=None
         self.intake_closed=False
         self.counts=dict(received=0,accepted=0,write_attempted=0,durably_acknowledged=0,rejected=0)
@@ -173,6 +182,7 @@ class TransportSession:
     async def close_resources(self):
         resources=list(self.producers.items())
         if self.reference:resources.append(('reference',self.reference))
+        if self.aggregate:resources.append(('aggregate',self.aggregate))
         results=await asyncio.gather(*(p.aclose() for _,p in resources),return_exceptions=True)
         for (name,_),result in zip(resources,results):
             if isinstance(result,BaseException):
@@ -258,6 +268,10 @@ class TransportSession:
         if datetime.now(timezone.utc)<time_value(self.spec['start_after']):raise ValueError('before explicit start window')
         if self.state!='idle':raise ValueError('session already started')
         # Constructors validate all destinations before a file or connection is opened.
+        if self.spec.get('source_session'):
+            from .source_session import configure, AggregateWorker
+            configure(self.spec,self.spec['source_session'],self.endpoints,prepare_approved=getattr(self,'native_authorized',False))
+            self.aggregate=AggregateWorker(self)
         def ref_sink(row):self.emit('reference',row)
         if reference_enabled(self.spec):
             p=dict(self.spec['http'])
@@ -268,6 +282,8 @@ class TransportSession:
                 key_options=dict(real_key=os.environ.get('ODDS_API_KEY'))
                 if not key_options['real_key']:raise ValueError('optional ODDS_API_KEY unavailable')
             self.reference=OddsHTTP(self.endpoints['reference'],self.spec['sources']['the_odds_api']['event_id'],HTTPPolicy(**p),ref_sink,**key_options)
+        if self.spec.get('native_discovery'):
+            self.credentials={}  # Public listing probe: no account or stream access.
         if self.spec['mode']=='real' and self.credentials is None:
             from .venue_access import load_credentials
             if self.spec.get('native_sources'):
@@ -280,12 +296,20 @@ class TransportSession:
         if getattr(self,'supervised_live',False):
             from .supervised_live import validate_live
             validate_live(self.spec,self.endpoints,self.credentials,require_credentials=True)
-        self.producers={v:PredictionProducer(v,self.spec,self.endpoints[v]['rest'],self.endpoints[v]['ws'],self.emit,self.set_health,
+        # ContinuousSession supplies REST-only discovery owners for a public
+        # probe. Never instantiate credentialed stream producers for that mode.
+        self.producers={} if self.spec.get('native_discovery') else {v:PredictionProducer(v,self.spec,self.endpoints[v]['rest'],self.endpoints[v]['ws'],self.emit,self.set_health,
                         credential=(self.credentials or {}).get(v),budget=self.budgets.get(v)) for v in ('kalshi','polymarket_us') if not self.spec.get('native_sources') or (self.spec['native_sources'][v]['state']=='enabled' and v not in getattr(self,'source_access_errors',{}))}
         self.output.mkdir(parents=True,exist_ok=True)
         try:
             self.journal=self.open_journal()
             self.emit('session',dict(type='session_started',spec=self.spec,provenance=('real venue observation; economics unqualified' if self.spec['mode']=='real' else 'local mock; fabricated protocol and identified retained metadata')))
+            if self.aggregate:
+                from app.dashboard.math_scenarios import VERSION as MATH
+                from app.reference.aggregate_assessment import VERSION as RULES
+                from app.reference.aggregate import VERSION as MAPPING
+                self.emit('session',dict(type='source_versions',math=MATH,rules=RULES,mapping=MAPPING,
+                    source_session=self.spec['source_session']['version'],qualification='SIMULATED sequence; original provider timestamps retained when replaying retained responses' if self.spec['mode']=='mock' else 'Approved bounded observations; economic and delay qualification unavailable'))
         except (OSError,BudgetStop) as exc:
             self.storage_failed(getattr(exc,'stage','open'))
             await self.close_resources()
@@ -360,16 +384,19 @@ class TransportSession:
             except asyncio.CancelledError:raise
             except Exception as exc:
                 failure(__name__, 'producer', exc)
-                self.request_stop('producer_failure:'+type(exc).__name__)
+                if self.spec.get('source_session') and not self.persistence_error:
+                    self.emit('session',dict(type='source_worker_failure',reason=type(exc).__name__))
+                else:self.request_stop('producer_failure:'+type(exc).__name__)
             else:
-                if not self.stop_event.is_set():self.request_stop('producer_ended')
+                if not self.stop_event.is_set() and not self.spec.get('source_session') and not self.spec.get('native_discovery'):self.request_stop('producer_ended')
         try:
             # Deadline includes bounded discovery, connections and backoff.
-            seconds=self.spec['duration'] if self.spec.get('two_source_qualification') else min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
+            seconds=self.spec['duration'] if (self.spec.get('native_discovery') or self.spec.get('two_source_qualification') or self.spec.get('source_session',{}).get('quota_startup')) else min(self.spec['duration'],(time_value(self.spec['scheduled_start'])-datetime.now(timezone.utc)).total_seconds())
             if getattr(self, 'started_monotonic', None) is not None:
                 import time
                 seconds=max(0, seconds-(time.monotonic()-self.started_monotonic))
             async with asyncio.timeout(seconds):
+                if self.aggregate:tasks.append(asyncio.create_task(self.aggregate.run()))
                 discovery_tasks=[asyncio.create_task(p.discover()) for p in self.producers.values()]
                 try:
                     group=asyncio.gather(*discovery_tasks)
@@ -384,7 +411,7 @@ class TransportSession:
                 finally:
                     for task in discovery_tasks:task.cancel()
                     await asyncio.gather(*discovery_tasks,return_exceptions=True)
-                tasks=[asyncio.create_task(guarded(p.run(m))) for p,m in zip(self.producers.values(),markets)]
+                tasks += [asyncio.create_task(guarded(p.run(m))) for p,m in zip(self.producers.values(),markets)]
                 tasks += [asyncio.create_task(guarded(self.discoveries()))]
                 if self.reference:
                     tasks += [asyncio.create_task(self.optional_references()),asyncio.create_task(guarded(self.freshness()))]
@@ -407,7 +434,7 @@ class TransportSession:
             try:
                 if not self.persistence_error:self.save_observed(dict(type='session_finished',session_id=self.sid,observed_at=utc(),reason=self.reason,
                     delivered=self.delivered,persisted=self.persisted,ingress_accounting=dict(self.counts,unresolved=self.counts['accepted']-self.counts['durably_acknowledged']),health=self.health,accounting=self.reference.budget.snapshot() if self.reference else None,
-                    cleanup_errors=list(self.cleanup_errors),prediction_accounting={v:dict(requests=p.budget.requests,connections=p.budget.connections,
+                    aggregate_accounting=self.aggregate.budget.snapshot() if self.aggregate else None,cleanup_errors=list(self.cleanup_errors),prediction_accounting={v:dict(requests=p.budget.requests,connections=p.budget.connections,
                         dollars_reserved=str(p.budget.dollars),body_bytes_charged=p.budget.bytes) for v,p in self.producers.items()},economics=None))
             except (OSError,BudgetStop) as exc:self.storage_failed(getattr(exc,'stage','terminal'))
             finally:

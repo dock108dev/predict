@@ -12,10 +12,12 @@ class NFLPolymarketAdapter(PolymarketUSAdapter):
         return await super()._get(path,params)
 
 
-def participant_mapping(event):
+def participant_mapping(event, *, live=False, scope_binding=None):
     from app.normalization.observations import enrich_event
     from app.normalization.registry import Registry
-    normalized=enrich_event(event,environment='production');registry=Registry.load();mapping={}
+    from app.normalization.native_registry import native_registry
+    registry=native_registry(live=live)
+    normalized=enrich_event(event,environment='production',registry=registry,scope_binding=scope_binding);mapping={}
     for p in normalized.participants:
         value=p.resolution.canonical_id
         if value is None and isinstance(p.name,str) and ' ' in p.name:
@@ -32,7 +34,8 @@ def validate_pregame(event, market=None, *, as_of=None):
     if event.scheduled_start is None or event.scheduled_start<=(as_of or datetime.now(timezone.utc)):
         raise ValueError('kickoff or unknown schedule')
     if event.raw.ref.venue.value=='polymarket_us':
-        rows=[r for r in event.raw.decode().get('events',[]) if str(r.get('id'))==event.raw.ref.event_id]
+        data=event.raw.decode()
+        rows=[r for r in data.get('events',[data['event']] if isinstance(data.get('event'),dict) else []) if str(r.get('id'))==event.raw.ref.event_id]
         if len(rows)!=1:raise ValueError('ambiguous event identity')
         row=rows[0]
         if row.get('live') is True or row.get('ended') is True or row.get('closed') is True or row.get('period') not in (None,'NS') or row.get('rescheduledFromGameId') not in (None,0,'0'):

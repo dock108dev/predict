@@ -1,0 +1,19 @@
+{
+  "version": "native-control-binding-v1",
+  "response_byte_cap": 65536,
+  "exact_keys": [
+    "implementation_sha256",
+    "spec_sha256",
+    "attempt_id",
+    "output",
+    "file_hashes"
+  ],
+  "hashes": "lowercase 64 hexadecimal; all compared exactly",
+  "attempt": "canonical UUID",
+  "output": "absolute POSIX path; no parent traversal/control characters; max4096 characters",
+  "file_hashes": "1..64 single filenames, max128 characters, mandatory AUTHORIZATION.txt",
+  "json": "strict UTF-8, duplicate keys/nonfinite values rejected",
+  "redaction": "Only validated complete public binding escapes response redaction; other routes and saved records retain sanitizer",
+  "comparison": "Complete validated identity equals local sealed identity; no hash excluded",
+  "control_stop_margin_seconds": 1
+}

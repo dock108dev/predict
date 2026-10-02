@@ -19,6 +19,8 @@ OUTPUT=historical.ROOT/'evidence/multi-game/sessions'
 def configuration():
     from app.dashboard.e6_live import configuration as original
     spec=original();now=datetime.now(timezone.utc)
+    from app.collection.v1_comparison import REPAIR_POLICY as POLICY
+    spec['v1_comparison_policy']=POLICY
     # Bootstrap fields satisfy the existing single-session contract. Actual selected
     # event identities are recorded independently before any subscriptions.
     spec.update(duration=175,scheduled_start=(now+timedelta(days=1)).isoformat(),capture_authorization='One multi-game verification run, maximum 180 seconds including discovery; zero additional spending',mapping_revision='multi-game-native-1')

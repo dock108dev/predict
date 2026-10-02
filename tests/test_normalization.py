@@ -69,7 +69,7 @@ class RegistryTests(unittest.TestCase):
         unmapped=self.r.resolve('team','Dallas Cowboys',**{**c,'native_id':'not-a-team-id'})
         self.assertEqual(unmapped.canonical_id,'NFL:DAL')
         self.assertIn('native-id-unmapped; name-only-resolution',unmapped.provenance)
-        self.assertEqual(len(self.r.native),79)
+        self.assertEqual(len(self.r.native),107)
         self.assertEqual(self.r.resolve('league','NHL',venue='prophetx',environment='sandbox',native_id='234').canonical_id,'NHL')
 
     def test_validation_duplicate_conflicting_rows_and_targets(self):
@@ -154,9 +154,23 @@ class ObservationTests(unittest.IsolatedAsyncioTestCase):
         r=enrich_event(px[0],environment=px[1],registry=self.r)
         self.assertEqual([(p.name,p.role) for p in r.participants],[('Carolina Panthers','home'),('Chicago Bears','away')])
         pm=next(e for e,_,_ in self.events if e.raw.ref.venue=='polymarket_us')
-        self.assertTrue(all(p.role is None for p in enrich_event(pm,environment='production',registry=self.r).participants))
+        bound=enrich_event(pm,environment='production',registry=self.r).participants
+        native=next(e for e in pm.raw.decode()['events'] if str(e['id'])==pm.raw.ref.event_id)
+        side_roles={str(s['teamId']):s['team']['ordering'] for m in native['markets'] for s in m['marketSides'] if s.get('teamId') and (s.get('team') or {}).get('ordering')}
+        self.assertEqual([(p.native_id,p.role) for p in bound],[(p.native_id,side_roles[p.native_id]) for p in bound])
         k=next(e for e,_,_ in self.events if e.raw.ref.venue=='kalshi')
-        self.assertTrue(all(p.native_id is None and p.role is None for p in enrich_event(k,environment='production',registry=self.r).participants))
+        bound=enrich_event(k,environment='production',registry=self.r).participants
+        milestone=next(m for m in k.raw.decode()['milestones'] if m['details'].get('main_game_event_ticker')==k.raw.ref.event_id)
+        self.assertEqual([(p.role,p.native_id) for p in bound],[(role,milestone['details'][role+'_team_id']) for role in ('away','home')])
+        self.assertEqual(milestone['title'],' at '.join(p.name for p in bound))
+        for mutation in ('duplicate','conflicting_title'):
+            raw=k.raw.decode()
+            if mutation=='duplicate':raw['milestones'].append(milestone)
+            else:
+                for m in raw['milestones']:
+                    if m['details'].get('main_game_event_ticker')==k.raw.ref.event_id:m['title']='Unrelated at Unrelated'
+            changed=replace(k,raw=replace(k.raw,json_text=json.dumps(raw)))
+            self.assertTrue(all(p.native_id is None and p.role is None for p in enrich_event(changed,environment='production',registry=self.r).participants))
 
     async def test_synthetic_mutation_native_name_and_league_conflicts(self):
         e=next(e for e,_,_ in self.events if e.raw.ref.venue=='polymarket_us')

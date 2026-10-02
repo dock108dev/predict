@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const context={BoardView:{words:x=>x,title:x=>({name:x}),sourceState:x=>x},PredictDecision:require('../app/dashboard/opportunity_static/decision.js')};
+vm.createContext(context);vm.runInContext(fs.readFileSync('app/dashboard/opportunity_static/comparisons.js','utf8')+';this.render=PriceComparisons.render',context);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const data=JSON.parse(fs.readFileSync('app/fixtures/aggregate-h1-rules-20260929-v1.json'));
+const leg={label:'Novig via The Odds API',ask:'.4',decimal_odds:'2.5',contract:'Outcome',entry:{quantity:'1',lower:null,basis:'No executable depth'},depth_limit:'Published limits are not depth'};
+const a={version:data.version,status:'documented_unbound',basis:'Later research; not known at acquisition',books:{novig:{crosswalk:data.bindings[0]}},blockers:data.blockers};
+const row={id:'retained',aggregated:true,historical:true,identity:{competition:'NFL',family:'moneyline',period:'first_half'},legs:[leg,{...leg,label:'ProphetX via The Odds API'}],outcome:'Example',game_title:'Example',lower_raw:'Equal',raw_difference:'0',timing:{reason:'Historical',receipt_skew_seconds:'0'},settlement_status:'UNKNOWN',settlement:'Unknown terms',rule_analysis:a};
+let text=context.render({comparisons:[row]},esc,()=>'/game');
+assert(text.includes(data.version));assert(text.includes('provider-reported event'));assert(text.includes('market ID not supplied'));assert(text.includes('Native contract and effective rules not verified'));assert(text.includes('Sources, applicability and missing facts'));assert(text.includes('Contract sizing unavailable'));assert(!text.includes('class="size-evaluate"'));
+a.books.novig.crosswalk.book_event_id='<img src=x onerror=alert(1)>';
+text=context.render({comparisons:[row]},esc,()=>'/game');assert(!text.includes('<img'));assert(text.includes('&lt;img'));
+const board=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');assert(board.includes("q.set('rule_version',params.get('rule_version'))"));
+const dashboard=fs.readFileSync('app/dashboard/opportunity_static/dashboard.js','utf8');assert(dashboard.includes("q.set('rule_version',r.rule_analysis.version)"));
+console.log('PASS: versioned research, identity limitations, escaping and version-preserving Details links');

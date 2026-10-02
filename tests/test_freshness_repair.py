@@ -3,6 +3,7 @@ import unittest,tempfile
 from pathlib import Path
 from unittest.mock import patch
 from types import SimpleNamespace
+from datetime import datetime
 from aiohttp.test_utils import TestClient,TestServer
 from app.dashboard.coverage_owner import CoverageOwner
 from app.dashboard.multi_game_server import create_app
@@ -16,6 +17,10 @@ class RetainedFreshness(unittest.IsolatedAsyncioTestCase):
     async def test_selected_current_avoids_saved_load_and_registry_per_market(self):
         p=SessionProjection()
         for r in list(verified(FOLDER)['rows'])[:1400]:p.apply(r)
+        # This retained-current fixture must not age out as the wall calendar moves.
+        class FrozenClock(datetime):
+            @classmethod
+            def now(cls,tz=None):return datetime.fromisoformat(p.last)
         class Owner(CoverageOwner):
             def active(self):return True
             def status(self):return dict(state='running',active=True,start_available=False)
@@ -27,12 +32,12 @@ class RetainedFreshness(unittest.IsolatedAsyncioTestCase):
             c=TestClient(TestServer(create_app(owner=o,sessions={})));await c.start_server()
             try:
                 from app.normalization.registry import Registry
-                with patch('app.dashboard.session_history.load',side_effect=AssertionError('unselected history replayed')),patch.object(Registry,'load',wraps=Registry.load) as load:
+                with patch('app.dashboard.session_projection.datetime',FrozenClock),patch('app.dashboard.session_history.load',side_effect=AssertionError('unselected history replayed')),patch.object(Registry,'load',wraps=Registry.load) as load:
                     first=await (await c.get('/api/dashboard?view=feed')).json();self.assertEqual(len(first['comparisons']),8)
-                    self.assertEqual(load.call_count,2) # current and frozen, each once
+                    self.assertEqual(load.call_count,0) # Explicit review avoids legacy per-market registry work.
                     frozen=o.cutoffs.copy()
                     second=await (await c.get('/api/dashboard?view=feed')).json()
-                    self.assertEqual(load.call_count,3) # unchanged frozen cutoff reused
+                    self.assertEqual(load.call_count,0) # Unchanged reviewed inputs remain reusable.
                     self.assertIs(next(iter(frozen.values())),next(iter(o.cutoffs.values())))
                     self.assertEqual([l['received_at'] for x in first['comparisons'] for l in x['legs']],[l['received_at'] for x in second['comparisons'] for l in x['legs']])
                     self.assertTrue(all(not x['timing']['synchronized'] and x['net'] is None for x in second['comparisons']))

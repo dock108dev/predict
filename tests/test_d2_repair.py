@@ -55,7 +55,7 @@ class Repair(unittest.IsolatedAsyncioTestCase):
             self.assertLess(select_inventory(cat,AT)[1],5,change)
 
     async def test_interrupted_third_generation_preserves_second(self):
-        session=SimpleNamespace(producers={},emit=lambda *a:None)
+        session=SimpleNamespace(spec={},producers={},emit=lambda *a:None)
         d=Discovery(session)
         async def venue(v):
             d.pages.extend(p for p in self.pages if p['source']==v and p['discovery_generation']==d.generation)
@@ -90,7 +90,7 @@ class Repair(unittest.IsolatedAsyncioTestCase):
             s.journal.close()
 
     async def test_publication_rejection_and_cancellation(self):
-        s=SimpleNamespace(producers={},emit=lambda *a:None);d=Discovery(s)
+        s=SimpleNamespace(spec={},producers={},emit=lambda *a:None);d=Discovery(s)
         async def venue(v):d.pages.extend(p for p in self.pages if p['source']==v and p['discovery_generation']==1)
         d.venue=venue
         with patch('app.collection.continuous.now',return_value=AT):
@@ -126,7 +126,7 @@ class Repair(unittest.IsolatedAsyncioTestCase):
 
 
     async def test_durable_receipt_survives_queue_failure(self):
-        s=SimpleNamespace(counts={'durably_acknowledged':0},producers={})
+        s=SimpleNamespace(spec={},counts={'durably_acknowledged':0},producers={})
         def emit(*args):
             s.counts['durably_acknowledged']+=1
             raise asyncio.QueueFull()

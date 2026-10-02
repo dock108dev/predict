@@ -5,7 +5,7 @@ from aiohttp import web
 
 CONTROL_BODY_LIMIT = 4096
 IMPORT_BODY_LIMIT = 1024 * 1024
-IMPORT_ROUTES = frozenset(('/api/references', '/api/resolutions'))
+IMPORT_ROUTES = frozenset(('/api/references', '/api/resolutions', '/api/math-scenario'))
 
 
 def body_limit(path):

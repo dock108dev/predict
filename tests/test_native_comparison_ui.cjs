@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const rows=JSON.parse(fs.readFileSync('evidence/native-books-comparison-20260930-v2/comparisons-v2.json'));
+const context=vm.createContext({Set,Number,JSON,BoardView:require('../app/dashboard/opportunity_static/presentation.js')});
+vm.runInContext(fs.readFileSync('app/dashboard/opportunity_static/comparisons.js','utf8')+'\nthis.api=PriceComparisons;',context);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const html=context.api.render({comparisons:rows},esc,r=>'/game?session='+encodeURIComponent(r.session));
+for(const expected of ['New Mexico State','Western Kentucky','$0.5600','$0.5550','$0.4500','Settlement rules differ','Download retained comparison','Quantity changes and health re-emissions are not price changes','2026-09-30T14:52:41.333585520Z','native-book-comparison-2'])assert(html.includes(expected),expected);
+assert(!html.includes('Simulation · no market link'));assert(html.includes('No verified market link'));
+const mockNodes=new Map();
+const node=id=>{if(!mockNodes.has(id))mockNodes.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,replaceChildren(){},classList:{toggle(){}}});return mockNodes.get(id)};
+const source=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');
+const start=source.indexOf('function render(r){');const end=source.indexOf("\n}\n",start)+2;
+const block=source.slice(start,end)+'\n}'; // isolate early raw branch, before qualified economics rendering
+const detailContext=vm.createContext({$:node,esc,PriceComparisons:context.api,location:{href:'/game'},last:null,session:()=>({timeline:[{id:rows[0].cutoff}]}),showView(){}});
+vm.runInContext(block,detailContext);
+vm.runInContext('render('+JSON.stringify({native_raw:true,aggregated:false,comparisons:rows,cutoff:rows[0].cutoff,native_review:rows[0].native_review})+')',detailContext);
+assert(node('data-mode').textContent.includes('Retained native'));assert(!node('quantity').disabled);assert(node('probability').disabled);assert(node('ev-result').textContent.includes('Net and EV unavailable'));
+console.log('PASS: captured native comparison cards, ordinary Details branch, exact download binding, timestamps and exclusions');

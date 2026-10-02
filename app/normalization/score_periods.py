@@ -11,7 +11,14 @@ def validate_descriptor(e,d):
     if not scope(i):raise ValueError('Unsupported sport scoring segment')
     start,end=PERIODS[e['competition']][d['period']]
     expected=dict(offered='pregame',overtime='excluded',overtime_format='not_applicable',regulation=d['period'],segment_start=start,segment_end=end,normal_completion=completion(i),settlement_score=d['period']+'_only',tied_score='evaluate_actual_score_predicate')
-    if e['competition']=='MLB':expected.update(extra_innings='excluded',pitcher_conditions='action',completion_scope='specified_segment_only')
+    if e['competition']=='MLB':
+        pitcher='action'
+        if d.get('public_binding_version')=='public-contract-bindings-1' and d['family']=='moneyline':
+            from app.collection.public_contracts import load
+            if d.get('contract_provenance')!=load()['sources']['kalshi-baseball-win']:
+                raise ValueError('Public winner contract provenance conflict')
+            pitcher='not_specified_in_linked_winner_contract'
+        expected.update(extra_innings='excluded',pitcher_conditions=pitcher,completion_scope='specified_segment_only')
     if any(d.get(k)!=v for k,v in expected.items()):raise ValueError('Missing explicit segment boundaries, completion, excluded later scoring or action condition')
     if not isinstance(d.get('contract_document'),str) or not d['contract_document'].startswith('https://'):raise ValueError('Reviewed source contract document required')
     if d['family']=='moneyline':

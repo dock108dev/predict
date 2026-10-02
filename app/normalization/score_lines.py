@@ -44,8 +44,10 @@ def descriptor(event,d):
     if event['competition']=='NHL' and not segment:nhl_lines.validate_descriptor(event,d)
     family=d.get('family');line=Decimal(0) if h1 and family=='moneyline' else decimal(d.get('line'))
     if family=='spread' or (h1 and family=='moneyline'):
-        if d.get('participant') not in (event['home'],event['away']):raise ValueError('Spread participant missing or outside game')
-        threshold=-line if d['participant']==event['home'] else line
+        tie=(d.get('public_binding_version')=='public-contract-bindings-1' and family=='moneyline'
+             and d.get('participant')=='tie' and d.get('winner_structure')=='binary_tie_not_tie')
+        if not tie and d.get('participant') not in (event['home'],event['away']):raise ValueError('Spread participant missing or outside game')
+        threshold=Decimal(0) if tie else -line if d['participant']==event['home'] else line
     elif family=='total':
         if d.get('participant')!='combined' or line<0:raise ValueError('Only combined nonnegative game total supported')
         threshold=line
@@ -64,6 +66,19 @@ def descriptor(event,d):
     if ops not in ({'gt','le'},{'ge','lt'},{'gt','lt'},{'eq','ne'},{'gt','eq','lt'}):raise ValueError('Unsupported native predicate pair')
     if ops=={'gt','lt'} and any(s['equality']=='predicate' for s in sides):raise ValueError('Strict pair requires explicit push or unknown equality')
     return dict(domain='home_margin' if family in ('spread','moneyline') else 'combined_score',threshold=format(threshold,'f'))
+
+def orient_descriptor(event,d):
+    canonical=descriptor(event,d)
+    sides=[]
+    for s in d['outcomes']:
+        if d['family']=='futures':
+            label=d['participant']+' '+s['native_label'];sides.append(dict(s,participant=label,predicate='score',operator='state',threshold=None,domain='championship_states',label=label));continue
+        operator=s['operator']
+        if d['family'] in ('spread','moneyline') and d['participant']==event['away']:operator={'gt':'lt','ge':'le','lt':'gt','le':'ge','eq':'eq','ne':'ne'}[operator]
+        label=(d['participant']+' '+d['line'] if d['family']=='spread' else d['participant']+(' '+d['period']+' winner' if score_periods.scope(dict(d,competition=event['competition'])) else ' First half winner') if d['family']=='moneyline' else 'Total '+d['line'])+' '+s['native_label']
+        sides.append(dict(s,participant=label,predicate='score',operator=operator,threshold=canonical['threshold'],domain=canonical['domain'],label=label))
+    return canonical,sides
+
 
 def review(event,market,meta,source,mode):
     config=futures if market.get('market_type')=='futures' else CONFIG.get(event.get('competition'))
@@ -93,14 +108,7 @@ def review(event,market,meta,source,mode):
     if first_half.scope(dict(d,competition=event['competition'])) and terms['completion']!=first_half.completion(dict(d,competition=event['competition'])):raise ValueError('First-half completion terms must explicitly bind the reviewed completed segment')
     if score_periods.scope(dict(d,competition=event['competition'])) and terms['completion']!=score_periods.completion(dict(d,competition=event['competition'])):raise ValueError('Segment completion terms conflict')
     if not terms['completion'] or terms['completion'] in ('unknown','unverified'):raise ValueError('Completed-game score definition unknown')
-    sides=[]
-    for s in d['outcomes']:
-        if d['family']=='futures':
-            label=d['participant']+' '+s['native_label'];sides.append(dict(s,participant=label,predicate='score',operator='state',threshold=None,domain='championship_states',label=label));continue
-        operator=s['operator']
-        if d['family'] in ('spread','moneyline') and d['participant']==event['away']:operator={'gt':'lt','ge':'le','lt':'gt','le':'ge','eq':'eq','ne':'ne'}[operator]
-        label=(d['participant']+' '+d['line'] if d['family']=='spread' else d['participant']+(' '+d['period']+' winner' if score_periods.scope(dict(d,competition=event['competition'])) else ' First half winner') if d['family']=='moneyline' else 'Total '+d['line'])+' '+s['native_label']
-        sides.append(dict(s,participant=label,predicate='score',operator=operator,threshold=canonical['threshold'],domain=canonical['domain'],label=label))
+    sides=orient_descriptor(event,d)[1]
     if market.get('product_outcomes')!=sides:raise ValueError('Projected native score outcomes conflict')
     basis=r.get('fee_basis')
     if basis and path_value(native,r.get('fee_path'))!=basis:raise ValueError('Score-line fee evidence conflicts')

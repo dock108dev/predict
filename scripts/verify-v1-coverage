@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Offline retained-evidence reinterpretation. No transport or account access."""
+import json,sys,hashlib
+from pathlib import Path
+from collections import defaultdict,Counter
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
+from app.collection.source_bindings import load_ledger,SOURCES
+from app.collection.v1_comparison import bind,annotate,us_selectors,POLICY
+from app.collection.public_contracts import load as public,award_identity
+from app.collection.native_scope_bindings import selectors_for,series_binding
+from app.reference.aggregate import bind as aggregate_bind,augment
+from app.reference.odds_sample import normalize
+from app.reference.odds_bindings import normalize_event,CHAMPIONSHIPS
+from app.dashboard.session_projection import stable
+OUT=ROOT/'evidence/v1-coverage-comparison-20261001-v1'
+
+def read(path):return json.loads((ROOT/path).read_text())
+def key(i):return '/'.join([i['competition'],i['period'],i.get('category') or i['family']])
+def main():
+ OUT.mkdir(exist_ok=True)
+ reprocessed=[]
+ ledger=load_ledger();facts=read('app/fixtures/source-live-facts-20260930-v1.json');pairs=defaultdict(list);derived=[];receipts=[]
+ # Independent saved feeds already preserve original simultaneous capture IDs.
+ for base in ('evidence/LIVE-integrated-extension-7b2bf55f-74c4-4620-a7a1-81956097f431','evidence/LIVE-source-engineering-0701b59d-886f-444c-95b1-206144ef46c2'):
+  for path in sorted((ROOT/base).rglob('*feed.json')):
+   data=json.loads(path.read_text());data=data.get('body',data)
+   if not isinstance(data,dict):continue
+   for row in data.get('comparisons',[]):
+    if row.get('raw_difference') is None:continue
+    pairs[key(row['identity'])].append(dict(path=str(path.relative_to(ROOT)),row_id=row['id'],session=row['hash'],cutoff=row['cutoff'],sources=sorted(l['venue'] for l in row['legs']),evidence_class='retained_same_session_pair',timing=row['timing']))
+ # Whole historical aggregate bodies: one independent projection per body.
+ samples=read('evidence/odds-api-five-books-20260929/coverage.json')
+ bodies=[]
+ for sample in samples:
+  path=sample['raw_path'];result=read(str(Path(path).parent/'result.json'))
+  if result.get('body_complete') and result.get('status')==200:
+   body=(ROOT/path).read_bytes()
+   if hashlib.sha256(body).hexdigest()!=sample['raw_sha256']:raise ValueError('Retained aggregate digest differs')
+   bodies.append((path,normalize(body,sample['sport'],result['received_at'])))
+ path='evidence/source-bindings-20260929/acquisition/odds/response.json'
+ result=read('evidence/source-bindings-20260929/acquisition/odds/result.json');receipt=read('evidence/source-bindings-20260929/acquisition/odds/receipt.json')
+ if result.get('body_complete') and result.get('status')==200:
+  body=(ROOT/path).read_bytes()
+  if hashlib.sha256(body).hexdigest()!=receipt['raw_sha256']:raise ValueError('Period receipt digest differs')
+  bodies.append((path,normalize_event(body,'NFL',receipt['received_at'])))
+ for path,rows in bodies:
+  snapshot=dict(session_id='derived-'+stable(path),durable_cursor='response-'+stable(path),market_catalog=[],references=[],games=[],points={},rows_by_game={},sources=[])
+  augment(snapshot,aggregate_bind(rows))
+  for row in snapshot['aggregate_comparisons']:
+   if row['raw_difference'] is not None:pairs[key(row['identity'])].append(dict(path=path,row_id=row['id'],session=snapshot['session_id'],cutoff=snapshot['durable_cursor'],sources=sorted(l['venue'] for l in row['legs']),evidence_class='single_complete_response_pair',timing=row['timing']))
+ # Reprocess every whole indexed native response once; never merge sessions.
+ folders=sorted({r['source_folder'] for c in facts['cells'].values() for v in c.values() for r in v.get('records',[]) if r.get('source_folder')})
+ from app.dashboard.session_history import verified
+ from app.collection.coverage import decode_page,catalog
+ for folder in folders:
+  rows=list(verified(ROOT/folder)['rows']);pages=[r for r in rows if r['type']=='prediction_discovery_http'];at=max((r['received_at'] for r in pages),default=None)
+  if not at:continue
+  from app.dashboard.session_projection import stamp
+  # New catalog interpretation only; original pages remain byte-for-byte sealed.
+  interpreted=[dict({k:v for k,v in r.items() if k!='acquisition_discovery_policy'},v1_comparison_policy=POLICY) for r in pages]
+  for venue in SOURCES[:2]:
+   cat=catalog(interpreted,venue,stamp(at));annotate(cat,venue,rows[0]['spec'].get('native_review_records',[]));events={e['id']:e for e in cat['events']}
+   for market in cat['markets']:
+    event=events.get(market['event_id'],dict(id=market['event_id'],participants={},identity='unresolved'))
+    result=market.get('v1_raw_binding') or bind(event,market,venue)
+    if result.get('source_predicate') or result.get('award_binding') or result.get('public_identity') or result.get('locator',{}).get('status')=='DOCUMENTED_LOCATOR':
+     derived.append(dict(session=rows[0]['session_id'],folder=folder,cell_id=key(result['identity']) if result['identity'] and result['identity'].get('competition') else None,binding=result,original_exclusion=market.get('exclusion'),books_in_this_capture=sum(r['type']=='prediction_book' and r.get('source')==venue and r.get('book',{}).get('raw',{}).get('ref',{}).get('market_id')==market['id'] for r in rows)))
+  from copy import deepcopy
+  from app.dashboard.session_history import project_rows
+  from app.dashboard.price_comparison import comparisons
+  original_spec_sha256=stable(rows[0]['spec']);versioned=deepcopy(rows)
+  versioned[0]['spec']['v1_comparison_policy']=POLICY
+  snapshot=project_rows(versioned)
+  selected=comparisons(snapshot,{})
+  reprocessed.append(dict(folder=folder,original_spec_sha256=original_spec_sha256,derived_policy=POLICY,
+     session=snapshot['session_id'],cutoff=snapshot['durable_cursor'],new_manual_pairs=sum(bool(r.get('manual_raw')) for r in selected),
+     comparisons=selected,exclusions=snapshot.get('manual_comparison_exclusions',[]),original_modified=False))
+  receipts.extend(dict(path=folder,body_sha256=p['body_sha256'],complete=p.get('complete'),usable=p.get('usable_metadata')) for p in pages)
+ # Award crosswalk is independently exact and remains usable without payout table.
+ awards=[];award_rows={}
+ for association in public()['award_crosswalks']:
+  file=ROOT/association['source_path']
+  if str(file) not in award_rows:award_rows[str(file)]=list(verified(file.parent)['rows'])
+  row=next(r for r in award_rows[str(file)] if r.get('body_sha256')==association['source_body_sha256'])
+  _,body=decode_page(row);native=next(m for m in body['markets'] if m['ticker']==association['market_id'])
+  scope=series_binding(association['series_ticker']);award=award_identity(native,scope)
+  raw_binding=bind(dict(id=association['event_id'],participants={},identity='unresolved'),dict(id=association['market_id'],event_id=association['event_id'],_native=native,native_scope_binding=scope,market_type='futures',period='season'), 'kalshi')
+  if raw_binding['status']!='BOUND_RAW_PREDICATE':raise ValueError('Exact retained award raw predicate remains blocked')
+  awards.append(dict(market_id=association['market_id'],binding=award,raw_binding=raw_binding))
+ cells=[];source_records=[]
+ for c in ledger['cells']:
+  cid=c['cell_id'];sources={};pair_sources=sorted({s for p in pairs[cid] for s in p['sources']})
+  for venue,old in c['sources'].items():
+   exact=old.get('exact_bindings',[]);captured=old.get('captured_live_facts',{})
+   actual=bool(exact or old.get('listing_evidence') or captured.get('complete_metadata_records') or captured.get('records'))
+   locators=selectors_for(cid) if venue=='kalshi' else us_selectors(c) if venue=='polymarket_us' else []
+   if venue in SOURCES[2:]:
+    keys=old['binding'].get('market_keys',[])
+    if c['category']=='league_champion':keys=['outrights'];sport_key=CHAMPIONSHIPS[c['sport']]
+    else:sport_key=old['binding'].get('sport_key')
+    if c['category']=='conference_champion' or c['period'] in ('first_6','regulation_9'):keys=[]
+    locators=[dict(sport_key=sport_key,market_key=k) for k in keys]
+   blockers=[]
+   if not locators:blockers.append('Exact published source locator unestablished for '+cid)
+   matching=[d for d in derived if d['cell_id']==cid and d['binding']['source']==venue]
+   if matching:blockers.extend(b for d in matching for b in d['binding']['blockers'])
+   if c['sport']=='MLB' and venue in SOURCES[:2]:blockers.append('Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart')
+   if c['category']:
+    blockers.append('Selected current season/award/entrant and field revision association; counterpart same-award quote')
+   elif c['sport']=='NCAAB':blockers.append('Actual men Division I event, season, participant and selected market observations')
+   elif not actual and locators:blockers.append('Actual selected event/outcome/period/line records and same-session counterpart quotes')
+   elif not pairs[cid]:blockers.append('Same-session exact counterpart prices/state/receipt evidence')
+   if venue in pair_sources:blockers=['Broader actual coverage and fresh window; retained pairs are dated']
+   sources[venue]=dict(actual_retained_observations=actual,valid_comparable_pair=venue in pair_sources,
+    observed_metadata_count=captured.get('complete_metadata_records',0),exact_record_count=len(exact),
+    original_observation_refs=exact,retained_capture_records=captured.get('records',[]),locators=locators,
+    implemented_matching_awaiting_observations=bool(locators and venue not in pair_sources and not (venue=='polymarket_us' and c['family']=='futures')),shared_matching_implemented=True,source_locator_implemented=bool(locators),
+    offering_status='observed' if actual else 'unobserved',demonstrably_unsupported=False,
+    latest_delivery=old.get('latest_capture'),delivery_status='unavailable_in_retained_attempt' if old.get('latest_capture',{}).get('metadata',{}).get('complete') is False else 'complete_observations_retained' if actual else 'no_observation_indexed',
+    exact_remaining_locator_or_identity_blocker=list(dict.fromkeys(blockers)),
+    optional_economics='Unavailable calculations stay independently gated; no account/probability prerequisite')
+   source_records.append(dict(cell_id=cid,source=venue,**sources[venue]))
+  cells.append(dict(cell_id=cid,observed_sources=[s for s,r in sources.items() if r['actual_retained_observations']],comparable_sources=pair_sources,sources=sources,pair_evidence=pairs[cid]))
+ report=dict(version=POLICY,required_product_requirements=63,source_support_records=252,collection_authorized=False,
+  summary=dict(observed_source_support_records=sum(r['actual_retained_observations'] for r in source_records),paired_source_support_records=sum(r['valid_comparable_pair'] for r in source_records),requirements_with_observations=sum(bool(c['observed_sources']) for c in cells),requirements_with_valid_retained_pairs=sum(bool(c['comparable_sources']) for c in cells),
+   by_source={s:dict(observed_requirements=sum(c['sources'][s]['actual_retained_observations'] for c in cells),paired_requirements=sum(c['sources'][s]['valid_comparable_pair'] for c in cells),implemented_awaiting=sum(c['sources'][s]['implemented_matching_awaiting_observations'] for c in cells)) for s in SOURCES},
+   award_mappings=len(awards),derived_bindings=len(derived),unsupported_offerings=0),cells=cells,
+  limitations=['Retained observations and priced pairs are distinct; counts are not current live availability or full V1 completion','Metadata-only records never create simultaneous prices; receipt freshness is not source freshness','All seasonal requirements remain open; no scope reductions'])
+ for name,value in [('coverage-63.json',report),('source-support-252.json',source_records),('derived-native-bindings.json',derived),('derived-awards-32.json',awards),('retained-receipts.json',receipts),('reprocessed-session-comparisons.json',reprocessed)]:
+  (OUT/name).write_text(json.dumps(value,indent=2,sort_keys=True)+'\n')
+ md=['# V1 retained coverage — October 1, 2026','',str(report['summary']),'','63 product requirements; 252 source-support records. Counts describe retained evidence, not current availability. No seasonal exclusion.','', '| Requirement | Observed sources | Valid paired sources | Exact remaining source blockers |','| --- | --- | --- | --- |']
+ for c in cells:md.append('| '+c['cell_id']+' | '+', '.join(c['observed_sources'])+' | '+', '.join(c['comparable_sources'])+' | '+'; '.join(s+': '+', '.join(r['exact_remaining_locator_or_identity_blocker']) for s,r in c['sources'].items())+' |')
+ (OUT/'coverage-63.md').write_text('\n'.join(md)+'\n');print(json.dumps(report['summary'],indent=2))
+if __name__=='__main__':main()

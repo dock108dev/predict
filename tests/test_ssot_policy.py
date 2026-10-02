@@ -23,7 +23,9 @@ class DirectPolicy(unittest.TestCase):
         for owner_type in (MultiOwner, CoverageOwner, QualificationOwner):
             with self.subTest(owner=owner_type.__name__):
                 parameters = set(inspect.signature(owner_type.start).parameters) - {'self'}
-                self.assertEqual(parameters, owner_type.start_controls)
+                # Source settings are exposed only with an isolated aggregate transport.
+                optional={'source_settings'} if owner_type is CoverageOwner else set()
+                self.assertEqual(parameters-optional, owner_type.start_controls)
         with tempfile.TemporaryDirectory() as tmp:
             owner = CoverageOwner(Path(tmp)/'saved', pilot_output=Path(tmp)/'pilot')
             self.assertEqual(owner.status()['start_controls'], ['duration'])

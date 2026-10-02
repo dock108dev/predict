@@ -31,7 +31,7 @@ def identity(event, market):
     legacy=isinstance(event.get('canonical_key'),list) and len(event['canonical_key'])==2 and isinstance(event['canonical_key'][1],list)
     return dict(version=1, event=event.get('canonical_key') or ['unresolved',event['id']],
         sport=event.get('sport','american_football' if legacy else 'unknown'), competition=event.get('competition','NFL' if legacy else 'unknown'),
-        season=event.get('season',event.get('scheduled_start','')[:4]), stage=event.get('stage'),
+        season=event.get('season',(event.get('scheduled_start') or '')[:4]), stage=event.get('stage'),
         scheduled_start=event.get('scheduled_start'), family=market.get('market_type','unknown'),
         period=market.get('period','unknown'), line=market.get('line'), subject=market.get('subject'),
         outcome_set=market.get('outcome_set'), rules=market.get('rules_revision','normal-winner-legacy'),
@@ -52,8 +52,9 @@ class SessionProjection:
     def __init__(self):
         self.cursor=0; self.chain='0'*64; self.last=None; self.started=None; self.finished=None; self.stop_reason=None
         self.qualification_contexts={}; self.sid=None; self.spec={}; self.inventory={}; self.generation=None
-        self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}; self.resolutions={}
-        self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.last_row_hash=None; self.sizes={}; self.safety={}
+        self.book_evidence={}; self.metadata={}; self.books={}; self.health={}; self.invalid=set(); self.references={}; self.resolutions={}
+        self.aggregates={}; self.aggregate_bytes=0; self.aggregate_scopes={}; self.aggregate_status={}; self.aggregate_context={}
+        self.native_receipts={}; self.native_reviews={}; self.native_fee_contexts={}; self.qualification_failure=None; self.coverage_status={}; self.refresh=None; self.last_row_hash=None; self.sizes={}; self.safety={}
 
     def apply(self,row,cursor=None):
         # Match journal JSON types at the acknowledged live boundary.
@@ -64,6 +65,8 @@ class SessionProjection:
             return
         if cursor!=self.cursor+1: raise ValueError('noncontiguous durable cursor')
         typ=row['type']; source=row.get('source'); at=row['observed_at']
+        if self.spec.get('aggregate_version') and typ in ('coverage_inventory','prediction_book','market_selected','product_reference'):
+            raise ValueError('Historical aggregate session cannot mix source paths')
         if typ in ('prediction_book','market_selected','coverage_inventory','product_reference'):
             data=row.get('book',row.get('market',{}));ref=data.get('raw',{}).get('ref',{})
             size_key=(typ,source,ref.get('event_id'),ref.get('market_id'),row.get('reference',{}).get('id'))
@@ -72,18 +75,50 @@ class SessionProjection:
             self.sizes[size_key]=size
         if self.finished: raise ValueError('observation after terminal')
         if self.sid and row['session_id']!=self.sid: raise ValueError('session identity changed')
+        if typ=='native_fee_metadata' and source=='kalshi' and row.get('status')=='scoped_current_terms_bound':
+            if len(self.native_fee_contexts)>=16:raise ValueError('Native fee context bound')
+            self.native_fee_contexts[row['event_id']]=deepcopy(row)
         if typ=='session_started':
             if self.started: raise ValueError('duplicate session start')
             self.sid=row['session_id']; self.started=at; self.spec=deepcopy(row['spec'])
+            from app.dashboard.native_reviews import validate
+            values=self.spec.get('native_review_records',[])
+            if not isinstance(values,list) or len(values)>128 or len(json.dumps(values).encode())>4*1024*1024:raise ValueError('Native review input bound')
+            for value in values:
+                record=validate(value);key=(record['review_id'],record['revision'])
+                if key in self.native_reviews:raise ValueError('Duplicate native review revision')
+                self.native_reviews[key]=record
+        elif typ=='native_review':
+            from app.dashboard.native_reviews import validate
+            record=validate(row['review'])
+            key=(record['review_id'],record['revision'])
+            if key in self.native_reviews:raise ValueError('Native review revision cannot be rewritten')
+            if len(self.native_reviews)>=128 or sum(len(json.dumps(v).encode()) for v in self.native_reviews.values())+len(json.dumps(record).encode())>4*1024*1024:raise ValueError('Native review capacity exceeded')
+            self.native_reviews[key]=record
         elif typ=='qualification_context':
             if self.spec.get('future_qualification_policy')!='native-prerequisites-1':raise ValueError('Unversioned qualification context')
             context=deepcopy(row['context']); key=context['book_id']
             if key in self.qualification_contexts:raise ValueError('Qualification context cannot be rewritten')
             if len(self.qualification_contexts)>=64 or len(json.dumps(context).encode())>32768:raise ValueError('Qualification context bound')
             self.qualification_contexts[key]=context
+        elif typ in ('prediction_http','prediction_discovery_http'):
+            # Receipt anchors for versioned retained catalog judgments; never parse partial bytes.
+            if row.get('complete') and row.get('status')==200:
+                import base64
+                body=base64.b64decode(row['body_b64'])
+                if sha256(body).hexdigest()!=row['body_sha256']:raise ValueError('Native receipt hash mismatch')
+                if len(self.native_receipts)>=4096 and (source,row['body_sha256']) not in self.native_receipts:raise ValueError('Native receipt anchor bound')
+                receipt_key=(source,row['body_sha256'])
+                from app.collection.native_review_binding import enabled as current_review_binding
+                if current_review_binding(self.spec) and receipt_key in self.native_receipts:
+                    self.native_receipts[receipt_key]=min(self.native_receipts[receipt_key],row['received_at'],key=stamp)
+                else:self.native_receipts[receipt_key]=row['received_at']
         elif typ=='coverage_inventory':
             if row.get('previous_generation')!=self.generation: raise ValueError('inventory dependency mismatch')
             cats=deepcopy(row['inventory'])
+            if sum(len(c['markets']) for c in cats.values())>512 and getattr(self,'native_interpretation','native-book-comparison-4')=='native-book-comparison-4':
+                from app.collection.catalog_metadata import compact
+                for venue,cat in cats.items():compact(cat,venue)
             if sum(len(c['markets']) for c in cats.values())>512: raise ValueError('projection market bound')
             old=self.memberships(); self.inventory=cats; self.generation=row['generation']; new=self.memberships()
             for key in list(self.books):
@@ -100,7 +135,20 @@ class SessionProjection:
             if typ=='market_selected': self.metadata[key]=deepcopy(row)
             else:
                 self.books[key]=deepcopy(row)
+                if row.get('native_observation'):
+                    obs=row['native_observation']
+                    summary=self.book_evidence.setdefault(key,dict(counts={},latest=None))
+                    label=obs['classification']
+                    summary['counts'][label]=summary['counts'].get(label,0)+1
+                    summary['latest']=deepcopy(obs)
                 if data['sync']=='synchronized' and self.health.get(key,{}).get('state')=='connected': self.invalid.discard(key)
+        elif typ=='native_source_stopped':
+            if source in self.inventory:
+                self.inventory[source].update(source_error=row['reason'],selected_exclusions=[dict(reason=row['reason'],admission='terminal',retry=False)])
+            for key in self.books:
+                if key[0]==source:
+                    self.invalid.add(key)
+                    self.health[key]=dict(source=source,state='unavailable',gap_reason=row['reason'])
         elif typ=='source_health':
             for key in self.memberships() | dict.fromkeys(self.books):
                 if key[0]!=source: continue
@@ -119,6 +167,43 @@ class SessionProjection:
             if r['id'] not in self.resolutions:
                 if len(self.resolutions)>=MAX_RECORDS or sum(len(json.dumps(v).encode()) for v in self.resolutions.values())+len(json.dumps(r).encode())>8*1024*1024:raise ValueError('Resolution bound')
                 self.resolutions[r['id']]=dict(record=r,observed_at=at,cursor=cursor)
+        elif typ in ('aggregate_snapshot','aggregate_award_snapshot','aggregate_inventory','aggregate_status'):
+            from app.collection.source_session import VERSION as SESSION_VERSION
+            from app.reference.aggregate import VERSION
+            if self.spec.get('source_session',{}).get('version')!=SESSION_VERSION:
+                raise ValueError('Unversioned aggregate session observation')
+            if typ=='aggregate_status':self.aggregate_status=deepcopy(row)
+            elif typ=='aggregate_inventory':
+                for scope in list(self.aggregate_scopes):
+                    if scope[0]==row['sport'] and scope[1] not in row['event_ids'] and scope[1]!='award':
+                        for key in self.aggregate_scopes.pop(scope):self.aggregates.pop(key,None)
+                        self.aggregate_context.pop(scope,None)
+            else:
+                if row['version']!=VERSION:raise ValueError('Unsupported aggregate mapping')
+                records=deepcopy(row['records'])
+                if len(records)>5000 or any(r['original']['sport']!=row['sport'] or (typ!='aggregate_award_snapshot' and r['original']['source_event_id']!=row['event_id']) or r['response']!=row['response_sha256'] for r in records):raise ValueError('Aggregate scope mismatch')
+                scope=(row['sport'],'award' if typ=='aggregate_award_snapshot' else row['event_id'])
+                updated={k:v for k,v in self.aggregates.items() if k not in self.aggregate_scopes.get(scope,[])}
+                updated.update({r['id']:r for r in records})
+                if len(updated)>5000 or len(json.dumps(updated).encode())>16*1024*1024:raise ValueError('Aggregate bound')
+                self.aggregates=updated;self.aggregate_scopes[scope]=[r['id'] for r in records]
+                self.aggregate_context[scope]={k:deepcopy(row.get(k)) for k in ('sport','event_id','response_sha256','received_at','processing_at','observed_at')}
+        elif typ=='product_aggregate':
+            from app.reference.aggregate import VERSION
+            if self.spec.get('aggregate_version') != VERSION or self.spec.get('mode') != 'observation':
+                raise ValueError('Aggregate import requires an isolated historical observation session')
+            if self.inventory or self.books:raise ValueError('Aggregate historical session cannot mix native books')
+            records=deepcopy(row['records'])
+            if row.get('version') != VERSION:raise ValueError('Unsupported aggregate version')
+            for record in records:
+                key=record['id']
+                if record['version'] not in (VERSION, 'odds-aggregate-period-1'):raise ValueError('Unsupported aggregate record')
+                if key in self.aggregates:
+                    if self.aggregates[key]!=record:raise ValueError('Aggregate revision changed')
+                    continue
+                size=len(json.dumps(record).encode())
+                if len(self.aggregates)>=5000 or self.aggregate_bytes+size>16*1024*1024:raise ValueError('Aggregate bound')
+                self.aggregates[key]=record;self.aggregate_bytes+=size
         elif typ=='product_reference':
             ref=deepcopy(row['reference'])
             if ref['role'] not in ('model_reference','bookmaker_reference'): raise ValueError('invalid reference role')
@@ -186,6 +271,8 @@ class SessionProjection:
                 if is_line and ident['competition']=='NFL':reason=reason or nfl_line_gaps.get((source,e['id']))
                 if ident and ((ident['family']!='moneyline' and not is_line) or (ident['period']!='full_game' and not h1 and not segment and not futures.scope(ident))): reason=reason or 'unsupported family or period'
                 if m['id'] not in cat.get('selection',{}).get('ids',[]): reason=reason or 'not selected'
+                if self.spec.get('native_discovery',{}).get('slice')=='native-books-v1':
+                    reason=reason or 'raw native acquisition; economics and contract equivalence unqualified'
                 record=dict(source_id=source,event_id=m['event_id'],market_id=m['id'],identity=ident,title=(e or {}).get('title'),reason=reason,health=deepcopy(self.health.get(key)),native=deepcopy(m))
                 if 'display_prices' in m:
                     record.update(received_at=m.get('received_at'),update_path=cat.get('update_path'))
@@ -193,7 +280,13 @@ class SessionProjection:
                 if retained:
                     record.update(received_at=retained['book']['raw']['received_at'],update_path=retained.get('update_path','native stream'),
                         quantity_unit=retained['book']['quantity_unit'],quotes=[deepcopy(q) for p in retained['packets'] for q in p['normalized']['quotes']])
+                if key in self.book_evidence:
+                    record['book_evidence']=deepcopy(self.book_evidence[key])
+                    record['native_book']=deepcopy(retained['book']) if retained else None
                 catalog.append(record)
+                if self.spec.get('mode')=='real' and source in ('kalshi','polymarket_us') and ident and ident.get('rules')=='normal-winner-legacy' and getattr(self,'native_interpretation','native-book-comparison-4')=='native-book-comparison-4':
+                    record['reason']=reason or 'Explicit versioned native review required for raw correspondence'
+                    continue
                 if reason: continue
                 meta=self.metadata.get(key)
                 if not meta: record['reason']='awaiting metadata'; continue
@@ -326,11 +419,22 @@ class SessionProjection:
             started_at=self.started,stopped_at=self.finished,stop_reason=self.stop_reason,durable_cursor=token,projection_revision=REVISION,mapping_revision=self.spec.get('mapping_revision'),
             last_update=self.last,sources=sources,market_catalog=catalog,references=refs,refresh=self.refresh,generation=self.generation,
             games=games,points=points,rows_by_game=rows_by_game,comparison_groups_beyond_limit=truncated)
+        from app.dashboard.native_book_comparison import connect
+        connect(self,result,at)
         if self.spec.get('future_qualification_policy'):
             if self.spec['future_qualification_policy']!='native-prerequisites-1':raise ValueError('Unsupported future qualification policy')
             result['future_qualification_contexts']=deepcopy(self.qualification_contexts)
         if self.spec.get('two_source_qualification'):result['qualification_fee_policy']='native-evidence-required'
         if self.resolutions:result['resolutions']=deepcopy(list(self.resolutions.values()))
+        if self.aggregates or self.spec.get('source_session'):
+            from app.reference.aggregate import augment
+            augment(result,self.aggregates.values())
+            if self.spec.get('source_session'):
+                from app.collection.source_projection import current_aggregate
+                current_aggregate(result,self.spec['source_session'],self.aggregate_status,at,list(self.aggregate_context.values()))
+        if self.spec.get('v1_comparison_policy')in ('manual-comparison-1','manual-comparison-2'):
+            from app.collection.v1_comparison import connect as manual_connect
+            manual_connect(self,result,at)
         from app.dashboard.bounds import retained_bytes
         if retained_bytes(result)>32*1024*1024:raise ValueError('snapshot byte bound')
         return deepcopy(result)

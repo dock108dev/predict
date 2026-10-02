@@ -1,0 +1,85 @@
+{
+  "status": "OFFLINE_VERIFIED_NOT_LIVE_AUTHORIZED",
+  "implementation_sha256": "22ae2fb1aafd6789e10a74c9bec90b6eded5fefc01f12c31f82e4d86c6e79ac0",
+  "spec_sha256": "6df2c2504745d840cb10ba1148b223050080a03de2a3d30c7548b20c75d8bd62",
+  "timed": {
+    "classification": "OFFLINE exact script/control and ordinary owner Start/Stop; labeled synthetic quota, games, award identity, milestone links and capped US response; loopback only",
+    "implementation_sha256": "22ae2fb1aafd6789e10a74c9bec90b6eded5fefc01f12c31f82e4d86c6e79ac0",
+    "spec_sha256": "6df2c2504745d840cb10ba1148b223050080a03de2a3d30c7548b20c75d8bd62",
+    "duration": 180,
+    "elapsed_seconds": 182.20702991704457,
+    "operations": {
+      "aggregate": 31,
+      "kalshi": 53,
+      "us": 3
+    },
+    "simulated_reserved_credits": 102,
+    "actual_provider_requests": 0,
+    "actual_credit_use": 0,
+    "credential_access": 0,
+    "automatic_deadline": "manual_stop",
+    "ordinary_control": true,
+    "actual_launcher_main": true,
+    "cleanup": true,
+    "exact_reopening": true,
+    "raw_replay": {
+      "version": "unified-source-session-1",
+      "verified": true,
+      "snapshots": 24,
+      "dispatch_reservations": 31,
+      "qualification": "Offline raw response and mapping replay; no source semantics inferred"
+    },
+    "resources": {
+      "peak_rss_bytes": 202588160,
+      "peak_queue_records": 4,
+      "peak_queue_bytes": 2810221,
+      "ingress_bytes": 449947,
+      "journal_bytes": 487508,
+      "elapsed_seconds": 183.31450024992228
+    },
+    "unused_budget": "expires; never a retry allowance"
+  },
+  "checks": {
+    "native": 62,
+    "ordinary": 27,
+    "collector": 6,
+    "total_unique": 95
+  },
+  "fresh_process": {
+    "exact": true,
+    "snapshot_sha256": "d049a29fddfd901a2e5421f43e18b3e3589f2e6f85b34c6df7c2f795192686f5",
+    "independent_process": true,
+    "actual_requests": 0
+  },
+  "supervisor": {
+    "classification": "OFFLINE actual supervisor with process stand-ins; actual launcher/control qualified separately",
+    "consumed_attempt_refused": true,
+    "actual_provider_requests": 0,
+    "credentials": 0,
+    "outcome": "control_complete",
+    "elapsed_seconds": 0.09785112494137138,
+    "children_reaped": true,
+    "unused_budget": "expires; never refunded or reused"
+  },
+  "evidence_paths": [
+    "evidence/v1-coverage-collector-20261001-v1/sealed-native-regressions.log",
+    "evidence/v1-coverage-collector-20261001-v1/sealed-ordinary-regressions.log",
+    "evidence/v1-coverage-collector-20261001-v1/final-lifecycle.log",
+    "evidence/v1-coverage-collector-20261001-v1/sealed-contract-deadline.log",
+    "evidence/v1-coverage-collector-20261001-v1/sealed-quota.log",
+    "evidence/v1-coverage-collector-20261001-v1/scoped-native-books-final.log"
+  ],
+  "scope_limits": [
+    "Labeled fixtures qualify executable processing only; real locators/identity/offerings remain unknown",
+    "Timed run Stop reason is manual_stop; automatic deadline verified separately",
+    "Supervisor child stand-ins are distinct from actual launcher/controller and ordinary routes",
+    "Earlier failed and changing-candidate attempts remain retained; resource caps were not raised"
+  ],
+  "preservation": {
+    "protected_files": 15638,
+    "changed": [],
+    "passed": true,
+    "includes_consumed_approvals": true
+  },
+  "scoped_native_books": "Labeled one-scope NFL fixture: actual discovery selection, WebSocket prices and repeated update, Stop and exact reopening"
+}

@@ -119,6 +119,55 @@ def parse_market(response, data, event_id):
         state=state(data.get('status', data.get('ep3Status'))))
 
 
+# Fine-grained full-game values established by complete retained records.
+FULL_GAME_TYPES = {'nfl':'football_team_full_game_winner', 'cfb':'football_team_full_game_winner',
+                   'mlb':'baseball_team_full_game_winner', 'nhl':'hockey_team_full_game_winner'}
+LIVE_FULL_GAME_TYPES = {**FULL_GAME_TYPES, 'nba':'basketball_team_full_game_winner'}
+
+def event_game_binding(data, league, *, live_bindings=False):
+    """Bind a listing's participants/market refs through explicit side team IDs.
+
+    Some complete NHL events have no gameId and contain ancillary teams/tags.
+    Never infer a pair from title order or silently pick two of three teams.
+    All qualifying embedded markets must agree on the same explicit pair.
+    """
+    teams=data.get('teams')
+    if not isinstance(teams,list):return dict(teams=[],markets=[],basis='missing_teams')
+    types=LIVE_FULL_GAME_TYPES if live_bindings else FULL_GAME_TYPES
+    if league not in types:return dict(teams=teams,markets=[],basis='event_teams_only')
+    bound=[];pairs=[]
+    for market in data.get('markets') or []:
+        if not isinstance(market,dict) or market.get('sportsMarketType')!=types.get(league):continue
+        sides=market.get('marketSides')
+        if not isinstance(sides,list) or len(sides)!=2:continue
+        # Older/minimal records without side-team IDs remain unbound.
+        if any(not isinstance(x,dict) or not x.get('teamId') for x in sides):continue
+        try:
+            mid=identifier(market.get('id'));slug=identifier(market.get('slug'))
+            if len(slug)>200 or len(side_ids(market))!=2:raise ValueError('invalid_market_pair')
+            pair=[]
+            for side in sides:
+                sid=str(side['teamId']);team=side.get('team') or {}
+                matching=[t for t in teams if isinstance(t,dict) and str(t.get('id'))==sid]
+                if (str(side.get('marketId'))!=mid or str(team.get('id'))!=sid or len(matching)!=1
+                    or team.get('name')!=matching[0].get('name') or team.get('league')!=league
+                    or matching[0].get('league')!=league):raise ValueError('conflicting_embedded_team_identity')
+                role=team.get('ordering')
+                pair.append(dict(matching[0],ordering=role if role in ('home','away') else None))
+            if len({t['id'] for t in pair})!=2:raise ValueError('duplicate_embedded_team_identity')
+            roles=[t['ordering'] for t in pair]
+            if any(roles) and set(roles)!={'away','home'}:raise ValueError('conflicting_embedded_team_roles')
+            pairs.append(pair);bound.append(dict(id=mid,slug=slug))
+        except (KeyError,TypeError,ValueError) as exc:raise ValueError('invalid_embedded_game_binding:'+str(exc)) from None
+    if pairs:
+        signature=lambda pair:sorted((str(t['id']),t['name'],t.get('ordering')) for t in pair)
+        if any(signature(pair)!=signature(pairs[0]) for pair in pairs):raise ValueError('conflicting_embedded_game_pairs')
+        if len({m['id'] for m in bound})!=len(bound) or len({m['slug'] for m in bound})!=len(bound):raise ValueError('duplicate_embedded_market_identity')
+        return dict(teams=pairs[0],markets=sorted(bound,key=lambda m:(m['id'],m['slug'])),basis='embedded_full_game_side_team_ids',
+                    ignored_team_ids=[str(t.get('id')) for t in teams if isinstance(t,dict) and t.get('id') not in {v['id'] for v in pairs[0]}])
+    return dict(teams=teams,markets=[],basis='event_teams_only')
+
+
 def parse_event(response, data, league='nfl'):
     """Shared native event conversion for live adapters and offline inventory."""
     return Event(raw=response.raw(identifier(data.get('id'))), title=data.get('title'),
@@ -179,7 +228,7 @@ def _market_index(body):
     elif 'markets' in data:
         candidates = data['markets']
     else:
-        candidates = [m for e in data.get('events', []) for m in e.get('markets', [])]
+        candidates = [m for e in data.get('events', [data['event']] if isinstance(data.get('event'),dict) else []) for m in e.get('markets', [])]
     return {identifier(m.get('id')): m for m in candidates}
 
 

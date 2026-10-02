@@ -1,0 +1,52 @@
+{
+  "format": "predict-counterpart-master-1",
+  "fresh_package_id": "v1-counterpart-3e21ecd1-da04-42ed-8772-0ae4c8c1f753",
+  "initial_implementation_sha256": "a06609c5b1e684225cd486977263ff7b3d094e5b34daa12b83964816d30e6ddf",
+  "spec_sha256": "28bfa087fe3268f45a03be3518e0816101edaa49bd40e950ae40e1656116cf4f",
+  "output_root": "/Users/michaelfuscoletti/Desktop/prediction-arb/evidence/LIVE-v1-counterpart-3e21ecd1-da04-42ed-8772-0ae4c8c1f753",
+  "max_sessions": 2,
+  "per_session_reservation": {
+    "http": 27,
+    "credits": 8,
+    "websocket_attempts": 4,
+    "collection_seconds": 180,
+    "supervised_seconds": 240,
+    "output_bytes": 134217728
+  },
+  "cumulative": {
+    "sessions": 2,
+    "http_attempts": 54,
+    "websocket_attempts": 8,
+    "credits": 16,
+    "collection_seconds": 360,
+    "supervised_seconds": 480,
+    "output_bytes": 268435456,
+    "control_bytes": 6291456
+  },
+  "validity_window": {
+    "start": "2026-10-01T00:00:00Z",
+    "latest_start": "2026-10-08T03:55:59Z",
+    "expires": "2026-10-08T03:59:59Z"
+  },
+  "protected_files": {
+    "app/collection/native_approval.py": "b0af4b7233efc266d41315165cf9eb2213b4d71433724d916d8a5ce8463a6e57",
+    "app/collection/engineering_authorization.py": "eedfc76551c207a0cc253d98060785d8e07aac62112240ab6674913845da45e2"
+  },
+  "file_hashes": {
+    "SOURCE-MANIFEST.json": "15534acdae82f4b78711621d6fa77c4f43da49ce795ee0d1fc34dc47a89ad6fe",
+    "SOURCE.zip": "af78200f8dba2055b80282ec7720680284d46b6d725ea0fe0f085a848b733061",
+    "TARGETS.json": "e4d3675f0a0dac530efd49d94c62e685bf2d5cdf3b4189f405c495392a488ad7",
+    "execute.py": "69022f7801baa4d2e1a63cd33d06c7a2251196f884d4b9d93ff2758c041f4bd5",
+    "control.py": "2e94270901e1929df776543bcbe38f605a7f3167b6d894e43c606ba9c5f60e7d",
+    "LIMITS.json": "e9b0e35337ef96501db128f8b3f3a8120d41908f65d0d4ded47b71db4afe0efe",
+    "README.md": "f108448c34fd180dfcdc6b343ec457a6144175569f1ffbdd8b1735992eff5438",
+    "AUTHORIZATION.txt": "1e8408ae577a75e271230c6886f53a4b671ab7b226c2ebf56cadbbecad82cd3a",
+    "launch.py": "737842b83cd930922450fcfd413cb4f8d37a4145e3b18f99821f6684491feb88",
+    "master.py": "662a10bd63910606bfaf94e6cb23389661ba155209c20568ddd15e65201f2e4e",
+    "execute-child.py": "8cab6d55c15054964b326090591494ab1908e609b03cf00d3968df664ed98fb4",
+    "run-spec.json": "6ccbc2ea92bd6992ec296c04ef038ca847f44760b23d35a46ce972eaf8f4c630",
+    "OPERATIONS.json": "5fc30e18bf667e328a4609d2fb1f782c19b21c4c3da133575e2335d049ed0abe"
+  },
+  "approved": false,
+  "collection_authorized": false
+}

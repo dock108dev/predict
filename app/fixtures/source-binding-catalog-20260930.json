@@ -1,0 +1,31 @@
+{
+  "schema": "source-binding-catalog-review-1",
+  "reviewed_at": "2026-09-30",
+  "evidence_mode": "public_primary_documentation",
+  "sources": {
+    "markets": "https://the-odds-api.com/sports-odds-data/betting-markets.html",
+    "sports": "https://the-odds-api.com/sports-odds-data/sports-apis.html"
+  },
+  "findings": {
+    "mlb_six_nine": {
+      "status": "published_key_unestablished",
+      "source": "https://the-odds-api.com/sports-odds-data/betting-markets.html",
+      "fact": "Published baseball cumulative-period keys cover first 1, 3, 5 and 7 innings. No required first-6 or regulation-9 key is documented.",
+      "missing": "Exact supported provider key/schema and selected Novig/ProphetX records for required first-6/regulation-9; full-game or first-7 substitution forbidden",
+      "limitation": "Published API catalog boundary; no inference that the originating venue never offers the market"
+    },
+    "conference": {
+      "status": "conference_identifier_unestablished",
+      "source": "https://the-odds-api.com/sports-odds-data/sports-apis.html",
+      "fact": "Selected league championships have published sport keys; required conference championships lack documented equivalent identifiers.",
+      "missing": "Exact conference award/key, season, regular-season versus tournament meaning, full field and selected-book records"
+    },
+    "league": {
+      "status": "catalog_key_only",
+      "source": "https://the-odds-api.com/sports-odds-data/sports-apis.html",
+      "fact": "All six selected league championship sport keys are documented; generic outrights is a published market key.",
+      "missing": "Actual selected-book event/outcomes with evidenced season/horizon, award and complete field revision; catalog name is insufficient"
+    }
+  },
+  "collection_authorized": false
+}

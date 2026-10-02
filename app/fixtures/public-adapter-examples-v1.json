@@ -1,0 +1,157 @@
+{
+  "version": "public-adapter-examples-1",
+  "evidence_mode": "synthetic",
+  "qualification": "Documented-format fixtures only; no real selected-market result, correction, position or fill observation",
+  "examples": [
+    {
+      "format": "kalshi_market",
+      "document_id": "kalshi-market",
+      "body": {
+        "market": {
+          "ticker": "SYNTHETIC-K",
+          "event_ticker": "SYNTHETIC-E",
+          "result": "scalar",
+          "notional_value_dollars": "1",
+          "settlement_value_dollars": "0.306",
+          "settlement_ts": "2026-09-30T12:00:00Z"
+        }
+      }
+    },
+    {
+      "format": "us_instrument",
+      "document_id": "us-instrument-settlement",
+      "body": {
+        "symbol": "SYNTHETIC-SYMBOL",
+        "priceScale": "100",
+        "stats": {
+          "settlementPx": "0",
+          "settlementPreliminary": false,
+          "settlementPriceCalculationMethod": "SETTLEMENT_PRICE_CALCULATION_METHOD_EVENT_TIER_1",
+          "settlementSetTime": "2026-09-30T12:00:00Z"
+        }
+      }
+    },
+    {
+      "format": "us_instrument",
+      "document_id": "us-instrument-settlement",
+      "correction_example": true,
+      "local_supersession_basis": "same exact symbol, newer explicit settlementSetTime; not a provider revision ID",
+      "body": {
+        "symbol": "SYNTHETIC-SYMBOL",
+        "priceScale": "100",
+        "stats": {
+          "settlementPx": "100",
+          "settlementPreliminary": false,
+          "settlementPriceCalculationMethod": "SETTLEMENT_PRICE_CALCULATION_METHOD_EVENT_TIER_1",
+          "settlementSetTime": "2026-09-30T14:00:00Z"
+        }
+      }
+    },
+    {
+      "format": "us_retail",
+      "document_id": "us-settlement",
+      "body": {
+        "slug": "SYNTHETIC-SLUG",
+        "settlement": "0.5"
+      }
+    },
+    {
+      "format": "novig_v3_market",
+      "document_id": "novig-market-schema",
+      "body": {
+        "marketId": "SYNTHETIC-M",
+        "eventId": "SYNTHETIC-E",
+        "status": "SETTLED",
+        "voids": "FMV",
+        "outcomes": [
+          {
+            "outcomeId": "SYNTHETIC-A",
+            "name": "A",
+            "status": "0.3"
+          },
+          {
+            "outcomeId": "SYNTHETIC-B",
+            "name": "B",
+            "status": "0.7"
+          }
+        ]
+      }
+    },
+    {
+      "format": "novig_v3_market",
+      "document_id": "novig-lifecycle",
+      "correction_example": true,
+      "local_supersession_basis": "explicit remediation resets whole outcome group; source clock unknown",
+      "body": {
+        "marketId": "SYNTHETIC-M",
+        "eventId": "SYNTHETIC-E",
+        "status": "CLOSED",
+        "voids": "FMV",
+        "outcomes": [
+          {
+            "outcomeId": "SYNTHETIC-A",
+            "name": "A",
+            "status": "TBD"
+          },
+          {
+            "outcomeId": "SYNTHETIC-B",
+            "name": "B",
+            "status": "TBD"
+          }
+        ]
+      }
+    },
+    {
+      "format": "prophetx_order",
+      "document_id": "prophetx-order-schema",
+      "body": {
+        "data": {
+          "order_id": "SYNTHETIC-ORDER",
+          "market_id": 2,
+          "sport_event_id": 3,
+          "outcome_id": 4,
+          "status": "closed",
+          "winning_status": "draw",
+          "settled_at": "2026-09-30T12:00:00Z"
+        },
+        "last_synced_at": "2026-09-30T12:01:00Z"
+      }
+    },
+    {
+      "format": "us_execution",
+      "document_id": "us-order-model",
+      "body": {
+        "order": {
+          "priceScale": "100",
+          "fractionalQuantityScale": "100"
+        },
+        "lastPx": "97",
+        "lastShares": "312",
+        "commissionNotionalCollected": "100"
+      }
+    },
+    {
+      "format": "odds_scores",
+      "document_id": "odds-scores",
+      "body": {
+        "id": "SYNTHETIC-ODDS-E",
+        "sport_key": "americanfootball_nfl",
+        "commence_time": "2026-09-30T00:00:00Z",
+        "completed": true,
+        "home_team": "SYNTHETIC Home",
+        "away_team": "SYNTHETIC Away",
+        "scores": [
+          {
+            "name": "SYNTHETIC Away",
+            "score": "17"
+          },
+          {
+            "name": "SYNTHETIC Home",
+            "score": "24"
+          }
+        ],
+        "last_update": "2026-09-30T03:01:00Z"
+      }
+    }
+  ]
+}

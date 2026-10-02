@@ -68,3 +68,5 @@
 .dashboard-page #product-coverage:not(:empty){padding:4px 16px}
 .dashboard-page #product-coverage summary{min-height:44px;align-content:center}
 .comparison-card summary{min-height:44px;align-content:center}
+.math-panel textarea{width:100%;box-sizing:border-box;min-width:16em;max-width:100%;font-family:monospace}
+.math-panel label{display:block;margin:.6em 0}.math-panel button{margin:.25em}.math-panel .math-result{overflow-wrap:anywhere}

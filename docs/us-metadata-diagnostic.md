@@ -1,0 +1,7 @@
+# Polymarket US metadata-only diagnostic
+
+The completed [delivery repair](us-metadata-delivery-repair.md) remains historical authority. The new [sealed diagnostic](../evidence/us-metadata-diagnostic-20260930-v1/README.md) opts into native-http-v2 through its own us-event-delivery-diagnostic-v1 slice and exact public event-by-ID request. Legacy specifications retain their original limits.
+
+The ordinary owned-server/control and collector paths now permit an explicitly sealed metadata-only single US response, followed by durable separate findings and immediate terminal cleanup. No paired review, book selection, credentials, Kalshi, aggregate request or automatic follow-up is allowed. A complete started or closed event can answer delivery while failing pregame eligibility. Whole response framing/validation and full catalog resource admission precede semantic claims; incomplete or bounded failures retain raw provenance and exact reasons. Fresh reopening recomputes the semantic report and rejects changed or invented claims.
+
+Preparation and synthetic engineering evidence do not approve execution. Each activation/dispatch requires its exact candidate, specification, package, unused attempt/destination and independent finite validity. Latest activation/dispatch reserves the full32-second path before expiration. Future paired books and current review/product applicability remain separate work.

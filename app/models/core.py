@@ -66,6 +66,9 @@ class MarketState(StrEnum):
 class MarketType(StrEnum):
     UNKNOWN = "unknown"
     MONEYLINE = "moneyline"
+    SPREAD = "spread"
+    TOTAL = "total"
+    FUTURES = "futures"
 
 
 class SettlementCompatibility(StrEnum):

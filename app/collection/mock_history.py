@@ -20,8 +20,9 @@ def validate_mock(spec, endpoints, credentials=None):
 
 
 def fixture_endpoints(session):
-    validate_mock(session.spec, session.endpoints, session.credentials)
-    return session.endpoints
+    endpoints={k:v for k,v in session.endpoints.items() if k!='aggregate'} if session.spec.get('source_session') else session.endpoints
+    validate_mock(session.spec, endpoints, session.credentials)
+    return endpoints
 
 
 class SegmentedTransportJournal:

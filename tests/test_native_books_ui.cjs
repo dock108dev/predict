@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const script=fs.readFileSync('app/dashboard/opportunity_static/dashboard.js','utf8');
+const helper=script.slice(0,script.indexOf('\n}',script.indexOf('function nativeBookDetails'))+2);
+const context={};vm.createContext(context);vm.runInContext(helper,context);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const html=context.nativeBookDetails({source_id:'kalshi',market_id:'<id>',book_evidence:{counts:{initial_snapshot:1,repeated_identical_observation:4,price_or_quantity_change:2,recovery_snapshot:1},latest:{exchange_at:null,received_at:'original receipt'}},native:{slug:'<source slug>'}},esc);
+assert(html.includes('1 initial snapshots · 4 identical repeats · 2 price or quantity changes · 1 recovery snapshots'));
+assert(html.includes('source time: unavailable'));assert(html.includes('Original inputs and identity'));
+assert(!html.includes('<id>'));assert(!html.includes('<source slug>'));assert(html.includes('does not establish fresh prices'));
+assert.equal(context.nativeBookDetails({},esc),'');
+console.log('PASS: native Details counts, missing source clock, raw-input escaping and ordinary non-slice output');

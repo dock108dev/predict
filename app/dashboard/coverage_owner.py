@@ -8,12 +8,22 @@ from datetime import datetime, timezone
 
 from app.diagnostics import failure
 from app.dashboard.multi_game import MultiOwner, configuration
-from app.dashboard.e6_live import save_json, digest, ROOT
+from app.dashboard.e6_live import save_json as _save_json, digest, ROOT
 from app.collection.continuous import ContinuousSession, LIMITS, MIB, rss
 from app.collection.transport_session import reopen
 from app.collection.native_replay import verify_native_saved
 
 OUTPUT = ROOT/'evidence/d2-coverage'
+
+
+def save_json(path, value):
+    """Reserve final export bytes before writing; preserve the journal on failure."""
+    path = Path(path)
+    required = len(json.dumps(value, indent=2).encode())
+    retained = sum(p.stat().st_size for p in path.parent.iterdir() if p.is_file())
+    if retained + required > LIMITS['output_bytes']:
+        raise ValueError('output cap exceeded before export')
+    _save_json(path, value)
 
 
 def spec():
@@ -34,7 +44,34 @@ def replay_groups(saved):
     if saved['rows'][0].get('spec',{}).get('native_sources'):
         from app.collection.native_rest_replay import verify
         result['native_rest']=verify(saved['rows'])
+    if saved['rows'][0].get('spec',{}).get('source_session'):
+        from app.collection.source_session import verify_rows
+        result['aggregate']=verify_rows(saved['rows'])
+    from app.collection.us_metadata_diagnostic import enabled as us_diagnostic, verify as verify_diagnostic
+    if us_diagnostic(saved['rows'][0].get('spec',{})):
+        result['us_metadata_diagnostic']=verify_diagnostic(saved['rows'])
     return result
+
+
+def delivery_limits(spec):
+    """Describe the exact selected reader without changing any legacy seal."""
+    if 'native_transport' not in spec:
+        return {}
+    from app.collection.native_payload import validate_transport
+    from app.collection.acquisition_policy import native_caps, bounded_native
+    contract=validate_transport(spec)
+    prediction=spec['prediction']
+    caps=native_caps(spec) if bounded_native(spec) else {
+        source:prediction['discovery_requests'] for source in ('kalshi','polymarket_us')}
+    return dict(native_transport=contract,
+        native_http_request_caps={source:min(cap,prediction['discovery_requests'])
+                                  for source,cap in caps.items()},
+        native_http_timeout_seconds=spec.get('http',{}).get('timeout',5),
+        per_venue_body_bytes=prediction['session_bytes'],
+        native_discovery_plaintext_bytes=contract['discovery_wire_bytes'],
+        native_discovery_decoded_bytes=contract['discovery_decoded_bytes'],
+        native_catalog_retained_bytes=contract['source_inventory_bytes'],
+        sampled_rss_stop_bytes=LIMITS['rss_bytes'])
 
 
 class CoverageOwner(MultiOwner):
@@ -47,6 +84,8 @@ class CoverageOwner(MultiOwner):
         self.cutoff_sizes={}
         self.product_mode=product_mode
         self.native_approval_path=native_approval_path
+        if product_mode and 'aggregate' in kwargs.get('endpoints',{}):
+            self.start_controls=frozenset({'duration','source_settings'})
         if product_mode and (supervised_live or profile_name): raise ValueError('product mode cannot consume supervised allowances')
         self.supervised_live = supervised_live
         self.segmented_history = mock_segmented or supervised_live
@@ -74,7 +113,7 @@ class CoverageOwner(MultiOwner):
                 retained = json.loads(report.read_text())
                 self.previous_pilot = {k:retained[k] for k in ('session','reason','collection_seconds','cleanup_complete')}
 
-    async def start(self, duration=180):
+    async def start(self, duration=180, source_settings=None):
         if type(duration) is not int or not 1 <= duration <= (300 if self.profile else 180):
             raise ValueError('Duration must be 1 to 180 seconds')
         async with self.lock:
@@ -92,15 +131,22 @@ class CoverageOwner(MultiOwner):
                 self.owner_lock = None
                 raise ValueError('Another collector owns the pilot') from None
             self.starting = True
+            created_session = None
             try:
                 value = self.spec_factory() if self.product_mode else spec(); value.pop('multi_game_limits',None); value['duration'] = duration
+                if source_settings is not None:
+                    if not self.product_mode or self.segmented_history:raise ValueError('Source settings require ordinary product mode')
+                    from app.collection.source_session import configure
+                    value=configure(value,source_settings,self.endpoints,prepare_approved=bool(self.native_approval_path))
                 if self.product_mode:
                     from app.collection.mock_history import validate_mock
                     if value.get('native_sources') and value['mode']=='real':
+                        from app.collection.engineering_extension import gate
+                        gate(self.native_approval_path)
                         from app.collection.native_approval import validate_approval
                         validate_approval(value,self.endpoints,self.native_approval_path,self.pilot_output,consume=True)
                     else:
-                        validate_mock(value,self.endpoints)
+                        validate_mock(value,{k:v for k,v in self.endpoints.items() if k!='aggregate'})
                         if not value.get('two_source_qualification'):
                             value['capture_authorization']='B2 explicit product fixture session; no real-source allowance'
                     self.error=None
@@ -116,6 +162,7 @@ class CoverageOwner(MultiOwner):
                     value.update(supervised_profile=self.profile['name'],discovery_cadence=120)
                     value['prediction'].update(messages=self.profile['group_messages'],session_bytes=self.profile['body_bytes'],discovery_requests=self.profile['requests'])
                 self.session = self.session_factory(value,self.pilot_output/'pending',self.endpoints,**options)
+                created_session = self.session
                 if isinstance(self.session,ContinuousSession):
                     from app.dashboard.session_projection import SessionProjection
                     self.session.product_session=self.product_mode
@@ -131,6 +178,14 @@ class CoverageOwner(MultiOwner):
                     effective_ingress_bytes=16*MIB,effective_ingress_records=2048,
                     per_venue_body_bytes=16*MIB,per_group_messages=600,
                     journal_terminal_reserve_bytes=65536,journal_terminal_reserve_records=64)
+                limits.update(delivery_limits(value))
+                from app.collection.us_metadata_diagnostic import enabled as us_diagnostic
+                if us_diagnostic(value):
+                    limits.update(native_transport=value['native_transport'],per_venue_body_bytes=2097152,
+                        per_group_messages=0,connection_attempts=0,simultaneous_connections=0,
+                        rest_per_venue=1,session_wall_seconds=15,http_timeout_seconds=5,
+                        effective_source_http_plaintext_bytes=8388608,expanded_journal_bytes=32*MIB,
+                        acquisition='one US metadata GET only; no book or credential access')
                 if self.mock_segmented:
                     from app.collection.segmented import POLICY
                     limits = dict(POLICY, per_group_messages=600,
@@ -149,10 +204,22 @@ class CoverageOwner(MultiOwner):
                 # Startup owns resources even if the request is cancelled. Cleanup
                 # must not replace the original failure or cancellation.
                 failure(__name__, 'coverage_start', exc)
-                self.error = 'Product fixture Start failed; run retained' if self.product_mode else 'Collection Start failed; attempt retained, no retry authorized'
+                self.error = 'Product fixture Start failed; run retained' if self.product_mode and getattr(self.session,'spec',{}).get('mode')=='mock' else 'Collection Start failed; attempt retained, no retry authorized'
                 try:
-                    if self.session and self.session.task:
-                        await self.session.stop()
+                    if created_session and created_session.task:
+                        await created_session.stop()
+                    elif created_session:
+                        await self.session.close_resources()
+                        if self.session.journal:self.session.journal.close()
+                        self.session.state='failed'
+                        self.session.cleanup_complete=not self.session.cleanup_errors
+                        save_json(self.session.output/'startup-failure.json',dict(
+                            format='native-startup-failure-1',session=self.session.sid,
+                            failure_class=type(exc).__name__,stage='before_session_task',
+                            primary_journal_created=self.session.journal is not None,
+                            cleanup_complete=self.session.cleanup_complete,
+                            accounting=self.session.accounting(),
+                            qualification='startup diagnostic only; not provider observations or a replayable session'))
                 except BaseException as cleanup_error:
                     failure(__name__, 'coverage_start_cleanup', cleanup_error)
                     self.session.cleanup_errors.append('startup:' + type(cleanup_error).__name__)
@@ -194,8 +261,15 @@ class CoverageOwner(MultiOwner):
                     replay_error = type(exc).__name__
                     replay = dict(verified=False,reason=replay_error)
             else:
-                replay_error = 'replay_memory_reservation'
-                replay = dict(verified=False,reason=replay_error)
+                try:
+                    from app.collection.finalization_replay import isolated
+                    replay, replay_resources = await asyncio.to_thread(isolated,session.journal.path)
+                    if replay_resources['journal_chain']!=session.journal.previous:
+                        raise ValueError('Replay final journal identity changed')
+                    save_json(folder/'replay-resources.json',replay_resources)
+                except Exception as exc:
+                    replay_error=type(exc).__name__
+                    replay=dict(verified=False,reason=replay_error)
             save_json(folder/'replay.json',replay)
             if replay_error:
                 self.error = 'Native replay unverified: '+replay_error
@@ -210,6 +284,14 @@ class CoverageOwner(MultiOwner):
                     'US gameId filtering and short-page exhaustion do not guarantee upstream atomic snapshot or all listings',
                     'US Short depth derived only from supplied Long bids; completeness unverified' if session.spec.get('native_sources') else 'US Short purchase depth unavailable',
                     'Usable means synchronized and receipt-recent, not economic or settlement qualification'])
+            from app.collection.us_metadata_diagnostic import enabled as us_diagnostic
+            if us_diagnostic(session.spec):
+                summary['us_metadata_diagnostic']=session.discovery.diagnostic_result
+                summary['limitations']=[
+                    'One exact US event metadata delivery; transport, JSON, identity, terms, state and pregame eligibility are separate findings',
+                    'No native books, Kalshi observations, subscriptions, paired comparisons or supported paired review acquired',
+                    'Diagnostic approval window does not extend expired paired-book applicability',
+                    'Economics, owner validation and commercial qualification remain unavailable']
             save_json(folder/'report.json',summary)
             if replay_error or not session.journal.terminal_acknowledged or not session.cleanup_complete:
                 raise ValueError('collector finalization unverified')
@@ -248,11 +330,20 @@ class CoverageOwner(MultiOwner):
                     configured=True
                 except (ValueError,OSError):pass
             value.update(operating_mode='product-session',start_available=configured and not self.active() and not getattr(self.session,'cleanup_errors',[]),pilot_allowance='One approved native-source qualification; no automatic repeat' if self.native_approval_path else 'Explicit bounded fixture sessions; real source Start not authorized')
+        if self.session and getattr(self.session,'aggregate',None):
+            value['aggregate']=dict(state=self.session.aggregate.health,accounting=self.session.aggregate.budget.snapshot(),settings=self.session.spec['source_session'])
+        value['source_settings_available']=self.product_mode and not self.segmented_history and 'aggregate' in self.endpoints
         return value
 
     def history_paths(self):
         from app.dashboard.session_history import list_sessions
-        return list_sessions([self.output,self.pilot_output])
+        from app.dashboard.native_reviews import historical_paths
+        paths=historical_paths()
+        # Ordinary saved sessions retain their default selection priority.
+        for sid,folder in list_sessions([self.output,self.pilot_output,ROOT/'evidence/aggregate-ingestion-20260929/sessions',
+                                       ROOT/'evidence/source-bindings-20260929/sessions']).items():
+            paths.pop(sid,None);paths[sid]=folder
+        return paths
 
     def current_snapshot(self):
         s=self.session

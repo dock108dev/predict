@@ -6258,6 +6258,196 @@
         "NCAAB:M:D1:MIAOH"
       ],
       "text": "Miami"
+    },
+    {
+      "kind": "team",
+      "text": "Vancouver",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:VAN"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Edmonton",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:EDM"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Chicago",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:CHI"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Vegas",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:VGK"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "New York I",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:NYI"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Toronto",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:TOR"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Pittsburgh",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:PIT"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Philadelphia",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:PHI"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Los Angeles",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:LAK"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Colorado",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:COL"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Buffalo",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:BUF"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Columbus",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:CBJ"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "New Jersey",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:NJD"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Tampa Bay",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:TBL"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "New York R",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:NYR"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Minnesota",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:MIN"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Nashville",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:NSH"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Seattle",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:SEA"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
+    },
+    {
+      "kind": "team",
+      "text": "Calgary",
+      "league": "NHL",
+      "venue": "kalshi",
+      "targets": [
+        "NHL:CGY"
+      ],
+      "source": "Retained r2 NHL game title/subtitle, sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c; existing NHL registry entity/league-specific shorthand"
     }
   ],
   "entities": [
@@ -8028,6 +8218,258 @@
       "source": "evidence/slice-3/sandbox-qualification-20260912/catalog/sandbox-20260912T005709Z/market-001.json",
       "target": "NBA",
       "venue": "prophetx"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "4fa3f3ec-f7e7-41ec-9383-a40af2d26297",
+      "target": "NFL:NYG",
+      "league": "NFL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:7a74000e4fef90be54436a992d99d11a6a6c6410172f9d20408e76b3805e73de"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "422d5fd7-ad18-4c96-902d-6f7c50e4660f",
+      "target": "NFL:LAR",
+      "league": "NFL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:cee6e5a19822a81379a26cd2d9b4e07a4eb97972a0a1ed527b8d11a1d1a68cca"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "ccc2af2d-5c4d-4717-8036-5ba6bec5cfbd",
+      "target": "NFL:NYJ",
+      "league": "NFL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:cee6e5a19822a81379a26cd2d9b4e07a4eb97972a0a1ed527b8d11a1d1a68cca"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "6dd427f5-fa02-40ef-aa90-cfa73e0c539e",
+      "target": "NBA:BOS",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "65569528-1888-40aa-9d62-2b0e8142a9b4",
+      "target": "NBA:DET",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "0554528d-586b-461f-827b-801cf93e8a8e",
+      "target": "NBA:PHI",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "67468ecc-b868-43a4-b9dc-751a52894bb0",
+      "target": "NBA:NYK",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "a85f6eca-2f3b-4f61-83ab-8d049f59ce2c",
+      "target": "NBA:OKC",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "ad36c3e8-4194-4e63-920f-7c50f46191a6",
+      "target": "NBA:SAS",
+      "league": "NBA",
+      "source": "Exact retained game/milestone/title/role relationship sha256:de66593e551b4f15e3b6a92f66d02958ca98e4503cf1d37b622eac40bbe56fb7"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "2d6db4a4-99f2-4547-85f3-9913404577f9",
+      "target": "NHL:VAN",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "e8b67c82-f465-450d-aef9-c8414f2ae83a",
+      "target": "NHL:EDM",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "a0e115e4-5a0c-405f-a005-e83ecdc0baa6",
+      "target": "NHL:CHI",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "d599b5cc-5e06-4679-9303-4d5dad7c4cce",
+      "target": "NHL:VGK",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "03f52887-5bb7-4b51-954e-433f73474350",
+      "target": "NHL:NYI",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "f61f9daa-407b-4c46-96e8-feee19cd6f51",
+      "target": "NHL:TOR",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "1b5c6299-90f7-49c7-8617-264610d50488",
+      "target": "NHL:PIT",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "24770a4a-6bb0-4ecc-a40b-ad77bcbe403f",
+      "target": "NHL:PHI",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "dbea1e18-0f3c-47a6-9617-e16981181ca2",
+      "target": "NHL:LAK",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "70ecc991-a426-4567-b6ec-53f529f29078",
+      "target": "NHL:COL",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:81fdd860e616689d77b20ad574e393aa52cfef2b5a030cc90316477eca15f30d"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "458b20ce-1c62-47d8-8fc4-6f752a2476e7",
+      "target": "NHL:BUF",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "253e2161-4b9b-4580-88e7-a25b9f6cf8af",
+      "target": "NHL:CBJ",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "25df3a21-8554-4e7d-a3cc-8633360d6d51",
+      "target": "NHL:NJD",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "b08e569c-3249-4fcf-bea2-a57ab5e822eb",
+      "target": "NHL:TBL",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "9979553a-3962-4169-b2c3-510ba6d931d2",
+      "target": "NHL:NYR",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "1cee0410-99f1-43a2-a67c-4e6a3b968a9c",
+      "target": "NHL:MIN",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "fcfd0b58-cc0a-448e-8f4b-6ddeab8f339f",
+      "target": "NHL:NSH",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "2ed1104c-eb5a-4175-9f05-0561caaa59d2",
+      "target": "NHL:SEA",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "ea3554a4-eaa6-4e72-a32f-8388e618133f",
+      "target": "NHL:CGY",
+      "league": "NHL",
+      "source": "Exact retained game/milestone/title/role relationship sha256:a731a7a6d3525121e4c5f336c1e257593f3402de0653f6987883dcb9dbb0fb1c"
     }
   ],
   "planned_leagues": [
@@ -8039,5 +8481,5 @@
   ],
   "schema_version": 1,
   "verified_at": "2026-09-21",
-  "version": "2026-09-21.nhl-mlb-nba-ncaaf-ncaab-b5"
+  "version": "2026-09-30.native-gap-v1"
 }

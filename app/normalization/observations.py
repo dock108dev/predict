@@ -27,8 +27,9 @@ class NormalizedEvent:
     native_roles: tuple[tuple[str, str], ...] = ()
 
 
-def enrich_event(event: Event, *, environment=None, registry=None) -> NormalizedEvent:
-    registry = registry or Registry.load()
+def enrich_event(event: Event, *, environment=None, registry=None, scope_binding=None) -> NormalizedEvent:
+    from .native_registry import native_registry
+    registry = registry or native_registry()
     venue = event.raw.ref.venue
     payload = event.raw.decode()
     provenance = []
@@ -37,6 +38,7 @@ def enrich_event(event: Event, *, environment=None, registry=None) -> Normalized
     league_name = event.league
     league_id = None
     row = None
+    binding_error = None
     if venue == Venue.POLYMARKET_US:
         rows = payload.get('events', [])
         matches = [x for x in rows if str(x.get('id')) == event.raw.ref.event_id]
@@ -45,7 +47,12 @@ def enrich_event(event: Event, *, environment=None, registry=None) -> Normalized
             lg = payload.get('league', {})
             league_name = lg.get('name', league_name)
             league_id = lg.get('id')
-            for i, team in enumerate(row.get('teams', [])):
+            from app.adapters.polymarket_us import event_game_binding
+            try:binding=event_game_binding(row,str(event.league).lower())
+            except ValueError as exc:
+                binding_error=str(exc);binding=dict(teams=row.get('teams') or [],basis='conflicting_embedded_identity')
+            provenance.append('native-game-participants:'+binding['basis'])
+            for i, team in enumerate(binding['teams']):
                 inputs.append((team.get('name'), team.get('id'), team.get('ordering'),
                                f'events[id={event.raw.ref.event_id}].teams[{i}]', team.get('league')))
             provenance.append('pmus-event-teams:v1; array order; no home/away inference')
@@ -67,21 +74,49 @@ def enrich_event(event: Event, *, environment=None, registry=None) -> Normalized
         matches = [x for x in rows if x.get('event_ticker') == event.raw.ref.event_id]
         if len(matches) == 1:
             row = matches[0]
-            series_league = {'KXNFLGAME':'NFL', 'KXMLBGAME':'MLB', 'KXNBAGAME':'NBA', 'KXNCAAFGAME':'NCAAF', 'KXNCAAFCSGAME':'NCAAF', 'KXNCAAMBGAME':'NCAAB'}.get(row.get('series_ticker'))
+            series_league = {'KXNFLGAME':'NFL', 'KXMLBGAME':'MLB', 'KXNBAGAME':'NBA', 'KXNCAAFGAME':'NCAAF', 'KXNCAAFCSGAME':'NCAAF', 'KXNCAAMBGAME':'NCAAB', 'KXNHLGAME':'NHL'}.get(row.get('series_ticker'))
+            if scope_binding and scope_binding.get('series_ticker')==row.get('series_ticker') and scope_binding.get('family')!='futures':
+                series_league=scope_binding['sport']
             if series_league:
                 league_name = series_league
                 # Bounded observed format; deliberately no ticker substring decoding.
-                pair = re.fullmatch(r'([\w .\'-]+) vs\.? ([\w .\'-]+)', row.get('title', ''))
+                title = row.get('title', '')
+                if row.get('series_ticker') == 'KXMLBGAME':
+                    # Captured numbered game titles; numbering is retained in raw
+                    # metadata and is not a doubleheader/innings assertion.
+                    title = re.sub(r'^Game [1-9][0-9]*: ', '', title)
+                if scope_binding:
+                    suffix={'spread':'Spread','total':'Total Points' if series_league in ('NFL','NBA','NCAAF','NCAAB') else 'Total Runs','moneyline':'Winner'}[scope_binding['family']]
+                    if scope_binding['period']=='first_half':suffix='1st Half '+{'moneyline':'Winner','spread':'Spread','total':'Total'}[scope_binding['family']]
+                    if scope_binding['period'] in ('first_3','first_5'):suffix='First '+scope_binding['period'].split('_')[1]+' Innings '+{'moneyline':'Winner','spread':'Spread','total':'Total'}[scope_binding['family']]
+                    if title.endswith(': '+suffix):title=title[:-(len(suffix)+2)]
+                pair = re.fullmatch(r'([\w .\'-]+) vs\.? ([\w .\'-]+)', title)
                 if pair and len(re.findall(r' vs\.? ', row.get('title', ''))) == 1:
                     inputs = [(n, None, None, 'event.title:kalshi-game-vs:v1', None) for n in pair.groups()]
                     provenance.append('kalshi-game-vs:v1; series gated; title order; roles unknown')
             for milestone in payload.get('milestones', []):
                 details = milestone.get('details', {})
-                if details.get('main_game_event_ticker') == event.raw.ref.event_id:
+                if details.get('main_game_event_ticker') == event.raw.ref.event_id or (scope_binding and event.raw.ref.event_id in milestone.get('related_event_tickers',[])):
                     for role in ('home', 'away'):
                         if details.get(role + '_team_id'):
                             roles.append((role, str(details[role + '_team_id'])))
-            if roles:
+            # Bind role IDs only through one exact event/milestone/title relation.
+            # Never infer away/home from title ordering alone.
+            links=[]
+            if len(inputs)==2:
+                for m in payload.get('milestones',[]):
+                    detail=m.get('details',{})
+                    if ((detail.get('main_game_event_ticker')==event.raw.ref.event_id or (scope_binding and detail.get('main_game_event_ticker') in m.get('related_event_tickers',[])))
+                        and event.raw.ref.event_id in m.get('related_event_tickers',[])
+                        and m.get('title')==' at '.join(x[0] for x in inputs)
+                        and detail.get('away_team_id') and detail.get('home_team_id')
+                        and detail['away_team_id']!=detail['home_team_id']):
+                        links.append((str(detail['away_team_id']),str(detail['home_team_id'])))
+            if len(links)==1:
+                inputs=[(old[0],native,role,'milestone.main_game/title/exact-role:v1',None)
+                        for old,native,role in zip(inputs,links[0],('away','home'))]
+                provenance.append('exact event-milestone role binding:v1')
+            elif roles:
                 provenance.append('milestone.details native role IDs retained; identity relationship unestablished')
     # Shared participants are a supported explicit input for any adapter. Unknown
     # title-only Novig formats are never converted into invented team evidence.
@@ -105,6 +140,8 @@ def enrich_event(event: Event, *, environment=None, registry=None) -> Normalized
             if team_league and registry.resolve('league', team_league).canonical_id != league.canonical_id:
                 result = registry.result('conflicting', result.candidates,
                                          (*result.provenance, 'team-event-league-disagreement'), name, native)
+        if binding_error:
+            result=registry.result('conflicting',result.candidates,(*result.provenance,binding_error),name,native)
         if event.participants and len(event.participants) != len(inputs):
             result = registry.result('conflicting', result.candidates,
                                      (*result.provenance, 'shared-native-participant-count-disagreement'), name, native)

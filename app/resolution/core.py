@@ -54,6 +54,9 @@ def record(kind,body,*,url,path,received_at,evidence_mode):
 def validate(r):
     raw=r['raw']
     if record(r['kind'],raw['body'],url=raw['url'],path=raw['path'],received_at=r['received_at'],evidence_mode=r['evidence_mode'])!=r:raise ValueError('Resolution record hash/schema/literal conflict')
+    if 'source_adapter' in json.loads(raw['body']):
+        from app.resolution.source_adapters import validate_envelope
+        validate_envelope(r)
 
 
 def emit_records(collector,records):
@@ -275,5 +278,9 @@ def resolve(records,snapshot,game,as_of,q=None):
             ak='stake_refund' if a['kind']=='refund' else a['kind']
             disagreement=ak!=b['kind'] or (ak=='fraction' and number(a['value'])!=number(b['value']))
         venues.append(dict(source=source,contract=contract,label=side.get('label',side['participant']),native_id=side['native_id'],expected=expected,observed=decision,disagrees_with_rule=disagreement))
-    return dict(version='championship-resolution-view-1' if futures.scope(game['product_identity']) else {'NBA':'nba-resolution-view-1','NCAAF':'ncaaf-resolution-view-1','NCAAB':'ncaab-resolution-view-1','MLB':'mlb-resolution-view-1','NHL':'nhl-resolution-view-1'}.get(game['product_identity'].get('competition'),'nfl-resolution-view-1'),as_of=as_of,prediction_cutoff=snapshot['durable_cursor'],sporting=sport,venues=venues,unbound=unbound,excluded_future_count=excluded,
+    result=dict(version='championship-resolution-view-1' if futures.scope(game['product_identity']) else {'NBA':'nba-resolution-view-1','NCAAF':'ncaaf-resolution-view-1','NCAAB':'ncaab-resolution-view-1','MLB':'mlb-resolution-view-1','NHL':'nhl-resolution-view-1'}.get(game['product_identity'].get('competition'),'nfl-resolution-view-1'),as_of=as_of,prediction_cutoff=snapshot['durable_cursor'],sporting=sport,venues=venues,unbound=unbound,excluded_future_count=excluded,
         limitation='Sporting results, rule-derived expectations and venue reports are separate. No fills, account balances or realized profit are established.')
+    if any(v['record']['payload'].get('adapter') for v in visible):
+        from app.resolution.source_adapters import local_lineage
+        result['local_observation_lineage']=local_lineage(visible,records)
+    return result

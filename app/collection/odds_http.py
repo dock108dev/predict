@@ -69,18 +69,22 @@ class Budget:
         self.used, self.remaining = policy.initial_used, policy.initial_remaining
         self.reported_remaining = policy.initial_remaining
         self.reason = None
+        self.reservation = policy.reserve_per_request
 
-    def reserve(self):
+    def reserve(self, credits=None):
         p = self.policy
         if self.reason:
             raise BudgetStop(self.reason)
-        n = p.reserve_per_request
+        n = p.reserve_per_request if credits is None else credits
+        if type(n) is not int or not 0 <= n <= p.reserve_per_request:
+            raise ValueError('Invalid request-specific reservation')
         if self.requests + 1 > p.requests or self.credits + n > p.credits or n > self.remaining or (self.credits+n)*p.dollars_per_credit > p.dollars:
             self.reason = 'request_credit_or_dollar_cap'
             raise BudgetStop(self.reason)
         self.requests += 1
         self.credits += n  # Uncertain charges are never refunded.
         self.remaining -= n
+        self.reservation = n
 
     def reconcile(self, headers):
         values = {}
@@ -93,9 +97,9 @@ class Budget:
         used, remaining, last = (values[k] for k in ('x-requests-used', 'x-requests-remaining', 'x-requests-last'))
         p = self.policy
         previous_remaining = self.reported_remaining
-        if used-self.used != last or previous_remaining-remaining != last or last > p.reserve_per_request:
+        if used-self.used != last or previous_remaining-remaining != last or last > self.reservation:
             self.reason = 'quota_contradictory'
-            self.credits += max(0, last-p.reserve_per_request)
+            self.credits += max(0, last-self.reservation)
         # Retain conservative available allowance, including over-reservations.
         self.used = used
         self.reported_remaining = remaining
@@ -115,12 +119,12 @@ class OddsHTTP:
     Every dispatched attempt emits a capture, including partial bytes on cancellation.
     The injected sink must durably retain it before returning.
     """
-    def __init__(self, endpoint, event_id, policy, sink, *, dummy_key='e6-dummy-key', real_key=None):
+    def __init__(self, endpoint, event_id, policy, sink, *, dummy_key='e6-dummy-key', real_key=None, aggregate_authorized=False):
         self.real=real_key is not None
         if self.real:
             if endpoint!='https://api.the-odds-api.com' or not isinstance(real_key,str) or not real_key:
                 raise ValueError('invalid optional reference configuration')
-            if policy.credits>5 or policy.dollars!=0 or policy.dollars_per_credit!=0:
+            if (policy.credits>5 and not aggregate_authorized) or policy.dollars!=0 or policy.dollars_per_credit!=0:
                 raise ValueError('optional reference limited to five free credits')
             self.endpoint=endpoint
         else:self.endpoint = mock_endpoint(endpoint)
@@ -155,7 +159,9 @@ class OddsHTTP:
     async def _request(self):
         if self.total_bytes >= self.policy.session_bytes:
             raise BudgetStop('session_byte_cap')
-        self.budget.reserve()
+        self.budget.reserve(self.reservation_cost() if hasattr(self,'reservation_cost') else None)
+        before_dispatch=getattr(self,'before_dispatch',None)
+        if before_dispatch:before_dispatch(self.metadata(),self.budget.snapshot())
         started = utc()
         body = bytearray()
         status, headers, reason = None, [], None
@@ -165,6 +171,8 @@ class OddsHTTP:
                 self._client = aiohttp.ClientSession(auto_decompress=False, trust_env=False,
                     connector=aiohttp.TCPConnector(limit=1), timeout=aiohttp.ClientTimeout(total=self.policy.timeout),
                     read_bufsize=4096, max_line_size=4096, max_field_size=4096)
+                # aiohttp may otherwise transparently repeat an idempotent GET.
+                self._client._retry_connection = False
             meta = self.metadata()
             async with self._client.get(self.endpoint+meta['path'], params={**meta['params'], 'apiKey':self._key},
                                         allow_redirects=False, headers={'Accept-Encoding':'identity'}) as response:

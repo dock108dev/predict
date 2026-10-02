@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Offline reproducible mathematical package evidence; no provider access."""
+from pathlib import Path
+import hashlib,json,re,sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from tests.test_full_scope_engineering import cases
+from tests.test_periods import snapshot
+from tests.test_math_package import scenario
+from app.dashboard.product_view import calculate
+from app.dashboard.math_scenarios import evaluate,replay
+from app.fees.engine import digest
+root=Path(__file__).resolve().parents[1]
+out=root/'evidence/math-package-20260929';(out/'scope').mkdir(exist_ok=True)
+ledger=[]
+for cell,rows in cases():
+    s=snapshot(rows);g=next(g for g in s['games'] if set(g['sources'])=={'kalshi','polymarket_us'})
+    original=calculate(s,g,dict(quantity='1'));derived=evaluate(s,g,dict(spec=scenario(),quantities=['.5','.5']))
+    replay(derived)
+    assert calculate(s,g,dict(quantity='1'))==original
+    name='-'.join(cell)+'.json'
+    bundle=dict(evidence_class='synthetic mathematical integration only',cell=cell,original=original,derived=derived)
+    (out/'scope'/name).write_text(json.dumps(bundle,sort_keys=True,indent=2))
+    ledger.append(dict(cell=cell,path='scope/'+name,original_hash=digest(original),derived_hash=derived['sha256'],partitions=original.get('score_partitions'),native_source_qualification=False))
+assert len(ledger)==63
+(out/'scope-63-cells.json').write_text(json.dumps(ledger,indent=2))
+before=json.loads((out/'preservation-before.json').read_text())
+changed=[s for s,h in before.items() if not (root/s).exists() or hashlib.sha256((root/s).read_bytes()).hexdigest()!=h]
+assert not changed,changed
+summary=dict(cells=63,preserved_original_evidence_files=len(before),changed_original_evidence_files=changed,verification_class='offline mathematical and ordinary product integration; no native qualification')
+(out/'preservation-result.json').write_text(json.dumps(summary,indent=2))
+print(json.dumps(summary))

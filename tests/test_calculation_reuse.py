@@ -12,7 +12,7 @@ from app.dashboard.product_view import calculate, dashboard
 class CalculationReuse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        p=SessionProjection()
+        p=SessionProjection();p.native_interpretation='native-book-comparison-3' # Sealed legacy mathematical interpretation.
         for row in list(verified(FOLDER)['rows'])[:1400]:p.apply(row)
         cls.snapshot=p.snapshot()
 

@@ -18,6 +18,9 @@ def usable(r):
 
 def calculate(snapshot,game,q,reuse=None):
     validate_choices(q)
+    if game.get('manual_raw'):raise ValueError('Manual raw comparison has no qualified payoff/cost model; use raw comparisons')
+    if game.get('native_raw'):raise ValueError('Native raw comparison: selected settlement '+game['native_review']['settlement']['status'].lower()+'; qualified payout, fee coverage and probability required for net economics')
+    if game.get('aggregated'):raise ValueError('Aggregate observations have no executable contract; use raw comparisons')
     locked=snapshot.get('qualification_fee_policy')=='native-evidence-required'
     if locked:q=dict(q,scenario='unknown')
     point=snapshot['points'][game['id']]
@@ -56,6 +59,7 @@ def dashboard(snapshot,q,assumptions,reuse=None):
     items=[];sid=snapshot['session_id'];view=q.get('view','arb')
     if view=='research':return [] # Retrospective research remains on its original saved packages.
     for game in snapshot['games']:
+        if game.get('aggregated') or game.get('native_raw') or game.get('manual_raw'):continue
         if any(q.get(k) and game['product_identity'].get(k)!=q[k] for k in ('competition','season')):continue
         if q.get('period') and game['product_identity']['period']!=q['period']:continue
         if q.get('family') and game['product_identity']['family']!=q['family']:continue
@@ -79,4 +83,6 @@ def dashboard(snapshot,q,assumptions,reuse=None):
                     ev=calculate(snapshot,game,dict(q,contract=key,probability=probability,reference=ref['id'] if ref else ''),reuse=reuse)['ev'];leg=ev['leg'];v=leg['venue']
                     if ref and not usable(ref):basis+=' · '+(ref.get('reason') or 'Unsupported reference value')
                     items.append(dict(**common,id=game['id']+'~'+key+('~'+ref['id'] if ref else ''),candidate='',contract=key,reference_id=ref['id'] if ref else None,reference_role=ref['role'] if ref else None,legs=[leg],status=ev['status'],profit=ev['expected_profit'],return_pct=ev['return_pct'],break_even_pct=ev['break_even_pct'],probability=ev['probability'],assumption=basis,venues=[v],venue_pair=v,usable=ev['usable'],modeled_quantity=ev['modeled_quantity'],depth_limited=ev['depth_limited'],raw_gap=None))
+    from app.dashboard.decision_support import explanation
+    for row in items:row['decision']=explanation(row)
     return rank_filter(items,q.get('sort','roi'),q.get('positive')=='true',q.get('venue',''),q.get('freshness',''),q.get('search',''))

@@ -16,8 +16,8 @@ def event_key(e):
     if e.get('competition')=='NCAAB' and (e.get('gender'),e.get('division'))!=('men','I'):raise ValueError('Futures college basketball gender/division conflict')
     for k in ('championship_id','horizon'):
         if not isinstance(e.get(k),str) or not e[k].strip():raise ValueError('Explicit championship/horizon identity required')
-    if e['category']=='conference_champion' and not e.get('conference_id','horizon_start'):raise ValueError('Exact conference identity required')
-    if e['category']=='league_champion' and e.get('conference_id','horizon_start') is not None:raise ValueError('League and conference horizons conflict')
+    if e['category']=='conference_champion' and (not isinstance(e.get('conference_id'),str) or not e['conference_id'].strip()):raise ValueError('Exact conference identity required')
+    if e['category']=='league_champion' and ('conference_id' not in e or e['conference_id'] is not None):raise ValueError('League and conference horizons conflict')
     if time(e['horizon_start'])>=time(e['scheduled_start']):raise ValueError('Championship start/deadline conflict')
     field=e.get('field');reg=expanded()
     if not isinstance(field,list) or not 2<=len(field)<=512 or len(set(field))!=len(field) or any(cid not in reg.entities or reg.entities[cid].get('league')!=e['competition'] for cid in field):raise ValueError('Explicit distinct championship field required')

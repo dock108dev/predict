@@ -1,0 +1,4307 @@
+{
+  "version": "retained-native-admission-2",
+  "collection_authorized": false,
+  "mappings": [
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "641e0ff2-3d85-4ba7-b28f-402ee2527275",
+      "target": "NCAAB:M:D1:ALA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-ALA",
+          "native_metadata_sha256": "b229bd85bb565d3ca05b9900d156eb7d130cf173ee4c65657c863c56e8c859ad",
+          "canonical_id": "NCAAB:M:D1:ALA",
+          "label": "Alabama",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "770236b1-0c9b-4954-842a-b36970eb2f17",
+      "target": "NCAAB:M:D1:NCAA29",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-ARIZ",
+          "native_metadata_sha256": "dba40523e91d8dd090012944a8e02ce5cdd1da48bd8ef018dd2f402ba13c9318",
+          "canonical_id": "NCAAB:M:D1:NCAA29",
+          "label": "Arizona",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "4e7cb217-acb9-4b34-a831-3e6a3d2671af",
+      "target": "NCAAB:M:D1:NCAA37",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-AUB",
+          "native_metadata_sha256": "70cb18928c91168f01937a6386f66cfa04bd5d48b9dac4b7868962a595a2d1eb",
+          "canonical_id": "NCAAB:M:D1:NCAA37",
+          "label": "Auburn",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "c38f00d4-0e48-4efd-b9f1-02f31e7d4dca",
+      "target": "NCAAB:M:D1:NCAA51",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-BAY",
+          "native_metadata_sha256": "253ed0d4ea39f1299ffa0ab3517919d727c4a6d236c837a8b5066995a4faa7a8",
+          "canonical_id": "NCAAB:M:D1:NCAA51",
+          "label": "Baylor",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "b0224585-2413-4e1f-a293-a86ecb660b2e",
+      "target": "NCAAB:M:D1:NCAA67",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-BC",
+          "native_metadata_sha256": "658989b0c5550ac5c6b487dbe0399bf7f13a57cf549ab3ce6e895d55263a10d8",
+          "canonical_id": "NCAAB:M:D1:NCAA67",
+          "label": "Boston College",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "f015b759-da5b-47b5-a4a5-2168e3085b41",
+      "target": "NCAAB:M:D1:NCAA87",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-BUT",
+          "native_metadata_sha256": "b9dfa8d187110e6aa7929bec374db03ce2e2dbffd8bef173e81eb0d2e9e67c7a",
+          "canonical_id": "NCAAB:M:D1:NCAA87",
+          "label": "Butler",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "d465555f-135d-46a2-b38f-860adb2b250a",
+      "target": "NCAAB:M:D1:NCAA140",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-CIN",
+          "native_metadata_sha256": "7c412a30e060adf0dc45bd23ee184e588d322448350c98ea01a5ab7ccd64abc8",
+          "canonical_id": "NCAAB:M:D1:NCAA140",
+          "label": "Cincinnati",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "97859a5c-c6ac-42e8-ad48-86c76d4bb281",
+      "target": "NCAAB:M:D1:NCAA147",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-CLEM",
+          "native_metadata_sha256": "500efcd7782f22169fb8a579e03c59284db464ccbb3c27a9dba55851e6ef76f8",
+          "canonical_id": "NCAAB:M:D1:NCAA147",
+          "label": "Clemson",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "5adef119-6974-4e42-ac68-34b3e5005705",
+      "target": "NCAAB:M:D1:NCAA169",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-CREI",
+          "native_metadata_sha256": "0d09de543c9ed102231e7ad40fd9c747a13729e2f5b2496d0e954677c2b42008",
+          "canonical_id": "NCAAB:M:D1:NCAA169",
+          "label": "Creighton",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "35b19e92-62db-4bc0-977e-52df56fcd05c",
+      "target": "NCAAB:M:D1:NCAA175",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-DAY",
+          "native_metadata_sha256": "43f4a254e083b26960c6eabfdd846bd09a62f725aee6f0baabb7bdf32cd619ab",
+          "canonical_id": "NCAAB:M:D1:NCAA175",
+          "label": "Dayton",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        },
+        {
+          "market_id": "KXNCAAMBA10-27-DAY",
+          "native_metadata_sha256": "dc3eccada39628b428bb917d2d1fb17fad57fefc9b3454615211ddb1ddd921d1",
+          "canonical_id": "NCAAB:M:D1:NCAA175",
+          "label": "Dayton",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "9edafb0c-ac57-4901-b884-2da97b71194e",
+      "target": "NCAAB:M:D1:NCAA193",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-DUKE",
+          "native_metadata_sha256": "cd771f6115ceed1de2d9b27fee0c93053d7ab2800de5ed8590401745677fb947",
+          "canonical_id": "NCAAB:M:D1:NCAA193",
+          "label": "Duke",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "f8825d9e-79b1-4732-89c0-48e995df537a",
+      "target": "NCAAB:M:D1:NCAA235",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-FLA",
+          "native_metadata_sha256": "f7001f3ce79f2c4cb000c3005ababb07741bb9792e7e2bb47b98e3b54258cf0c",
+          "canonical_id": "NCAAB:M:D1:NCAA235",
+          "label": "Florida",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "b43e542a-b2dc-47f5-acf8-0fe10d31dc53",
+      "target": "NCAAB:M:D1:NCAA260",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-GONZ",
+          "native_metadata_sha256": "6cf7ce56b86bbdf1ebe6964016d38506eccbf676122f0d30efd8f19ad3c13be6",
+          "canonical_id": "NCAAB:M:D1:NCAA260",
+          "label": "Gonzaga",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "62207e67-92c7-4ea1-89a1-29a178a47e1b",
+      "target": "NCAAB:M:D1:NCAA251",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-GTWN",
+          "native_metadata_sha256": "08aa5092d336717ef2eee9c32bdfbb4913f9e1faf129bcd050e411ed31e683de",
+          "canonical_id": "NCAAB:M:D1:NCAA251",
+          "label": "Georgetown",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "28d23012-9bc2-4bb0-8cf2-03a190bd3406",
+      "target": "NCAAB:M:D1:NCAA635",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-HALL",
+          "native_metadata_sha256": "b08231221b524b6e9174148e504125cd2ee900f432b4f63455fc2a282d55d3b2",
+          "canonical_id": "NCAAB:M:D1:NCAA635",
+          "label": "Seton Hall",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "91aa26c8-e466-4aed-bc92-fbdd69b1cca3",
+      "target": "NCAAB:M:D1:NCAA288",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-HOU",
+          "native_metadata_sha256": "886d5abd5375654471606fc3012f3919471ca5fec7da47ac3ab8d77ce4cac0bb",
+          "canonical_id": "NCAAB:M:D1:NCAA288",
+          "label": "Houston",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "c8268052-5cf3-4642-8a60-0bb50a24749c",
+      "target": "NCAAB:M:D1:NCAA312",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-IOWA",
+          "native_metadata_sha256": "d43b830812005f05d15dccf1b8dd1d297b561d04ac32153b544f47dd143b76a1",
+          "canonical_id": "NCAAB:M:D1:NCAA312",
+          "label": "Iowa",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "9324bc18-0f6a-4095-8f5e-5f48dd76552a",
+      "target": "NCAAB:M:D1:NCAA328",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-KU",
+          "native_metadata_sha256": "3eee10348295f1ee16d8523672a5190ca8dc55830a9d4db672e80140ee6792f8",
+          "canonical_id": "NCAAB:M:D1:NCAA328",
+          "label": "Kansas",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "73247531-86d3-4c59-9789-07bf484000d7",
+      "target": "NCAAB:M:D1:NCAA367",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-LOU",
+          "native_metadata_sha256": "e83355f973cd9f9f16d71601c3c69b32120e206b0cc819d7852ab36db2662800",
+          "canonical_id": "NCAAB:M:D1:NCAA367",
+          "label": "Louisville",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "7214ced0-a52b-42ba-b6d9-e51c03a1bfd8",
+      "target": "NCAAB:M:D1:NCAA387",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MARQ",
+          "native_metadata_sha256": "ce59bcda8de04f08e5fc699af9f3edd59961dc3b39880dd07b9fe65fcf3be1d5",
+          "canonical_id": "NCAAB:M:D1:NCAA387",
+          "label": "Marquette",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "4c57c231-ec7e-41b9-8d1b-23c61bbec7f4",
+      "target": "NCAAB:M:D1:NCAA404",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MEM",
+          "native_metadata_sha256": "c6c43506b15b737cfb560d56a9062fa9cb2f7b121ee4afaea1fcf6d8efb1ec6e",
+          "canonical_id": "NCAAB:M:D1:NCAA404",
+          "label": "Memphis",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "9b6c40ef-01f2-4cd4-afa0-f1ea68f59746",
+      "target": "NCAAB:M:D1:MIAFL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MIA",
+          "native_metadata_sha256": "1e21840f0825d064bc9a0418708407cf0bdb8960c5e3674c39a18ac8bff11819",
+          "canonical_id": "NCAAB:M:D1:MIAFL",
+          "label": "Miami (FL)",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "5de6200f-c507-4bab-915b-be8955635cf5",
+      "target": "NCAAB:M:D1:NCAA418",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MICH",
+          "native_metadata_sha256": "7518bef3a7cf2e9826a011de586e46a3cb768c85edd13a258af06471cf237562",
+          "canonical_id": "NCAAB:M:D1:NCAA418",
+          "label": "Michigan",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "3a304675-4cba-4be8-842c-7b9044b572e5",
+      "target": "NCAAB:M:D1:NCAA513",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-ND",
+          "native_metadata_sha256": "bf35ce041fb20215e2b20bb7fc6366a200534b625d42f477da765491c3b86978",
+          "canonical_id": "NCAAB:M:D1:NCAA513",
+          "label": "Notre Dame",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "7f555169-e0ca-4d36-b663-4ba545675526",
+      "target": "NCAAB:M:D1:NCAA522",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-OKLA",
+          "native_metadata_sha256": "075c8e3713af22acb58adeaaa5db01033cef1dd62359adfa2eaa2a6a5cda4169",
+          "canonical_id": "NCAAB:M:D1:NCAA522",
+          "label": "Oklahoma",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "c30c39d4-f735-40c2-a458-c351c5686a63",
+      "target": "NCAAB:M:D1:NCAA529",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-ORE",
+          "native_metadata_sha256": "cc7a95d22f2f34e42e00f58052349eec9c0b95c81b6d2a7ccb4929365c920820",
+          "canonical_id": "NCAAB:M:D1:NCAA529",
+          "label": "Oregon",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "3cdabe25-e737-4fa0-8084-9e91874338d4",
+      "target": "NCAAB:M:D1:NCAA545",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-PITT",
+          "native_metadata_sha256": "ae71e3819a021dda527bf3cb37c1ba9d90afdaf25a3d2103648678881f1ad659",
+          "canonical_id": "NCAAB:M:D1:NCAA545",
+          "label": "Pittsburgh",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "e0574a10-8efe-4ab3-a3e9-70128031ca0f",
+      "target": "NCAAB:M:D1:NCAA559",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-PUR",
+          "native_metadata_sha256": "1e56e26a94cf85fb929ed31f28c1bda235cf2f89e2d32c912ae56b896ea7a10e",
+          "canonical_id": "NCAAB:M:D1:NCAA559",
+          "label": "Purdue",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "0f955368-34a3-488d-b20e-88f525cc6b48",
+      "target": "NCAAB:M:D1:NCAA575",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-RICH",
+          "native_metadata_sha256": "161d3c40f81bcedac88eed4e561307a0f61aa622c3888b26ce89f404dbc7aa98",
+          "canonical_id": "NCAAB:M:D1:NCAA575",
+          "label": "Richmond",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        },
+        {
+          "market_id": "KXNCAAMBA10-27-RICH",
+          "native_metadata_sha256": "afddbb364b9c8cac80a0e9841e2c49624c63501a7bef1c233fdb7b2bf24754c2",
+          "canonical_id": "NCAAB:M:D1:NCAA575",
+          "label": "Richmond",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "120ce01a-73f9-4863-b6a8-b5a3afc64d78",
+      "target": "NCAAB:M:D1:NCAA596",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-SBON",
+          "native_metadata_sha256": "02414c55f10364c59ae543ef3abfc50305a85f0a83282085c2e4779733369579",
+          "canonical_id": "NCAAB:M:D1:NCAA596",
+          "label": "St. Bonaventure",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        },
+        {
+          "market_id": "KXNCAAMBA10-27-SBON",
+          "native_metadata_sha256": "cd2964b799df867430c4db395d51b4544ce5868f8b087c0e24677749a3a9f43c",
+          "canonical_id": "NCAAB:M:D1:NCAA596",
+          "label": "St. Bonaventure",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "c98b4a17-62b2-4c19-b82f-575458c120af",
+      "target": "NCAAB:M:D1:NCAA629",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-SF",
+          "native_metadata_sha256": "302d98889ca4738211a0f97729df15666caa464710e963ba8b7365f44ce1f433",
+          "canonical_id": "NCAAB:M:D1:NCAA629",
+          "label": "San Francisco",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "2356fb0f-7d89-41ab-b273-26fe24cd541a",
+      "target": "NCAAB:M:D1:NCAA674",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-STAN",
+          "native_metadata_sha256": "dddb048b592abc6f6e5dd44d5ccd3d19d5c0fd5ca4b5ec03f32dcf957fc02486",
+          "canonical_id": "NCAAB:M:D1:NCAA674",
+          "label": "Stanford",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "b0fef671-ddaa-4d07-b402-47b0a4a1bc86",
+      "target": "NCAAB:M:D1:NCAA688",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-SYR",
+          "native_metadata_sha256": "1da25aa44de7946cda4a1811a3ace51f26cc720bf03d81afa60238321d2a025a",
+          "canonical_id": "NCAAB:M:D1:NCAA688",
+          "label": "Syracuse",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "75e829e3-6dc0-40da-86d1-80717b456f73",
+      "target": "NCAAB:M:D1:NCAA700",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-TTU",
+          "native_metadata_sha256": "22af5e3e732b562684686339a52c69eddf4247931aaa7e3da6618d87523e7337",
+          "canonical_id": "NCAAB:M:D1:NCAA700",
+          "label": "Texas Tech",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "081594e6-e4a2-4fdf-b802-7238e1957851",
+      "target": "NCAAB:M:D1:NCAA334",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-UK",
+          "native_metadata_sha256": "22d9c5f01539eaf6d4b43a095748379769d4b3456972c29c96e1654e90430419",
+          "canonical_id": "NCAAB:M:D1:NCAA334",
+          "label": "Kentucky",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "6ce2364b-90a0-4162-ad9c-ac6dd07105fe",
+      "target": "NCAAB:M:D1:NCAA746",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-UVA",
+          "native_metadata_sha256": "a99640d2d58b0dfe3de2dffce9653002b62afaa27f31ffe631f4603ba61ef73c",
+          "canonical_id": "NCAAB:M:D1:NCAA746",
+          "label": "Virginia",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "d5aefcf7-ed6f-4e24-a5bc-0982c24376e9",
+      "target": "NCAAB:M:D1:NCAA736",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-VAN",
+          "native_metadata_sha256": "44a146dbb088b24da44c2791fe7354a72f234e8521e75078891b1f9ae15e2e0b",
+          "canonical_id": "NCAAB:M:D1:NCAA736",
+          "label": "Vanderbilt",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "2dc561b2-4bfc-4af6-b4d5-ae5a22791e37",
+      "target": "NCAAB:M:D1:NCAA739",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-VILL",
+          "native_metadata_sha256": "cc22654e166beb4da01c1b1057d8eb517461cc85cf224021acd861df11b8e4db",
+          "canonical_id": "NCAAB:M:D1:NCAA739",
+          "label": "Villanova",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "8d873e64-e62e-4496-a156-e97294a7bdfb",
+      "target": "NCAAB:M:D1:NCAA749",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-WAKE",
+          "native_metadata_sha256": "1e6f91f12d1db353ff28a58054a73de99aa5754f09d9646072e1a9d1a1853730",
+          "canonical_id": "NCAAB:M:D1:NCAA749",
+          "label": "Wake Forest",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "7f82faca-4511-4549-91c9-844180387779",
+      "target": "NCAAB:M:D1:NCAA812",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-XAV",
+          "native_metadata_sha256": "2c46491d7f1293a16ab3759f00a0ed3da30d39d9106290b0a8d8800c4b77f7ea",
+          "canonical_id": "NCAAB:M:D1:NCAA812",
+          "label": "Xavier",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "aa47177d-346b-4467-b8d2-dc49e284a2e6",
+      "target": "MLB:ATL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-ATL",
+          "native_metadata_sha256": "e92f0325407d6d6c9a1197dac2bcc1fb5ddcfffb51b2263cbeaf6d6a947ea9e1",
+          "canonical_id": "MLB:ATL",
+          "label": "Atlanta",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "38fca57a-f2cb-43b2-9e84-cc250972ac17",
+      "target": "MLB:ARI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-AZ",
+          "native_metadata_sha256": "bb0a1303119184b4684e14b846732e9ab65a6c4c7b5ac35a4f558b8e8faa0cb6",
+          "canonical_id": "MLB:ARI",
+          "label": "Arizona",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "e0a64786-0b17-4f7c-a8b5-425d52debb2d",
+      "target": "MLB:BAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-BAL",
+          "native_metadata_sha256": "c65399bdea3465bc55753dbd906d6faf1a11911080e314e3ce421578ad5e4d4d",
+          "canonical_id": "MLB:BAL",
+          "label": "Baltimore",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-BAL",
+          "native_metadata_sha256": "c9769c7487724dc2594c3089d46a4add227d64c3edeb761cb850ba833d6740dd",
+          "canonical_id": "MLB:BAL",
+          "label": "Baltimore",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "6e285aea-d5a3-419f-89e7-7061016abf87",
+      "target": "MLB:BOS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-BOS",
+          "native_metadata_sha256": "0603fd30a2ac141bb9ed721ef8fea9d2b595e02022f9ce49ad409f911eb79101",
+          "canonical_id": "MLB:BOS",
+          "label": "Boston",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-BOS",
+          "native_metadata_sha256": "3a7c5e4e8faaaf2e5c8c07a6cccf8a52464172e116cc6547b293768263f1a189",
+          "canonical_id": "MLB:BOS",
+          "label": "Boston",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "ed1fa89d-04cc-4a5d-9e87-9a89c0142724",
+      "target": "MLB:CIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-CIN",
+          "native_metadata_sha256": "e53c9fb110bf33f79b986886268cd4f2ddcbe994d158f7c651463bd0282b6125",
+          "canonical_id": "MLB:CIN",
+          "label": "Cincinnati",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "60097777-bab8-4215-8d29-b92466b5bb65",
+      "target": "MLB:CLE",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-CLE",
+          "native_metadata_sha256": "7d4ed5fcd81a03a2124d0af504f13ae60c7737895e99ce43831e2e1b58b147ad",
+          "canonical_id": "MLB:CLE",
+          "label": "Cleveland",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-CLE",
+          "native_metadata_sha256": "ece55e41ace73ed51ef894e187175b00d44cdbcf39688cf4f8f7c2e211a0b03a",
+          "canonical_id": "MLB:CLE",
+          "label": "Cleveland",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "19c3bb01-8748-4127-9d1e-8554951bebd9",
+      "target": "MLB:COL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-COL",
+          "native_metadata_sha256": "93a4fb03b6e9279ffcc32ea24aa689f7aa1a1bbe85cffe04f880786ea385d95f",
+          "canonical_id": "MLB:COL",
+          "label": "Colorado",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "8905d233-d4fc-485d-9df7-3092bb192b3e",
+      "target": "MLB:DET",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-DET",
+          "native_metadata_sha256": "1045e0951798871f195810d5712afea2bfab14f44930d2a4716489ff00af7745",
+          "canonical_id": "MLB:DET",
+          "label": "Detroit",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-DET",
+          "native_metadata_sha256": "10a82dd9dc932a942e246667fff9e0fcf188117cfb98377f1178782b11134c96",
+          "canonical_id": "MLB:DET",
+          "label": "Detroit",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "9f4268d7-a294-4698-98c5-c16e37e4ac3d",
+      "target": "MLB:HOU",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-HOU",
+          "native_metadata_sha256": "cc2919416c067bd517a62b552f2ab58c962f1763011a55845af0c95c34f565e7",
+          "canonical_id": "MLB:HOU",
+          "label": "Houston",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-HOU",
+          "native_metadata_sha256": "9812f3e4a1170f88d8a20ea727f09a08bd276da28cf10f845096b0dafe9f3baf",
+          "canonical_id": "MLB:HOU",
+          "label": "Houston",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "1fd1359b-d478-46ab-9ea7-612d671951d6",
+      "target": "MLB:KC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-KC",
+          "native_metadata_sha256": "395ad9b34ea0dc76e150ca854b55eb7d70ab7b75150796496dc7b96500275c48",
+          "canonical_id": "MLB:KC",
+          "label": "Kansas City",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-KC",
+          "native_metadata_sha256": "84173326d8ffcf85206945bf382de2dd5351c29aeceebaed46529a60ab912c7b",
+          "canonical_id": "MLB:KC",
+          "label": "Kansas City",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "80d1713b-a45b-42f8-ba94-a634aaa9a0e2",
+      "target": "MLB:MIA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-MIA",
+          "native_metadata_sha256": "21129604ebe49531d3cadbaf80ae49c976342b9a4982e8a28674e281664dad76",
+          "canonical_id": "MLB:MIA",
+          "label": "Miami",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "087f0ae7-c231-4dcd-b7e5-f026c1769e40",
+      "target": "MLB:MIL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-MIL",
+          "native_metadata_sha256": "1ca00aa6481585e3ec4a61b1aa58031ad701d5b8c8a153bca1a5d358995721f0",
+          "canonical_id": "MLB:MIL",
+          "label": "Milwaukee",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "a2e0a7af-4208-4889-b60c-7c9254c67d5b",
+      "target": "MLB:MIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-MIN",
+          "native_metadata_sha256": "1e5c37cd50eced1100a3e8f9dcd1449add39769c5af08efc0c5fb5639e5b7172",
+          "canonical_id": "MLB:MIN",
+          "label": "Minnesota",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-MIN",
+          "native_metadata_sha256": "dd049f6d239002f69f61082cdc12d15c2c6b316508c544190a42b7142a7da2c3",
+          "canonical_id": "MLB:MIN",
+          "label": "Minnesota",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "576dc9ee-9a05-4610-8e9d-efa2a046582d",
+      "target": "MLB:NYY",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-NYY",
+          "native_metadata_sha256": "31e14fd0c068227d307e3d6c5f024b3567c6f1c8601834858e5bf08e8dcf31a7",
+          "canonical_id": "MLB:NYY",
+          "label": "New York Y",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-NYY",
+          "native_metadata_sha256": "c9202b0ec8ed44b1ec3277ca319103c54637d2f9f0dd7aba6a8ced1840ac8714",
+          "canonical_id": "MLB:NYY",
+          "label": "New York Y",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "bf277158-b28d-4a0e-aa3b-54fd3acd3009",
+      "target": "MLB:PHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-PHI",
+          "native_metadata_sha256": "0de48e416080f3e3866972094410142c0739aa454932186e8d73e26f55fe7e0d",
+          "canonical_id": "MLB:PHI",
+          "label": "Philadelphia",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "7f7b33bd-0aa9-4128-a9ba-94adc9bacc29",
+      "target": "MLB:PIT",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-PIT",
+          "native_metadata_sha256": "8b07f02e3dee63cca78d17f04585ca12a7f352af67dcc4392eb8e923176db70c",
+          "canonical_id": "MLB:PIT",
+          "label": "Pittsburgh",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "807fa239-87eb-4e89-a969-649ab2027bc4",
+      "target": "MLB:SD",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-SD",
+          "native_metadata_sha256": "f5ad226a8e79de22078a75dd885069a8bf331b09014a4208808f2ea51c2d0174",
+          "canonical_id": "MLB:SD",
+          "label": "San Diego",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "00ca8318-b0fe-45c4-82c7-f43901a96114",
+      "target": "MLB:SEA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-SEA",
+          "native_metadata_sha256": "91dd16c0a12d79c82e44a1e67637672866d6bbaaf38b75ac88868a55dd760b4a",
+          "canonical_id": "MLB:SEA",
+          "label": "Seattle",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-SEA",
+          "native_metadata_sha256": "a3f1ada52bd88a54b6ad4022d613dcf0065c4e7a7ec7828261862bd5ca8e81a7",
+          "canonical_id": "MLB:SEA",
+          "label": "Seattle",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "cef5e9c6-0724-4524-bdd1-000f92a91c40",
+      "target": "MLB:SF",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-SF",
+          "native_metadata_sha256": "5ce956df7b0e11d7f7f3eb1fb91b4cb48535a30c9cc8adf09c0c810f968c0602",
+          "canonical_id": "MLB:SF",
+          "label": "San Francisco",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "8068b1da-6725-4883-a163-885111c4f717",
+      "target": "MLB:STL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-STL",
+          "native_metadata_sha256": "c6a454cbb4e96e317d6a8163e87078636bfb8ff2326eba960e17fefc53f6472a",
+          "canonical_id": "MLB:STL",
+          "label": "St. Louis",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "942f3f85-869a-4f7a-8e5a-336365c5294b",
+      "target": "MLB:TB",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-TB",
+          "native_metadata_sha256": "14e407b1c41537e45815757660bee58b01e28c159c26352fdb6918fa020124f4",
+          "canonical_id": "MLB:TB",
+          "label": "Tampa Bay",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-TB",
+          "native_metadata_sha256": "b2e6e6346d6ebab33aa2f1861b7b5349ed2e5afd9d623b8bef0823d298483850",
+          "canonical_id": "MLB:TB",
+          "label": "Tampa Bay",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "ad64d981-5e58-4988-8e7e-7cac4ff4960c",
+      "target": "MLB:TEX",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-TEX",
+          "native_metadata_sha256": "03c9321f0dfd00ece0523d0c11e35355c4d544bf5dad13ce508b45264e8ec4b1",
+          "canonical_id": "MLB:TEX",
+          "label": "Texas",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-TEX",
+          "native_metadata_sha256": "b8bb0c74f464632d3053e0143b7b3732ce223181d3f2dcb829852d6de6ce1442",
+          "canonical_id": "MLB:TEX",
+          "label": "Texas",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "d237086c-19b8-4f27-9efb-ae6f5b915332",
+      "target": "MLB:TOR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-TOR",
+          "native_metadata_sha256": "5d0f447270d4bdbb9c65d486a5920bb26c39766e6ca039014d0a3275c4c9a734",
+          "canonical_id": "MLB:TOR",
+          "label": "Toronto",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        },
+        {
+          "market_id": "KXMLBAL-26-TOR",
+          "native_metadata_sha256": "dc0e7624a1b5e82b0b07264bee34936daef0d4bd965d46148c7e8ecadeb1de5d",
+          "canonical_id": "MLB:TOR",
+          "label": "Toronto",
+          "body_sha256": "f0081437df5c0fa5bfb97c53eedf8a0dc5a7f123489cacc2df539ce8cd6e1057"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "MLB",
+      "native_id": "517134f6-9c3a-4fbe-bad5-3fbe925f9a02",
+      "target": "MLB:WSH",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMLB-26-WSH",
+          "native_metadata_sha256": "7f4be8b9b30bea42288686f7ea7d66ec876fa8c4dd92aef73035bf87104de557",
+          "canonical_id": "MLB:WSH",
+          "label": "Washington",
+          "body_sha256": "eaa536387e17e91795465ab100d87e3fc8ff2946282eaa82e65f63c091f24bbe"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "e0729403-9c95-4ee2-b5d4-f704d8322570",
+      "target": "NBA:ATL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-ATL",
+          "native_metadata_sha256": "7e29d518a7882fd6d5131957fa245ff37dbd78d117b30521def2fcac1d455d5b",
+          "canonical_id": "NBA:ATL",
+          "label": "Atlanta",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-ATL",
+          "native_metadata_sha256": "71644ac54e60602fe13fcd2e76b2622a343348955dab4334b4d066d49048bb2d",
+          "canonical_id": "NBA:ATL",
+          "label": "Atlanta",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "7cc1eb26-46ee-44b7-94ad-248ee3b0fbd3",
+      "target": "NBA:BKN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-BKN",
+          "native_metadata_sha256": "c06d4e921f8698e5eaba852b32ae6d0b8d7fb94ba55b4d4138d6c0b34a10a7c5",
+          "canonical_id": "NBA:BKN",
+          "label": "Brooklyn",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-BKN",
+          "native_metadata_sha256": "0a053f30877e9e64a1146ca50e5d58b4308fbbad3c527b7a141dd84e291c32af",
+          "canonical_id": "NBA:BKN",
+          "label": "Brooklyn",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "6dd427f5-fa02-40ef-aa90-cfa73e0c539e",
+      "target": "NBA:BOS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-BOS",
+          "native_metadata_sha256": "a18e1501a7edf2dbfa61d098a3eaa3a0d8c95bda2c649cf9be35e487e0947cc1",
+          "canonical_id": "NBA:BOS",
+          "label": "Boston",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-BOS",
+          "native_metadata_sha256": "228c60235947f455bbe3b57cafd6dae0ff80809e3d32b40cfc9a7fe6f663c4cb",
+          "canonical_id": "NBA:BOS",
+          "label": "Boston",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "7c980c51-fa76-4571-b165-242b2a00f3a1",
+      "target": "NBA:CHA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-CHA",
+          "native_metadata_sha256": "68d859cb1bc2886c72a6641c0b36c0647a1b8d9e9cd87da9f56f945208334743",
+          "canonical_id": "NBA:CHA",
+          "label": "Charlotte",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-CHA",
+          "native_metadata_sha256": "daa10b3b45a02fa5d78f75ac726c85635ac9c72d7c27078df0081d19c6ab6568",
+          "canonical_id": "NBA:CHA",
+          "label": "Charlotte",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "65f0250b-455d-43d7-b7dc-7d321bdf9abc",
+      "target": "NBA:CHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-CHI",
+          "native_metadata_sha256": "c9e9e9792e1207341edd08899aa0ac4b130d70a919645ecf33b2999fdf77c073",
+          "canonical_id": "NBA:CHI",
+          "label": "Chicago",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-CHI",
+          "native_metadata_sha256": "1c5a0e41403986f95b021fef50a507e2015f8242a884a209d669153cd2f8530b",
+          "canonical_id": "NBA:CHI",
+          "label": "Chicago",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "90381a35-42a6-4975-851f-175418e4271a",
+      "target": "NBA:CLE",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-CLE",
+          "native_metadata_sha256": "784a158b4c3d8e7797c8e7b418bbc98abf51ff3b5c738fc3c54ad6c051d2d114",
+          "canonical_id": "NBA:CLE",
+          "label": "Cleveland",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-CLE",
+          "native_metadata_sha256": "59bb15644840ba377d28204e6dd7b9d0b5e7e8ca213344d5d9ee2ece3e97687f",
+          "canonical_id": "NBA:CLE",
+          "label": "Cleveland",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "36547ae6-f0fa-4d06-a6e5-5bfa64a217ed",
+      "target": "NBA:DAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-DAL",
+          "native_metadata_sha256": "33398ed2417e61cc3234c15e8c163a9dd231382f987804e6593d028ecd6df556",
+          "canonical_id": "NBA:DAL",
+          "label": "Dallas",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "ba2cb6be-9827-46a8-8e6f-d8661307ba77",
+      "target": "NBA:DEN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-DEN",
+          "native_metadata_sha256": "a7a155d19b6e97aa332a072f50cf329eeb75136523c276bc50d21b1aa19e9d78",
+          "canonical_id": "NBA:DEN",
+          "label": "Denver",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "65569528-1888-40aa-9d62-2b0e8142a9b4",
+      "target": "NBA:DET",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-DET",
+          "native_metadata_sha256": "358975ee10c4f0b5cbece0e9922561b5ab17784dc00a9d62f5741a93f9d10db8",
+          "canonical_id": "NBA:DET",
+          "label": "Detroit",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-DET",
+          "native_metadata_sha256": "05829562fc57d6e78eedf8a0b376682748475112794a92c49bcf2ecb99ec3921",
+          "canonical_id": "NBA:DET",
+          "label": "Detroit",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "502c629b-4da7-40fd-92ab-20cb55411c35",
+      "target": "NBA:GSW",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-GSW",
+          "native_metadata_sha256": "7c0389bcef6eec967eb0afdcc2357f118f852e269e5488d832f68f2134f336b4",
+          "canonical_id": "NBA:GSW",
+          "label": "Golden State",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "a8625e4b-4ae6-4062-a7c1-0b6e1f4ae211",
+      "target": "NBA:HOU",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-HOU",
+          "native_metadata_sha256": "361da7deed697643b739ed77970c5d62c43fd0824c0b1c86159326a2a0a236f9",
+          "canonical_id": "NBA:HOU",
+          "label": "Houston",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "d059bab2-9fb5-42dd-8038-5a12474300ce",
+      "target": "NBA:IND",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-IND",
+          "native_metadata_sha256": "42620796bd4f02b87853a96f5de45d00698159c8febfd44134b476832cf1f41f",
+          "canonical_id": "NBA:IND",
+          "label": "Indiana",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-IND",
+          "native_metadata_sha256": "e0e649c05f5361073343e472bfd2599b0762e8c76168e9d58b9e4e96ca8c81e0",
+          "canonical_id": "NBA:IND",
+          "label": "Indiana",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "daca4413-0ea1-4db2-a815-f05c181ef0a6",
+      "target": "NBA:LAC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-LAC",
+          "native_metadata_sha256": "f3ca5354ff8a09f18c34f3b77abe549fe3d9631b517e3634458527653ed5d4f5",
+          "canonical_id": "NBA:LAC",
+          "label": "Los Angeles C",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "2ef4d31c-0b46-4f43-a403-f44d62489034",
+      "target": "NBA:LAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-LAL",
+          "native_metadata_sha256": "f498a4efa2ad0bb15c5e6ff5df397394cd99c01d089c30ab718f7eaf69192b62",
+          "canonical_id": "NBA:LAL",
+          "label": "Los Angeles L",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "1cfe70b8-4dfc-47dc-acca-b68d4a725972",
+      "target": "NBA:MEM",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-MEM",
+          "native_metadata_sha256": "c3aa33ac0c134e37b97d8bf21cd188007fc3101d854028af0797b95a24c4b045",
+          "canonical_id": "NBA:MEM",
+          "label": "Memphis",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "a17e4a68-2999-4f60-b67e-3e80aa9e198b",
+      "target": "NBA:MIA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-MIA",
+          "native_metadata_sha256": "ea928d8188efe3dce5df50ba205e99a01b337b57fb6018ea28a56c572f62024c",
+          "canonical_id": "NBA:MIA",
+          "label": "Miami",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-MIA",
+          "native_metadata_sha256": "0b5196caac6a159a044839caf7a30fc77f76895e7de92f3cfed2c830c96a40cf",
+          "canonical_id": "NBA:MIA",
+          "label": "Miami",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3",
+      "target": "NBA:MIL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-MIL",
+          "native_metadata_sha256": "ac9c93f207b6177ca683eae5ee9d34b6411f23137e6e93f6472e8182a5d98761",
+          "canonical_id": "NBA:MIL",
+          "label": "Milwaukee",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-MIL",
+          "native_metadata_sha256": "ffffc619639863e5ed79e8d6cbf7836e4735d4a109d34b92b3c50a826b3ff032",
+          "canonical_id": "NBA:MIL",
+          "label": "Milwaukee",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "29e3c04e-fadb-4006-be20-cbb8c159ce0e",
+      "target": "NBA:MIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-MIN",
+          "native_metadata_sha256": "89fd82045fe5f1ee2fc26463fde9a8dece16eb9b9a3911d4dd4ea36a15fc8f56",
+          "canonical_id": "NBA:MIN",
+          "label": "Minnesota",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "d3c8c2ac-c4a0-4d67-8b16-53cb91118dfc",
+      "target": "NBA:NOP",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-NOP",
+          "native_metadata_sha256": "660367d4018c10ee876d125707549b43a3c21a7681a4db7df91640c07e36f7e4",
+          "canonical_id": "NBA:NOP",
+          "label": "New Orleans",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "67468ecc-b868-43a4-b9dc-751a52894bb0",
+      "target": "NBA:NYK",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-NYK",
+          "native_metadata_sha256": "20d9fdab49432cb7d35af42701c67e503095d29717dc46f094138e43309b2a85",
+          "canonical_id": "NBA:NYK",
+          "label": "New York",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-NYK",
+          "native_metadata_sha256": "03424e504553b6bac383786951235c25120bf3f153efe0bd75728e069c6ab16d",
+          "canonical_id": "NBA:NYK",
+          "label": "New York",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "a85f6eca-2f3b-4f61-83ab-8d049f59ce2c",
+      "target": "NBA:OKC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-OKC",
+          "native_metadata_sha256": "9b3119580c4aa3f66f6c980705d96ecd471f86be61df1aa852edd957ad364a83",
+          "canonical_id": "NBA:OKC",
+          "label": "Oklahoma City",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "00c3e69d-d9b9-4ac3-bf79-19707fe43637",
+      "target": "NBA:ORL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-ORL",
+          "native_metadata_sha256": "c44df36464d6cbf14cadcc1ebd299387ff2d823b207772507b8c8ed264fc0477",
+          "canonical_id": "NBA:ORL",
+          "label": "Orlando",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-ORL",
+          "native_metadata_sha256": "3b9428d242ba8c96c8e8bf38691d7e5a604a2d41d723543caf2a746c39f72ee8",
+          "canonical_id": "NBA:ORL",
+          "label": "Orlando",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "0554528d-586b-461f-827b-801cf93e8a8e",
+      "target": "NBA:PHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-PHI",
+          "native_metadata_sha256": "c43934c9fc40e3a390c4cf0c8014ac93b922e67631d4f3bd0c95517bd2a835ba",
+          "canonical_id": "NBA:PHI",
+          "label": "Philadelphia",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-PHI",
+          "native_metadata_sha256": "c5c214e1f8e7f66f0888213554fdc5e7757856ada4eb0523c492d554521c0663",
+          "canonical_id": "NBA:PHI",
+          "label": "Philadelphia",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "ace11dff-c5d1-4ab9-9452-5312253659fd",
+      "target": "NBA:PHX",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-PHX",
+          "native_metadata_sha256": "b21d31765e080fc5dc23704102ff132cf687936942e2f5d8cf535ceed498b252",
+          "canonical_id": "NBA:PHX",
+          "label": "Phoenix",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "2229b01e-68eb-46ad-adf4-71a9533c84fc",
+      "target": "NBA:POR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-POR",
+          "native_metadata_sha256": "eb1aaef629a8888cbca6c0c133d86fa64f4e6c1ff36f44e382b3fc85ca31ef05",
+          "canonical_id": "NBA:POR",
+          "label": "Portland",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "ab9e2e9a-3243-41b6-a291-95f4d9c6edf7",
+      "target": "NBA:SAC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-SAC",
+          "native_metadata_sha256": "3763c1c8ed1add529d460a97bafd37c0ba81eac0c1ea93899742a4ba1923adab",
+          "canonical_id": "NBA:SAC",
+          "label": "Sacramento",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "ad36c3e8-4194-4e63-920f-7c50f46191a6",
+      "target": "NBA:SAS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-SAS",
+          "native_metadata_sha256": "34000e2f942f6b1a0e37f1fc2d10eabcde4258bcd22ef07ef211e675fdca840a",
+          "canonical_id": "NBA:SAS",
+          "label": "San Antonio",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "96c447dd-2cdd-4c58-a151-ef0df87de981",
+      "target": "NBA:TOR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-TOR",
+          "native_metadata_sha256": "b6ac297c8280f2e84672218e0a543c1c5d612428c30db8668ca1a7cc8d0dc11a",
+          "canonical_id": "NBA:TOR",
+          "label": "Toronto",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-TOR",
+          "native_metadata_sha256": "c53497f14d9cbccf477b243b00b34b45a6bf1bda954f7b48e2041641d8bdfb25",
+          "canonical_id": "NBA:TOR",
+          "label": "Toronto",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "6f60dfb1-fda1-423f-b76f-67e9d24b9644",
+      "target": "NBA:UTA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-UTA",
+          "native_metadata_sha256": "b2c0eec9341c883adbe9992807a6cf136878a051b3f4cd661f50e787e14885f7",
+          "canonical_id": "NBA:UTA",
+          "label": "Utah",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NBA",
+      "native_id": "0464e75c-8bc8-4f18-9ee2-577832b889d6",
+      "target": "NBA:WAS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNBA-27-WAS",
+          "native_metadata_sha256": "0f00d32045137afa762a8e42604317c9ac5c648eab0f2403998c4e68087d86eb",
+          "canonical_id": "NBA:WAS",
+          "label": "Washington",
+          "body_sha256": "b9366653b81b600cb39f42bbd65b90b6c635c7d15e3b64ea5dd4562ff8bd809b"
+        },
+        {
+          "market_id": "KXNBAEAST-27-WAS",
+          "native_metadata_sha256": "41c4d1a4197316c608ab22b17accd59b6b5d0f5f3ecfcff97e24555052bfc62d",
+          "canonical_id": "NBA:WAS",
+          "label": "Washington",
+          "body_sha256": "10fa2b73f1f7e18a840e9299d11fdba74edda5add5d85700d3af90f71fa36829"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "d76c78bf-3249-4d7a-86d6-df7df6c0fb60",
+      "target": "NCAAF:ALA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-ALA",
+          "native_metadata_sha256": "a9845df5ba30aef80e36ac5703be85c3851fd12d292ec6a9e705145d13cb4aff",
+          "canonical_id": "NCAAF:ALA",
+          "label": "Alabama",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "4d04b3c4-de42-41ce-b7e0-a9ac9716ceb7",
+      "target": "NCAAF:NCAA29",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-ARIZ",
+          "native_metadata_sha256": "71677cdd0000b92b1933f5c95c383b0f1ef92292a44ca9fa725cd86c5fe47a23",
+          "canonical_id": "NCAAF:NCAA29",
+          "label": "Arizona",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "a1a9b074-3b37-4077-908a-f25a6f962a4d",
+      "target": "NCAAF:NCAA37",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-AUB",
+          "native_metadata_sha256": "cc0d6182a690e5b8af3e1397dd65dd6bcc10c40f9c4d04efcbe47841b52e9c79",
+          "canonical_id": "NCAAF:NCAA37",
+          "label": "Auburn",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "8ce020e8-9b57-4b59-afb5-7ad24fad3e9e",
+      "target": "NCAAF:NCAA51",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-BAY",
+          "native_metadata_sha256": "907d72602aa2467dd44b87d7ced85962092985295056a990e4cc6ee83245acb9",
+          "canonical_id": "NCAAF:NCAA51",
+          "label": "Baylor",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "f060e85c-9173-4f46-97b3-93644748c16e",
+      "target": "NCAAF:NCAA147",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-CLEM",
+          "native_metadata_sha256": "6184a7b22d39189cc5d19458397d321ec7e4c00f46a46600a763e76278b58f83",
+          "canonical_id": "NCAAF:NCAA147",
+          "label": "Clemson",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "339366c5-6d28-41f6-a37e-31fc6ff60c3b",
+      "target": "NCAAF:NCAA235",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-FLA",
+          "native_metadata_sha256": "04503a68a21814ba60959b0ead8c0c222493291dcb0c27f4c382a09e04899972",
+          "canonical_id": "NCAAF:NCAA235",
+          "label": "Florida",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "f6333c46-3ac7-4530-b0d0-51795fb98813",
+      "target": "NCAAF:NCAA288",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-HOU",
+          "native_metadata_sha256": "8b32a2f36a861dd605ae444467e4f8d8f7dd5908d608ea0f0e181f8adc3b34ae",
+          "canonical_id": "NCAAF:NCAA288",
+          "label": "Houston",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "1d27c970-07a1-4176-8eb0-b91bef710549",
+      "target": "NCAAF:NCAA312",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-IOWA",
+          "native_metadata_sha256": "7a54ec83dd83e3462f05aa32a01fbd74ef2d682478def1590b2b7f6dd8412e71",
+          "canonical_id": "NCAAF:NCAA312",
+          "label": "Iowa",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "70ddf80a-3853-481a-9903-05200c42c955",
+      "target": "NCAAF:NCAA317",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-JMU",
+          "native_metadata_sha256": "b9f5bfa9f05e83aa60a7d05f150b4296ec43043226de0ca15d0dc69844074753",
+          "canonical_id": "NCAAF:NCAA317",
+          "label": "James Madison",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "a918cf98-b685-4bbb-9293-7a23436076d0",
+      "target": "NCAAF:NCAA367",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-LOU",
+          "native_metadata_sha256": "33bf00eac75f29d7aacc018f1916459c367111b359aa6cf8dbec424576cce499",
+          "canonical_id": "NCAAF:NCAA367",
+          "label": "Louisville",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "f17cc58a-4b13-4c14-b420-c3b7dd172fe4",
+      "target": "NCAAF:MIAFL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-MIA",
+          "native_metadata_sha256": "cb8cce8b288328297276ae25e3d38a1549b17ac5f90a13c229c153582e02d1e5",
+          "canonical_id": "NCAAF:MIAFL",
+          "label": "Miami (FL)",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "24f587ff-0cd0-42ed-b232-f3850407fc0a",
+      "target": "NCAAF:NCAA418",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-MICH",
+          "native_metadata_sha256": "c6aec299aea562c141f9298be4255e73b16a81597232e3a5f8f8beb81e43b3f1",
+          "canonical_id": "NCAAF:NCAA418",
+          "label": "Michigan",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "8035af46-2259-433c-ae79-2f0f7d88e789",
+      "target": "NCAAF:MIAOH",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-MOH",
+          "native_metadata_sha256": "8dc5f930f2f5259db3d2253e1a2e5849f42b27f46196fe415880d282d287b512",
+          "canonical_id": "NCAAF:MIAOH",
+          "label": "Miami (OH)",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "e29b78dd-ca06-432f-8f2f-8d25aca47b9a",
+      "target": "NCAAF:NCAA513",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-ND",
+          "native_metadata_sha256": "aa1e6e30b7b70acb10d43866f8a02bdac82055a055790d8b5ba7e348c5e8fe59",
+          "canonical_id": "NCAAF:NCAA513",
+          "label": "Notre Dame",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "19e65a21-93aa-44d9-be82-9078509fcc6a",
+      "target": "NCAAF:NCAA522",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-OKLA",
+          "native_metadata_sha256": "b6f302504a14b21808ec6b43f0cbaeecfc8292f4d9e8f3e12ce361ec3b3ff84a",
+          "canonical_id": "NCAAF:NCAA522",
+          "label": "Oklahoma",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "6578cfe6-e17c-46ff-a2f7-eb4a5cc2ec73",
+      "target": "NCAAF:NCAA529",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-ORE",
+          "native_metadata_sha256": "fb62ae5175cea95515e5d070edcffa980b84cc95b913b7df1c4653a8c96f2280",
+          "canonical_id": "NCAAF:NCAA529",
+          "label": "Oregon",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "17b70f39-2dd0-4497-a8f2-d68baff1abc2",
+      "target": "NCAAF:NCAA545",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-PITT",
+          "native_metadata_sha256": "237e1f4a36dffa5c0b32674576011150169d51969550d43816fedb600c408dc9",
+          "canonical_id": "NCAAF:NCAA545",
+          "label": "Pittsburgh",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "2a063f95-6320-451a-8175-1d85c9198790",
+      "target": "NCAAF:NCAA539",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-PSU",
+          "native_metadata_sha256": "4d5c65567063175660aa263e4c0a1dd87457858ab9ce32feb862049163caa647",
+          "canonical_id": "NCAAF:NCAA539",
+          "label": "Penn St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "8c2bb3a9-6c76-47f6-8ccb-eef514f2d166",
+      "target": "NCAAF:NCAA700",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-TTU",
+          "native_metadata_sha256": "3d5c94b940252bd0d57583dd72a099a339a99e358f352a2112b1ce5c5addb8bc",
+          "canonical_id": "NCAAF:NCAA700",
+          "label": "Texas Tech",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "677805e1-9feb-41c6-b810-9b9f4997fb9a",
+      "target": "NCAAF:NCAA718",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-TULN",
+          "native_metadata_sha256": "2ca8991c16bce2465e17218277132bdad35835fe987417b2a5e6ecbf21bdfa2a",
+          "canonical_id": "NCAAF:NCAA718",
+          "label": "Tulane",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        },
+        {
+          "market_id": "KXNCAAFAAC-26-TULN",
+          "native_metadata_sha256": "d532bb677e0f19fbfd5913b623b5b657221c8305a2745f06bcff7f6cffe2f407",
+          "canonical_id": "NCAAF:NCAA718",
+          "label": "Tulane",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "a92d6ac7-dbda-434a-b791-5b5959d1fb7b",
+      "target": "NCAAF:NCAA257",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-UGA",
+          "native_metadata_sha256": "839d9cec2398218c523cb8764c691c0d03631621d09e5516009043e8950ac5d8",
+          "canonical_id": "NCAAF:NCAA257",
+          "label": "Georgia",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "1db5f6a2-6127-4b66-830a-10f5d8af4211",
+      "target": "NCAAF:NCAA334",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-UK",
+          "native_metadata_sha256": "512f96d276d4d5862752a9a51d2a2fb717277cb8154fbd2a93d7a14d15c09637",
+          "canonical_id": "NCAAF:NCAA334",
+          "label": "Kentucky",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "6ef86191-9211-4ea4-bbe4-bb7cdc04ebf4",
+      "target": "NCAAF:NCAA497",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-UNT",
+          "native_metadata_sha256": "67ebc8133f04fe31b740ec0a8b9509635b8455a11680e286048b2044d436c38e",
+          "canonical_id": "NCAAF:NCAA497",
+          "label": "North Texas",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        },
+        {
+          "market_id": "KXNCAAFAAC-26-UNT",
+          "native_metadata_sha256": "ef62a6a69222f633a9380e4beb365ae6d995dc9f1c05873874489e2925616c64",
+          "canonical_id": "NCAAF:NCAA497",
+          "label": "North Texas",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "721c6368-9a6a-47f1-8fdb-302f25594b6e",
+      "target": "NCAAF:NCAA732",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-UTAH",
+          "native_metadata_sha256": "763d14dc51a745a5fc3b901b860e76e8d36a0915239f77f3a0a0ef7b885f7162",
+          "canonical_id": "NCAAF:NCAA732",
+          "label": "Utah",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "0bf6c190-3556-4ad9-90f2-942a596cd45d",
+      "target": "NCAAF:NCAA746",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-UVA",
+          "native_metadata_sha256": "070a35ba1483264ea84f5f6516c8ef894203ab0bb7cd9bd7db7d5850845726b6",
+          "canonical_id": "NCAAF:NCAA746",
+          "label": "Virginia",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "bb63ad49-2d07-442b-a61b-37a79da6ef01",
+      "target": "NCAAF:NCAA736",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-VAN",
+          "native_metadata_sha256": "ffd6ebb253356012a45b197faa95510760edfbca90dba102798156a8f894dcc3",
+          "canonical_id": "NCAAF:NCAA736",
+          "label": "Vanderbilt",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "58435bc1-489d-4661-b211-5037c934b192",
+      "target": "NCAAF:NCAA742",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-VT",
+          "native_metadata_sha256": "b8de793c9c80a01647c9d4b134ce4203baa4169eb4c94a02aeee51199cb31733",
+          "canonical_id": "NCAAF:NCAA742",
+          "label": "Virginia Tech",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "15f75603-cb42-4000-8110-af3c069e7c1d",
+      "target": "NCAAF:NCAA756",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-WASH",
+          "native_metadata_sha256": "144c37568acabcb06b64230d08134bee31227d17c7569d9ebbe66be7b7985d8f",
+          "canonical_id": "NCAAF:NCAA756",
+          "label": "Washington",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+      "target": "NCAAF:NCAA196",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-ECU",
+          "native_metadata_sha256": "99067d34616a2af58f41a5060e73ceb11dc84b22b0f39c976aaf3229543a08c0",
+          "canonical_id": "NCAAF:NCAA196",
+          "label": "East Carolina",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "c9866078-c81e-4d18-a093-b74ed39cfafe",
+      "target": "NCAAF:NCAA229",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-FAU",
+          "native_metadata_sha256": "e3d782e6c2871fdef4d58529d3447a08b7ee10b21f8950c7298e744f83521179",
+          "canonical_id": "NCAAF:NCAA229",
+          "label": "Florida Atlantic",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "32c6235b-341c-4d7b-bf83-fddd09cfaf89",
+      "target": "NCAAF:NCAA404",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-MEM",
+          "native_metadata_sha256": "af6b7c9996af55fa04a38b87289cb393b2d314c40da2cc83c40740d6c44c464d",
+          "canonical_id": "NCAAF:NCAA404",
+          "label": "Memphis",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "7a47c2bf-3d5a-4cdd-b3cc-fce07250d1cb",
+      "target": "NCAAF:NCAA574",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-RICE",
+          "native_metadata_sha256": "e027538819930f58014423d71f92be3a4e235e215e7ce65ee94cf1c1e7c689f5",
+          "canonical_id": "NCAAF:NCAA574",
+          "label": "Rice",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+      "target": "NCAAF:NCAA690",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-TEM",
+          "native_metadata_sha256": "83bfa8c12b6efdbb90b20e5a3be82271033f9d51686abb7d30b38cad896802fe",
+          "canonical_id": "NCAAF:NCAA690",
+          "label": "Temple",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "8cd1c3b1-0e14-4583-b17b-939bb19d0589",
+      "target": "NCAAF:NCAA719",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-TLSA",
+          "native_metadata_sha256": "4df5d88dc8b3dfd3724a36068e02890c8d270b976964f9e25554adbc34a8d8a8",
+          "canonical_id": "NCAAF:NCAA719",
+          "label": "Tulsa",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "39bbb91b-8351-4c69-be69-4c08206c6884",
+      "target": "NCAAF:NCAA651",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFAAC-26-USF",
+          "native_metadata_sha256": "b4ade50e891e317ebc6629b8e5559cd3dfb28e9eff1b12adfd64fe48f75a97ec",
+          "canonical_id": "NCAAF:NCAA651",
+          "label": "South Florida",
+          "body_sha256": "d1506fbc27478464c13622d0c753d3946a6a37a95f004c0ad591257b57edb412"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "39cafc85-80ac-4ab9-83b0-701fa4c07d84",
+      "target": "NCAAB:M:D1:NCAA194",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-DUQ",
+          "native_metadata_sha256": "0ae17efaaf5e624b845f4e6cbff66f9bc6ae93430e8066c15612ebeb1539a103",
+          "canonical_id": "NCAAB:M:D1:NCAA194",
+          "label": "Duquesne",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "ff57bf27-c763-43e8-b5fa-ebeb148a27c7",
+      "target": "NCAAB:M:D1:NCAA236",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-FOR",
+          "native_metadata_sha256": "236b31bd76367f99bd5d98a58f978751568a8517745bb58f5f4ada16e9cfd674",
+          "canonical_id": "NCAAB:M:D1:NCAA236",
+          "label": "Fordham",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "39150431-8887-4930-8e35-541b30941f05",
+      "target": "NCAAB:M:D1:NCAA248",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-GMU",
+          "native_metadata_sha256": "5ad4fcf13df8105eb1a9278187e55d40c57cdeca7290921b6cbd8cdc58f96da9",
+          "canonical_id": "NCAAB:M:D1:NCAA248",
+          "label": "George Mason",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "010772c2-110f-4b64-b117-7e061fc3f1c4",
+      "target": "NCAAB:M:D1:NCAA249",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-GW",
+          "native_metadata_sha256": "f8ac24542885a502013f4beb718be285ff60b8aac91d9572ee699e78aa93fc45",
+          "canonical_id": "NCAAB:M:D1:NCAA249",
+          "label": "George Washington",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "a3a008dc-bf2f-4d3d-9ed5-8bc4f6166273",
+      "target": "NCAAB:M:D1:NCAA606",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-JOES",
+          "native_metadata_sha256": "d65f1def31f4ed4fa26db87af0a13e55dbc8a29f943cb2a5c522ea8a092d49a1",
+          "canonical_id": "NCAAB:M:D1:NCAA606",
+          "label": "Saint Joseph's",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "64308658-e1b0-41ae-9fa4-e1bfe5a86edb",
+      "target": "NCAAB:M:D1:NCAA340",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-LAS",
+          "native_metadata_sha256": "b62fe044f70011c114b3a704504250b5d25be587c60a178bf52e9840c3fac69a",
+          "canonical_id": "NCAAB:M:D1:NCAA340",
+          "label": "La Salle",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "dccafa18-01ae-43ff-b6e1-8749c192f52a",
+      "target": "NCAAB:M:D1:NCAA609",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-SLU",
+          "native_metadata_sha256": "374ea821e1fc701dc1b8a7f250dd7abab6dab076b59b79145e7368dc5f881d5a",
+          "canonical_id": "NCAAB:M:D1:NCAA609",
+          "label": "Saint Louis",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "d9ceec00-7fe5-4f43-9654-5713dbf15371",
+      "target": "NCAAB:M:D1:NCAA572",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBA10-27-URI",
+          "native_metadata_sha256": "c0f698114aeda13f6b66df495d9942bd6019dcc60b830b7b477af2999eecc864",
+          "canonical_id": "NCAAB:M:D1:NCAA572",
+          "label": "Rhode Island",
+          "body_sha256": "e4f3ec0753111f6b03e8244d94c42445acef53230d5d7e8a193985ac98372720"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "a69a57af-f1a1-4d44-ab62-e220ebaa2a5c",
+      "target": "NFL:BAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-BAL",
+          "native_metadata_sha256": "f50374ae82b9609f96395ae295463f49b1c35d0fce2c6b971169d69560f7e9c1",
+          "canonical_id": "NFL:BAL",
+          "label": "Baltimore",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-BAL",
+          "native_metadata_sha256": "78770a2d4fce26b9879743d7e2f3276a7387fc20a1e4e305f92b5adcf9cecb96",
+          "canonical_id": "NFL:BAL",
+          "label": "Baltimore",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "f9acd396-ba35-4cae-a431-a44b2af707b0",
+      "target": "NFL:BUF",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-BUF",
+          "native_metadata_sha256": "ee21945bcdeb747adc2eb015e78ebcd0aaa16379afaf20b7a0762c8e01fd5946",
+          "canonical_id": "NFL:BUF",
+          "label": "Buffalo",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-BUF",
+          "native_metadata_sha256": "f4d0401a55aa8de7fcdea4958f898a3cdae9380692bfcf405a9d4cfac1981842",
+          "canonical_id": "NFL:BUF",
+          "label": "Buffalo",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "b007a1ab-bca6-42c7-8706-62607a605866",
+      "target": "NFL:CIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-CIN",
+          "native_metadata_sha256": "822a0f00d68383451899220c5fee786fbbb32c64ed64dda1304e5459a2897d78",
+          "canonical_id": "NFL:CIN",
+          "label": "Cincinnati",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-CIN",
+          "native_metadata_sha256": "0c557731a32008352ceca28ed5b77e44d305163802cce5e63da708c85346d972",
+          "canonical_id": "NFL:CIN",
+          "label": "Cincinnati",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "05cc62a4-bd74-4b2c-ab7b-1b177b9f6790",
+      "target": "NFL:CLE",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-CLE",
+          "native_metadata_sha256": "e823621251ad7063cbb6b941813b9173dcaf863aa266f32fdd000ebdcf9cb824",
+          "canonical_id": "NFL:CLE",
+          "label": "Cleveland",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-CLE",
+          "native_metadata_sha256": "3ddecb1fd2f7728525111ac814f9bccada59759a8cdca1372104acdbe5cac066",
+          "canonical_id": "NFL:CLE",
+          "label": "Cleveland",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "0aa02fd7-1bb1-474b-98e1-5379d0a191e3",
+      "target": "NFL:DEN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-DEN",
+          "native_metadata_sha256": "594ee514f38d19d50e6df1ae5e115c0bbdf08446ecc1351f0d6ef3acd6e49d91",
+          "canonical_id": "NFL:DEN",
+          "label": "Denver",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-DEN",
+          "native_metadata_sha256": "25fdab48c81254a8862483ede09b038bf78d8ccd9e94c39b341a569eb0b5f367",
+          "canonical_id": "NFL:DEN",
+          "label": "Denver",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+      "target": "NFL:HOU",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-HOU",
+          "native_metadata_sha256": "901aa0814c299d133349026eb2774ea99fbd5d4fab5c27e42cc41eeec8ac4246",
+          "canonical_id": "NFL:HOU",
+          "label": "Houston",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-HOU",
+          "native_metadata_sha256": "be13738ed407300cb11a79367e451b7719c1814397e25269d9b8c77c35f51e7c",
+          "canonical_id": "NFL:HOU",
+          "label": "Houston",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf",
+      "target": "NFL:IND",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-IND",
+          "native_metadata_sha256": "b504e43de0649ebb099a5ba5b0974c3d543763b90387961af6fd32a55ff28094",
+          "canonical_id": "NFL:IND",
+          "label": "Indianapolis",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-IND",
+          "native_metadata_sha256": "051ee8250bc9e260358faa10c8ffdf62884fe3e7da15af44488fafa725f6b4b5",
+          "canonical_id": "NFL:IND",
+          "label": "Indianapolis",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+      "target": "NFL:JAX",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-JAC",
+          "native_metadata_sha256": "5afa0422cc324f1882df18d08897de48afc0dba899dbde4a32b92122bd5c7332",
+          "canonical_id": "NFL:JAX",
+          "label": "Jacksonville",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-JAC",
+          "native_metadata_sha256": "d96ae684ea5805b341cadf49a25b3d71a562b72bbd3cb9a082ee555308e9c87e",
+          "canonical_id": "NFL:JAX",
+          "label": "Jacksonville",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "64f72720-2e4a-4cc8-a39b-ca148aecb389",
+      "target": "NFL:KC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-KC",
+          "native_metadata_sha256": "12a59605e43d68d2a15ae85e4c678b2d0c9962ea6814bf81cb67b31a3dcc64a3",
+          "canonical_id": "NFL:KC",
+          "label": "Kansas City",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-KC",
+          "native_metadata_sha256": "39437709baa511e2338ca4809903f609c5da513dbe11e1da349f58f340ee1acf",
+          "canonical_id": "NFL:KC",
+          "label": "Kansas City",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "611e3786-3bfe-4919-bbd5-bc70fc13d827",
+      "target": "NFL:LAC",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-LAC",
+          "native_metadata_sha256": "cd3751e3e0416a291e72e67d33aa940ff4c1716a0ac15f48e5a8638fb62af5b8",
+          "canonical_id": "NFL:LAC",
+          "label": "Los Angeles C",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-LAC",
+          "native_metadata_sha256": "867030d95251730ef7d394322c5e99dbfdd076360383fbe8d1c75edc9a3f411f",
+          "canonical_id": "NFL:LAC",
+          "label": "Los Angeles C",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "8b1ce23e-7d64-4213-85e9-7d12bc8c4d85",
+      "target": "NFL:LV",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-LV",
+          "native_metadata_sha256": "04837be73abea5a4d77944842b85227236f9db2d66e7976a37248fd37bfabf1e",
+          "canonical_id": "NFL:LV",
+          "label": "Las Vegas",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-LV",
+          "native_metadata_sha256": "c453555221024465f0f7fdeff14482e31c6b1cf4ab6369a5ef0aedd446018114",
+          "canonical_id": "NFL:LV",
+          "label": "Las Vegas",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "4cba614d-2d32-48ef-a066-1524437fbaff",
+      "target": "NFL:MIA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-MIA",
+          "native_metadata_sha256": "479860fb65bba5374c8dd5663461d606c12d9a2ad674ffe5d7a7d4db46db27e0",
+          "canonical_id": "NFL:MIA",
+          "label": "Miami",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-MIA",
+          "native_metadata_sha256": "63729b13da4f8c4582f2851017ad9db067bcbb5ebb57c14b4aad10e74b680947",
+          "canonical_id": "NFL:MIA",
+          "label": "Miami",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "d1d64188-5cd5-4feb-97ff-8542c9dbeb43",
+      "target": "NFL:NE",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-NE",
+          "native_metadata_sha256": "b06a6b5d574fd298e62f8a9a3a54075d23edb7c7d3a9f65481a68adb6c02e84e",
+          "canonical_id": "NFL:NE",
+          "label": "New England",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-NE",
+          "native_metadata_sha256": "3da7fab9ce2a333553f07c020d47f3a319497de418c0251c5572d6767cc1b4a7",
+          "canonical_id": "NFL:NE",
+          "label": "New England",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "ccc2af2d-5c4d-4717-8036-5ba6bec5cfbd",
+      "target": "NFL:NYJ",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-NYJ",
+          "native_metadata_sha256": "954a9c5d3e0667017b137a91b61dee18c978f99c7e69321e3eff15c7c2ee6114",
+          "canonical_id": "NFL:NYJ",
+          "label": "New York J",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-NYJ",
+          "native_metadata_sha256": "45b833e93f16f925702c23086aa5ff1f5cd57d31da5a84ea9299b283b32ba8e0",
+          "canonical_id": "NFL:NYJ",
+          "label": "New York J",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "6aa76797-7833-45e1-85e3-96e0122801e1",
+      "target": "NFL:PIT",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-PIT",
+          "native_metadata_sha256": "15e955423eb44c4a7c90e68bdb7f10fe690e0927c2e6bbca90eb882e9395767f",
+          "canonical_id": "NFL:PIT",
+          "label": "Pittsburgh",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-PIT",
+          "native_metadata_sha256": "41a58d4a2209266b718418f5483aee5e04e496c33356ad2cd5ec40010a06b2c5",
+          "canonical_id": "NFL:PIT",
+          "label": "Pittsburgh",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "7c86629b-eafc-47b4-9204-b46a2d0e9cbb",
+      "target": "NFL:TEN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNFLAFCCHAMP-27-TEN",
+          "native_metadata_sha256": "13fbc7405d0b13b881c1bcb40651a1bfad4c06a78a3492a2d532feb259e78e9c",
+          "canonical_id": "NFL:TEN",
+          "label": "Tennessee",
+          "body_sha256": "2e7e47284434d6648322e70733b5728cfbc729c4ffa6a7e137585c043e4d8c84"
+        },
+        {
+          "market_id": "KXSB-27-TEN",
+          "native_metadata_sha256": "b62f662f729cc3cf0fabcd2b4cfb1136431e1c1c8cf3d9874eae62712af19456",
+          "canonical_id": "NFL:TEN",
+          "label": "Tennessee",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "954d2f87-b6bf-4eba-b424-478817a59b92",
+      "target": "NHL:ANA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-ANA",
+          "native_metadata_sha256": "eb7e788678815c5ff9331266fbf551d9fb547ae9d9087ba7a6465c80c0a4757b",
+          "canonical_id": "NHL:ANA",
+          "label": "Anaheim Ducks",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "4163474f-3470-4f0c-8a60-c998e3f93810",
+      "target": "NHL:BOS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-BOS",
+          "native_metadata_sha256": "6337b0be9c733b00c0cf0c6fe45e6eb2ea4d969faaae55006e59b721b00612fe",
+          "canonical_id": "NHL:BOS",
+          "label": "Boston Bruins",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-BOS",
+          "native_metadata_sha256": "9952b901aee70382d16b4cbcc16074adcb6c26e6a3ce641c19565451077bbca8",
+          "canonical_id": "NHL:BOS",
+          "label": "Boston Bruins",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "458b20ce-1c62-47d8-8fc4-6f752a2476e7",
+      "target": "NHL:BUF",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-BUF",
+          "native_metadata_sha256": "7d6de2a9db2d351a65d33c4383278124acaff5eef254cb0d6c500943edea57b4",
+          "canonical_id": "NHL:BUF",
+          "label": "Buffalo Sabres",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-BUF",
+          "native_metadata_sha256": "9490021b365d6cb550b6dc1cd524001bbfcfd6b05d395c210306e2f38bd9e14a",
+          "canonical_id": "NHL:BUF",
+          "label": "Buffalo Sabres",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "b93573ce-fdb3-4762-a28e-0f2505b1bd97",
+      "target": "NHL:CAR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-CAR",
+          "native_metadata_sha256": "b9ea095a2f9855101e681291c60525dfdd5dfd0fea35256863059c3d45f84cf1",
+          "canonical_id": "NHL:CAR",
+          "label": "Carolina Hurricanes",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-CAR",
+          "native_metadata_sha256": "62d94955c1b1cf823535fb93c1bf38dc95bdfc1c40eaccfeec72ea698cc92ee5",
+          "canonical_id": "NHL:CAR",
+          "label": "Carolina Hurricanes",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "253e2161-4b9b-4580-88e7-a25b9f6cf8af",
+      "target": "NHL:CBJ",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-CBJ",
+          "native_metadata_sha256": "8a57ba171b3e1080e2903b209cb3f10842a8989a2687ff5884a62f80b13a1dbf",
+          "canonical_id": "NHL:CBJ",
+          "label": "Columbus Blue Jackets",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-CBJ",
+          "native_metadata_sha256": "1db73f5afd74da00d3241e35e71f6f72e0d94fd039205d764c41cb96e2e958b3",
+          "canonical_id": "NHL:CBJ",
+          "label": "Columbus Blue Jackets",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "ea3554a4-eaa6-4e72-a32f-8388e618133f",
+      "target": "NHL:CGY",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-CGY",
+          "native_metadata_sha256": "5b6083bf72f339b2468bb27dcb0094ae735f42ba76a580bdffade5c23e3af9e8",
+          "canonical_id": "NHL:CGY",
+          "label": "Calgary Flames",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "a0e115e4-5a0c-405f-a005-e83ecdc0baa6",
+      "target": "NHL:CHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-CHI",
+          "native_metadata_sha256": "3b77c8b430c0e287b2ab01b3dd16c915ac4c7f1cb18fcc4c81b8f2fdf6f134cb",
+          "canonical_id": "NHL:CHI",
+          "label": "Chicago Blackhawks",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "70ecc991-a426-4567-b6ec-53f529f29078",
+      "target": "NHL:COL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-COL",
+          "native_metadata_sha256": "a8db213530c636939393bb444ca577665af92102fa3c8e74dda6032336f4ad5c",
+          "canonical_id": "NHL:COL",
+          "label": "Colorado Avalanche",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "5cfee6b9-43ff-4dfa-8347-2b9de7ed51b6",
+      "target": "NHL:DAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-DAL",
+          "native_metadata_sha256": "ceac2a76e6d85b097f4a3e9e4ea285e20b343c8274dacf0d9f178877db97c50a",
+          "canonical_id": "NHL:DAL",
+          "label": "Dallas Stars",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "2e166d0f-2ebf-4477-84d8-7702257b797f",
+      "target": "NHL:DET",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-DET",
+          "native_metadata_sha256": "40fde7192aa8062dffeb5af8503cfc3ec0114d39cf1f11b53ee00fd9e8a00e52",
+          "canonical_id": "NHL:DET",
+          "label": "Detroit Red Wings",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-DET",
+          "native_metadata_sha256": "97fe23a62ca825a6b77a62348f81f5b1c470d667cc43a8d62fdcca02d7a94f6f",
+          "canonical_id": "NHL:DET",
+          "label": "Detroit Red Wings",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "e8b67c82-f465-450d-aef9-c8414f2ae83a",
+      "target": "NHL:EDM",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-EDM",
+          "native_metadata_sha256": "73127c345433d8d562278b3099b5f8618bfc27972105d7201df89f468014c431",
+          "canonical_id": "NHL:EDM",
+          "label": "Edmonton Oilers",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "49b28762-c1b6-4962-a0cb-f1578510cad8",
+      "target": "NHL:FLA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-FLA",
+          "native_metadata_sha256": "2d791cdbeed439b1a062ca358786990c330624895240fa9ed7f0e644c23118fe",
+          "canonical_id": "NHL:FLA",
+          "label": "Florida Panthers",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-FLA",
+          "native_metadata_sha256": "0db062c882b5e3eeb3ee90c16bbc860a42b40ce368ef0647fe02f322c2d968c1",
+          "canonical_id": "NHL:FLA",
+          "label": "Florida Panthers",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "dbea1e18-0f3c-47a6-9617-e16981181ca2",
+      "target": "NHL:LAK",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-LA",
+          "native_metadata_sha256": "3490e986d7b7ec17a6aa749f91393a7624ec2a939a90e16c08aae691d7535c7d",
+          "canonical_id": "NHL:LAK",
+          "label": "Los Angeles Kings",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1cee0410-99f1-43a2-a67c-4e6a3b968a9c",
+      "target": "NHL:MIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-MIN",
+          "native_metadata_sha256": "2563fdec026ef13572efaaf238528f461cd125beebde86cdf7020feb2f45aa9f",
+          "canonical_id": "NHL:MIN",
+          "label": "Minnesota Wild",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "687da65c-5858-40e7-a189-0f20cf2a5686",
+      "target": "NHL:MTL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-MTL",
+          "native_metadata_sha256": "cf2081c4cbaa19359beadaa095c61823cc291afdcc742a378c410e217d590057",
+          "canonical_id": "NHL:MTL",
+          "label": "Montr\u00e9al Canadiens",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-MTL",
+          "native_metadata_sha256": "700ad6d2ecb0b473577a6ab74683030391202bb96f46d2cbe8d07e7ba4f43561",
+          "canonical_id": "NHL:MTL",
+          "label": "Montreal Canadiens",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "25df3a21-8554-4e7d-a3cc-8633360d6d51",
+      "target": "NHL:NJD",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-NJ",
+          "native_metadata_sha256": "000dccc5cd3234e595d89f51a2553cba248ab105ed17c2152c01018809411dc5",
+          "canonical_id": "NHL:NJD",
+          "label": "New Jersey Devils",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-NJ",
+          "native_metadata_sha256": "ecc63466766289486c17ff80cbe76f6162b0ae5becd597eb2896ac51fb267da3",
+          "canonical_id": "NHL:NJD",
+          "label": "New Jersey Devils",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "fcfd0b58-cc0a-448e-8f4b-6ddeab8f339f",
+      "target": "NHL:NSH",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-NSH",
+          "native_metadata_sha256": "018a9ae9292b06a356b62664403c45460f4f35c2af95e78a53ce3718fa36a2f7",
+          "canonical_id": "NHL:NSH",
+          "label": "Nashville Predators",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "03f52887-5bb7-4b51-954e-433f73474350",
+      "target": "NHL:NYI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-NYI",
+          "native_metadata_sha256": "e94429203cfccd218188f5786ed6732abbc9ca5ad3749d2de3c3c9c049050398",
+          "canonical_id": "NHL:NYI",
+          "label": "New York Islanders",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-NYI",
+          "native_metadata_sha256": "3b17f670d6d878c94a684ae6e214fd6018bf938406df4dc5ecfa4580e3051e2e",
+          "canonical_id": "NHL:NYI",
+          "label": "New York Islanders",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "9979553a-3962-4169-b2c3-510ba6d931d2",
+      "target": "NHL:NYR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-NYR",
+          "native_metadata_sha256": "bf7d799a26e27a24b2f42f9fce12f38ccea0475a36a65b826adac07e15e15a15",
+          "canonical_id": "NHL:NYR",
+          "label": "New York Rangers",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-NYR",
+          "native_metadata_sha256": "e58ec175efe0aa8276b763cdee580e552ed1c11c8e6fee601d6c2f4a28ef377c",
+          "canonical_id": "NHL:NYR",
+          "label": "New York Rangers",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "a2478063-2ded-4657-923b-e59de696ad21",
+      "target": "NHL:OTT",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-OTT",
+          "native_metadata_sha256": "3caad39a797af77b96ab9761112454508c76bd41dff40b410ee9fcd5a4e1486f",
+          "canonical_id": "NHL:OTT",
+          "label": "Ottawa Senators",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-OTT",
+          "native_metadata_sha256": "adb46d4db9ddd1b6474dfdd71ed3894cd4056a1057cdb87cead7c4c97b727d3d",
+          "canonical_id": "NHL:OTT",
+          "label": "Ottawa Senators",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "24770a4a-6bb0-4ecc-a40b-ad77bcbe403f",
+      "target": "NHL:PHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-PHI",
+          "native_metadata_sha256": "5cc52edd9f277e6944184aa2ef02446075522c4a31421b3ffbe24ba27b4b2c75",
+          "canonical_id": "NHL:PHI",
+          "label": "Philadelphia Flyers",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-PHI",
+          "native_metadata_sha256": "ce6804dde9607cf6f5bb7376a99af78fc2540db0f3b3785959a32bb4096e3e85",
+          "canonical_id": "NHL:PHI",
+          "label": "Philadelphia Flyers",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "1b5c6299-90f7-49c7-8617-264610d50488",
+      "target": "NHL:PIT",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-PIT",
+          "native_metadata_sha256": "9a41ac7c15dde2b63e66e71604dacb2bfd73616584c5b33fb8b088b0df44ee34",
+          "canonical_id": "NHL:PIT",
+          "label": "Pittsburgh Penguins",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-PIT",
+          "native_metadata_sha256": "4e025ddaf7070417dd17fa12c55435e93b4f613a903161a71338db85892855fb",
+          "canonical_id": "NHL:PIT",
+          "label": "Pittsburgh Penguins",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "2ed1104c-eb5a-4175-9f05-0561caaa59d2",
+      "target": "NHL:SEA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-SEA",
+          "native_metadata_sha256": "fdf8a13b44fce681129f433cb9288babd49f916f743fea21e08de2544e93e30f",
+          "canonical_id": "NHL:SEA",
+          "label": "Seattle Kraken",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "eb4bc183-5966-40eb-8bdb-3dd922ad1752",
+      "target": "NHL:SJS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-SJ",
+          "native_metadata_sha256": "dabab11a8e90d2c37990ff6f6a0ed06eeecf11cdbc2812df165929e10eeb033d",
+          "canonical_id": "NHL:SJS",
+          "label": "San Jose Sharks",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "999aeed3-b537-4775-a2f1-bfcfb9916303",
+      "target": "NHL:STL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-STL",
+          "native_metadata_sha256": "d1aef59317a2b190531cdfcd8a964b22b06252f8a9bae9dbf2040da05d1120b4",
+          "canonical_id": "NHL:STL",
+          "label": "St. Louis Blues",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "b08e569c-3249-4fcf-bea2-a57ab5e822eb",
+      "target": "NHL:TBL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-TB",
+          "native_metadata_sha256": "ae929581a71290e4809521be91bc0b6616c15a231514860ff59343dbf3ad9e30",
+          "canonical_id": "NHL:TBL",
+          "label": "Tampa Bay Lightning",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-TB",
+          "native_metadata_sha256": "974008ed4d59a65ed37d04e1167fef5b7b8c093cd400d71a8828e238385e5111",
+          "canonical_id": "NHL:TBL",
+          "label": "Tampa Bay Lightning",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "f61f9daa-407b-4c46-96e8-feee19cd6f51",
+      "target": "NHL:TOR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-TOR",
+          "native_metadata_sha256": "5ff95d3a01a732179fd28072dc689c946cbfe34d9e5e4a90848687dbe66100f1",
+          "canonical_id": "NHL:TOR",
+          "label": "Toronto Maple Leafs",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-TOR",
+          "native_metadata_sha256": "66d98fcf2be85c299a26fe3794a31d023ce5ed9e407559372b2f3f4b8bd11c98",
+          "canonical_id": "NHL:TOR",
+          "label": "Toronto Maple Leafs",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "7d20591d-c6fa-4b85-8d69-ff05fb3649ac",
+      "target": "NHL:UTA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-UTA",
+          "native_metadata_sha256": "0680ca011f52c93593d10cfa7f73251ce59594e42cbc3b866ac2a12c908f337d",
+          "canonical_id": "NHL:UTA",
+          "label": "Utah Mammoth",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "2d6db4a4-99f2-4547-85f3-9913404577f9",
+      "target": "NHL:VAN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-VAN",
+          "native_metadata_sha256": "ed2f5555ea5155e11a0aec30d23be2185b2bba28bb1d90e38a30835ea540f9b0",
+          "canonical_id": "NHL:VAN",
+          "label": "Vancouver Canucks",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "d599b5cc-5e06-4679-9303-4d5dad7c4cce",
+      "target": "NHL:VGK",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-VGK",
+          "native_metadata_sha256": "82130361500928b101152d61605ac479a0d13ff8decb1e05724ccf86882ac861",
+          "canonical_id": "NHL:VGK",
+          "label": "Vegas Golden Knights",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "6f769f6d-161e-43d3-a586-db5451c5050e",
+      "target": "NHL:WPG",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-WPG",
+          "native_metadata_sha256": "e1e23f870bfcf27ad73fa80c8316c44f8dada8d4e454ac3669250ed52aca1557",
+          "canonical_id": "NHL:WPG",
+          "label": "Winnipeg Jets",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NHL",
+      "native_id": "5b474f02-be1a-4aee-8200-4c4eb6e557e9",
+      "target": "NHL:WSH",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNHL-27-WSH",
+          "native_metadata_sha256": "932a73b9a9ba53d45098518e3165e4b7fb20643427c22dad2f166defada1082e",
+          "canonical_id": "NHL:WSH",
+          "label": "Washington Capitals",
+          "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
+        },
+        {
+          "market_id": "KXNHLEAST-27-WSH",
+          "native_metadata_sha256": "a3976f209084e1aa20f74aa3fc04c364e81afbc3c5bb28cb403a1dfdf63923a3",
+          "canonical_id": "NHL:WSH",
+          "label": "Washington Capitals",
+          "body_sha256": "88b975784a2fbf8fb285f15ed597bf3749ce6735829981f5757d2e77c7aea827"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "d73dae4f-1f08-4b5e-bf23-4e25e9b6a69c",
+      "target": "NFL:ARI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-ARI",
+          "native_metadata_sha256": "2c12efbf9edc2253d73f31bd57d608270ec4943163a06e58fa8cfb2ed80f165c",
+          "canonical_id": "NFL:ARI",
+          "label": "Arizona",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "75685be6-4388-4bba-8bcb-d0b0c24feb50",
+      "target": "NFL:ATL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-ATL",
+          "native_metadata_sha256": "022531840ad1d2491b26de09e6ce2dc7615faaad172a13499e6d22beaa5a8a62",
+          "canonical_id": "NFL:ATL",
+          "label": "Atlanta",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "e37050ce-354f-4dd0-b2d8-0bd1e9650eb7",
+      "target": "NFL:CAR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-CAR",
+          "native_metadata_sha256": "a3dd7e208ab907a1e7571bad5921e5af3582f721cc7a197edd964f069979f1fd",
+          "canonical_id": "NFL:CAR",
+          "label": "Carolina",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "9a77500a-1945-495e-b6f5-5c35bedaa8b9",
+      "target": "NFL:CHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-CHI",
+          "native_metadata_sha256": "e576a6719ec0c4368baf52c34abc31c0e788d8d241859a9309fd5be3ae6e571a",
+          "canonical_id": "NFL:CHI",
+          "label": "Chicago",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "62b97b7c-5503-461c-b328-fd8543219b22",
+      "target": "NFL:DAL",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-DAL",
+          "native_metadata_sha256": "fc0253fb8a8cde3668c00debc6ca2511fedc41c03c70330fd47c20d90c8c6164",
+          "canonical_id": "NFL:DAL",
+          "label": "Dallas",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "f95a55a7-8472-4ffa-be20-14547e3c32ff",
+      "target": "NFL:DET",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-DET",
+          "native_metadata_sha256": "659bda80fec73f14cb62e98d4c378769dc2f2c9bfc30f1af609002c6c1428edd",
+          "canonical_id": "NFL:DET",
+          "label": "Detroit",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "08c52d1f-7ce1-445f-be72-97de0554ecc8",
+      "target": "NFL:GB",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-GB",
+          "native_metadata_sha256": "0e55db898372a35b86926da1bc2098dd507c3227cfb0b76142a8d6d8c17cd723",
+          "canonical_id": "NFL:GB",
+          "label": "Green Bay",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "422d5fd7-ad18-4c96-902d-6f7c50e4660f",
+      "target": "NFL:LAR",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-LAR",
+          "native_metadata_sha256": "2769686d8e1c2f7e8a8a21408e32b764d650ae3a6483fdfcfbc800655d18c44c",
+          "canonical_id": "NFL:LAR",
+          "label": "Los Angeles R",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "2279efa0-9284-4224-9647-09b14f6983ce",
+      "target": "NFL:MIN",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-MIN",
+          "native_metadata_sha256": "a743ceaee08e68b78d540198ba62ddeab5f8dcd9fd0d39b9a6b4163b689e891d",
+          "canonical_id": "NFL:MIN",
+          "label": "Minnesota",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "f7c2cd06-61bf-469e-984f-3ef56cb8f3d7",
+      "target": "NFL:NO",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-NO",
+          "native_metadata_sha256": "cb924bb383982b271f8fee906502d56a5511d317ea16063c29e845c93c01cf29",
+          "canonical_id": "NFL:NO",
+          "label": "New Orleans",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "4fa3f3ec-f7e7-41ec-9383-a40af2d26297",
+      "target": "NFL:NYG",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-NYG",
+          "native_metadata_sha256": "8928db181d28ea2f13b936e57d05815b579c95226f19c1c32836616b3fe48ec7",
+          "canonical_id": "NFL:NYG",
+          "label": "New York G",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "bc65405b-5bda-425c-b7c5-681c382e6a5a",
+      "target": "NFL:PHI",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-PHI",
+          "native_metadata_sha256": "63473cb80d9a118f5fdc373ee88e85bcac3b4543978aa0f99d97a5868c610d9a",
+          "canonical_id": "NFL:PHI",
+          "label": "Philadelphia",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "8e52cc75-cba8-4373-9b62-b535b53b3be8",
+      "target": "NFL:SEA",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-SEA",
+          "native_metadata_sha256": "4da481b1a7c7fe9cd91ad6bb2c7e62abf67f0ccadeac03a2873fe6903f4d7843",
+          "canonical_id": "NFL:SEA",
+          "label": "Seattle",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "bfaa7639-8bdf-47b2-8d28-98d2cdbefbcb",
+      "target": "NFL:SF",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-SF",
+          "native_metadata_sha256": "8780c4db27dcd80e99c244db9a278a255572e118b7f8546203552f6fe09cc919",
+          "canonical_id": "NFL:SF",
+          "label": "San Francisco",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "1105fa0d-c798-4020-9e24-f377a334b3d9",
+      "target": "NFL:TB",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-TB",
+          "native_metadata_sha256": "bdc17c3e9ceb0712afbf6cbec8a27b55c73170c6e2bd8ed2509d891ca39bd3eb",
+          "canonical_id": "NFL:TB",
+          "label": "Tampa Bay",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NFL",
+      "native_id": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f",
+      "target": "NFL:WAS",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXSB-27-WAS",
+          "native_metadata_sha256": "a7530bd0160e36770f9ce87d0668a38e00678a5c15323ede14ff5f87db086ab8",
+          "canonical_id": "NFL:WAS",
+          "label": "Washington",
+          "body_sha256": "0be0b1c47345c0ed962b2784cd07ca88aafbb18f1fe0fe0dd0ea1561085c0400"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "e3adca8c-02c2-4557-84e0-c3270897fa1c",
+      "target": "NCAAB:M:D1:NCAA66",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-BSU",
+          "native_metadata_sha256": "631626d939e6a617923a907cd006359cc9c81bce2ee5326d2bef3b79db085844",
+          "canonical_id": "NCAAB:M:D1:NCAA66",
+          "label": "Boise St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "751f58cd-4c03-4bdc-8037-39beb61f9e5d",
+      "target": "NCAAB:M:D1:NCAA156",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-CSU",
+          "native_metadata_sha256": "e4633ccafb991cdaa7fdc822f498ecb50b0a2cc15560ff44bb181e0cab2281df",
+          "canonical_id": "NCAAB:M:D1:NCAA156",
+          "label": "Colorado St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "ff86bf01-716c-45e1-9a78-30ab6470c4de",
+      "target": "NCAAB:M:D1:NCAA234",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-FSU",
+          "native_metadata_sha256": "7af725b21844e039208c46ac9b0281b79146e5d729b86c234da5e521887e501a",
+          "canonical_id": "NCAAB:M:D1:NCAA234",
+          "label": "Florida St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "3e806ca2-b0f4-4840-8165-c7e548892a50",
+      "target": "NCAAB:M:D1:NCAA311",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-ISU",
+          "native_metadata_sha256": "ce7467febbd0c3ae2d9a55a7ff31392d04643f8e74f0c234490d6334428a8fcd",
+          "canonical_id": "NCAAB:M:D1:NCAA311",
+          "label": "Iowa St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "e1263e70-7beb-4a46-9c2c-2727a4edd882",
+      "target": "NCAAB:M:D1:NCAA430",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MSST",
+          "native_metadata_sha256": "7b2f0013a8934f54259d73671188187b5e494d7cc16d047a85235ec8b33766aa",
+          "canonical_id": "NCAAB:M:D1:NCAA430",
+          "label": "Mississippi St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "e446b474-b851-42d8-824b-aedead9c3e29",
+      "target": "NCAAB:M:D1:NCAA416",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-MSU",
+          "native_metadata_sha256": "527ad367c781fb25c00fcbbb1a09b4c0a392a23bcf6f2a102dcf1d5ea8564aa5",
+          "canonical_id": "NCAAB:M:D1:NCAA416",
+          "label": "Michigan St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "f75674f9-b49c-4e61-a948-9d99563548e1",
+      "target": "NCAAB:M:D1:NCAA626",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXMARMAD-27-SDSU",
+          "native_metadata_sha256": "6ef47f42ab1cd3f18c3aea30a754c728487de4aaa452ae97a6a6a6324dda2cbc",
+          "canonical_id": "NCAAB:M:D1:NCAA626",
+          "label": "San Diego St.",
+          "body_sha256": "c762ec55f3a5f2b092f072259b206cbadacbaec1fdfb98f8a772c1713816e496"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "40870436-059a-4dc3-8d34-d21afe96d326",
+      "target": "NCAAF:NCAA28",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-ASU",
+          "native_metadata_sha256": "b4d7f50ce9140259d50b2998defd2718c1334905498bc5924b01b50a9c9549ee",
+          "canonical_id": "NCAAF:NCAA28",
+          "label": "Arizona St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "0e8ff0a5-43fa-4350-a45e-0998851bdaaa",
+      "target": "NCAAF:NCAA234",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-FSU",
+          "native_metadata_sha256": "7c4b14992c2a67e5373a1a94b018c381d5237690fb1f84e84631c9c48aeb8676",
+          "canonical_id": "NCAAF:NCAA234",
+          "label": "Florida St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "89e2fc30-bf0f-42a8-884f-e0494afdeb9b",
+      "target": "NCAAF:NCAA327",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-KSU",
+          "native_metadata_sha256": "d592c8ce85b7f46bdeb230a25beb608c2beb2bd553875d70c5966425e382e82c",
+          "canonical_id": "NCAAF:NCAA327",
+          "label": "Kansas St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "5a7a1616-73ed-4516-a411-a051455ce3c0",
+      "target": "NCAAF:NCAA430",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-MSST",
+          "native_metadata_sha256": "05615623c968e40995bc2d9ffda13a3d655dc37f29f93c369cd22bfe96d362e1",
+          "canonical_id": "NCAAF:NCAA430",
+          "label": "Mississippi St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "e33b83e5-1305-4de1-9def-9baef7b4eb1f",
+      "target": "NCAAF:NCAA490",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-NCST",
+          "native_metadata_sha256": "df6fdd8ad20e137511badbf8f2c09b99a797b8c837e617544b91c99dfae678c5",
+          "canonical_id": "NCAAF:NCAA490",
+          "label": "North Carolina St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "ac4a34f9-a1d1-4b82-b2a3-f349d64ac23c",
+      "target": "NCAAF:NCAA521",
+      "source": "retained-713fd0fa: exact award literal and canonical name/institutional directory",
+      "evidence": [
+        {
+          "market_id": "KXNCAAF-27-OKST",
+          "native_metadata_sha256": "2923a29e75da69a4afa54421323bf6e10e3e3a190bc774dbeb4f71ca418f839d",
+          "canonical_id": "NCAAF:NCAA521",
+          "label": "Oklahoma St.",
+          "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
+        }
+      ]
+    }
+  ],
+  "sha256": "9cc1b8e32aef2b0a522d8626fba3a0cd79eea8104e3e53f8c30b51c8f5aa38f7"
+}

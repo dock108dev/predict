@@ -1,0 +1,367 @@
+{
+  "status": 200,
+  "body": {
+    "state": "stopped",
+    "active": false,
+    "start_controls": [
+      "duration"
+    ],
+    "operating_mode": "product-session",
+    "start_available": false,
+    "error": null,
+    "cleanup_errors": [],
+    "saved": [],
+    "session": "9eae4ce9-6fd1-4e9c-8068-3c6debfaaf1c",
+    "cleanup_complete": true,
+    "coverage": {
+      "kalshi": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "generation": 3,
+        "eligible": 0,
+        "selected": 0,
+        "event_discovery": "unknown",
+        "terminal_reason": null,
+        "market_completeness": "unestablished",
+        "applied_generation": 3,
+        "applied_eligible": 0,
+        "applied_selected": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 8,
+          "acknowledged": 8,
+          "receiving": 1,
+          "usable": 1
+        },
+        "peak_simultaneous": {
+          "requested": 8,
+          "acknowledged": 8,
+          "receiving": 1,
+          "usable": 1
+        },
+        "requests": 85,
+        "connection_attempts": 1,
+        "body_bytes_charged": 1273060,
+        "acknowledgement_basis": "explicit channel acknowledgement",
+        "latest_receipts": {
+          "KXMLBGAME-26OCT011400PHIATL-ATL": {
+            "received_at": "2026-10-01 23:17:18.147191+00:00",
+            "exchange_at": null,
+            "sync": "synchronized",
+            "source_time_progress": "missing"
+          }
+        }
+      },
+      "polymarket_us": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "generation": 3,
+        "eligible": null,
+        "selected": 0,
+        "event_discovery": "failed",
+        "terminal_reason": "native_parse_expansion_cap",
+        "market_completeness": "partial",
+        "applied_generation": null,
+        "applied_eligible": 0,
+        "applied_selected": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "receiving": 0,
+        "usable": 0,
+        "ever": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "peak_simultaneous": {
+          "requested": 0,
+          "acknowledged": 0,
+          "receiving": 0,
+          "usable": 0
+        },
+        "requests": 9,
+        "connection_attempts": 0,
+        "body_bytes_charged": 3500773,
+        "acknowledgement_basis": "valid current-request market image; no separate acknowledgement",
+        "latest_receipts": {}
+      },
+      "novig": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "generation": 3,
+        "eligible": 0,
+        "selected": 0,
+        "event_discovery": "disabled",
+        "terminal_reason": null,
+        "market_completeness": "unestablished",
+        "state": "disabled",
+        "reason": null,
+        "requests": 0,
+        "body_bytes_charged": 0,
+        "connection_attempts": 0,
+        "update_path": "dated REST snapshot",
+        "usable": 0,
+        "receiving": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "semantics": {
+          "price": "1 minus opposite outcome bid",
+          "quantity": "CASH payout cents / 100 = contracts",
+          "fees": "Novig schedule; applicability/account terms unverified",
+          "settlement": "listing-specific contract association unverified"
+        }
+      },
+      "prophetx": {
+        "discovered_events": 0,
+        "discovered_markets": 0,
+        "generation": 3,
+        "eligible": 0,
+        "selected": 0,
+        "event_discovery": "disabled",
+        "terminal_reason": null,
+        "market_completeness": "unestablished",
+        "state": "disabled",
+        "reason": null,
+        "requests": 0,
+        "body_bytes_charged": 0,
+        "connection_attempts": 0,
+        "update_path": "dated REST snapshot",
+        "usable": 0,
+        "receiving": 0,
+        "requested": 0,
+        "acknowledged": 0,
+        "semantics": {
+          "price": "American odds converted to payout probability",
+          "quantity": "unknown; neither quantity nor value used for sizing",
+          "fees": "ProphetX applicability unverified",
+          "settlement": "listing-specific terms unverified"
+        }
+      }
+    },
+    "pilot_allowance": "One approved native-source qualification; no automatic repeat",
+    "stop_reason": "manual_stop",
+    "previous_pilot": null,
+    "discovery": {
+      "source_stops": {
+        "polymarket_us": "native_parse_expansion_cap"
+      },
+      "source_catalog_resources": {
+        "kalshi": {
+          "generation": 3,
+          "last_bytes": 1033,
+          "max_bytes": 541898,
+          "limit_bytes": 2097152,
+          "admission": "within_bound"
+        },
+        "polymarket_us": {
+          "generation": 3,
+          "last_bytes": 1033,
+          "max_bytes": 802579,
+          "limit_bytes": 2097152,
+          "admission": "within_bound"
+        },
+        "novig": {
+          "generation": 3,
+          "last_bytes": 1332,
+          "max_bytes": 1332,
+          "limit_bytes": 2097152,
+          "admission": "within_bound"
+        },
+        "prophetx": {
+          "generation": 3,
+          "last_bytes": 1332,
+          "max_bytes": 1332,
+          "limit_bytes": 2097152,
+          "admission": "within_bound"
+        }
+      },
+      "published_generation": 3,
+      "published_at": "2026-10-01T23:17:58.141792+00:00",
+      "age_seconds": 60.764274,
+      "refresh": {
+        "state": "completed",
+        "generation": 3,
+        "started_at": "2026-10-01T23:17:58.133931+00:00",
+        "finished_at": "2026-10-01T23:17:58.141792+00:00"
+      },
+      "partial": null,
+      "responses": {
+        "kalshi": {
+          "received": 85,
+          "durably_retained": 85,
+          "attempted_requests": 85
+        },
+        "polymarket_us": {
+          "received": 9,
+          "durably_retained": 9,
+          "attempted_requests": 9
+        },
+        "novig": {
+          "received": 0,
+          "durably_retained": 0,
+          "attempted_requests": 0
+        },
+        "prophetx": {
+          "received": 0,
+          "durably_retained": 0,
+          "attempted_requests": 0
+        }
+      },
+      "safety_exclusions": {
+        "kalshi": {},
+        "polymarket_us": {},
+        "novig": {},
+        "prophetx": {}
+      }
+    },
+    "resources": {
+      "peak_rss_bytes": 149667840,
+      "peak_queue_records": 5,
+      "peak_queue_bytes": 2808615,
+      "ingress_bytes": 1761406,
+      "journal_bytes": 1822447,
+      "elapsed_seconds": 180.77342270803638
+    },
+    "aggregate": {
+      "state": "completed",
+      "accounting": {
+        "requests": 29,
+        "reserved_credits": 90,
+        "charged_dollar_bound": "0",
+        "reported_used": 242,
+        "conservative_remaining": 248,
+        "stop": null,
+        "baseline_pending": false
+      },
+      "settings": {
+        "version": "unified-source-session-1",
+        "roles": {
+          "kalshi": "native_comparison",
+          "polymarket_us": "native_comparison",
+          "novig": "aggregate_comparison",
+          "prophetx": "aggregate_comparison",
+          "pinnacle": "reference",
+          "draftkings": "reference",
+          "betmgm": "reference"
+        },
+        "scopes": [
+          {
+            "sport": "NFL",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_h1",
+              "spreads_h1",
+              "totals_h1"
+            ],
+            "event_ids": []
+          },
+          {
+            "sport": "NCAAF",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_h1",
+              "spreads_h1",
+              "totals_h1"
+            ],
+            "event_ids": []
+          },
+          {
+            "sport": "NBA",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_h1",
+              "spreads_h1",
+              "totals_h1"
+            ],
+            "event_ids": []
+          },
+          {
+            "sport": "NCAAB",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_h1",
+              "spreads_h1",
+              "totals_h1"
+            ],
+            "event_ids": []
+          },
+          {
+            "sport": "MLB",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_1st_3_innings",
+              "spreads_1st_3_innings",
+              "totals_1st_3_innings",
+              "h2h_1st_5_innings",
+              "spreads_1st_5_innings",
+              "totals_1st_5_innings"
+            ],
+            "event_ids": []
+          },
+          {
+            "sport": "NHL",
+            "markets": [
+              "h2h",
+              "spreads",
+              "totals",
+              "h2h_p1",
+              "spreads_p1",
+              "totals_p1",
+              "h2h_p2",
+              "spreads_p2",
+              "totals_p2",
+              "h2h_p3",
+              "spreads_p3",
+              "totals_p3"
+            ],
+            "event_ids": []
+          }
+        ],
+        "refresh_seconds": 60,
+        "stale_seconds": 90,
+        "event_limit": 1,
+        "max_cycles": 2,
+        "http": {
+          "requests": 31,
+          "credits": 102,
+          "dollars": "0",
+          "dollars_per_credit": "0",
+          "reserve_per_request": 12,
+          "initial_used": null,
+          "initial_remaining": null,
+          "plan_evidence": "Official Odds API V4 and golf outright example checked October 1: one market x one region; five books one region. 12 outright credits plus 90 game credits; quota contradictions stop; no refund/retry.",
+          "response_bytes": 1048576,
+          "session_bytes": 16777216,
+          "timeout": 5,
+          "retries": 0,
+          "backoff": 1
+        },
+        "quota_startup": "sports-quota-once-v1",
+        "native_discovery": "bounded-open-catalog-v4",
+        "coverage_policy": "v1-missing-pairs-1",
+        "native_scopes": {
+          "kalshi": "required-63-v1",
+          "polymarket_us": "required-63-v1"
+        },
+        "correspondence_policy": "source-correspondence-1"
+      }
+    },
+    "source_settings_available": true
+  },
+  "truncated": false,
+  "retained_input_bytes": 6944
+}

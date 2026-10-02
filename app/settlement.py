@@ -136,3 +136,55 @@ def relationships(a,b,pa,pb,participants,settlement):
                 'complementary_payoffs':complement,'noncomplementary_cases':noncomplement,
                 'unresolved_cases':missing,'scenarios':scenarios})
     return rows
+
+
+def portfolio(legs, states, *, complete, probabilities=None, probability_kind='manual What-if', reserve='0'):
+    """Explicit joint venue-state cashflows. No automatic state equivalence.
+
+    Each leg supplies committed cash and net receipts for every state, after
+    settlement fees. A refund is a receipt, never cancellation of entry fees.
+    Reserve is conservatively consumed in every state and included in capital.
+    Missing amounts remain unknown, including zero-probability states.
+    """
+    from decimal import Decimal, Context, localcontext
+    from app.fees.engine import arithmetic_number as number
+    with localcontext(Context(prec=100)):
+        if not states or len(set(states))!=len(states) or len(states)>1024: raise ValueError('Unique explicit states required (at most 1024)')
+        if type(complete) is not bool: raise ValueError('Explicit coverage completeness required')
+        if not legs: raise ValueError('At least one leg required')
+        r=number(reserve)
+        if r<0: raise ValueError('Negative reserve')
+        reasons=[]; costs=[]
+        for leg in legs:
+            if set(leg['receipts'])-set(states): raise ValueError('Receipt outside settlement state set')
+            cost=None if leg.get('cash') is None else number(leg['cash'])
+            if cost is not None and cost<0: raise ValueError('Negative committed cash')
+            costs.append(cost)
+        acquisition=None if None in costs else sum(costs,Decimal(0))+r
+        liability=None if any(l['receipts'].get(k) is None for l in legs for k in states) else sum((max(Decimal(0),-min(number(l['receipts'][k]) for k in states)) for l in legs),Decimal(0))
+        cash=None if acquisition is None or liability is None else acquisition+liability
+        flows={}
+        for state in states:
+            values=[l['receipts'].get(state) for l in legs]
+            flows[state]=None if acquisition is None or None in values else sum((number(v) for v in values),Decimal(0))-acquisition
+        if not complete: reasons.append('Applicable state coverage incomplete')
+        if cash is None: reasons.append('Committed cash unknown')
+        if any(v is None for v in flows.values()): reasons.append('State net receipts unknown')
+        known=[v for v in flows.values() if v is not None]
+        worst=min(known) if complete and len(known)==len(states) else None
+        ev=None
+        if probability_kind not in ('manual What-if','model EV','reference-derived estimate'): raise ValueError('Unknown probability kind')
+        if probabilities is not None:
+            if set(probabilities)!=set(states): raise ValueError('Probability set must equal settlement state set')
+            ps={k:number(v) for k,v in probabilities.items()}
+            from fractions import Fraction
+            if any(v<0 or v>1 for v in ps.values()) or sum(Fraction(v) for v in ps.values())!=1: raise ValueError('Probabilities must sum exactly to one')
+            if complete and len(known)==len(states): ev=sum((ps[k]*flows[k] for k in states),Decimal(0))
+        fmt=lambda x:None if x is None else str(x)
+        return dict(version='settlement-portfolio-1',committed_cash=fmt(cash),acquisition_cash=fmt(acquisition),settlement_liability_funding=fmt(liability),return_denominator=fmt(cash),denominator_basis='Incremental acquisition cash plus consumed reserve and separately prefunded worst settlement liability per leg; prior position capital excluded. Unused liability funding is returned, not consumed.',
+                    states={k:fmt(v) for k,v in flows.items()},minimum_known_return=fmt(min(known) if known else None),
+                    worst_case_return=fmt(worst),return_pct=fmt(worst/cash*100 if worst is not None and cash else None),
+                    mathematical_arbitrage=bool(worst is not None and worst>0 and cash and cash>0),
+                    expected_net=fmt(ev),ev_pct=fmt(ev/cash*100 if ev is not None and cash else None),
+                    ev_label=probability_kind,coverage_complete=complete,reasons=reasons,
+                    qualification='Conditional mathematical result; supplied joint states and cashflows, not execution or native settlement qualification')

@@ -1,0 +1,184 @@
+{
+  "mode": "real",
+  "reference_enabled": false,
+  "start_after": "2026-10-01T00:00:00Z",
+  "start_before": "2026-10-08T03:55:59Z",
+  "duration": 180,
+  "discovery_cadence": 60,
+  "stale_seconds": 30,
+  "sources": {
+    "kalshi": {
+      "credential_reference": "keychain:prediction-arb.kalshi.production/market-data",
+      "entitlement_reference": "account-api-limits.json; official-access.json"
+    },
+    "polymarket_us": {
+      "credential_reference": "keychain:prediction-arb.polymarket-us/retail-api",
+      "entitlement_reference": "account-api-limits.json; official-access.json"
+    }
+  },
+  "mapping_revision": "v1-counterpart-completion-1; manual-comparison-2",
+  "assessment_revisions": {
+    "pairing": null,
+    "lineage": null,
+    "fees": null,
+    "settlement": null
+  },
+  "prediction": {
+    "messages": 600,
+    "connections": 2,
+    "frame_bytes": 262144,
+    "session_bytes": 8388608,
+    "discovery_requests": 10,
+    "dollar_cap_per_source": "0",
+    "dollars_per_discovery_request": "0",
+    "dollars_per_connection": "0",
+    "plan_evidence": "docs/e6-prediction-only-report.md#access"
+  },
+  "cleanup": "close only this session transports; retain isolated file journals",
+  "capture_authorization": "One explicitly approved bounded read-only integrated acquisition; no authority until exact approval",
+  "source_session": {
+    "version": "unified-source-session-1",
+    "roles": {
+      "kalshi": "native_comparison",
+      "polymarket_us": "native_comparison",
+      "novig": "aggregate_comparison",
+      "prophetx": "aggregate_comparison",
+      "pinnacle": "reference",
+      "draftkings": "reference",
+      "betmgm": "reference"
+    },
+    "scopes": [
+      {
+        "sport": "NFL",
+        "markets": [
+          "spreads_h1",
+          "totals_h1"
+        ],
+        "event_ids": []
+      },
+      {
+        "sport": "NCAAF",
+        "markets": [
+          "spreads_h1",
+          "totals_h1"
+        ],
+        "event_ids": []
+      }
+    ],
+    "refresh_seconds": 60,
+    "stale_seconds": 90,
+    "event_limit": 1,
+    "max_cycles": 2,
+    "http": {
+      "requests": 7,
+      "credits": 8,
+      "dollars": "0",
+      "dollars_per_credit": "0",
+      "reserve_per_request": 2,
+      "initial_used": null,
+      "initial_remaining": null,
+      "plan_evidence": "Retained official V4 pricing; two H1 markets x two football sports x two bounded cycles; no outright or broad moneyline polling",
+      "response_bytes": 1048576,
+      "session_bytes": 16777216,
+      "timeout": 5,
+      "retries": 0,
+      "backoff": 1
+    },
+    "quota_startup": "sports-quota-once-v1",
+    "native_discovery": "bounded-open-catalog-v4",
+    "coverage_policy": "v1-counterpart-completion-1",
+    "native_scopes": {
+      "kalshi": [
+        {
+          "sport": "NFL",
+          "period": "first_half",
+          "family": "spread",
+          "category": null
+        },
+        {
+          "sport": "NFL",
+          "period": "first_half",
+          "family": "total",
+          "category": null
+        },
+        {
+          "sport": "NCAAF",
+          "period": "first_half",
+          "family": "spread",
+          "category": null
+        },
+        {
+          "sport": "NCAAF",
+          "period": "first_half",
+          "family": "total",
+          "category": null
+        }
+      ],
+      "polymarket_us": [
+        {
+          "sport": "NFL",
+          "period": "first_half",
+          "family": "spread",
+          "category": null
+        },
+        {
+          "sport": "NFL",
+          "period": "first_half",
+          "family": "total",
+          "category": null
+        },
+        {
+          "sport": "NCAAF",
+          "period": "first_half",
+          "family": "spread",
+          "category": null
+        },
+        {
+          "sport": "NCAAF",
+          "period": "first_half",
+          "family": "total",
+          "category": null
+        }
+      ]
+    },
+    "correspondence_policy": "source-correspondence-1"
+  },
+  "native_sources": {
+    "kalshi": {
+      "state": "enabled",
+      "environment": "production",
+      "poll_seconds": 60,
+      "event_cap": 1,
+      "market_cap": 10
+    },
+    "polymarket_us": {
+      "state": "enabled",
+      "environment": "production",
+      "poll_seconds": 60,
+      "event_cap": 1,
+      "market_cap": 10
+    },
+    "novig": {
+      "state": "disabled",
+      "selected": false
+    },
+    "prophetx": {
+      "state": "disabled",
+      "selected": false
+    }
+  },
+  "v1_comparison_policy": "manual-comparison-2",
+  "native_transport": {
+    "policy": "native-http-v2",
+    "response_wire_bytes": 4194304,
+    "response_entity_bytes": 2097152,
+    "response_decoded_bytes": 2097152,
+    "parse_expansion_bytes": 16777216,
+    "json_depth": 32,
+    "json_structural_tokens": 100000,
+    "discovery_wire_bytes": 6291456,
+    "discovery_decoded_bytes": 6291456,
+    "ingress_callback_bytes": 262144,
+    "source_inventory_bytes": 2097152
+  }
+}

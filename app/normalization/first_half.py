@@ -30,6 +30,8 @@ def validate_payout(d):
             if ops!={'eq','ne'} or any(s.get('equality')!='predicate' for s in sides):raise ValueError('Tie strike requires exact tie/not-tie outcomes')
         elif structure=='shared_winner':
             if ops!={'gt','le'} or any(s.get('equality')!='fraction' or s.get('equality_payout')!='0.5' for s in sides):raise ValueError('Reviewed two-team shared winner requires explicit half payout to both binary sides')
+        elif structure=='binary_team_win_unresolved_tie' and d.get('public_binding_version')=='public-contract-bindings-1':
+            if ops!={'gt','le'} or any(s.get('equality')!='unknown' for s in sides):raise ValueError('Unresolved tie must remain an unknown equality payout')
         else:raise ValueError('First-half winner structure unknown or unsupported; three-way needs a separately reviewed tie contract')
 
 def score_value(identity,observation):

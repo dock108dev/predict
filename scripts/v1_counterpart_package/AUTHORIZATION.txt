@@ -1,0 +1,13 @@
+PROPOSED AUTHORIZATION — UNAPPROVED
+
+Authorize the exact sealed v1-counterpart-completion-1 master, application candidate, scope, output root and window identified in master.json, for read-only V1 data collection and comparison for manual trading. No authority exists until an explicit owner approval binds the master SHA256.
+
+Allow at most two distinct, durably consumed sessions: one current-counterpart collection and one optional bounded repair/retest after confirmed cleanup, a concrete repair reason and retained offline regression evidence. No per-event approval is needed inside the sealed scope. No automatic repeat, restart, resumed exhausted attempt, refund or transfer of unused allowance. If consumption or cleanup is uncertain, stop without another session.
+
+Each session: at most 180 collection seconds, 240 owned supervisor seconds; 10 Kalshi HTTP attempts (two read-only account budget checks plus four documented H1 series listing/market dependencies), 10 US HTTP attempts (two sport listings, up to two exact event and two market details, four documented H1 family queries); seven aggregate HTTP attempts (one quota check, two event discoveries, four H1 spread/total counterpart or offering polls), eight existing prepaid credits, four WebSocket attempts within two per native source. Zero HTTP retries and $0 purchases or additional-dollar spend.
+
+Cumulative ceiling: 54 HTTP attempts, 16 prepaid credits, eight WebSocket attempts, 360 collection seconds, 480 owned supervisor seconds, 256 MiB session output plus 6 MiB controls. All unchanged transport, queue, journal, inventory, sampled RSS, disk, pacing and cleanup limits also bind.
+
+Refresh NFL/NCAAF first-half spread and total through evidenced selectors; prioritize exact native/native paired identities. Aggregate requests may supply a missing same-event/line counterpart or answer the explicit football H1 offering question. No outright, broad already-covered moneyline polling, unknown-locator campaign or trading. Historical retained IDs are fixtures/association evidence and cannot be selected without fresh eligible discovery and admission. Account economics gates only dependent displayed calculations; automated trading is V2.
+
+Start no later than October 7, 2026 at 11:55:59 p.m. America/New_York, with full supervisor time ending by 11:59:59 p.m. The beta coverage threshold is 48 of the fixed 63 exact eligible valid retained price-pair requirements; 51 is optional if straightforward. This package does not promise that threshold, current availability or beta signoff.

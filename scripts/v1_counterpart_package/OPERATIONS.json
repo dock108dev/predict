@@ -1,0 +1,59 @@
+{
+  "version": "v1-counterpart-operations-1",
+  "kalshi": [
+    {
+      "kind": "read_only_account_budget_checks",
+      "maximum": 2
+    },
+    {
+      "kind": "documented_series_listing",
+      "maximum": 4,
+      "event_page_size": 5
+    },
+    {
+      "kind": "selected_event_market_page",
+      "maximum": 4,
+      "market_page_size": 50
+    }
+  ],
+  "polymarket_us": [
+    {
+      "kind": "sport_game_listing_identity_only",
+      "maximum": 2,
+      "page_size": 5
+    },
+    {
+      "kind": "current_selected_event_detail",
+      "maximum": 2
+    },
+    {
+      "kind": "selected_market_detail",
+      "maximum": 2
+    },
+    {
+      "kind": "documented_H1_family_page",
+      "maximum": 4,
+      "page_size": 5
+    }
+  ],
+  "aggregate": [
+    {
+      "kind": "fresh_quota",
+      "maximum": 1,
+      "credits": 0
+    },
+    {
+      "kind": "shared_selected_event_discovery",
+      "maximum": 2,
+      "credits": 0
+    },
+    {
+      "kind": "H1_spread_total_counterpart_or_offering_query",
+      "maximum": 4,
+      "credits": 8,
+      "cycles": 2
+    }
+  ],
+  "no_requests_for_other_44_missing_requirements": true,
+  "source_receipts_are_not_books": true
+}

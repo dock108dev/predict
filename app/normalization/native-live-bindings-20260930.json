@@ -1,0 +1,626 @@
+{
+  "version": "native-live-identity-20260930-v1",
+  "entities": [],
+  "aliases": [
+    {
+      "kind": "team",
+      "league": "MLB",
+      "venue": "kalshi",
+      "text": "New York Y",
+      "targets": [
+        "MLB:NYY"
+      ],
+      "source": "Explicit selected full-game market outcome code NYY, yes_sub_title and primary predicate agree; a13aff47198d6c197adc2441752380fc922af0a002811230f973baad4d89b1b8"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "PIT Steelers",
+      "targets": [
+        "NFL:PIT"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "CLE Browns",
+      "targets": [
+        "NFL:CLE"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "IND Colts",
+      "targets": [
+        "NFL:IND"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "WAS Commanders",
+      "targets": [
+        "NFL:WAS"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "ARI Cardinals",
+      "targets": [
+        "NFL:ARI"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "DAL Cowboys",
+      "targets": [
+        "NFL:DAL"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "HOU Texans",
+      "targets": [
+        "NFL:HOU"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "GB Packers",
+      "targets": [
+        "NFL:GB"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "TB Buccaneers",
+      "targets": [
+        "NFL:TB"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "JAC Jaguars",
+      "targets": [
+        "NFL:JAX"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "CIN Bengals",
+      "targets": [
+        "NFL:CIN"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "PHI Eagles",
+      "targets": [
+        "NFL:PHI"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "NE Patriots",
+      "targets": [
+        "NFL:NE"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "BUF Bills",
+      "targets": [
+        "NFL:BUF"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "CHI Bears",
+      "targets": [
+        "NFL:CHI"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "TEN Titans",
+      "targets": [
+        "NFL:TEN"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "BAL Ravens",
+      "targets": [
+        "NFL:BAL"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "MIA Dolphins",
+      "targets": [
+        "NFL:MIA"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "MIN Vikings",
+      "targets": [
+        "NFL:MIN"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "DEN Broncos",
+      "targets": [
+        "NFL:DEN"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "SF 49ers",
+      "targets": [
+        "NFL:SF"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "KC Chiefs",
+      "targets": [
+        "NFL:KC"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "LV Raiders",
+      "targets": [
+        "NFL:LV"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "SEA Seahawks",
+      "targets": [
+        "NFL:SEA"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "DET Lions",
+      "targets": [
+        "NFL:DET"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "CAR Panthers",
+      "targets": [
+        "NFL:CAR"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "ATL Falcons",
+      "targets": [
+        "NFL:ATL"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "text": "NO Saints",
+      "targets": [
+        "NFL:NO"
+      ],
+      "source": "Current complete NFL event label; exact abbreviation/nickname agree in existing registry; 4bcecb95d26533fafbda666b3d0a10c05d029958fac943a384d50f57ce46b234"
+    }
+  ],
+  "native_mappings": [
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "6aa76797-7833-45e1-85e3-96e0122801e1",
+      "target": "NFL:PIT",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 576eba248241269de5f62c8696a72afdae9337f6ded9260b1c35454ee017cdf1"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "05cc62a4-bd74-4b2c-ab7b-1b177b9f6790",
+      "target": "NFL:CLE",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 576eba248241269de5f62c8696a72afdae9337f6ded9260b1c35454ee017cdf1"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "62b97b7c-5503-461c-b328-fd8543219b22",
+      "target": "NFL:DAL",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 032b1afd16b2e5378d02b99a1d35ef1c6561a92018117e851d4bc33525902651"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+      "target": "NFL:HOU",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 032b1afd16b2e5378d02b99a1d35ef1c6561a92018117e851d4bc33525902651"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "08c52d1f-7ce1-445f-be72-97de0554ecc8",
+      "target": "NFL:GB",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; f37ffbc0edbbe6b2cb63b18387371e4553917e3820ef80bc18bccfcb02fd82ee"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "1105fa0d-c798-4020-9e24-f377a334b3d9",
+      "target": "NFL:TB",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; f37ffbc0edbbe6b2cb63b18387371e4553917e3820ef80bc18bccfcb02fd82ee"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+      "target": "NFL:JAX",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 7b3bf9fb1b519df4af4f048b856fc63a66196d1f23356067f00533e14564a80d"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "b007a1ab-bca6-42c7-8706-62607a605866",
+      "target": "NFL:CIN",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 7b3bf9fb1b519df4af4f048b856fc63a66196d1f23356067f00533e14564a80d"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "bc65405b-5bda-425c-b7c5-681c382e6a5a",
+      "target": "NFL:PHI",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 90efa2be97b308f52db3313e096c55f6cb85a7a68f7d5b3a581f700b965526a3"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "f9acd396-ba35-4cae-a431-a44b2af707b0",
+      "target": "NFL:BUF",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 49eb477c7114753de7d3ad550a2bfb8e2e83d28831af8ee5b32b9b5f546e66e0"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "d1d64188-5cd5-4feb-97ff-8542c9dbeb43",
+      "target": "NFL:NE",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 49eb477c7114753de7d3ad550a2bfb8e2e83d28831af8ee5b32b9b5f546e66e0"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "9a77500a-1945-495e-b6f5-5c35bedaa8b9",
+      "target": "NFL:CHI",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 2ee07235a490d22faf3977391e6a7fb7354bfcd64b3198f208f6d7cae63e7bce"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "a69a57af-f1a1-4d44-ab62-e220ebaa2a5c",
+      "target": "NFL:BAL",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; c75543b595730caf8773b0ee8c2a033563ec66e212aa8a6bda29da580ad8dce1"
+    },
+    {
+      "kind": "team",
+      "league": "NFL",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "7c86629b-eafc-47b4-9204-b46a2d0e9cbb",
+      "target": "NFL:TEN",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; c75543b595730caf8773b0ee8c2a033563ec66e212aa8a6bda29da580ad8dce1"
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "a17e4a68-2999-4f60-b67e-3e80aa9e198b",
+      "target": "NBA:MIA",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 9c5836505e451f1d2fc77bfb89accf5048834d900ebad6cbbf5dd72d59702e87"
+    },
+    {
+      "kind": "team",
+      "league": "NBA",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "96c447dd-2cdd-4c58-a151-ef0df87de981",
+      "target": "NBA:TOR",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; 9c5836505e451f1d2fc77bfb89accf5048834d900ebad6cbbf5dd72d59702e87"
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "6e285aea-d5a3-419f-89e7-7061016abf87",
+      "target": "MLB:BOS",
+      "source": "Complete exact full-game custom_strike with known yes_sub_title; a13aff47198d6c197adc2441752380fc922af0a002811230f973baad4d89b1b8"
+    },
+    {
+      "kind": "team",
+      "league": "MLB",
+      "venue": "kalshi",
+      "environment": "production",
+      "native_id": "576dc9ee-9a05-4610-8e9d-efa2a046582d",
+      "target": "MLB:NYY",
+      "source": "Exact whole MLB full-game structured outcome code/label/primary agreement; a13aff47198d6c197adc2441752380fc922af0a002811230f973baad4d89b1b8"
+    }
+  ],
+  "evidence": {
+    "folder": "evidence/LIVE-source-engineering-0701b59d-886f-444c-95b1-206144ef46c2/da1253ec-9c7e-4ca2-b493-bfa83e21f0a6/782c034e-5c9f-4773-b9db-9cb9a9776084",
+    "records": [
+      {
+        "event_id": "KXNFLGAME-26OCT01PITCLE",
+        "market_id": "KXNFLGAME-26OCT01PITCLE-PIT",
+        "source_body_sha256": "576eba248241269de5f62c8696a72afdae9337f6ded9260b1c35454ee017cdf1",
+        "native_metadata_sha256": "2c321ae405adff7ca29d49ff76f32f8b0ec83e50e5208c95e5b8cd127ca922db",
+        "canonical_id": "NFL:PIT",
+        "native_id": "6aa76797-7833-45e1-85e3-96e0122801e1"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT01PITCLE",
+        "market_id": "KXNFLGAME-26OCT01PITCLE-CLE",
+        "source_body_sha256": "576eba248241269de5f62c8696a72afdae9337f6ded9260b1c35454ee017cdf1",
+        "native_metadata_sha256": "5ee75b9411d6dc0a9bf73b52afdff8205bdf49baeeb648e5279d8fcee0e9bc7e",
+        "canonical_id": "NFL:CLE",
+        "native_id": "05cc62a4-bd74-4b2c-ab7b-1b177b9f6790"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04DALHOU",
+        "market_id": "KXNFLGAME-26OCT04DALHOU-DAL",
+        "source_body_sha256": "032b1afd16b2e5378d02b99a1d35ef1c6561a92018117e851d4bc33525902651",
+        "native_metadata_sha256": "9cc2318ed9734308b04e922433bcfc117a15efdca239c93e3ea61d2a81fc5f0b",
+        "canonical_id": "NFL:DAL",
+        "native_id": "62b97b7c-5503-461c-b328-fd8543219b22"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04DALHOU",
+        "market_id": "KXNFLGAME-26OCT04DALHOU-HOU",
+        "source_body_sha256": "032b1afd16b2e5378d02b99a1d35ef1c6561a92018117e851d4bc33525902651",
+        "native_metadata_sha256": "2a4ee27131cd22ac45e52a87d19c9bd69dd7d07f26c3d38c95d9eafed077744d",
+        "canonical_id": "NFL:HOU",
+        "native_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04GBTB",
+        "market_id": "KXNFLGAME-26OCT04GBTB-GB",
+        "source_body_sha256": "f37ffbc0edbbe6b2cb63b18387371e4553917e3820ef80bc18bccfcb02fd82ee",
+        "native_metadata_sha256": "93eb1e0bcc8e9c09735b0aad298cab5019844a37f99c68a35163c52374243443",
+        "canonical_id": "NFL:GB",
+        "native_id": "08c52d1f-7ce1-445f-be72-97de0554ecc8"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04GBTB",
+        "market_id": "KXNFLGAME-26OCT04GBTB-TB",
+        "source_body_sha256": "f37ffbc0edbbe6b2cb63b18387371e4553917e3820ef80bc18bccfcb02fd82ee",
+        "native_metadata_sha256": "3a05491c02e08486473f12c895ce1645304a1a9ac8b035ebbcbfcc2a5c4bf1c6",
+        "canonical_id": "NFL:TB",
+        "native_id": "1105fa0d-c798-4020-9e24-f377a334b3d9"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04JACCIN",
+        "market_id": "KXNFLGAME-26OCT04JACCIN-JAC",
+        "source_body_sha256": "7b3bf9fb1b519df4af4f048b856fc63a66196d1f23356067f00533e14564a80d",
+        "native_metadata_sha256": "469ba4a096d85e03378edc95c24e203e8a44db276ac948f57a7ea2204befa671",
+        "canonical_id": "NFL:JAX",
+        "native_id": "61a75ab7-eaf0-4601-b920-86b1e165007d"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04JACCIN",
+        "market_id": "KXNFLGAME-26OCT04JACCIN-CIN",
+        "source_body_sha256": "7b3bf9fb1b519df4af4f048b856fc63a66196d1f23356067f00533e14564a80d",
+        "native_metadata_sha256": "bf67c6f032fd36ab36123809894ef6c572ec2164674ed19e2c46159b188224c8",
+        "canonical_id": "NFL:CIN",
+        "native_id": "b007a1ab-bca6-42c7-8706-62607a605866"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04LARPHI",
+        "market_id": "KXNFLGAME-26OCT04LARPHI-PHI",
+        "source_body_sha256": "90efa2be97b308f52db3313e096c55f6cb85a7a68f7d5b3a581f700b965526a3",
+        "native_metadata_sha256": "98a5866571c9cf3d7f5af0299175176dee9feab7cc2b7b3e7f7b320ef7ee6f5c",
+        "canonical_id": "NFL:PHI",
+        "native_id": "bc65405b-5bda-425c-b7c5-681c382e6a5a"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04LARPHI",
+        "market_id": "KXNFLGAME-26OCT04LARPHI-LAR",
+        "source_body_sha256": "90efa2be97b308f52db3313e096c55f6cb85a7a68f7d5b3a581f700b965526a3",
+        "native_metadata_sha256": "09fecbd7d31a5530e9d3b6bf4f2fe34a575e8f1ccf52d89f5231d573a7f0bd4d",
+        "canonical_id": "NFL:LAR",
+        "native_id": "422d5fd7-ad18-4c96-902d-6f7c50e4660f"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04NEBUF",
+        "market_id": "KXNFLGAME-26OCT04NEBUF-BUF",
+        "source_body_sha256": "49eb477c7114753de7d3ad550a2bfb8e2e83d28831af8ee5b32b9b5f546e66e0",
+        "native_metadata_sha256": "d0524ae55a2455e6b0586beb6e6b7a2962d69e8af5862ba45ce397ccea744e32",
+        "canonical_id": "NFL:BUF",
+        "native_id": "f9acd396-ba35-4cae-a431-a44b2af707b0"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04NEBUF",
+        "market_id": "KXNFLGAME-26OCT04NEBUF-NE",
+        "source_body_sha256": "49eb477c7114753de7d3ad550a2bfb8e2e83d28831af8ee5b32b9b5f546e66e0",
+        "native_metadata_sha256": "231474213f8991e7a8d0a5d81b9795522b3c393f19daa46d4dca12a6fe31b754",
+        "canonical_id": "NFL:NE",
+        "native_id": "d1d64188-5cd5-4feb-97ff-8542c9dbeb43"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04NYJCHI",
+        "market_id": "KXNFLGAME-26OCT04NYJCHI-CHI",
+        "source_body_sha256": "2ee07235a490d22faf3977391e6a7fb7354bfcd64b3198f208f6d7cae63e7bce",
+        "native_metadata_sha256": "bcd735f6738de91d45e299092a4be22c30027f78849130a580422e060f1fb606",
+        "canonical_id": "NFL:CHI",
+        "native_id": "9a77500a-1945-495e-b6f5-5c35bedaa8b9"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04NYJCHI",
+        "market_id": "KXNFLGAME-26OCT04NYJCHI-NYJ",
+        "source_body_sha256": "2ee07235a490d22faf3977391e6a7fb7354bfcd64b3198f208f6d7cae63e7bce",
+        "native_metadata_sha256": "ee771f2a25f9e9ef546d23dc7effaae72ba31999a9ec6b9984ac9ee749ef3974",
+        "canonical_id": "NFL:NYJ",
+        "native_id": "ccc2af2d-5c4d-4717-8036-5ba6bec5cfbd"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04TENBAL",
+        "market_id": "KXNFLGAME-26OCT04TENBAL-BAL",
+        "source_body_sha256": "c75543b595730caf8773b0ee8c2a033563ec66e212aa8a6bda29da580ad8dce1",
+        "native_metadata_sha256": "e68c147861ed1e2fe8b77c88928d85e2ede8c4407c91fadd0a85d99b190fa743",
+        "canonical_id": "NFL:BAL",
+        "native_id": "a69a57af-f1a1-4d44-ab62-e220ebaa2a5c"
+      },
+      {
+        "event_id": "KXNFLGAME-26OCT04TENBAL",
+        "market_id": "KXNFLGAME-26OCT04TENBAL-TEN",
+        "source_body_sha256": "c75543b595730caf8773b0ee8c2a033563ec66e212aa8a6bda29da580ad8dce1",
+        "native_metadata_sha256": "63db420be5b708bc2312c3b9adaddcf60e018025e54b376141e1b99172fd9289",
+        "canonical_id": "NFL:TEN",
+        "native_id": "7c86629b-eafc-47b4-9204-b46a2d0e9cbb"
+      },
+      {
+        "event_id": "KXNBAGAME-26OCT03MIATOR",
+        "market_id": "KXNBAGAME-26OCT03MIATOR-MIA",
+        "source_body_sha256": "9c5836505e451f1d2fc77bfb89accf5048834d900ebad6cbbf5dd72d59702e87",
+        "native_metadata_sha256": "65313ca8465ccc35808fcc477a9b6fa46d690d7e895dc0e7950d88e716db5251",
+        "canonical_id": "NBA:MIA",
+        "native_id": "a17e4a68-2999-4f60-b67e-3e80aa9e198b"
+      },
+      {
+        "event_id": "KXNBAGAME-26OCT03MIATOR",
+        "market_id": "KXNBAGAME-26OCT03MIATOR-TOR",
+        "source_body_sha256": "9c5836505e451f1d2fc77bfb89accf5048834d900ebad6cbbf5dd72d59702e87",
+        "native_metadata_sha256": "58d05f49df0931f719944ec93d14a2d6ca670ae9b3e3b3e1e49ac7cf87bc05ba",
+        "canonical_id": "NBA:TOR",
+        "native_id": "96c447dd-2cdd-4c58-a151-ef0df87de981"
+      },
+      {
+        "event_id": "KXMLBGAME-26SEP302000BOSNYY",
+        "market_id": "KXMLBGAME-26SEP302000BOSNYY-BOS",
+        "source_body_sha256": "a13aff47198d6c197adc2441752380fc922af0a002811230f973baad4d89b1b8",
+        "native_metadata_sha256": "c714eb82d30702faf5413fe670c83aada740ef5f5cf7889370302d0147e456dd",
+        "canonical_id": "MLB:BOS",
+        "native_id": "6e285aea-d5a3-419f-89e7-7061016abf87"
+      },
+      {
+        "event_id": "KXMLBGAME-26SEP302000BOSNYY",
+        "market_id": "KXMLBGAME-26SEP302000BOSNYY-NYY",
+        "source_body_sha256": "a13aff47198d6c197adc2441752380fc922af0a002811230f973baad4d89b1b8",
+        "native_id": "576dc9ee-9a05-4610-8e9d-efa2a046582d",
+        "canonical_id": "MLB:NYY",
+        "outcome_code": "NYY",
+        "native_label": "New York Y"
+      }
+    ]
+  }
+}

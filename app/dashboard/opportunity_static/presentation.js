@@ -19,14 +19,14 @@ const BoardView = {
  title(value) { const [name,...context]=String(value??'Game').split(' · ');return {name,context:this.words(context.join(' · '))}; },
  date(value) { const date=new Date(value);return Number.isNaN(date.valueOf())?String(value??'Unknown'):date.toLocaleString(undefined,{timeZoneName:'short'}); },
  captureLabel(value) {
-  const match=/^(synthetic|real) · (saved|current|incomplete) · (.+)$/.exec(value);
+  const match=/^(synthetic|real|observation) · (saved|current|incomplete) · (.+)$/.exec(value);
   return match?this.mode(match[1],match[2]==='current')+(match[2]==='incomplete'?' · incomplete':'')+' · '+this.date(match[3]):value;
  },
  mode(value,live=false,state='') {
   const demo=['mock','synthetic'].includes(value);
   if(state==='saving')return demo?'Saving demo…':'Saving observations…';
   if(state==='incomplete')return demo?'Incomplete demo':'Incomplete saved observations';
-  return demo?(live?'Simulation · current test':'Simulation · saved'):value==='real'?(live?'Current observations':'Historical observations'):(value||'Saved observations');
+  return demo?(live?'Simulation · current test':'Simulation · saved'):['real','observation'].includes(value)?(live?'Current observations':'Historical observations'):(value||'Saved observations');
  },
  sourceState(value) { return ({configured:'Configured',enabled:'Enabled',stopped:'Stopped',connected:'Connected',receiving:'Receiving',disconnected:'Disconnected',failed:'Failed',unconfigured:'Setup needed',selected:'Selected',resynchronization_required:'Waiting for fresh prices',unselected:'Not selected',unavailable:'Unavailable'})[value]||String(value||'Status unknown').replaceAll('_',' '); },
  scanStatus(s) {

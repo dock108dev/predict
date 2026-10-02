@@ -1,0 +1,1980 @@
+{
+  "schema": "v1-consolidated-coverage-request-1",
+  "status": "PREPARED_NOT_AUTHORIZED",
+  "collection_authorized": false,
+  "execution_authorized": false,
+  "v1_comparison_policy": "manual-comparison-1",
+  "purpose": "Fill exact source locator/identity and same-session price gaps for manual trading; retain all 63 requirements and all 252 source-support records",
+  "targets": [
+    {
+      "cell_id": "NFL/full_game/moneyline",
+      "sources": [],
+      "blockers": {}
+    },
+    {
+      "cell_id": "NFL/full_game/spread",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/full_game/total",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/first_half/moneyline",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable",
+          "Exact home/away roles for score predicate unavailable"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/first_half/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable",
+          "Exact home/away roles for score predicate unavailable",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/first_half/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact award/season/entrant crosswalk unavailable",
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for NFL/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for NFL/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NFL/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact award/season/entrant crosswalk unavailable",
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/full_game/moneyline",
+      "sources": [
+        "novig",
+        "prophetx"
+      ],
+      "blockers": {
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/full_game/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/full_game/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/first_half/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/first_half/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/first_half/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for NBA/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for NBA/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NBA/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/full_game/moneyline",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact schedule, sport season and stage unavailable",
+          "Exact MLB game/number/original/rescheduled identity unavailable",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/full_game/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/full_game/total",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_3/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Exact MLB game/number/original/rescheduled identity unavailable",
+          "Exact home/away roles for score predicate unavailable",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_3/moneyline",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_3/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/first_3/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_3/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_3/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/first_3/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_3/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_5/moneyline",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Exact MLB game/number/original/rescheduled identity unavailable",
+          "Exact home/away roles for score predicate unavailable",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_5/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Exact MLB game/number/original/rescheduled identity unavailable",
+          "Exact home/away roles for score predicate unavailable",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_5/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact schedule, sport season and stage unavailable",
+          "Exact MLB game/number/original/rescheduled identity unavailable",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_6/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/first_6/moneyline",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/first_6/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_6/moneyline",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/first_6/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_6/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/first_6/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/first_6/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_6/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/first_6/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/first_6/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/first_6/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/first_6/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/first_6/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/first_6/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/regulation_9/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/regulation_9/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/regulation_9/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/regulation_9/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/regulation_9/spread",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/regulation_9/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/regulation_9/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for MLB/regulation_9/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/regulation_9/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for MLB/regulation_9/total",
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/regulation_9/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for MLB/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for MLB/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "MLB/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/full_game/moneyline",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [],
+        "polymarket_us": [
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Exact US Long/Short outcome orientation unavailable"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/full_game/spread",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/full_game/total",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_1/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_1/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_1/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_1/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_1/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_1/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_1/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_1/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_1/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_2/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_2/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_2/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_2/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_2/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_2/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_2/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_2/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_2/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_3/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_3/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_3/moneyline",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_3/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_3/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_3/spread",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/period_3/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact published source locator unestablished for NHL/period_3/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Exact published source locator unestablished for NHL/period_3/total",
+          "Same-session exact counterpart prices/state/receipt evidence"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for NHL/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for NHL/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NHL/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/full_game/moneyline",
+      "sources": [],
+      "blockers": {}
+    },
+    {
+      "cell_id": "NCAAF/full_game/spread",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/full_game/total",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/first_half/moneyline",
+      "sources": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/first_half/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/first_half/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "novig": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "polymarket_us": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ],
+        "prophetx": [
+          "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact award/season/entrant crosswalk unavailable",
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for NCAAF/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for NCAAF/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAF/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Exact award/season/entrant crosswalk unavailable",
+          "Exact distinct canonical participants unavailable",
+          "Exact schedule, sport season and stage unavailable",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/full_game/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/full_game/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/full_game/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/first_half/moneyline",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/first_half/spread",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/first_half/total",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "novig": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "polymarket_us": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ],
+        "prophetx": [
+          "Actual men Division I event, season, participant and selected market observations"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/season/conference_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Exact published source locator unestablished for NCAAB/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Exact published source locator unestablished for NCAAB/season/conference_champion",
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    },
+    {
+      "cell_id": "NCAAB/season/league_champion",
+      "sources": [
+        "kalshi",
+        "novig",
+        "polymarket_us",
+        "prophetx"
+      ],
+      "blockers": {
+        "kalshi": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "novig": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "polymarket_us": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ],
+        "prophetx": [
+          "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+        ]
+      }
+    }
+  ],
+  "priority": [
+    {
+      "group": "Kalshi unresolved selectors",
+      "cells": [
+        "MLB/first_3/spread",
+        "MLB/first_3/total",
+        "MLB/first_6/moneyline",
+        "MLB/first_6/spread",
+        "MLB/first_6/total",
+        "MLB/regulation_9/moneyline",
+        "MLB/regulation_9/spread",
+        "MLB/regulation_9/total",
+        "NHL/period_1/moneyline",
+        "NHL/period_1/spread",
+        "NHL/period_1/total",
+        "NHL/period_2/moneyline",
+        "NHL/period_2/spread",
+        "NHL/period_2/total",
+        "NHL/period_3/moneyline",
+        "NHL/period_3/spread",
+        "NHL/period_3/total"
+      ],
+      "new_hypothesis": "For selected MLB/NHL game milestones, inspect documented related_event_tickers and fetch exact linked event/series metadata; admit only returned series plus literal period predicate. No guessed ticker strings."
+    },
+    {
+      "group": "US unresolved segments and championship awards",
+      "targets": [
+        "NHL P1/P2/P3 W/S/T",
+        "MLB cumulative F3/F6/regulation-9 W/S/T",
+        "six sports conference/league championship awards"
+      ],
+      "method": "Complete exact-game market pagination and documented coarse FUTURE filtering; inspect actual typed metadata, period boundary, signed line, award/season/entrant IDs. No sibling key substitution."
+    },
+    {
+      "group": "Odds API available comparison data",
+      "targets": [
+        "six sport full-game W/S/T",
+        "NFL/NBA/NCAAF/NCAAB H1 W/S/T",
+        "MLB F3/F5 W/S/T",
+        "NHL P1/P2/P3 W/S/T",
+        "six documented league championship outright keys"
+      ],
+      "method": "One selected future event per sport; capture both selected books in each complete response. Two bounded polls retain independent updates."
+    },
+    {
+      "group": "Odds unresolved locators",
+      "targets": [
+        "MLB F6/regulation-9",
+        "conference championships"
+      ],
+      "method": "No paid guessed-key requests. Check one documented sports catalog response and selected event market inventory if available within approved allowance. Unchanged official schema findings stay open."
+    },
+    {
+      "group": "Exact identity",
+      "targets": [
+        "MLB native/provider game IDs, game number, original/rescheduled occurrence, home/away",
+        "championship exact sport season, award meaning, selected entrant and field revision"
+      ],
+      "method": "Retain explicit source IDs and exact official sporting crosswalk, not ticker/title inference. Missing associations remain exclusions."
+    }
+  ],
+  "limits": {
+    "collection_seconds": 180,
+    "supervised_seconds": 240,
+    "kalshi_http_attempts": 58,
+    "us_http_attempts": 54,
+    "aggregate_http_attempts": 31,
+    "aggregate_prepaid_credits": 102,
+    "paid_spend_dollars": "0",
+    "native_connection_commands": 4,
+    "selected_markets_per_native_source": 12,
+    "events_per_sport": 1,
+    "aggregate_polls": 2,
+    "automatic_retries": 0,
+    "discovery_response_bytes": 2097152,
+    "metadata_response_bytes": 262144,
+    "book_response_bytes": 524288,
+    "total_ingress_bytes": 33554432,
+    "total_output_bytes": 134217728,
+    "sampled_rss_stop_bytes": 268435456
+  },
+  "limit_justification": [
+    "Reuse existing finite native HTTP and resource ceilings; prioritize first missing-cell opportunity before any second alias/page. Metadata-only unresolved offerings use zero book connections.",
+    "Aggregate 45 documented game/period market keys plus six league outright keys per poll = 51 maximum credits; two polls = 102. Six free event listings + 12 selected event odds + 12 outright pulls + one quota/catalog request = at most 31 HTTP attempts. Actual dispatch accounting must use existing quota reservation and stop before limit; no purchases.",
+    "180 seconds covers two independent bounded polls and targeted native changes; ordinary manual Stop, cleanup and exact reopening reuse verified lifecycle. No prolonged cadence or execution benchmark.",
+    "Every target remains on the ledger if it is unavailable in this finite window, unreached by allowance, empty or seasonal. One run is not promised to complete all coverage."
+  ],
+  "required_before_execution": [
+    "Fresh explicit authorization bound to final candidate, request, window, destination and one unused attempt; all prior authorizations remain exhausted",
+    "Translate metadata locator operations into the existing bounded collector and validate exact request schema/accounting offline; the current legacy source-session schema cannot dispatch outright keys. This reviewable request is deliberately not an executable approval package.",
+    "At Start resolve current IDs only within approved public discovery; no secrets in chat. No account-document/fill/position/probability prerequisite. No automated trading, outreach, purchases, owner walkthrough or commercial validation"
+  ],
+  "stop_rules": [
+    "Missing required identity or malformed/incomplete response is evidence only, never absence or a price input",
+    "Keep each source failure isolated; do not retry envelope breach or exhausted locator hypothesis",
+    "No cross-session simultaneous-price join",
+    "Stop at time/request/credit/byte/memory limits or ordinary manual Stop; uncertain dispatch consumes the new attempt"
+  ],
+  "documented_aggregate_request_templates": [
+    {
+      "source": "odds_api",
+      "path": "/v4/sports",
+      "params": {
+        "all": "true"
+      },
+      "maximum_credits": 0,
+      "kind": "sports_catalog_and_quota"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_nfl/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "NFL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_nfl/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "NFL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_nfl_super_bowl_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "NFL",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_nfl/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "NFL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_nfl_super_bowl_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "NFL",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_ncaaf/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "NCAAF"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_ncaaf/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "NCAAF"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_ncaaf_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "NCAAF",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_ncaaf/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "NCAAF"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/americanfootball_ncaaf_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "NCAAF",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_nba/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "NBA"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_nba/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "NBA"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_nba_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "NBA",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_nba/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "NBA"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_nba_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "NBA",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_ncaab/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "NCAAB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_ncaab/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "NCAAB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_ncaab_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "NCAAB",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_ncaab/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_h1,spreads_h1,totals_h1",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 6,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "NCAAB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/basketball_ncaab_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "NCAAB",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/baseball_mlb/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "MLB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/baseball_mlb/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_1st_3_innings,spreads_1st_3_innings,totals_1st_3_innings,h2h_1st_5_innings,spreads_1st_5_innings,totals_1st_5_innings",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 9,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "MLB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/baseball_mlb_world_series_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "MLB",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/baseball_mlb/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_1st_3_innings,spreads_1st_3_innings,totals_1st_3_innings,h2h_1st_5_innings,spreads_1st_5_innings,totals_1st_5_innings",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 9,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "MLB"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/baseball_mlb_world_series_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "MLB",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/icehockey_nhl/events",
+      "params": {
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 0,
+      "kind": "select_one_exact_event",
+      "sport": "NHL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/icehockey_nhl/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_p1,spreads_p1,totals_p1,h2h_p2,spreads_p2,totals_p2,h2h_p3,spreads_p3,totals_p3",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 12,
+      "kind": "selected_game_prices",
+      "poll": 1,
+      "sport": "NHL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/icehockey_nhl_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 1,
+      "sport": "NHL",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/icehockey_nhl/events/{selected_event_id}/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "h2h,spreads,totals,h2h_p1,spreads_p1,totals_p1,h2h_p2,spreads_p2,totals_p2,h2h_p3,spreads_p3,totals_p3",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso",
+        "includeSids": "true"
+      },
+      "maximum_credits": 12,
+      "kind": "selected_game_prices",
+      "poll": 2,
+      "sport": "NHL"
+    },
+    {
+      "source": "odds_api",
+      "path": "/v4/sports/icehockey_nhl_championship_winner/odds",
+      "params": {
+        "bookmakers": "novig,prophetx,pinnacle,draftkings,betmgm",
+        "markets": "outrights",
+        "oddsFormat": "decimal",
+        "dateFormat": "iso"
+      },
+      "maximum_credits": 1,
+      "kind": "selected_league_award_metadata_and_prices",
+      "poll": 2,
+      "sport": "NHL",
+      "admission": "Unbound until exact season/award/entrant associations observed"
+    }
+  ],
+  "template_validation": {
+    "requests": 31,
+    "maximum_credits": 102,
+    "no_guessed_keys": true,
+    "network_executed": false,
+    "accounting_note": "Preflight templates only; selected event IDs and native locator operations require fresh exact dispatch sealing"
+  },
+  "sha256": "45b6de29142a265e13b8d1a36f8f88ba22d2ce5f5129a6cb66e6bba8afa54a49",
+  "candidate_sha256": "014e749e6994e1e08db0b1c8b7848407770c9ae222d158267431c9997996093b"
+}

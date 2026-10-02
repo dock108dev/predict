@@ -1,12 +1,29 @@
+# Current scope override — October 1, 2026
+
+**Current beta coverage acceptance — October 1 owner decision:** at least **48/63** exact eligible valid retained price pairs (76.19%), fixed denominator; 51/63 optional if straightforward. All four comparison venues must continue contributing useful comparisons. Sport/family/period distribution and separate freshness/runtime qualification remain visible. Once this gate and the ordinary V1 workflow pass, close beta coverage and carry remaining cells as visible post-beta limitations. Metadata, reference-only prices and synthetic fixtures never count. No collection authority changes. [Acceptance accounting and backlog](beta-coverage-acceptance.md). This decision supersedes older statements requiring all 63 before beta. Economics remains optional for dependent calculations; automated execution is V2.
+
+
+**Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** [Current definition](product-roadmap-review.md) and [complete gate reconciliation](full-scope-engineering-reconciliation.md) supersede earlier completion/next-action language below. V1 requires reliable independent four-venue data, correct six-sport/63-cell matching, useful raw comparisons, timestamps/stale/health, settlement differences/supported fee estimates, Details/filters/watches/Start/Stop/history/download/exact reopening, and informational sizing where supported. Pinnacle/DraftKings/BetMGM remain reference-only; Novig/ProphetX aggregate prices require no native trading access.
+
+Account classification, actual fills/positions, execution charges and complete net/EV economics apply only to a displayed calculation that needs them; missing inputs withhold or label that output while preserving valid raw comparisons. The account-document request is inactive as a prerequisite. Automated submission/orchestration, fills/positions synchronization, execution reconciliation and automated-trading timing qualification are V2; direct Novig/ProphetX integration remains deferred. V1 data freshness/source health remain required and are not order-path latency qualification.
+
+No new reproduced defect exists in the October 1 verified supported paths. Completed math/transport/lifecycle/replay/layout and all implementation/evidence remain preserved. Broader actual required coverage remains open. Owner walkthroughs/commercial validation stay deferred. Earlier native provisioning, execution-domain and private-economics gates below are historical where inconsistent with this scope. Existing consumed authorities remain closed; no new acquisition, access or outreach is requested.
+
+---
+
+## Preserved earlier data coverage plan and evidence
+
 # Delivery plan
 
-Updated September 27, 2026. **Beta NOT READY FOR SIGNOFF.** The [product definition](product-roadmap-review.md) preserves the six sports and required market families. The card/workflow package is complete locally with isolated simulation and offline verification. [Exact candidate handoff](opportunity-card-handoff.md). No real collection, credentials, credits, outreach, recurring jobs, commit, push or publication.
+**Current source-specific engineering — September 29:** 27 catalog-backed aggregate period cells now have raw-only mappings and an offline event importer; six league championship candidate keys remain season/award/field-unbound; 12 period/conference cells have no documented equivalent. Actual coverage for all 45 remains unqualified. [Exact per-book dependencies, verification and prepared two-request/three-credit NFL H1 proposal](../evidence/source-bindings-20260929/README.md). The authority is [the current tracker](../../prediction_arb_next_steps.md); E1–E5 and retained aggregate ingestion are already complete. Owner/customer/payment validation remains deferred; no acquisition is authorized.
 
-## Immediate next milestone — live two-venue comparison
+Updated September 29, 2026. **Beta NOT READY FOR SIGNOFF.** The [product definition](product-roadmap-review.md) preserves the six sports and required market families. The card/workflow package is complete locally with isolated simulation and offline verification. [Exact candidate handoff](opportunity-card-handoff.md). No real collection, credentials, credits, outreach, recurring jobs, commit, push or publication.
 
-**First deliver an easy ordinary-app comparison of the same market on Kalshi and Polymarket US, with real prices visible together and automatic streaming updates.** [Milestone contract and ordered next steps](live-two-venue-comparison-next-steps.md) govern the immediate work. Inspect and complete the existing app integration, verify locally, then prepare a concrete two-venue read-only live package for separate approval. Show prices, quantities, lower-price indication, supported fees, source age/health and direct venue links; valid comparisons must remain visible without arbitrage or model EV.
+## Completed local value engineering
 
-Novig/ProphetX access and further fee outreach do not block this intermediate product milestone. Preserve provisional fee assumptions and label unsupported net results. Complete real ordinary-app evidence and focused owner review before claiming this milestone delivered. The four-venue requirements below remain the later beta target; they do not gate starting two-venue engineering. This documentation update grants no live collection or credential access.
+September 29 owner instruction: execute [the E1–E5 engineering package](commercial-value-engineering.md) in order: explain comparability/economics, integrate intended-size comparison, add saved watchlists/in-app signals, add auditable opportunity history, then complete integrated verification. The package owns implementation scope and completion evidence. Status: LOCAL ENGINEERING COMPLETE (see the current tracker and retained E1–E5 evidence). Reuse existing engines and ordinary app paths; complete all independent local work before stopping on an external dependency.
+
+The earlier two-venue implementation and September 28 supervised comparison are retained completed engineering evidence; see the [current tracker](../../prediction_arb_next_steps.md). Do not restart that milestone or make owner review of its eight cards a prerequisite. Its unknown net economics, settlement conflict and unobserved real recovery remain honest limits. After the new engineering package, assess exact remaining native evidence and prepare any useful separately authorized market evaluation. No fresh collection is started here. All-four/six-sport qualification below remains required for full beta.
 
 ## Completed work to preserve
 

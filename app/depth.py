@@ -314,8 +314,7 @@ def _solve(original):
                 if q>0 and q<=limit and all(q>=d['minimum'] for d in domains): yield q,q
             for qs in product(*[([d['first']*d['step'],d['last']*d['step']] if d['first']<=d['last'] else [ZERO]) for d in domains]): yield qs
         # Nested lazy axes avoid materializing a huge quantity grid.
-        for a in axis(domains[0]):
-            for b in axis(domains[1]): yield a,b
+        yield from grid_allocations(domains)
     reached=False
     for qs in proposals():
         if qs in seen: continue
@@ -360,3 +359,158 @@ def evaluate_allocation(audit, quantities):
             domains.append(d)
         snapshot['qualification_reasons']=audit['reasons']
         return _allocation(qs,domains,snapshot,Registry(snapshot['registry']),{})
+
+
+def grid_allocations(domains):
+    """Shared lazy finite-grid enumeration, including the no-acquisition choice."""
+    def walk(i, prefix):
+        if i==len(domains):
+            yield tuple(prefix); return
+        d=domains[i]
+        yield from walk(i+1,[*prefix,ZERO])
+        for n in range(d['first'],d['last']+1):
+            yield from walk(i+1,[*prefix,n*d['step']])
+    yield from walk(0,[])
+
+
+def explicit_allocation(spec, quantities):
+    """General N-leg mathematical extension of the acquisition-depth solver.
+
+    Uses the same consume/grid/Decimal arithmetic as native depth. Generic fee
+    policies never bind to native venues. Shared level IDs are one capacity;
+    exclusive groups cannot coexist. State names are explicit joint states.
+    """
+    from app.fees.engine import generic_fee, arithmetic_number as D
+    from app.settlement import portfolio
+    with localcontext(Context(prec=100)):
+        legs=spec['legs']; states=spec['states']
+        if not 1<=len(legs)<=512 or len(quantities)!=len(legs): raise ValueError('One to 512 legs and matching quantities required')
+        if len({l['id'] for l in legs})!=len(legs): raise ValueError('Duplicate leg identity')
+        shared={}; use={}; exclusive=set(); flows=[]; audits=[]; net_groups={}
+        for leg,value in zip(legs,quantities):
+            q=D(value); minimum=D(leg['minimum']); step=D(leg['increment'])
+            if minimum<=0 or step<=0 or q<0 or (q and (q<minimum or q%step)):
+                raise ValueError('Quantity outside minimum / increment')
+            if type(leg.get('partial_final')) is not bool: raise ValueError('Explicit partial-final rule required')
+            if len(leg['levels'])>1000: raise ValueError('At most 1000 levels per leg')
+            for row in leg['levels']:
+                if not row.get('liquidity_id'): raise ValueError('Explicit level liquidity identity required')
+                key=row['liquidity_id']; capacity=D(row['quantity'])
+                if key in shared and shared[key]!=capacity: raise ValueError('Conflicting shared liquidity capacity')
+                shared[key]=capacity
+            fills=consume(leg['levels'],str(q),partial_final=leg['partial_final'])
+            if q and leg.get('exclusive_group'):
+                if leg['exclusive_group'] in exclusive: raise ValueError('Mutually exclusive alternatives cannot be combined')
+                exclusive.add(leg['exclusive_group'])
+            for f in fills:
+                key=f['liquidity_id'];use[key]=use.get(key,ZERO)+D(f['quantity'])
+                if use[key]>shared[key]: raise ValueError('Shared liquidity exhausted')
+            cost=sum((D(f['price'])*D(f['quantity']) for f in fills),ZERO)
+            policy=leg.get('fee_policy'); netting=policy is not None and policy.get('basis')=='net_gain'
+            fee=None if policy is None else ZERO if netting else D(generic_fee(fills,policy)['entry_fee'])
+            if not q: fee=ZERO
+            receipts={}
+            for state in states:
+                payout=leg.get('payouts',{}).get(state)
+                if not q: receipts[state]='0';continue
+                if payout is None or payout.get('settlement_fee_per_unit') is None:
+                    receipts[state]=None;continue
+                kind=payout['kind'];v=D(payout['value']); levy=D(payout['settlement_fee_per_unit'])
+                if v<0 or levy<0: raise ValueError('Negative payout or settlement fee')
+                if kind=='fraction':
+                    if v>1: raise ValueError('Payout fraction exceeds one')
+                    gross=q*v
+                elif kind=='refund':
+                    if v>1: raise ValueError('Refund fraction exceeds one')
+                    gross=cost*v
+                elif kind=='split':
+                    refund=D(payout['refund_fraction'])
+                    if refund<0 or v+refund>1: raise ValueError('Invalid split payout / refund fractions')
+                    gross=q*v+cost*refund
+                elif kind=='per_unit':gross=q*v
+                else: raise ValueError('Unknown payout representation')
+                receipts[state]=str(gross-q*levy)
+            flows.append(dict(id=leg['id'],cash=None if fee is None else str(cost+fee),receipts=receipts))
+            audits.append(dict(id=leg['id'],quantity=str(q),fills=fills,notional=str(cost),entry_fee=None if fee is None else str(fee)))
+            if netting and q:
+                position=leg.get('positions')
+                if not position: raise ValueError('Explicit scoped position required for net gain')
+                key=(position.get('account'),position.get('market'))
+                group=net_groups.setdefault(key,dict(policy=policy,positions=position,indices=[]))
+                if group['policy']!=policy or group['positions']!=position: raise ValueError('Conflicting account netting inputs')
+                group['indices'].append(len(flows)-1)
+        for group in net_groups.values():
+            indices=group['indices']; outcomes={}
+            for state in states:
+                if any(flows[i]['receipts'][state] is None for i in indices): break
+                outcomes[state]=str(sum((D(flows[i]['receipts'][state])-D(flows[i]['cash']) for i in indices),ZERO))
+            if len(outcomes)!=len(states):
+                for state in states: flows[indices[0]]['receipts'][state]=None
+            else:
+                fees=generic_fee([],group['policy'],positions=group['positions'],outcomes=outcomes)
+                for state,v in fees['state_fees'].items():
+                    flows[indices[0]]['receipts'][state]=str(D(flows[indices[0]]['receipts'][state])-D(v))
+                audits[indices[0]]['market_fee_audit']=fees
+        result=portfolio(flows,states,complete=spec['complete'],probabilities=spec.get('probabilities'),
+                         probability_kind=spec.get('probability_kind','manual What-if'),reserve=spec.get('reserve','0') if any(D(q) for q in quantities) else '0')
+        ceiling=spec.get('ceiling')
+        if ceiling is not None and D(ceiling)<0: raise ValueError('Negative spending ceiling')
+        result.update(quantities=[str(D(q)) for q in quantities],legs=audits,cashflow_legs=flows,
+                      within_ceiling=None if ceiling is None else result['committed_cash'] is not None and D(result['committed_cash'])<=D(ceiling),
+                      version='explicit-depth-1',input_hash=digest(spec),current_executable=False)
+        return result
+
+
+def solve_explicit(spec, *, max_evaluations=4096):
+    """Bounded same discrete solver domain, generalized to explicit N-leg cashflows."""
+    from itertools import islice
+    from app.fees.engine import arithmetic_number as D
+    with localcontext(Context(prec=100)):
+        if type(max_evaluations) is not int or not 1<=max_evaluations<=10000: raise ValueError('Evaluation limit must be 1..10000')
+        requested_evaluations=max_evaluations
+        max_evaluations=min(max_evaluations,max(1,2000000//max(1,len(spec['legs'])*len(spec['states']))))
+        # Validate complete structure even if search returns only zero.
+        explicit_allocation(spec,['0']*len(spec['legs']))
+        domains=[];total=1
+        for leg in spec['legs']:
+            size=sum((D(r['quantity']) for r in leg['levels']),ZERO);step=D(leg['increment'])
+            first=int((D(leg['minimum'])/step).to_integral_value(rounding=ROUND_CEILING));last=int(size//step)
+            domains.append(dict(first=first,last=last,step=step))
+            total*=1+max(0,last-first+1)
+        objective=spec.get('objective','worst_case_return')
+        if objective not in ('worst_case_return','return_pct','expected_net','ev_pct'): raise ValueError('Unknown sizing objective')
+        best=None;curve=[];invalid=0;unknown=0;evaluated=0
+        for quantities in islice(grid_allocations(domains),max_evaluations):
+            evaluated+=1
+            try:r=explicit_allocation(spec,[str(q) for q in quantities])
+            except ValueError as exc:
+                if any(s in str(exc) for s in ('Shared liquidity exhausted','Mutually exclusive','partial final level')):
+                    invalid+=1;continue
+                raise
+            if r['within_ceiling'] is False: continue
+            if r['worst_case_return'] is None or (any(quantities) and r[objective] is None): unknown+=1
+            curve.append({k:r[k] for k in ('quantities','committed_cash','worst_case_return','return_pct','expected_net','ev_pct','reasons')})
+            if r[objective] is not None and (best is None or D(r[objective])>D(best[objective])): best=r
+        curve.sort(key=lambda r:(r[objective] is None,-D(r[objective] or '0')))
+        exposures=[]
+        exposure_total=0;exposure_evaluated=0
+        if best:
+            exposure_spec=deepcopy(spec)
+            exposure_domains=[];exposure_total=1
+            for leg,q in zip(exposure_spec['legs'],best['quantities']):
+                leg['minimum']=leg['increment'];leg['partial_final']=True
+                last=int(D(q)/D(leg['increment']));exposure_total*=last+1
+                exposure_domains.append(dict(first=1,last=last,step=D(leg['increment'])))
+            for qs in islice(grid_allocations(exposure_domains),max_evaluations):
+                exposure_evaluated+=1
+                try:r=explicit_allocation(exposure_spec,[str(q) for q in qs])
+                except ValueError:continue
+                exposures.append({k:r[k] for k in ('quantities','committed_cash','states','worst_case_return')})
+        return dict(version='explicit-depth-1',input=deepcopy(spec),input_hash=digest(spec),best=best,curve=curve[:64],objective=objective,
+                    search=dict(total_grid_allocations=total,evaluated=evaluated,invalid=invalid,unknown=unknown,requested_evaluations=requested_evaluations,evaluation_limit=max_evaluations,
+                                domain=[{k:str(v) for k,v in d.items()} for d in domains],
+                                optimality='unresolved cashflows' if unknown else 'optimal within supplied discrete grid and fill model' if evaluated==total else 'best evaluated candidate; search limit reached'),
+                    partial_fill_exposure=sorted(exposures,key=lambda x:(x['worst_case_return'] is None,D(x['worst_case_return'] or '0')))[:64],
+                    exposure_search=dict(total=exposure_total,evaluated=exposure_evaluated,complete=exposure_total==exposure_evaluated,display_limit=64),
+                    limitation='One fill per consumed price level. Subfill rounding can differ. Exposure table shows up to 64 worst evaluated partial fills, on the stated increments down to zero, permitting fills below order minimum. Exposure coverage is explicitly bounded; off-grid fills and different fragmentation are not covered. No atomic execution assumed. Shared liquidity and exclusive alternatives are constrained.',
+                    label='Hypothetical What-if; no native fee, settlement or execution qualification')

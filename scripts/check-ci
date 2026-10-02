@@ -40,6 +40,9 @@ python -m unittest \
     tests.test_native_continuation \
     tests.test_reference_integration \
     tests.test_pinnacle_sample \
+    tests.test_odds_sample \
+    tests.test_odds_acquire \
+    tests.test_odds_bindings \
     tests.test_actual_references \
     tests.test_nhl \
     tests.test_mlb \
@@ -91,3 +94,26 @@ node tests/test_freshness_timing.cjs
 # Browser-independent supervision and ordinary Stop on Game Details.
 python -m unittest tests.test_supervised_observer tests.test_supervised_observer_integration tests.test_observer_capacity -q
 node tests/test_session_controls.cjs
+
+# Commercial decision support, watch transitions, history and retained-cutoff sizes.
+python -m unittest tests.test_commercial_engineering -v
+node tests/test_commercial_ui.cjs
+
+# Required market cells through shared feed, sizing, watch and exact history.
+python -m unittest tests.test_full_scope_engineering -v
+
+# Historical aggregate ingestion and ordinary saved app paths.
+python -m unittest tests.test_aggregate_ingestion -v
+node tests/test_aggregate_ui.cjs
+
+# Versioned actual H1 rule research; independent of acquisition and native execution.
+python -m unittest tests.test_aggregate_assessment -v
+node tests/test_aggregate_assessment_ui.cjs
+
+# Full mathematical package, versioned hypothetical paths and retained reference sets.
+python -m unittest tests.test_math_package -v
+node tests/test_math_package.cjs
+
+# Unified ordinary session on isolated transports; preservation and quota boundaries.
+python -m unittest tests.test_source_session -v
+node tests/test_source_settings.cjs

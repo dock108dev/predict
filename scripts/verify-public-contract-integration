@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Offline integrated verification, with independent resource ownership per module.
+
+All assertions and production caps stay active. ru_maxrss is a process lifetime
+high-water mark: resource fixtures must start in fresh interpreters, rather than
+inherit hundreds of previous unrelated fixture allocations. Lifecycle tests
+still exercise one ordinary app across Start/import/Stop/history/reopening.
+"""
+import json,os,re,subprocess,sys,time
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+OUT=ROOT/'evidence/public-contract-integration-20261001-v1/verification'
+MODULES=['test_public_native_routes','test_native_book_comparison','test_native_reviews','test_public_contract_integration','test_public_contracts','test_public_binding_routes',
+'test_source_bindings_routes','test_fees','test_periods','test_futures','test_native_scope_bindings',
+ 'test_math_package','test_nfl_resolution','test_nba_resolution','test_ncaaf_resolution',
+ 'test_ncaab_resolution','test_diamond_ice_resolution','test_segmented','test_journal_efficiency','test_d2_repair']
+CODE="""import json,unittest,sys,time
+from app.collection.continuous import rss
+started=time.monotonic()
+suite=unittest.defaultTestLoader.loadTestsFromName(sys.argv[1])
+result=unittest.TextTestRunner(verbosity=1).run(suite)
+print(json.dumps(dict(module=sys.argv[1],tests=result.testsRun,failures=len(result.failures),errors=len(result.errors),passed=result.wasSuccessful(),peak_rss_bytes=rss(),elapsed_seconds=time.monotonic()-started)))
+sys.exit(0 if result.wasSuccessful() else 1)
+"""
+
+def main():
+ OUT.mkdir(parents=True,exist_ok=True);results=[]
+ for name in MODULES:
+  started=time.monotonic()
+  child=subprocess.Popen([sys.executable,'-c',CODE,'tests.'+name],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  try:stdout,stderr=child.communicate()
+  except BaseException:
+   child.kill();child.wait();raise
+  (OUT/(name+'.log')).write_text(stderr+stdout)
+  value=json.loads(stdout.strip().splitlines()[-1]);results.append(value)
+  print(name+': '+('PASS' if value['passed'] else 'FAIL')+' ('+str(value['tests'])+' tests)',flush=True)
+ report=dict(version='public-contract-integration-1',process_isolation='One owned fresh interpreter per module; original lifecycle assertions run together in each ordinary app',modules=results,total_tests=sum(v['tests'] for v in results),passed=all(v['passed'] for v in results),provider_collection=False,production_caps_unchanged=True)
+ (OUT/'integrated-offline.json').write_text(json.dumps(report,indent=2)+'\n')
+ return 0 if report['passed'] else 1
+if __name__=='__main__':sys.exit(main())

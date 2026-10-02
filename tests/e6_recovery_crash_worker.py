@@ -22,9 +22,22 @@ async def main(output,phase):
         for _ in range(1000):
             if owner.health['kalshi']=='connected' and owner.producers['kalshi'].budget.connections>=2:break
             await asyncio.sleep(.005)
-        await owner.producers['kalshi'].interrupt_connection()
+        # This fixture models a crash at the interruption request boundary.
+        # Freeze synchronously there so a ready old-connection frame cannot race
+        # the parent process's kill and turn this into a different scenario.
+        producer=owner.producers['kalshi'];original_emit=producer.emit
+        def crash_boundary(source,row):
+            result=original_emit(source,row)
+            if row['type']=='controlled_interruption':owner.intake_closed=True
+            return result
+        producer.emit=crash_boundary
+        await producer.interrupt_connection()
     if phase=='finalization':await owner.stop()
     if phase=='torn':
+        # Freeze admission before the simulated crash tail. Otherwise background
+        # frames can append a complete line to the torn bytes before the parent
+        # kills this process, testing interior corruption instead of a crash tail.
+        owner.intake_closed=True
         # Simulate an OS-visible partial append after already fsynced records.
         owner.journal.file.write(b'{"previous":"torn-write');owner.journal.file.flush()
         import os;os.fsync(owner.journal.file.fileno())

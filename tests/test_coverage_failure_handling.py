@@ -92,9 +92,13 @@ class CoverageFailures(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(owner.status()['state'], 'failed')
                     self.assertIsNotNone(owner.error)
                     self.assertNotIn('SECRET', owner.error)
-                    self.assertTrue((folder/'report.json').exists())
-                    if fault != 'replay':
+                    # A capacity failure now reserves bytes before any export.
+                    # Keep original evidence, but never write past the disk cap.
+                    self.assertEqual((folder/'report.json').exists(), fault != 'capacity')
+                    if fault == 'fsync':
                         self.assertTrue((folder/'manifest.pending.json').exists())
+                    elif fault == 'capacity':
+                        self.assertFalse((folder/'manifest.pending.json').exists())
                 finally:
                     await fixture.close()
 

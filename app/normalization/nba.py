@@ -25,7 +25,11 @@ def event_key(event):
     first,last=map(int,season.split('-'))
     if last!=first+1 or any(not ((t.year==first and t.month>=9) or (t.year==last and t.month<=7)) for t in (start,original)):
         raise ValueError('NBA start outside declared season')
-    if event.get('stage') not in ('regular_season','play_in','playoffs','nba_cup'):
+    public_preseason=event.get('stage')=='preseason' and event.get('public_binding_version')=='public-contract-bindings-1'
+    if public_preseason:
+        from app.collection.public_contracts import validate_enriched_event
+        validate_enriched_event(event)
+    if not public_preseason and event.get('stage') not in ('regular_season','play_in','playoffs','nba_cup'):
         raise ValueError('Explicit NBA regular season / play-in / playoffs / NBA Cup stage required')
     mapping=event.get('participants',{});registry=Registry.load()
     if len(mapping)!=2 or len(set(mapping.values()))!=2:

@@ -1,0 +1,4474 @@
+[
+  {
+    "cell_id": "NFL/full_game/moneyline",
+    "sport": "NFL",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {}
+  },
+  {
+    "cell_id": "NFL/full_game/spread",
+    "sport": "NFL",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFLSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-09T17:30:49.953482Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLSPREAD",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "d779bef2da36812c38c0f4ca87d46020c0c6ec3d2a2dbff2b3ba96817ce257b9",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Pro Football Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/full_game/total",
+    "sport": "NFL",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFLTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-09T17:44:55.023295Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLTOTAL",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "d00ab5f21eedbaa4be7676208e89e65c2f33b9a6fc2fce1715a9127ca972f6d0",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Pro Football Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/first_half/moneyline",
+    "sport": "NFL",
+    "period": "first_half",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFL1H",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:32.964766Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFL1H",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "209cee936d37bc23219feb9d4278a94b5fab6eaf2b788e1c1d658fa12a6ab90d",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Pro Football 1st Half Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_first_half_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable",
+        "Exact home/away roles for score predicate unavailable"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/first_half/spread",
+    "sport": "NFL",
+    "period": "first_half",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFL1HSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-09T17:30:49.942329Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFL1HSPREAD",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "b5953ede123e7d082833eb78b40f69e99222841c9ab8511b701bb4670ee5aa74",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Pro Football 1st Half Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_first_half_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable",
+        "Exact home/away roles for score predicate unavailable",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/first_half/total",
+    "sport": "NFL",
+    "period": "first_half",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFL1HTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-09T17:44:54.998196Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFL1HTOTAL",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "b9eadc1cab531db00613b7fe8e6e5a53aa7991a9592f6270240c8e57322bb9b3",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Pro Football 1st  Half Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_game_first_half_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/season/conference_champion",
+    "sport": "NFL",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNFLAFCCHAMP",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_champion",
+            "category": "conference_champion",
+            "conference_id": "AFC",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NFL.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NFL.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T21:43:47.37311Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLAFCCHAMP",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "5c5e02d54ac4c37b344943afacff5f341ccc53da813fd78b827b245e412c5c86",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "American Football Conference Champion"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact award/season/entrant crosswalk unavailable",
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for NFL/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for NFL/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NFL/season/league_champion",
+    "sport": "NFL",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXSB",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T22:19:09.496371Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXSB",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              },
+              {
+                "name": "AP",
+                "url": "https://apnews.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "88d070814c2efdb373264c097ed500222329288e0ac9194a0aa2cf8742655ec1",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Super Bowl"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact award/season/entrant crosswalk unavailable",
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/full_game/moneyline",
+    "sport": "NBA",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBAGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-10T16:03:22.358315Z",
+            "milestone_type": "basketball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBAGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "22ca65345d93135f440e899697b84a15bf7c19e672c4348d3b9b10502b507643",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/full_game/spread",
+    "sport": "NBA",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBASPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLSPREADS.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-10T16:03:25.945807Z",
+            "milestone_type": "basketball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBASPREAD",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "a008684a57d3c6ab3955a11805261aeb6eee6ed58bbe44767c16087f4958c9e5",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/full_game/total",
+    "sport": "NBA",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBATOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-10T16:03:26.914173Z",
+            "milestone_type": "basketball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBATOTAL",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "8d0b042004fe2cbc222d2ba9809633b955e07111783fcd29c48fad50affb4d91",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/first_half/moneyline",
+    "sport": "NBA",
+    "period": "first_half",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBA1HWINNER",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T20:55:08.134229Z",
+            "milestone_type": "basketball_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBA1HWINNER",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "aaaae7a7d447d5fddeefb91c8d021f0473bcf04324ac52e3d05d6c5190a8600a",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Baskeball 1st Half Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/first_half/spread",
+    "sport": "NBA",
+    "period": "first_half",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBA1HSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLSPREADS.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-10T16:03:18.471815Z",
+            "milestone_type": "basketball_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBA1HSPREAD",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e5ac42f338e7dc4c930c6449339f1fc3634843924c1781b2f255b288f1914b8f",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball 1st Half Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/first_half/total",
+    "sport": "NBA",
+    "period": "first_half",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBA1HTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-10T16:03:18.51385Z",
+            "milestone_type": "basketball_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBA1HTOTAL",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "61fd383c9794df4d900ff635f0c7f1cd3007db99411b4edffc4d57af11ab6d49",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball 1st Half Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/season/conference_champion",
+    "sport": "NBA",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBAEAST",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_champion",
+            "category": "conference_champion",
+            "conference_id": "EAST",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-09-10T16:03:21.642672Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBAEAST",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "6f9581d43e1a0bfb2693c9a0e8afd4efc31db866973cfb07c1720cb362e003a1",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball Eastern Conference Champion"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for NBA/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for NBA/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NBA/season/league_champion",
+    "sport": "NBA",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNBA",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-09-10T16:03:18.400059Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNBA",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nba.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "b89acd1bd85e2f343ca6fd3227eb7d51fbcebc63522de3a3eb98add56ab3ce92",
+            "sport": "NBA",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Pro Basketball Champion"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/full_game/moneyline",
+    "sport": "MLB",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-08T19:38:23.158825Z",
+            "milestone_type": "baseball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBGAME",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com"
+              },
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "9d5f089e4fe380b78e6bad376202a3c97e24853e1f953321cb9665ba2a844029",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "Professional Baseball Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact schedule, sport season and stage unavailable",
+        "Exact MLB game/number/original/rescheduled identity unavailable",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/full_game/spread",
+    "sport": "MLB",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-08T19:38:23.319676Z",
+            "milestone_type": "baseball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBSPREAD",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "5bb8918ce1dd9a685a54703c58768421fa1f962c3ae45cf310bef1995f2e2ad1",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "Pro Baseball Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/full_game/total",
+    "sport": "MLB",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-08T19:38:23.228641Z",
+            "milestone_type": "baseball_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBTOTAL",
+            "settlement_sources": [
+              {
+                "name": "MLB",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "2d820e4cb356a194e22176c199f1d61e7135319ca07976120a71b30373399f2b",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "Pro Baseball Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_3/moneyline",
+    "sport": "MLB",
+    "period": "first_3",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBF3",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-08T19:38:22.976958Z",
+            "milestone_type": "baseball_game",
+            "period": "first_3",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBF3",
+            "settlement_sources": [
+              {
+                "name": "CBS Sports",
+                "url": "https://www.cbssports.com"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "f3a2c76f8a85d107dac787cb68a3924ec55e4c5fe4ece7e5d55d5868db06bafd",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "First 3 Innings Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Exact MLB game/number/original/rescheduled identity unavailable",
+        "Exact home/away roles for score predicate unavailable",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_3/moneyline",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_3/spread",
+    "sport": "MLB",
+    "period": "first_3",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/first_3/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_3/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_3/total",
+    "sport": "MLB",
+    "period": "first_3",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/first_3/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_3/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_5/moneyline",
+    "sport": "MLB",
+    "period": "first_5",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBF5",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-08T19:38:23.078897Z",
+            "milestone_type": "baseball_game",
+            "period": "first_5",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBF5",
+            "settlement_sources": [
+              {
+                "name": "CBS Sports",
+                "url": "https://www.cbssports.com"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "93a544e8d35ac54a4b5c4c920d1dbe165048ea8099a65fb701d6dcf2b59d45af",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "First 5 Innings Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_first_five_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Exact MLB game/number/original/rescheduled identity unavailable",
+        "Exact home/away roles for score predicate unavailable",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_5/spread",
+    "sport": "MLB",
+    "period": "first_5",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBF5SPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-08T19:38:23.310769Z",
+            "milestone_type": "baseball_game",
+            "period": "first_5",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBF5SPREAD",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "4a5597cebf31aafaf36135ce9328cc4d710a919befcbc7d4eb11c44d97cc1cd6",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "First 5 Innings Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_first_five_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Exact MLB game/number/original/rescheduled identity unavailable",
+        "Exact home/away roles for score predicate unavailable",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_5/total",
+    "sport": "MLB",
+    "period": "first_5",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBF5TOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-08T19:38:23.158771Z",
+            "milestone_type": "baseball_game",
+            "period": "first_5",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBF5TOTAL",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.mlb.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "8ba057a4ec9a6c44a20396f5b1764cc5f177ab9f6f212b75c7a9312c211209e2",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "First 5 Innings Total"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "baseball_team_first_five_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact schedule, sport season and stage unavailable",
+        "Exact MLB game/number/original/rescheduled identity unavailable",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_6/moneyline",
+    "sport": "MLB",
+    "period": "first_6",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/first_6/moneyline",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/first_6/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_6/moneyline",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/first_6/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_6/spread",
+    "sport": "MLB",
+    "period": "first_6",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/first_6/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/first_6/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_6/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/first_6/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/first_6/total",
+    "sport": "MLB",
+    "period": "first_6",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/first_6/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/first_6/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/first_6/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/first_6/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/regulation_9/moneyline",
+    "sport": "MLB",
+    "period": "regulation_9",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/regulation_9/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/regulation_9/spread",
+    "sport": "MLB",
+    "period": "regulation_9",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/regulation_9/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/regulation_9/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/regulation_9/spread",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/regulation_9/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/regulation_9/total",
+    "sport": "MLB",
+    "period": "regulation_9",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for MLB/regulation_9/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/regulation_9/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for MLB/regulation_9/total",
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/regulation_9/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/season/conference_champion",
+    "sport": "MLB",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLBAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_champion",
+            "category": "conference_champion",
+            "conference_id": "AL",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T21:43:47.37311Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLBAL",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              },
+              {
+                "name": "AP",
+                "url": "https://apnews.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "1f3f05000c2918135178637564fea45afd90a6c39c37e535f40009525fcd207c",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "MLB American League Championship"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for MLB/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for MLB/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "MLB/season/league_champion",
+    "sport": "MLB",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMLB",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T21:43:47.37311Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMLB",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              },
+              {
+                "name": "AP",
+                "url": "https://apnews.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "8bdacc0ee8182f7a78143e8e1ee955fac5b9006a85bef57834961a84f96bfaaf",
+            "sport": "MLB",
+            "tags": [
+              "Baseball"
+            ],
+            "title": "World Series"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected native original/rescheduled game ID and doubleheader game number; exact shared counterpart",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/full_game/moneyline",
+    "sport": "NHL",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNHLGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T20:55:07.40925Z",
+            "milestone_type": "hockey_match",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNHLGAME",
+            "settlement_sources": [
+              {
+                "name": "NHL",
+                "url": "https://www.nhl.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "900e2fadf9a4375d4fbf41d54abdf819cf6fd5cae3dfd464b8a946df3e321ba2",
+            "sport": "NHL",
+            "tags": [
+              "Hockey"
+            ],
+            "title": "NHL Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "hockey_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [],
+      "polymarket_us": [
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Exact US Long/Short outcome orientation unavailable"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/full_game/spread",
+    "sport": "NHL",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNHLSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYSPREADS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/HOCKEYSPREADS.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-08T19:38:25.326315Z",
+            "milestone_type": "hockey_match",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNHLSPREAD",
+            "settlement_sources": [
+              {
+                "name": "NHL",
+                "url": "https://www.nhl.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "f077715e438853dbd4b5cec036b49c804a760e7bcf2e7c79100ad80d6d0ea6ca",
+            "sport": "NHL",
+            "tags": [
+              "Hockey"
+            ],
+            "title": "NHL Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "hockey_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/full_game/total",
+    "sport": "NHL",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNHLTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/HOCKEYTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-08T19:38:25.513354Z",
+            "milestone_type": "hockey_match",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNHLTOTAL",
+            "settlement_sources": [
+              {
+                "name": "NHL",
+                "url": "https://www.nhl.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "2d90e1c463a336c2759bce559b99e40cca799934cabd2ff877d8049c7da4ed2c",
+            "sport": "NHL",
+            "tags": [
+              "Hockey"
+            ],
+            "title": "NHL Goal Total"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "hockey_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_1/moneyline",
+    "sport": "NHL",
+    "period": "period_1",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_1/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_1/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_1/spread",
+    "sport": "NHL",
+    "period": "period_1",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_1/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_1/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_1/total",
+    "sport": "NHL",
+    "period": "period_1",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_1/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_1/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_2/moneyline",
+    "sport": "NHL",
+    "period": "period_2",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_2/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_2/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_2/spread",
+    "sport": "NHL",
+    "period": "period_2",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_2/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_2/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_2/total",
+    "sport": "NHL",
+    "period": "period_2",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_2/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_2/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_3/moneyline",
+    "sport": "NHL",
+    "period": "period_3",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_3/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_3/moneyline",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_3/spread",
+    "sport": "NHL",
+    "period": "period_3",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_3/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_3/spread",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/period_3/total",
+    "sport": "NHL",
+    "period": "period_3",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "observed_milestone_link_only",
+      "predicate": "supported_observed_literal_only",
+      "selector": []
+    },
+    "polymarket_us": {
+      "selectors": [],
+      "discovery": "no_documented_family_key; unresolved"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact published source locator unestablished for NHL/period_3/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Exact published source locator unestablished for NHL/period_3/total",
+        "Same-session exact counterpart prices/state/receipt evidence"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/season/conference_champion",
+    "sport": "NHL",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNHLEAST",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_champion",
+            "category": "conference_champion",
+            "conference_id": "EAST",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NHL.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NHL.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T21:53:44.572206Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNHLEAST",
+            "settlement_sources": [
+              {
+                "name": "NHL",
+                "url": "https://www.nhl.com"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "433b49abca8ee2cf22ff922e4722fc8bb4f1bc224d689bf886b7cc83c2c5ecc5",
+            "sport": "NHL",
+            "tags": [
+              "Hockey"
+            ],
+            "title": "Eastern Conference Championship"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for NHL/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for NHL/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NHL/season/league_champion",
+    "sport": "NHL",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNHL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/TITLE.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/TITLE.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T22:19:09.496371Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNHL",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              },
+              {
+                "name": "AP",
+                "url": "https://apnews.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "dec54fe2df5ba9af972018a6d13a29b59516a21c4711f5eeb0cc64ad411ba543",
+            "sport": "NHL",
+            "tags": [
+              "Hockey"
+            ],
+            "title": "Stanley Cup"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/full_game/moneyline",
+    "sport": "NCAAF",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAFGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:32.979572Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAFGAME",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "da5ede63b4fb3dd4a29d44a849bc2789786b2e28d1282ac0b756465280c51fbc",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {}
+  },
+  {
+    "cell_id": "NCAAF/full_game/spread",
+    "sport": "NCAAF",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAFSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-09T17:30:49.938187Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAFSPREAD",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "0705c0d5759122ed97dbed970ce011d590ce2a315170ab20b132350f4986c1fd",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/full_game/total",
+    "sport": "NCAAF",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAFTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-09T17:44:55.002025Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAFTOTAL",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "25931913dac104a5090f65c6029d31da2704f405e55219cc23a55c95c8f13bd6",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/first_half/moneyline",
+    "sport": "NCAAF",
+    "period": "first_half",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": false,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAF1H",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.033904Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAF1H",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "2cc9cc2ea4bff0b416a4d9b14a1dcc2e869ec10a253faca7226cee0c6eb1926b",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football 1st Half Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_first_half_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/first_half/spread",
+    "sport": "NCAAF",
+    "period": "first_half",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAF1HSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-09T17:30:49.892832Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAF1HSPREAD",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "08f66b1c5831354448f73ce3f642d3acc322e24818dcc8e2d08de33fde13abee",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football 1st Half Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_team_first_half_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/first_half/total",
+    "sport": "NCAAF",
+    "period": "first_half",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAF1HTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-09T17:44:54.962633Z",
+            "milestone_type": "football_game",
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAF1HTOTAL",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/football/fbs"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "94efb4aa0da7afd1ab0aee6d2627a74c6457b8e0c533f67df632bdb56852ec0b",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "College Football 1st Half Total"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "football_game_first_half_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "novig": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "polymarket_us": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ],
+      "prophetx": [
+        "Actual selected event/outcome/period/line records and same-session counterpart quotes"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/season/conference_champion",
+    "sport": "NCAAF",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAFAAC",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_champion",
+            "category": "conference_champion",
+            "conference_id": "AAC",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NCAAF.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NCAAF.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T22:19:09.496371Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAFAAC",
+            "settlement_sources": [
+              {
+                "name": "The Wall Street Journal",
+                "url": "https://www.wsj.com/"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "2e50f569d5d0fba8dcb5d21198f9a8c4a9971dc8ab60169799e931c90b4da20c",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "American Athletic Conference Champion"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact award/season/entrant crosswalk unavailable",
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for NCAAF/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for NCAAF/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAF/season/league_champion",
+    "sport": "NCAAF",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAF",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NCAAF.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NCAAF.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-08-29T22:19:09.496371Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAF",
+            "settlement_sources": [
+              {
+                "name": "The Wall Street Journal",
+                "url": "https://www.wsj.com/"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "fb822785e563560b60f197b32582cc786bf60e858b79f4fbf85fe18fff9b3130",
+            "sport": "NCAAF",
+            "tags": [
+              "Football"
+            ],
+            "title": "NCAAF Championship"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Exact award/season/entrant crosswalk unavailable",
+        "Exact distinct canonical participants unavailable",
+        "Exact schedule, sport season and stage unavailable",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/full_game/moneyline",
+    "sport": "NCAAB",
+    "period": "full_game",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMBGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T20:55:07.732241Z",
+            "milestone_type": null,
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMBGAME",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "71e8d3c3298f1fb8b2018ed38c8958faf6248c12b0f2d4ff6868282d8de619a6",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball Men's Game"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/full_game/spread",
+    "sport": "NCAAB",
+    "period": "full_game",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMBSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLSPREADS.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-10T16:03:31.139257Z",
+            "milestone_type": null,
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMBSPREAD",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "ff54eb27aa66edbd32edbc5ae14c0298fa0a6860f91a0374e2330892c8abf6e9",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/full_game/total",
+    "sport": "NCAAB",
+    "period": "full_game",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMBTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-10T16:03:31.426693Z",
+            "milestone_type": null,
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMBTOTAL",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "bbbca62088384e25a7d946ac9d7b0a518029465a6d54be09837bba00d3450fe0",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball Total Points"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_full_game_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/first_half/moneyline",
+    "sport": "NCAAB",
+    "period": "first_half",
+    "family": "moneyline",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMB1HWINNER",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T20:55:07.720709Z",
+            "milestone_type": null,
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMB1HWINNER",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "ac3fc6f0c20b518d43d7560245a215cd214522d6dadd08e6e84e72cbdcfc19a4",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "College Basketball 1H Winner"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_winner"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/first_half/spread",
+    "sport": "NCAAB",
+    "period": "first_half",
+    "family": "spread",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMB1HSPREAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLSPREADS.pdf",
+            "family": "spread",
+            "last_updated_ts": "2026-09-10T16:03:27.893806Z",
+            "milestone_type": null,
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMB1HSPREAD",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "b0e02004cbe181ea6a5dbb1aab56068abfa6e8d165fafd7cedb005c8c860e24a",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball First Half Spread"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_spread"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/first_half/total",
+    "sport": "NCAAB",
+    "period": "first_half",
+    "family": "total",
+    "category": null,
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMB1HTOTAL",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASKETBALLTOTALS.pdf",
+            "family": "total",
+            "last_updated_ts": "2026-09-10T16:03:27.937474Z",
+            "milestone_type": null,
+            "period": "first_half",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMB1HTOTAL",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "c7ab5406d14c454ec58bc536bc4c29f56b2e867b96fefad90fa1085559d4e208",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball First Half Total"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "basketball_team_first_half_total"
+          }
+        }
+      ],
+      "discovery": "documented_typed_family"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Selected discovery identity and line/outcome; MLB native joins require exact occurrence, roles, game number and reschedule"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "novig": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "polymarket_us": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ],
+      "prophetx": [
+        "Actual men Division I event, season, participant and selected market observations"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/season/conference_champion",
+    "sport": "NCAAB",
+    "period": "season",
+    "family": "futures",
+    "category": "conference_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXNCAAMBA10",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "conference_tournament_champion",
+            "category": "conference_champion",
+            "conference_id": "ATLANTIC_10",
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NCAABCONF.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NCAABCONF.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-09-10T16:03:28.18024Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNCAAMBA10",
+            "settlement_sources": [
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              },
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com/"
+              },
+              {
+                "name": "Fox Sports",
+                "url": "https://www.foxsports.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "019c846a90fd29d0bc25f13512618fb9654c56ef9b93337a538ccb39fc4df824",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Atlantic-10 Conference Tournament"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": false,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Exact published source locator unestablished for NCAAB/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Exact published source locator unestablished for NCAAB/season/conference_champion",
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  },
+  {
+    "cell_id": "NCAAB/season/league_champion",
+    "sport": "NCAAB",
+    "period": "season",
+    "family": "futures",
+    "category": "league_champion",
+    "missing_retained_pair": true,
+    "kalshi": {
+      "path": "known_first_series",
+      "predicate": "supported_observed_literal_only",
+      "selector": [
+        {
+          "path": "/trade-api/v2/events",
+          "params": {
+            "series_ticker": "KXMARMAD",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "binding": {
+            "award_variant": "league_postseason_champion",
+            "category": "league_champion",
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/NCAAB.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/NCAAB.pdf",
+            "family": "futures",
+            "last_updated_ts": "2026-09-10T16:03:17.68465Z",
+            "milestone_type": null,
+            "period": "season",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXMARMAD",
+            "settlement_sources": [
+              {
+                "name": "ESPN",
+                "url": "https://www.espn.com"
+              },
+              {
+                "name": "Kalshi using information originating from the NCAA",
+                "url": "https://www.ncaa.com/sports/basketball-men/d1"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "4bf1722e82ea221eff4ae272a436d0963d240dee2136c2c619d572ccba63d794",
+            "sport": "NCAAB",
+            "tags": [
+              "Basketball"
+            ],
+            "title": "Men's College Basketball Tournament Champion"
+          }
+        }
+      ]
+    },
+    "polymarket_us": {
+      "selectors": [
+        {
+          "path": "/v1/markets",
+          "params": {
+            "sportsMarketTypes": "SPORTS_MARKET_TYPE_FUTURE"
+          }
+        }
+      ],
+      "discovery": "bounded_FUTURE"
+    },
+    "aggregate": {
+      "can_request": true,
+      "identity": "Exact observed current season/award/entrant required"
+    },
+    "closure": "Valid pair from any eligible comparison sources; never all four required",
+    "remaining_dependencies": {
+      "kalshi": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "novig": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "polymarket_us": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ],
+      "prophetx": [
+        "Selected current season/award/entrant and field revision association; counterpart same-award quote"
+      ]
+    }
+  }
+]

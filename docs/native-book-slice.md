@@ -1,0 +1,50 @@
+# Native market detail and book-update slice
+
+Preparation only. The successful consumed gap probe and completed native bindings remain immutable. The separate package is `evidence/native-books-20260930/`; no approval, activation, credential read or provider acquisition accompanies preparation.
+
+## Product scope and acquisition purpose
+
+All **63 product cells** remain in scope under the existing full-scope tracker. This acquisition has a narrower purpose: prove the ordinary native path from supported game discovery through exact market identity, subscription, observations, Details, Stop and exact saved reopening. It does not close NBA/CBB absence, broad source coverage, contract equivalence, settlement, fees, execution, economics or owner/commercial validation.
+
+One current **NCAAF game and one full-game moneyline market per venue**, selected from a fresh bounded listing at Start. NCAAF has retained complete listings, supported bindings and an evidenced common event; it is not a promise of future availability. Kalshi queries one five-event page in observed series KXNCAAFGAME. US queries one CFB event with the existing moneyline/games/time filters. Kickoff must be more than five minutes and at most seven days after Start selection time. Only resolved supported event identities enter selection. Prefer equal canonical participants and kickoff across the two pages, then chronological/native-ID order; otherwise select independently. Event association never establishes contract/outcome equivalence. If a source fails, is absent or lacks usable metadata/credentials, the other can continue. Do not spend unused slots on new sports, pages, replacements or a second run.
+
+## Embedded metadata and subscription identity
+
+Complete retained US event bytes supply event ID, exact market ID and slug, full-game family, explicit Long/Short side IDs and team roles, schedule and native terms. The ordinary catalog and market parser already consume these fields. No extra US request is made when that embedded identity passes subscription checks. If it does not, allow at most one five-market slug-filtered request using only observed slugs; conflicts and incomplete identity remain excluded. No invented gameId, token ID or slug. Separate slug-filtered delivery is **unverified until actually observed**. Empty historical gameId lookups and original retained bytes remain unchanged.
+
+Kalshi retrieves one five-market page for the selected event, then subscribes to one exact market ticker. It never subscribes by event ticker or market UUID. The selected market ID is frozen for this attempt; reconnect does not reselect. US subscribes to its observed slug while retaining distinct numeric market and side IDs. Both sides retain native orientation; Kalshi YES purchase price derives from the opposite NO bid, while US Long offers and Short purchase = 1 minus Long bid preserve native contract quantity. This does not make NO universally equivalent to the other team's win.
+
+Official protocol references checked September 30, 2026: [Kalshi orderbook updates](https://docs.kalshi.com/websockets/orderbook-updates) documents ticker subscriptions, initial snapshots and deltas; [US Markets WebSocket](https://docs.polymarket.us/api-reference/websocket/markets) documents the existing camel-case marketSlugs/full-market-data envelope, top-level book window and optional debouncing. [US authentication](https://docs.polymarket.us/api-reference/websocket/overview) documents signed handshake headers. No separate market-detail fetch is a documented prerequisite to a known-slug subscription. Local retained-byte parsing supplies the rest of our identity gate; actual delivery still requires authorized observation.
+
+## Access
+
+Public GETs only on `https://external-api.kalshi.com` and `https://gateway.polymarket.us`; no credentials attached to discovery/metadata. No account-limit, balance, portfolio, order, trade-history or entitlement requests. Conservative bootstrap pacing: Kalshi one request/second, US two/second, sequential within each venue, no HTTP retry or redirect. No account-tier claims.
+
+Only after supported market selection, and only during separately authorized Start, resolve once per selected venue the existing dedicated Keychain reference:
+
+- Kalshi: `keychain:prediction-arb.kalshi.production/market-data` (key ID and RSA signing key), signing only GET `/trade-api/ws/v2` to `wss://external-api-ws.kalshi.com/trade-api/ws/v2`.
+- Polymarket US: `keychain:prediction-arb.polymarket-us/retail-api` (key ID and Ed25519 secret), signing only GET `/v1/ws/markets` to `wss://api.polymarket.us/v1/ws/markets`.
+
+No credential creation, updates, enumeration, exports, `.env`, environment fallback, Odds API key, proxies or credentialed redirects. Credential unavailability stops only that source. Only Kalshi `orderbook_delta` and US `SUBSCRIPTION_TYPE_MARKET_DATA` (debouncing false), plus transport keepalive, are permitted. No private/user/order channels, orders, trades or purchases. Native market-data additional spend ceiling is zero; this is a read-only assumption, not an entitlement or account-access attestation. No Odds API traffic or credits.
+
+## Simultaneous limits
+
+- One Start, **90 seconds maximum**, including discovery and recovery, one discovery generation. Ordinary Stop may terminate earlier. Duration and global stops win over unfinished operations.
+- **Four HTTP attempts maximum:** Kalshi two (listing + selected-event markets); US two (listing + conditional exact-slug metadata). Complete embedded US identity uses only three total. No retries, extra pages, account calls or refresh requests.
+- **Two simultaneous sockets maximum, four connection attempts total:** one initial plus at most one recovery connection per venue. Each connection sends one exact subscription. Recovery waits at most the existing one-second first backoff, within the same deadline; it requires a new synchronized snapshot. No controlled live fault is requested.
+- 600 inbound application messages per source, 256 KiB per frame; transport queue one frame, no compression. Keepalive control frames/HTTP headers are not counted as application body bytes. Existing three-second open and one-second close timeouts, default WebSocket ping/pong timers; REST total timeout five seconds.
+- 512 KiB event response and 256 KiB metadata response acceptance ceilings; one charged overflow byte; incomplete JSON cannot supply identity. Discovery additional cumulative ceiling 6 MiB/source; combined HTTP + books 8 MiB/source. Structure depth 32 and 100,000 structural tokens; duplicate keys/nonfinite JSON/compression rejected.
+- Shared existing limits: 32 MiB ingress, 48 records/4 MiB queue, 32 MiB encoded and expanded journal with reserved terminal capacity (4,032 ordinary records of 4,096 maximum), 128 MiB output, 1 GiB free-disk floor plus output reservation; 256 MiB sampled RSS stop threshold, not a hard OS memory ceiling. Package control diagnostics separately bounded below 1 MiB. All limits apply together; no promise that every message fits before another cap stops collection.
+- Response envelope failure ends that bounded operation, no retry. Parser/compression/cumulative-source/request/invalid-traversal stops isolate the source. Journal/storage/queue/RSS/deadline stops end the session. Authentication failure, protocol ambiguity, duplicate or missing Kalshi sequence invalidates usable state; recovery allowance never increases. After allowance exhaustion, retain disconnected state until Stop.
+
+## Evidence and Details
+
+The new classification is computed on accepted native ladders **before** purchase conversion. Initial snapshot, repeated identical observation, within-connection price/quantity change, and recovery snapshot are separate. Equivalent decimal spellings do not invent changes. Recovery comparison with the last accepted book is explicitly across a gap, not contiguous change evidence. Price-level and shared-level quantity changes are separately flagged. Source time progress (missing/first/repeated/advanced/regressed) is distinct from local receipt and from actual ladder change. Quiet connected books become stale after ten seconds; health emissions are not new observations.
+
+Original raw wire bodies, native values and timestamps remain in the existing immutable journal with hashes. US images replace the advertised window atomically; no guessed delta semantics or exchange-wide completeness. Kalshi snapshots and SID-scoped contiguous deltas use the existing reconstructor; duplicate/gap frames remain wire evidence but do not become accepted price changes. Successful sockets or repeated snapshots never establish fresh prices.
+
+Ordinary Sources and market coverage → **Details · native book observations** shows counts, latest source/receipt times, native identity and raw book inputs. Raw quotes remain visible even while settlement/economics are unavailable. This slice explicitly prevents promotion into qualified game/economic calculations. The saved Details projection and evidence classifications replay exactly. `python -m app.collection.native_book_report SESSION_FOLDER` reads verified saved evidence offline and reports wire counts separately from accepted books, changes, recovery and health. It makes no request and does not modify the saved session.
+
+## Authorization and stop rule
+
+The sealed launcher checks implementation, specification, package hashes, attempt, start window and unused output; ordinary Start also consumes its native approval marker. The control client durably consumes dispatch before POST. Interruption, failure or uncertain dispatch consumes the attempt; no automatic restart, reset or allowance reuse. Expiry/candidate changes need a new seal and exact authority. Preparation files and approval wording are not authorization. Preserve prior probe output and completed bindings. NBA/CBB, separate source coverage, settlement, fees and contract equivalence remain dependencies; owner/commercial validation stays deferred.

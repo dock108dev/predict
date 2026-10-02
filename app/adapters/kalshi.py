@@ -20,10 +20,11 @@ from app.models.core import (BookLevel, BookSync, Depth, Event, EvidenceKind, La
 REST_URL = 'https://external-api.kalshi.com/trade-api/v2'
 SPORT_SERIES = {'KXNFLGAME': ('football', 'NFL', 'football_game'),
                 'KXMLBGAME': ('baseball', 'MLB', 'baseball_game'),
-                'KXNBAGAME': ('basketball', 'NBA', None),
-                'KXNCAAFGAME': ('football', 'NCAAF', None),
+                'KXNBAGAME': ('basketball', 'NBA', 'basketball_game'),
+                'KXNCAAFGAME': ('football', 'NCAAF', 'football_game'),
                 'KXNCAAFCSGAME': ('football', 'NCAAF', None),
-                'KXNCAAMBGAME': ('basketball', 'NCAAB', None)}
+                'KXNCAAMBGAME': ('basketball', 'NCAAB', None),
+                'KXNHLGAME': ('hockey', 'NHL', 'hockey_match')}
 
 
 def decode(body):
@@ -70,26 +71,44 @@ class Response:
             exchange_at=exchange_at, json_text=self.body, kind=self.kind)
 
 
-def parse_market(response, data, event_id, series_id):
+def parse_market(response, data, event_id, series_id, *, typed_scope=False):
     if data.get('event_ticker') != event_id:
         raise ValueError('event identity mismatch')
+    binding = None
+    if typed_scope:
+        from app.collection.native_scope_bindings import series_binding
+        binding = series_binding(series_id)
+        if binding is None:
+            raise ValueError('Exact retained native scope series unavailable')
     return Market(raw=response.raw(event_id, identity(data.get('ticker'))),
         title=data['title'], outcomes=(Outcome(native_id='yes', label=data.get('yes_sub_title') or 'YES'),
                                      Outcome(native_id='no', label=data.get('no_sub_title') or 'NO')),
-        market_type=MarketType.MONEYLINE if series_id in SPORT_SERIES else MarketType.UNKNOWN,
+        market_type=MarketType(binding['family']) if binding else MarketType.MONEYLINE if series_id in SPORT_SERIES else MarketType.UNKNOWN,
+        period=binding['period'] if binding else None,
         state=state(data.get('status')))
 
 
-def parse_event(response, data, series_id):
+def parse_event(response, data, series_id, *, typed_scope=False, linked_milestones=()):
     """Shared native catalog conversion; unknown/ambiguous kickoff stays unknown."""
     event_id = identity(data.get('event_ticker'))
     if data.get('series_ticker') != series_id:
         raise ValueError('series relationship mismatch')
-    sport, league, milestone_type = SPORT_SERIES[series_id]
-    matching = [m for m in decode(response.body).get('milestones', [])
+    if typed_scope:
+        from app.collection.native_scope_bindings import series_binding
+        binding = series_binding(series_id)
+        if binding is None:
+            raise ValueError('Exact retained native scope series unavailable')
+        league = binding['sport']
+        sport = {'NFL':'football','NCAAF':'football','NBA':'basketball','NCAAB':'basketball','MLB':'baseball','NHL':'hockey'}[league]
+        milestone_type = binding['milestone_type']
+    else:
+        sport, league, milestone_type = SPORT_SERIES[series_id]
+    matching = [m for m in (list(linked_milestones) or decode(response.body).get('milestones', []))
                 if milestone_type is not None and event_id in m.get('related_event_tickers', [])
                 and m.get('category') == 'Sports' and m.get('type') == milestone_type]
-    starts = {timestamp(m['start_date']) for m in matching}
+    # Complete retained r2 milestones establish NBA/NCAAF/NHL types. Missing
+    # or conflicting schedules never become a qualified kickoff.
+    starts = {timestamp(m.get('start_date')) for m in matching}
     start = next(iter(starts)) if len(starts) == 1 else None
     return Event(raw=response.raw(event_id), title=data['title'], sport=sport,
                  league=league, scheduled_start=start)
@@ -166,14 +185,20 @@ class KalshiAdapter(ReadOnlyAdapter):
 
     def __init__(self, *, client=None, series=('KXNFLGAME', 'KXMLBGAME'), max_pages=2,
                  page_size=20, max_requests=40, retries=1, depth=20, pregame_only=True,
-                 now=None, sleep=asyncio.sleep, stream_factory=None, stream_options=None):
+                 now=None, sleep=asyncio.sleep, stream_factory=None, stream_options=None,
+                 scope_policy=None):
         for value, maximum in ((max_pages, 10), (page_size, 200), (max_requests, 200)):
             if type(value) is not int or not 1 <= value <= maximum:
                 raise ValueError('invalid request bound')
         if type(retries) is not int or not 0 <= retries <= 3 or type(depth) is not int or not 0 <= depth <= 100:
             raise ValueError('invalid retry/depth bound')
-        if not series or len(set(series)) != len(series) or any(s not in SPORT_SERIES for s in series):
+        from app.collection.native_scope_bindings import POLICY as SCOPE_POLICY, series_binding
+        if scope_policy not in (None, SCOPE_POLICY):
+            raise ValueError('Unknown native series scope policy')
+        if not series or len(set(series)) != len(series) or any(
+                s not in SPORT_SERIES and not (scope_policy == SCOPE_POLICY and series_binding(s)) for s in series):
             raise ValueError('explicit supported sports series required')
+        self.typed_scope = scope_policy == SCOPE_POLICY
         self.client = client or httpx.AsyncClient(timeout=10, follow_redirects=False)
         self.series, self.max_pages, self.page_size = series, max_pages, page_size
         self.max_requests, self.retries, self.depth = max_requests, retries, depth
@@ -245,17 +270,21 @@ class KalshiAdapter(ReadOnlyAdapter):
                     event_id = identity(data.get('event_ticker'))
                     if data.get('series_ticker') != series:
                         raise ValueError('series relationship mismatch')
-                    sport, league, milestone_type = SPORT_SERIES[series]
+                    if self.typed_scope:
+                        from app.collection.native_scope_bindings import series_binding
+                        milestone_type = series_binding(series)['milestone_type']
+                    else:
+                        sport, league, milestone_type = SPORT_SERIES[series]
                     matching = [m for m in milestones if milestone_type is not None and event_id in m.get('related_event_tickers', [])
                                 and m.get('category') == 'Sports' and m.get('type') == milestone_type]
-                    starts = {timestamp(m['start_date']) for m in matching}
+                    starts = {timestamp(m.get('start_date')) for m in matching}
                     start = next(iter(starts)) if len(starts) == 1 else None
                     self.schedule_evidence[event_id] = {'milestones': matching, 'scheduled_start': start,
                                                        'source': response, 'ambiguous': len(starts) > 1}
                     self.event_series[event_id] = series
                     if self.pregame_only and (start is None or start <= self.now()):
                         continue
-                    found[event_id] = parse_event(response, data, series)
+                    found[event_id] = parse_event(response, data, series, typed_scope=self.typed_scope)
         self.events = found
         return tuple(found.values())
 
@@ -268,7 +297,7 @@ class KalshiAdapter(ReadOnlyAdapter):
         for eid in ((event_id,) if event_id else tuple(self.events)):
             async for response, rows in self._pages('/markets', 'markets', {'event_ticker': eid}):
                 for data in rows:
-                    m = parse_market(response, data, eid, self.event_series[eid])
+                    m = parse_market(response, data, eid, self.event_series[eid], typed_scope=self.typed_scope)
                     found[m.raw.ref.market_id] = m
                     self.market_metadata[m.raw.ref.market_id] = data
         self.markets.update(found)
@@ -287,7 +316,7 @@ class KalshiAdapter(ReadOnlyAdapter):
         data = decode(response.body)['market']
         if data.get('ticker') != mid:
             raise ValueError('market identity mismatch')
-        m = parse_market(response, data, old.raw.ref.event_id, self.event_series[old.raw.ref.event_id])
+        m = parse_market(response, data, old.raw.ref.event_id, self.event_series[old.raw.ref.event_id], typed_scope=self.typed_scope)
         self.markets[mid], self.market_metadata[mid] = m, data
         return m
 
