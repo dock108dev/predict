@@ -49,7 +49,8 @@ def verify(folder):
     binding=json.loads((folder/'qualification-manifest.json').read_text())
     for name,h in binding['files'].items():
         if name not in ('manifest.json','qualification-oracle.json') or sha256((folder/name).read_bytes()).hexdigest()!=h:raise ValueError('qualification artifact identity mismatch')
-    snapshot=session_history.load(folder,data['cutoff'])
+    # Frozen qualification oracles precede the optional current native reviews.
+    snapshot=session_history.load(folder,data['cutoff'],native_interpretation='original')
     if oracle(snapshot)!=data:raise ValueError('fresh-process snapshot/calculation disagreement')
     native=reopen(folder/(folder.name+'.jsonl'))
     if replay_groups(native)!=json.loads((folder/'replay.json').read_text()):raise ValueError('native replay disagreement')

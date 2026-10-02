@@ -12,6 +12,11 @@ venv/
 .ruff_cache/
 evidence/*
 
+# Immutable offline acquisition specification; sibling output remains local
+!evidence/source-bindings-20260929/
+evidence/source-bindings-20260929/*
+!evidence/source-bindings-20260929/proposal.json
+
 # Local environment, editor debris, and generated test output
 !.env.example
 !.env.sample

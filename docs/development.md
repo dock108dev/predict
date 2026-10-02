@@ -129,6 +129,11 @@ rejected-frame finalization. Keep both success and genuine cleanup-failure cases
 
 Tracked retained fixtures are immutable inputs read by offline tests and saved-review code. Ignore rules do not untrack existing files. Keep required retained fixtures tracked so a clean checkout can run those checks. Preserve their original bytes and historical failure/consumption states. Approvals and unrelated acquisitions remain ignored. The consumed-attempt regression resolves its retained marker within this checkout without following an owner’s absolute output path. To check fixture portability, export tracked and nonignored files to a temporary checkout and run the affected retained-review tests there; a pass in the full local archive is insufficient.
 
+`evidence/source-bindings-20260929/proposal.json` is a required acquisition-policy
+fixture with a pinned SHA256. Its exact ignore exception makes it a checkout
+input; sibling approvals, outputs and acquisition records remain local. Including
+the specification does not authorize any provider request.
+
 The ignored `app/reviews/native` catalog is an optional local archive. Its absence
 contributes no historical paths or accepted native judgments, and does not prevent
 ordinary saved-scan reads. Invalid existing catalogs, missing indexed records and

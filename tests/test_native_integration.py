@@ -19,6 +19,8 @@ from app.models.core import EvidenceKind
 def configuration():
     from app.dashboard.coverage_owner import spec
     s=spec();s.update(mode='mock',reference_enabled=False)
+    # This legacy winner-wire fixture predates literal predicate admission.
+    s.pop('v1_comparison_policy',None)
     s['native_sources']={v:dict(state='enabled',environment='production',poll_seconds=10,event_cap=1,market_cap=2) for v in ('kalshi','polymarket_us')}
     s['native_sources']['novig']=dict(state='enabled',environment='qa',credential_reference=REFERENCES['novig']['qa'],leagues=['NFL'],poll_seconds=10,event_cap=1,market_cap=2)
     s['native_sources']['prophetx']=dict(state='not_configured',selected=True)
@@ -99,7 +101,10 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
                     save(row);f.books+=row['type']=='prediction_book';f.changed.set()
                 o.session.journal.save=observed
                 async with asyncio.timeout(10):
-                    while len(f.active())!=2:await asyncio.sleep(.01)
+                    while len(f.active())!=2:
+                        if o.session.task.done():
+                            self.fail('collector ended before fixture streams: '+str(o.session.reason))
+                        await asyncio.sleep(.01)
                 await f.images()
                 await asyncio.sleep(.1)
                 self.assertTrue(o.session.producers['novig'].ever['receiving'], {'catalog':o.session.discovery.inventory,'health':o.session.health,'calls':calls})

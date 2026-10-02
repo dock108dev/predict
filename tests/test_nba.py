@@ -235,14 +235,23 @@ class NBA(unittest.TestCase):
             meta['raw']['json_text']=meta['raw']['json_text'].replace('KXNBAGAME',series);seal(rr,'kalshi')
             self.assertEqual(projection(rr)[0].snapshot()['games'],[])
 
-    def test_kalshi_series_parser_does_not_guess_start_or_expand_defaults(self):
+    def test_kalshi_series_parser_requires_linked_unambiguous_start_and_keeps_defaults(self):
         from app.adapters.kalshi import Response,parse_event,KalshiAdapter
         from datetime import datetime
         event=dict(event_ticker='synthetic-nba',series_ticker='KXNBAGAME',title='Boston Celtics vs New York Knicks')
         body=json.dumps(dict(events=[event],milestones=[dict(category='Sports',type='basketball_game',related_event_tickers=['synthetic-nba'],start_date='2026-10-10T23:00:00Z')]))
         parsed=parse_event(Response(body,'fixture:synthetic',datetime.fromisoformat(AT)),event,'KXNBAGAME')
         self.assertEqual((parsed.sport,parsed.league),('basketball','NBA'))
-        self.assertIsNone(parsed.scheduled_start)
+        self.assertEqual(parsed.scheduled_start,datetime.fromisoformat('2026-10-10T23:00:00+00:00'))
+        for milestones in ([],
+                           [dict(category='Sports',type='basketball_game',related_event_tickers=['other-event'],start_date='2026-10-10T23:00:00Z')],
+                           [dict(category='Sports',type='football_game',related_event_tickers=['synthetic-nba'],start_date='2026-10-10T23:00:00Z')],
+                           [dict(category='Sports',type='basketball_game',related_event_tickers=['synthetic-nba'],start_date=at)
+                            for at in ('2026-10-10T23:00:00Z','2026-10-11T23:00:00Z')]):
+            response=Response(json.dumps(dict(events=[event],milestones=milestones)),
+                              'fixture:synthetic',datetime.fromisoformat(AT))
+            with self.subTest(milestones=milestones):
+                self.assertIsNone(parse_event(response,event,'KXNBAGAME').scheduled_start)
         import inspect
         self.assertEqual(inspect.signature(KalshiAdapter).parameters['series'].default,('KXNFLGAME','KXMLBGAME'))
 
