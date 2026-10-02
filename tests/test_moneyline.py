@@ -19,6 +19,8 @@ from app.models.core import Venue, Market, MarketType, Outcome
 from app.moneyline import MoneylineMatcher, observe
 from app.moneyline_captures import captured_inputs, listing_profile
 from app.moneyline_example import synthetic_reports
+from app.normalization import Registry
+from app.normalization.native_registry import native_registry
 from app.settlement import (DIMENSIONS, SCENARIOS, fact, profile, compare_profiles,
                             relationships, payout)
 
@@ -57,8 +59,10 @@ def synthetic_pair():
     km=parse_k(kr,kn,'ka','KXNFLGAME'); pm=parse_p(pr,pn,'pm')
     kc={'series_ticker':'KXNFLGAME','product_metadata':{'competition_scope':'Game'}}
     pc={'id':'pm'}
-    a=observe(km,k,rules(),native=kn,context=kc,artifact='synthetic:test')
-    b=observe(pm,p,rules(),native=pn,context=pc,artifact='synthetic:test')
+    # synthetic() uses the expanded event registry; sides must use that exact identity too.
+    registry=native_registry()
+    a=observe(km,k,rules(),native=kn,context=kc,artifact='synthetic:test',registry=registry)
+    b=observe(pm,p,rules(),native=pn,context=pc,artifact='synthetic:test',registry=registry)
     return parents,a,b,(km,k,kn,kc),(pm,p,pn,pc)
 
 
@@ -74,7 +78,16 @@ class MoneylineTests(unittest.TestCase):
         m,p,n,c=deepcopy(bundle)
         m=market or m; n=native or n
         m=replace(m,raw=replace(m.raw,json_text=json.dumps(n)))
-        return observe(m,p,rules(),native=n,context=context or c,artifact='synthetic:test')
+        return observe(m,p,rules(),native=n,context=context or c,artifact='synthetic:test',registry=native_registry())
+
+    def test_registry_disagreement_blocks_qualification(self):
+        market,parent,native,context=self.pm
+        mismatched=observe(market,parent,rules(),native=native,context=context,
+                           artifact='synthetic:test',registry=Registry.load())
+        self.assertIn('normalization-registry-disagreement',mismatched['reasons'])
+        row=self.first(self.ingest(self.a,mismatched)[1])
+        self.assertFalse(row['structural_match'])
+        self.assertFalse(row['qualification']['eligible_for_fee_arb_evaluation'])
 
     def test_native_yes_no_vs_long_short(self):
         self.assertEqual([(s['native_id'],s['predicate']) for s in self.a['sides']],[('no','not_win'),('yes','win')])

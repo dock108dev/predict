@@ -25,7 +25,10 @@ def reviewed_data():
         raise ValueError('Unknown assessment version')
     for source in data['sources']:
         for field, digest in (('retained_path', 'sha256'), ('text_path', 'text_sha256')):
-            path = ROOT / source[field]
+            recorded = Path(source[field])
+            # Preserve the sealed record's bytes while relocating its exact repository paths.
+            relative = Path(*recorded.parts[recorded.parts.index('evidence'):]) if recorded.is_absolute() else recorded
+            path = ROOT / relative
             if not path.is_relative_to(ROOT) or sha256(path.read_bytes()).hexdigest() != source[digest]:
                 raise ValueError('Reviewed public source changed or unavailable')
     return data

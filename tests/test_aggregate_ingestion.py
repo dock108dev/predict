@@ -122,12 +122,16 @@ class Aggregate(unittest.TestCase):
             self.assertFalse(product_view.dashboard(s,dict(view='arb'),{}))
             self.assertTrue(all('ISOLATED' in str(l['provenance']['original']) for c in comparisons(s,{}) for l in c['legs']))
 
-    def test_unsupported_periods_and_championship(self):
+    def test_conflicting_periods_and_unbound_championship(self):
         for period in ('first_half','regulation_9','period_1','season'):
             pair=self.pair();pair[0]['period']=period
             self.assertFalse(comparisons(fixture(pair).snapshot(),{}))
-        pair=self.pair();pair[0]['market']='outrights'
-        self.assertFalse(comparisons(fixture(pair).snapshot(),{}))
+        pair=self.pair();pair[0].update(market='outrights',period='season',
+            award_association=dict(season=None,award=None,category='league_champion',conference_id=None))
+        # Outrights are supported, but a game record supplies no award/season binding.
+        self.assertIn('Exact current season/award association unavailable or conflicting',bind(pair)[0]['reasons'])
+        with self.assertRaisesRegex(ValueError,'Unsupported aggregate record'):
+            fixture(pair)  # Award records require their separate product_award channel.
 
     def test_watch_history_exact_reopening_and_live_isolation(self):
         s=self.snapshot;w=watch();obs=observations(s,w)

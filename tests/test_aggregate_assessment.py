@@ -116,7 +116,17 @@ class Routes(unittest.IsolatedAsyncioTestCase):
    try:
     response=await client.get('/api/dashboard?view=feed&capture='+F.name)
     self.assertEqual(response.status,200);feed=await response.json()
-    self.assertEqual(feed['comparisons'],comparisons(load(F),{}))
+    # The ordinary feed now adds public contract research to the retained H1 view.
+    baseline=comparisons(load(F),{})
+    core=lambda rows:[{k:v for k,v in row.items() if k not in ('public_contracts','decision')} for row in rows]
+    self.assertEqual(core(feed['comparisons']),core(baseline))
+    from app.collection.public_contracts import details
+    from app.dashboard.decision_support import explanation
+    snapshot=load(F);games={g['id']:g for g in snapshot['games']}
+    for row in feed['comparisons']:
+     self.assertEqual(row['public_contracts'],details(games[row['game_id']],snapshot))
+     self.assertEqual(row['decision'],explanation(row))
+     self.assertIsNone(row['net']);self.assertIsNone(row['ev'])
     for row in feed['comparisons']:
      q={k:row[k] for k in ('session','hash','cutoff','contract')};q['rule_version']=rules.VERSION
      url='/api/calculate?'+urlencode(q)
