@@ -3,10 +3,10 @@
 Use the [README](../README.md) for installation and [development guide](development.md)
 for offline checks. The supported live workflow is a local macOS source checkout,
 Python 3.11+, the `stream` extra and existing dedicated Keychain credentials.
-CI targets offline behavior on Ubuntu/Python 3.11; it does not test Linux credential
+CI targets offline behavior on Ubuntu/Python 3.14; it does not test Linux credential
 access. Current hosted verification limits are in the [development guide](development.md#pull-request-ci).
 
-## Current beta controls
+## Dashboard controls
 
 | Control | Source and behavior |
 | --- | --- |
@@ -19,7 +19,7 @@ access. Current hosted verification limits are in the [development guide](develo
 
 The launcher uses `.venv/bin/python` and a minimal child environment containing
 PATH, unbuffered output and disabled bytecode writes. It does not load `.env` or
-forward shell credentials. No `.env` keys are required for the current beta.
+forward shell credentials. No `.env` keys are required for the dashboard.
 `process.json` records PID, command, start time, URL and port; `server.log` is in
 the selected instance directory. Start returns the existing owned process when
 present; edits require a later explicit stop/start to take effect. `--port` does
@@ -62,9 +62,9 @@ and provider entitlement are not established by an offline check.
 
 The historical optional reference branch of `TransportSession.start` reads
 `ODDS_API_KEY` only for a real run with reference collection enabled. It is not
-needed or forwarded by the prediction-only beta launcher. Enabling paid reference
+needed or forwarded by the prediction-only dashboard launcher. Enabling paid reference
 collection requires its own run specification, budget and authorization; adding
-an environment key alone does not enable a beta feature. Native Novig/ProphetX
+an environment key alone does not enable collection. Native Novig/ProphetX
 branches are implemented in `collection/native_product.py`, with dedicated
 credential references. Actual access/qualification remain pending; credentials do
 not bypass spec/approval gates. Public Novig GraphQL is display-only. See
@@ -88,7 +88,7 @@ as installation checks or copy credential values into the repository.
 ## Operation and deployment limits
 
 There is no scheduler, system service, automatic scan, auto-restart or cloud
-deployment workflow for the beta. The browser explicitly starts and stops bounded
+deployment workflow for the dashboard. The browser explicitly starts and stops bounded
 work; finalization publishes a completed manifest before exposing a saved scan.
 Use [failure handling](error-handling.md) for pending manifests, cleanup failures
 and diagnostics. Captures accumulate without automatic retention or pruning.
@@ -103,24 +103,23 @@ The older PostgreSQL workflow is separate. `scripts/project-postgres` requires
 and `.local/pgsocket`, socket port 55432, role/database `prediction_arb`, without a
 TCP listener. Start can initialize a cluster and change local directory modes.
 `.venv/bin/python -m app.storage migrate` applies the migrations in `app/storage/migrations`;
-these are explicit operations, never a beta startup prerequisite. See
-[PostgreSQL capture](slice-12.md) before any database work. Neither database operations nor
+these are explicit operations, never a dashboard startup prerequisite. See
+[storage CLI](../app/storage/__main__.py) and [schema migrations](../app/storage/migrations/001_capture.sql) before database work. Neither database operations nor
 live verifiers are installation checks.
 
-## Private beta workflow review
+## Saved review and live collection
 
-The [authoritative tracker](../../prediction_arb_next_steps.md) owns scope and the
-[next action](../evidence/private-beta-workflow-20261001-v1/README.md) provides an
-exact saved-review sequence. Startup and saved selection require no credentials or
-provider requests. The default launcher cannot activate a live run merely because
-credentials exist or a Start control is visible.
+Choose a session from **Saved scan** on the comparison feed. Details selects
+games within that session at an exact saved cutoff. Startup and saved review
+require no provider credentials or requests. Default startup does not enable
+live collection merely because credentials exist or a Start control is visible.
 
 An authorized live session must supply `CoverageOwner` with an exact run
 specification, approved native/aggregate endpoint configuration, unused output,
 and a fresh applicable `native_approval_path`. Shared approval/candidate/resource
 gates run before credential resolution or dispatch. Source settings alone do not
-grant authority. No reusable live command is provided by this offline phase;
-consumed attempts and the sealed counterpart package remain closed/inert.
+grant authority. The checkout supplies no preauthorized live run configuration. Consumed attempts
+cannot be reused; historical acquisition packages do not enable new collection.
 
 Use `scripts/opportunity-board stop` followed by `scripts/opportunity-board start`
 after source edits. A launcher start reuses an owned existing server; it does not

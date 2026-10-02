@@ -3,6 +3,7 @@ import asyncio
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
+from unittest.mock import patch
 from aiohttp import web
 from aiohttp.test_utils import TestServer
 from app.collection.continuous import ContinuousSession
@@ -70,13 +71,20 @@ async def main():
         s['native_sources']={v:dict(state='enabled',environment='production',poll_seconds=10,event_cap=4,market_cap=10) for v in endpoints}
         s['native_sources'].update(novig=dict(state='unselected'),prophetx=dict(state='unselected'))
         return s
-    owner=CoverageOwner(root/'legacy',pilot_output=root/'sessions',endpoints=endpoints,product_mode=True,
+    class IsolatedOwner(CoverageOwner):
+        def history_paths(self):
+            from app.dashboard.session_history import list_sessions
+            return list_sessions([self.output,self.pilot_output])
+    owner=IsolatedOwner(root/'legacy',pilot_output=root/'sessions',endpoints=endpoints,product_mode=True,
                         spec_factory=configuration,mock_segmented=True,session_factory=Session);f.owner=owner
     if not owner.history_paths():
         await owner.start(duration=30);await f.wait(lambda:len(f.active())==2);await f.images()
         await owner.stop();await owner.finalizer
         if owner.error:raise RuntimeError(owner.error)
-    runner=web.AppRunner(create_app(owner=owner,sessions={}));await runner.setup();await web.TCPSite(runner,'127.0.0.1',8822).start()
+    # Exclude the ordinary catalog and local watches from this disposable preview.
+    isolation=patch('app.dashboard.native_reviews.historical_paths',return_value={})
+    isolation.start()
+    runner=web.AppRunner(create_app(owner=owner,sessions={},watch_path=root/'watchlists.json'));await runner.setup();await web.TCPSite(runner,'127.0.0.1',8822).start()
     print('http://127.0.0.1:8822 · four-event SIMULATION · loopback only',flush=True)
     try:
         while True:
@@ -85,6 +93,7 @@ async def main():
                 for c in list(f.active()):
                     mids=c['command']['params']['market_tickers'] if c['venue']=='kalshi' else c['command']['subscribe']['marketSlugs']
                     for mid in mids:await f.send(c,mid)
-    finally:await runner.cleanup();await f.close()
+    finally:
+        await runner.cleanup();await f.close();isolation.stop()
 
 if __name__=='__main__':asyncio.run(main())

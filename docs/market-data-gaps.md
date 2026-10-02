@@ -1,58 +1,47 @@
-# Current scope override — October 1, 2026
+# Data coverage and limitations
 
-**Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** [Current definition](product-roadmap-review.md) and [complete gate reconciliation](full-scope-engineering-reconciliation.md) supersede earlier completion/next-action language below. V1 requires reliable independent four-venue data, correct six-sport/63-cell matching, useful raw comparisons, timestamps/stale/health, settlement differences/supported fee estimates, Details/filters/watches/Start/Stop/history/download/exact reopening, and informational sizing where supported. Pinnacle/DraftKings/BetMGM remain reference-only; Novig/ProphetX aggregate prices require no native trading access.
+The dashboard supports comparisons only when source observations establish the
+same event, participants, outcome, period and line. A configured adapter or a
+sport handler does not establish current venue coverage, account entitlement,
+liquidity or equivalent settlement terms.
 
-Account classification, actual fills/positions, execution charges and complete net/EV economics apply only to a displayed calculation that needs them; missing inputs withhold or label that output while preserving valid raw comparisons. The account-document request is inactive as a prerequisite. Automated submission/orchestration, fills/positions synchronization, execution reconciliation and automated-trading timing qualification are V2; direct Novig/ProphetX integration remains deferred. V1 data freshness/source health remain required and are not order-path latency qualification.
+## Comparison sources and references
 
-No new reproduced defect exists in the October 1 verified supported paths. Completed math/transport/lifecycle/replay/layout and all implementation/evidence remain preserved. Broader actual required coverage remains open. Owner walkthroughs/commercial validation stay deferred. Earlier native provisioning, execution-domain and private-economics gates below are historical where inconsistent with this scope. Existing consumed authorities remain closed; no new acquisition, access or outreach is requested.
+| Source | Implemented role | Limitation |
+| --- | --- | --- |
+| Kalshi, Polymarket US | Native listing and book adapters | Live use needs scoped configuration, valid authorization and dedicated credentials; actual market availability varies. |
+| Novig, ProphetX | Aggregate observations through The Odds API; separate native adapter code | Aggregate observations do not establish native quantity, execution costs or production access to the direct APIs. |
+| Pinnacle, DraftKings, BetMGM | Calculation references | Never comparison legs. A bookmaker price is not automatically a calibrated probability. |
+| Public Novig GraphQL | Display-only discovery and dated prices | Does not provide qualified purchase depth or sized opportunities. |
 
----
+Native discovery, aggregate ingestion, references and sporting results retain
+separate identities and clocks. No default configuration continuously polls these
+sources, and an empty bounded response does not establish permanent non-support.
+See [configuration](configuration.md) for live requirements and
+[sport integration](sports-integration.md) for implemented market handlers.
 
-## Preserved earlier market data gaps and evidence
+## What calculations require
 
-# Market data gaps
+- Raw comparisons require compatible event/outcome/period/line identity and
+  usable observed prices. They do not imply contract-equivalent arbitrage.
+- Net and guaranteed-return calculations require applicable settlement and cost
+  facts. Missing fees, account charges or exceptional payouts remain unknown.
+- EV requires an explicit probability and disclosed basis. Retrospective
+  references and manual What-if assumptions do not become live model probabilities.
+- Sizing requires supported native units and depth. Displayed aggregate sizes or
+  informational estimates do not guarantee fills.
+- Sporting outcomes do not substitute for venue payout decisions. Corrections
+  and final settlement remain bound to their own source evidence and cutoffs.
 
-**Current source-specific engineering — September 29:** 27 catalog-backed aggregate period cells now have raw-only mappings and an offline event importer; six league championship candidate keys remain season/award/field-unbound; 12 period/conference cells have no documented equivalent. Actual coverage for all 45 remains unqualified. [Exact per-book dependencies, verification and prepared two-request/three-credit NFL H1 proposal](../evidence/source-bindings-20260929/README.md). The authority is [the current tracker](../../prediction_arb_next_steps.md); E1–E5 and retained aggregate ingestion are already complete. Owner/customer/payment validation remains deferred; no acquisition is authorized.
+## Operational limits
 
-**Current scope and next action — September 29:** The Odds API is selected for ProphetX, Novig, Pinnacle, DraftKings and BetMGM. Kalshi/Polymarket US retain native paths; direct ProphetX/Novig access work is deferred. Pinnacle/DraftKings/BetMGM are calculation references only, never comparison legs. All six sports and 63 market cells remain required; initial data does not establish full coverage. The owner-authorized six-request sample is complete (15 credits; 484 remaining): 3,302 observations, all five books represented, NCAAB empty and NBA missing ProphetX/Novig. [Data and coverage](../evidence/odds-api-five-books-20260929/README.md). Next is local shared ingestion/identity binding against these retained records. Fees, settlement, depth, periods/futures and timing remain explicit unknowns where unsupported. Owner/usefulness/customer/payment validation stays deferred. The sample allowance is consumed; older allowances and evidence remain unchanged. No ongoing collection or outreach is authorized. Earlier dated text below retains its historical scope.
+Saved observations prove their recorded time only. Source/receipt timestamps,
+stale status and disconnected states stay visible. Local replay and synthetic
+recovery tests do not establish real provider uptime, recovery or current prices.
+No trade submission, order management, position synchronization or automatic
+collection restart is implemented. Remote and shared-user deployment are
+unsupported. See [security](security.md) and [failure handling](error-handling.md).
 
-**Current work order — September 27 owner update:** the immediate next milestone is the [live Kalshi / Polymarket US comparison in ordinary Predict](live-two-venue-comparison-next-steps.md). Complete local integration and prepare its separately approved live check first. All-four readiness and unresolved net-economics evidence below remain scoped later requirements; they do not block useful raw two-venue price display. Preserve provisional fee decisions; no further Kalshi/US outreach is pending. Earlier audit/dispatch statements below are retained dated context, not the current next action. This update authorizes no credential access or collection.
-
-**Independent market support engineering COMPLETE, offline verified. Actual prediction-market qualification remains IN PROGRESS; optional reference qualification is not a beta gate. Beta NOT READY FOR SIGNOFF.** [Handoff](sports-integration.md) · [acceptance and exact identity](../evidence/b5-independent-20260922/final-report.md).
-
-| Product capability | Independent engineering state | Remaining qualification |
-|---|---|---|
-| Full-game winner, spread/run-line/puck-line and total | COMPLETE across NFL, NBA, MLB, NHL, NCAAF and men’s Division I NCAAB within reviewed seasons and explicit contract scope | Native listings, participant bindings, rule applicability, purchase size and fees by venue |
-| Pregame partial periods | COMPLETE: football/basketball first half; MLB cumulative first 3, first 5, first 6 and regulation 9; NHL individual periods 1, 2 and 3. Winner/spread/total remain separate | Actual period IDs, completion/tie/exception terms and optional period-specific reference distributions only where EV is offered |
-| Sporting results and venue settlement | COMPLETE shared full-game/H1 framework plus MLB/NHL/selected periods; corrections, pending/conflicting states, independent venue decisions, as-of and immutable pregame links | Actual result/payout records; unsupported completion, pitcher, fair-value and refund terms |
-| College identity coverage | COMPLETE current official directory: 266 DI football programs (2026) and 365 men’s DI basketball programs (2026–2027), additive to historical decisions | Native venue aliases/IDs, FCS-only contracts, campus/site bindings and later seasons |
-| Shared payout structures | COMPLETE explicit fractional/equality/three-way truth tables, purchase-stake pushes and categorical championship states | Real cross-strike/ternary native books and third-leg economics; exceptional probabilities, void/fair-value amounts and fee returns |
-| Conference/league championship futures | COMPLETE current-season identity, horizon, full field, exclusive/overlapping states, explicit probability mass, pending/eliminated/result handling | Native fields, source-specific award/no-award rules, actual forecasts and executable economics |
-| Ordinary product and history | COMPLETE filters, Details, source isolation, references, Stop, flat/segmented compatibility and exact saved reopening; oversized legacy flat input rejected before materialization | Actual jointly scoped four-venue use and owner beta review; finite offline integration complete |
-
-## All-four-venue readiness
-
-September 27: [Current path audit, exact candidate, dependency actions and non-executable qualification disposition](four-venue-readiness-handoff.md). Supported native engineering is already implemented; no provider evidence or coverage cell is upgraded by this offline audit.
-
-Updated September 26, 2026. Delivery requires **100% real data from all four selected venues** through ordinary Predict. This ledger describes evidence, not authorization to collect. Historical samples and offline adapters do not establish current production qualification. [Native evidence by source](native-integration.md#per-source-evidence-state) · [review7](../evidence/b6-native-review-20260923-v7/review.md).
-
-| Venue | Implemented and evidenced | Missing evidence / blocker | Concrete next action and actor | Useful ordinary-app completion condition |
-|---|---|---|---|---|
-| Kalshi | Native stream, shared projection/health/history/Stop; retained bounded production observations and offline native/lifecycle/math checks. Public fee type/multiplier reconciliation retained | Effective FOOTBALLGAMEWIN suspension amendment/notice for KXNFLGAME-26SEP24ATLGB-ATL/-GB at retained cutoff; fee priority, rounding and settlement-charge scope. Current broader native IDs, period/outcome terms, active-state continuity, purchase depth/size and measured timestamps/clock intervals remain unqualified | **Owner:** instruct dispatch if desired of the prepared unsent inquiry. **Exchange:** authoritative effective terms/schedule and exact coverage. **Engineering:** evaluate applicability; prepare current series/market bindings and later bounded qualification once prerequisites exist. Do not reopen closed historical C3/C4 state gaps | Real purchasable observations joined to equivalent markets and qualified economics in cards/Details, freshness measured under approved limits, original native inputs exactly reopened; actual participation across useful required overlap |
-| Polymarket US | Native stream, retained production books; offline fractional Short conversion from Long bids; broader catalog/history. Rule priority established and theta 0.0695/bounds retained | Effective historical contract/modification coverage for 108683/779756; mandatory settlement charge or explicit exemption. Actual US sport/period/championship bindings, Long/Short size and depth completeness, current status/freshness and result/payout evidence | **Owner:** instruct dispatch if desired of the prepared unsent inquiry. **Exchange:** exact applicability/charges. **Engineering:** evaluate answer against native settlement description; retain established hierarchy/theta and qualify current native overlap after supported proposal approval | Actual US purchase sides, supported depth/fees/terms and times yield honest comparisons through ordinary Details/history; no international substitution or implicit full-depth claim |
-| Novig | Auth/discovery/bounded REST/health/Stop and segmented replay offline verified; payout-cent quantity conversion supported by retained documentation/fixtures. GraphQL bridge displays discovery/dated values only. No QA or production sample qualified | Current NBX provisioning/API environment and actual wire contract; real full-game/period/rule association (parser period remains unknown), league/participant IDs, purchasable size/depth, fee applicability, settlement and source clock. Stream initial-image/handoff unqualified if later needed | **Owner:** report only new reply/provisioning status and nonsecret API/environment/docs; request already reported sent. **Provider:** issue access and missing native contract details. **Engineering:** reconcile issued NBX contract and native mappings; qualify bounded REST first if sufficient under later approval | Actual NBX observations participate in matched, economically supported cards/Details with native quantities and measured age, then exact save/reopen. GraphQL last values and synthetic QA do not satisfy this gate |
-| ProphetX | Selected; provisional bounded REST producer, native discovery and shared history/health/Stop; retained sandbox American prices projected as dated unsized quotes. No production sample qualified | Current production access/API type and tournament scope; quantity/value ownership and units, actual purchasable depth/size, fee/settlement/period rules, timestamps and update behavior | **Owner:** report new reply/provisioning status and nonsecret API/docs; no duplicate request. **Provider:** provision and clarify native units/rules. **Engineering:** reconcile exact issued API (including adapter adjustment only if different), tournament IDs and supported purchase semantics before proposing qualification | Actual production quotes with supported purchase economics join ordinary comparisons and preserve exact native inputs/times in Details/reopening; sandbox overlap and unsized quotes alone are insufficient |
-
-**Common evidence:** canonical event/participants/competition/season, native market and side IDs, exact line/period, source terms/version/effective date, prices and supported quantity/depth, all material fees, settlement and exception branches, source/receipt times and clock uncertainty. Preserve current 15s/5s freshness limits from retained qualification; a later proposal must measure the applicable criteria rather than infer freshness from a connected feed. Sporting results and each venue payout/correction remain separately evidenced. Unknown listed-pitcher, FCS-only, abandoned-period, tie/fair-value/refund/no-award or fee-return treatment stays unsupported where material.
-
-**Coverage completion:** each venue contributes useful actual comparable coverage through the shared app, not merely a logo or unmatched quote. Bind evidence to the [six-sport matrix](coverage-matrix.md), with full-game winner/spread/total, football/basketball pregame H1 W/S/T, MLB cumulative 3/5/6/regulation 9 W/S/T, NHL individual periods 1/2/3 W/S/T, and current-season conference/league championships. No promise that each venue lists every cell; missing required cells remain blockers unless the owner explicitly accepts an exclusion. H2-at-halftime and live/in-play stay stretch.
-
-## Optional reference extras and outstanding product work
-
-[Optional reference data](reference-data-gaps.md) may add dated analytics/model outputs or bookmaker lines when easily available. These are review extras, not required source coverage. Keep the EV%-first preference wherever supported EV exists. Without a supported probability, show EV unavailable; continue showing valid price comparisons and fee/size/depth/settlement-aware arbitrage return under its own label. Never relabel arbitrage return or implied probability as model EV, and do not require external analytics to populate the core feed. Missing material costs also leave EV unavailable. KenPom/NHL deferrals do not block beta or need exclusion decisions.
-
-The new [card/workflow package](data-coverage-plan.md#presentation-and-workflow-package) is complete locally; [candidate and evidence](opportunity-card-handoff.md) are ready for formative review. Real-source qualification remains open. Existing B5 sport/market calculations and B6 offline integration are complete; do not restart those slices. Model/native-dependent extensions await their named evidence. Owner scope decisions are resolved; owner workflow review is still outstanding after formative landing-page feedback.
-
-No real run is queued by this update. Engineering must prepare a candidate-bound, separately approved run once prerequisites exist. Preserve original attempts, review7 evidence, closed historical gaps and consumed Pinnacle/public-research allowances. No access, collection, outreach, spending or recurring jobs; no commit, push or publication.
-
-[Pre-consolidation history](history/b5-independent-20260922/README.md) retains earlier slice records.
+The [dated coverage assessment](coverage-matrix.md) preserves source-specific
+research and historical counts. It is not a promise of current availability or a
+prerequisite for starting the saved-data dashboard.

@@ -21,7 +21,7 @@ class FilingReviewTests(unittest.TestCase):
   self.assertFalse(suspension_modes('56',league_final=None,not_resumed=True)['available'])
   self.assertFalse(suspension_modes('56',league_final=1,not_resumed=True)['available'])
  def test_prior_reviews_exact_and_new_review_does_not_qualify(self):
-  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF)
+  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF,native_interpretation="original")
   for v in (1,2,3,4):
    expected=json.loads(Path(f'evidence/b6-native-review-20260923-v{v}/review.json').read_text())['calculations']
    self.assertEqual(json.loads(json.dumps({g['id']:product_view.calculate(s,g,{'review':f'atl-gb-native-review-{v}'}) for g in s['games']})),expected)

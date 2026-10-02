@@ -1,8 +1,10 @@
 # Historical implementation records
 
 These are the original README slice summaries. Counts and handoff statements
-record their original checkpoints, not the current working tree. Run historical
-commands from the repository root only within their documented scope.
+record their original checkpoints, not the current working tree. Historical
+`scripts/dashboard` commands below are retired and now fail before database or
+process actions. The generic `python -m app.dashboard` command runs
+the current file-backed app. Use [current setup](../README.md#run-locally).
 
 The numbered slice summaries below retain original evidence and test counts;
 they do not set the current next action. Use the
@@ -15,6 +17,10 @@ See the [Slice 1 historical record](slice-1.md),
 
 Earlier repository maintenance is recorded in [September 16 cleanup notes](history/cleanup-20260916.md).
 Current checks live in the [development guide](development.md).
+The [October 2 CI readiness pass](history/maintenance-20261002-ci.md) records
+Python 3.14 selection, clean-checkout fixes and the hosted-validation boundary.
+The subsequent [repository cleanup](history/cleanup-20261002.md) records shared
+game selection and preserved local copies of untracked test transcripts.
 
 ## Slice 2 — bounded US retail ingestion (complete)
 

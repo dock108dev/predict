@@ -1,4 +1,5 @@
 import json
+import asyncio
 import logging
 from pathlib import Path
 import tempfile
@@ -8,18 +9,21 @@ from app.reference.pinnacle_sample import capture,LIMIT
 
 class BoundedSample(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        # The one-shot executable disables logging; restore it for later tests.
+        # Keep test-owned logging state isolated if an assertion changes it.
         self.addCleanup(logging.disable, logging.root.manager.disable)
 
     async def test_one_call_original_bytes_and_exclusive_attempt(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);calls=[];body=b'[]'
             async def handler(req):
+                self.assertEqual(logging.root.manager.disable, logging.CRITICAL)
                 calls.append(req)
                 self.assertTrue((root/'attempt.json').exists())
                 self.assertEqual(req.url.params['bookmakers'],'pinnacle');self.assertEqual(req.url.params['markets'],'h2h')
                 return httpx.Response(200,content=body,headers={'x-requests-last':'1','x-requests-remaining':'499'})
+            previous=logging.root.manager.disable
             result=await capture(root,'synthetic-placeholder',transport=httpx.MockTransport(handler))
+            self.assertEqual(logging.root.manager.disable,previous)
             self.assertEqual(result['outcome'],'received');self.assertEqual((root/'response.bin').read_bytes(),body)
             with self.assertRaises(FileExistsError):await capture(root,'synthetic-placeholder',transport=httpx.MockTransport(handler))
             self.assertEqual(len(calls),1)
@@ -39,3 +43,12 @@ class BoundedSample(unittest.IsolatedAsyncioTestCase):
             result=await capture(Path(t),'synthetic-placeholder',transport=httpx.MockTransport(failed))
             self.assertEqual(result['outcome'],'transport_failure');self.assertEqual(result['error_type'],'ConnectError')
             self.assertNotIn('synthetic-placeholder',''.join(p.read_text() for p in Path(t).iterdir()))
+
+    async def test_cancellation_restores_logging_without_retry(self):
+        with tempfile.TemporaryDirectory() as t:
+            async def cancelled(req):raise asyncio.CancelledError()
+            previous=logging.root.manager.disable
+            with self.assertRaises(asyncio.CancelledError):
+                await capture(Path(t),'synthetic-placeholder',transport=httpx.MockTransport(cancelled))
+            self.assertEqual(logging.root.manager.disable,previous)
+            self.assertTrue((Path(t)/'attempt.json').exists())

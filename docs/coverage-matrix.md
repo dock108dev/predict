@@ -1,7 +1,9 @@
-# Source and market coverage
+# Historical source and market coverage assessment
 
-The [delivery plan](data-coverage-plan.md#current-handoff) records the current
-public-research outcome, remaining source requirements and next action.
+This dated engineering record preserves source research, counts and candidate
+status at the dates below. Its next-action language is historical. Use
+[data limitations](market-data-gaps.md) for current behavior and
+[configuration](configuration.md) for setup; this record is not a setup prerequisite.
 
 
 **Owner decision — September 21:** MoneyPuck dropped from the active plan. NHL analytics/model data is **MISSING — deferred**, with no replacement search, license inquiry or further MoneyPuck request queued. Preserve completed NHL engineering and historical evidence. Independent market support and offline integration are complete; NHL analytics remains an actual-data gap. KenPom remains deferred; Novig/ProphetX requests were reported sent, current replies/provisioning unconfirmed.
@@ -157,7 +159,7 @@ Product integration implementation and fixture acceptance are complete; these re
 
 ## Validation and completion record
 
-Assessment delivered with both matrices (36 source/sport rows total), explicit period columns, source evidence records, bounded recommendations, a dependency/owner-help ledger and the linked product integration module/contract/acceptance handoff. The Desktop tracker, product definition, delivery plan and gap assessment agree on **coverage review and product integration COMPLETE / actual qualification OPEN / beta NOT READY FOR SIGNOFF**. Local Markdown links and heading targets across all six active documents were checked; no missing targets. Documentation whitespace checks passed. No application tests or runtime were executed for this documentation-only change; historical test results remain attributed to their retained reports. Existing application changes, retained evidence and historical attempts were not modified.
+Assessment delivered with both matrices (36 source/sport rows total), explicit period columns, source evidence records, bounded recommendations, a dependency/owner-help ledger and the linked product integration module/contract/acceptance handoff. The associated dated reports record **coverage review and product integration COMPLETE / actual qualification OPEN / beta NOT READY FOR SIGNOFF** at that checkpoint. Local Markdown links and heading targets across all six active documents were checked; no missing targets. Documentation whitespace checks passed. No application tests or runtime were executed for this documentation-only change; historical test results remain attributed to their retained reports. Existing application changes, retained evidence and historical attempts were not modified.
 
 ## Integration update
 

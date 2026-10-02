@@ -5,7 +5,7 @@ from app.dashboard.native_retained_review import SESSION,CUTOFF
 from app.dashboard.native_public_review import VERSION,us_entry_bound,reviewed_registry,EFFECTIVE
 class PublicReviewTests(unittest.TestCase):
  def test_original_reviews_exact_and_new_bounds_do_not_qualify_net(self):
-  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF)
+  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF,native_interpretation="original")
   for version in (1,2):
    old=json.loads(Path(f'evidence/b6-native-review-20260923-v{version}/review.json').read_text())
    self.assertEqual({g['id']:json.loads(json.dumps(product_view.calculate(s,g,{'review':f'atl-gb-native-review-{version}'}))) for g in s['games']},old['calculations'])

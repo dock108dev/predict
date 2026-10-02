@@ -32,3 +32,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 app/reviews/*
+
+# Generated Python package output at the repository root
+/build/
+/dist/

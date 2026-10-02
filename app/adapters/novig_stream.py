@@ -3,9 +3,12 @@ import asyncio
 from dataclasses import replace
 import json
 import time
+import sys
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 from app.adapters.novig import (OrderImage, Response, HOSTS, decode, identity, native_state)
 from app.models.core import MarketState
+from app.cleanup import close_outcome
+from app.diagnostics import failure
 
 
 class MarketStream:
@@ -20,6 +23,7 @@ class MarketStream:
         self.generation,self.messages,self.bytes=0,0,0
         self.ws=None; self.closed=False
         self.frames=[]; self.connected=False
+        self.cleanup_errors=[]
         self.connections=0; self.initial_images=0; self.ticks=0
         self.live={}
 
@@ -105,7 +109,10 @@ class MarketStream:
                 async for update in self._run():
                     yield update
         finally:
-            await self.aclose()
+            primary=sys.exception()
+            try:await self.aclose()
+            except OSError:
+                if primary is None:raise
 
     async def _run(self):
         deadline=time.monotonic()+self.duration
@@ -147,7 +154,10 @@ class MarketStream:
                 except (ConnectionError,OSError,ConnectionClosed,InvalidStatus) as exc:
                     if attempt==self.reconnects: raise ConnectionError('Novig stream connection failed') from None
                 finally:
-                    await self._close_socket()
+                    primary=sys.exception()
+                    try:await self._close_socket()
+                    except OSError:
+                        if primary is None:raise
                 for mid,image in self.images.items():
                     image.initialized=False; image.orders.clear()
                     r=Response('{}','novig:transport-disconnected',self.adapter.now(),self.adapter.kind)
@@ -156,7 +166,10 @@ class MarketStream:
                     await self.adapter.sleep(min(2**attempt,4))
                     await self.adapter.access_token(force=True)
         finally:
-            await self.aclose()
+            primary=sys.exception()
+            try:await self.aclose()
+            except OSError:
+                if primary is None:raise
 
     async def _close_socket(self):
         ws,self.ws=self.ws,None
@@ -165,11 +178,29 @@ class MarketStream:
             try:
                 for channel in ('lifecycle',*self.images):
                     await asyncio.wait_for(ws.send(json.dumps({'event':'unsubscribe','data':channel})),1)
-            except Exception: pass
-            finally: await ws.close()
+            except Exception as exc:
+                # Unsubscribe is optional once the owned socket closes, but its
+                # failure remains visible. It cannot certify transport closure.
+                failure(__name__, 'novig_unsubscribe', exc)
+            finally:
+                closing=asyncio.create_task(close_outcome(ws,2))
+                try:error=await asyncio.shield(closing)
+                except asyncio.CancelledError:
+                    error=await closing
+                    if error is not None:self._close_failed(error)
+                    raise
+                if error is not None:self._close_failed(error)
+        if self.cleanup_errors:
+            raise OSError('Novig stream resource closure unconfirmed')
+
+    def _close_failed(self,error):
+        self.cleanup_errors.append(type(error).__name__)
+        self.closed=True
+        failure(__name__, 'stream_connection_close', error)
 
     async def aclose(self):
         self.closed=True; self.generation+=1
-        await self._close_socket()
-        for image in self.images.values():
-            image.orders.clear(); image.initialized=False
+        try:await self._close_socket()
+        finally:
+            for image in self.images.values():
+                image.orders.clear(); image.initialized=False

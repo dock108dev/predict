@@ -10,9 +10,12 @@ const mockNodes=new Map();
 const node=id=>{if(!mockNodes.has(id))mockNodes.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,replaceChildren(){},classList:{toggle(){}}});return mockNodes.get(id)};
 const source=fs.readFileSync('app/dashboard/opportunity_static/board.js','utf8');
 const start=source.indexOf('function render(r){');const end=source.indexOf("\n}\n",start)+2;
-const block=source.slice(start,end)+'\n}'; // isolate early raw branch, before qualified economics rendering
-const detailContext=vm.createContext({$:node,esc,PriceComparisons:context.api,location:{href:'/game'},last:null,session:()=>({timeline:[{id:rows[0].cutoff}]}),showView(){}});
+const block=source.slice(source.indexOf('function showSavedTime'),start)+source.slice(start,end)+'\n}'; // isolate early raw branch, before qualified economics rendering
+const detailContext=vm.createContext({$:node,esc,BoardView:context.BoardView,PriceComparisons:context.api,location:{href:'/game'},last:null,session:()=>({timeline:[{id:rows[0].cutoff,at:rows[0].at}]}),showView(){}});
 vm.runInContext(block,detailContext);
 vm.runInContext('render('+JSON.stringify({native_raw:true,aggregated:false,comparisons:rows,cutoff:rows[0].cutoff,native_review:rows[0].native_review})+')',detailContext);
 assert(node('data-mode').textContent.includes('Retained native'));assert(!node('quantity').disabled);assert(node('probability').disabled);assert(node('ev-result').textContent.includes('Net and EV unavailable'));
+assert(node('cutoff-label').textContent.startsWith('Saved prices · '));
+assert(!node('cutoff-label').textContent.includes(rows[0].cutoff));
+assert(node('cutoff-id').textContent.includes(rows[0].cutoff));
 console.log('PASS: captured native comparison cards, ordinary Details branch, exact download binding, timestamps and exclusions');

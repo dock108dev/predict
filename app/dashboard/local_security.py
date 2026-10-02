@@ -1,11 +1,13 @@
 """Browser boundary for the direct, loopback-only personal dashboard."""
 import json
 import math
+import asyncio
 from aiohttp import web
 
 CONTROL_BODY_LIMIT = 4096
 IMPORT_BODY_LIMIT = 1024 * 1024
 IMPORT_ROUTES = frozenset(('/api/references', '/api/resolutions', '/api/math-scenario'))
+BODY_READ_SECONDS = 10
 
 
 def body_limit(path):
@@ -29,8 +31,11 @@ def check_browser(request):
     hosts = {f'{host}:{address[1]}' for host in ('127.0.0.1', 'localhost')} if address else set()
     if len(request.headers.getall('Host', [])) != 1 or request.headers['Host'] not in hosts:
         raise web.HTTPForbidden(text='Use the local dashboard address')
-    if request.headers.get('Sec-Fetch-Site') == 'cross-site':
-        raise web.HTTPForbidden(text='Cross-site request denied')
+    sites = request.headers.getall('Sec-Fetch-Site', [])
+    # Another localhost port is same-site but cross-origin. It must not be able
+    # to drive read/replay/subscription routes through browser subresource loads.
+    if sites and sites not in (['same-origin'], ['none']):
+        raise web.HTTPForbidden(text='Same-origin browser request required')
     origins = request.headers.getall('Origin', [])
     expected = 'http://' + request.headers['Host']
     if origins and origins != [expected]:
@@ -50,13 +55,19 @@ async def read_json(request):
     if (request.content_length or 0) > limit:
         raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=request.content_length)
     body = bytearray()
-    while True:
-        chunk = await request.content.read(min(65536, limit + 1 - len(body)))
-        if not chunk:
-            break
-        body.extend(chunk)
-        if len(body) > limit:
-            raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(body))
+    try:
+        # One total deadline, not a per-chunk timer an indefinitely slow sender
+        # can reset. This starts when the JSON route begins consuming its body.
+        async with asyncio.timeout(BODY_READ_SECONDS):
+            while True:
+                chunk = await request.content.read(min(65536, limit + 1 - len(body)))
+                if not chunk:
+                    break
+                body.extend(chunk)
+                if len(body) > limit:
+                    raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(body))
+    except TimeoutError:
+        raise web.HTTPRequestTimeout(reason='JSON body deadline exceeded') from None
 
     def unique_object(pairs):
         result = {}

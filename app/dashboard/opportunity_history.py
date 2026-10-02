@@ -4,12 +4,16 @@ Watch definitions grant no collection authority. All numerical values come from
 ordinary product calculations at the original durable cutoff.
 """
 import json
+import os
+import tempfile
+import sys
 from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
 from collections import Counter
 from app.dashboard.session_projection import SessionProjection, stable
 from app.dashboard.query_policy import decimal_input, validate_http_query
+from app.diagnostics import failure
 
 VERSION = 'opportunity-history-2'
 MAX_WATCHES = 16
@@ -60,10 +64,26 @@ class WatchStore:
         clean = [validate_watch({k:v for k,v in x.items() if k != 'id'}) for x in values]
         if len({v['id'] for v in clean}) != len(clean):
             raise ValueError('Duplicate watchlist')
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temp = self.path.with_suffix('.tmp')
-        temp.write_text(json.dumps(clean, indent=2))
-        temp.replace(self.path)
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        temp = None
+        try:
+            # Exclusive unpredictable 0600 staging: never follow a preexisting
+            # predictable .tmp symlink or truncate the previous watch file.
+            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
+                    dir=self.path.parent, prefix='.'+self.path.name+'-',
+                    suffix='.tmp', delete=False) as file:
+                temp = Path(file.name)
+                file.write(json.dumps(clean, indent=2))
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(temp,self.path)
+        finally:
+            primary = sys.exception()
+            try:
+                if temp is not None:temp.unlink(missing_ok=True)
+            except OSError as exc:
+                failure(__name__, 'watchlist_staging_cleanup', exc)
+                if primary is None:raise
         return clean
 
 

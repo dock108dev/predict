@@ -10,9 +10,20 @@ are unsupported. Browser protections do not authenticate other local processes.
 `local_security.py` validates Host, Origin and Fetch Metadata and supplies response
 security headers, including CSP. Mutating routes require JSON. Strict streamed
 parsing rejects duplicate keys and non-finite numbers, with 4 KiB control and
-1 MiB import limits. `query_policy.py` validates selectors and manual assumptions.
+1 MiB import limits. Body consumption has a ten-second total deadline, including
+chunked uploads; partial progress does not reset it. Timeout returns a fixed HTTP
+408, closes the connection and dispatches no mutation. Cancellation still
+propagates. This deadline starts at body consumption, not initial connection or
+header receipt. `query_policy.py` validates selectors and manual assumptions.
 Reference/result imports append only to an active projected session; completed
 saved packages cannot be edited through those routes.
+
+Fetch Metadata, when present, must be one unambiguous `same-origin` or `none`
+value. A request from another localhost port can be `same-site` while still being
+cross-origin; those browser requests are rejected, including GET subresource
+loads. Missing Fetch Metadata remains supported for trusted local tools, while
+Host and Origin checks still apply. These headers are browser safeguards, not
+credentials against another local process.
 
 `GET /api/updates` admits at most eight subscriptions per application instance.
 Excess requests receive 429 with `Retry-After: 1`; disconnect, cancellation and
@@ -38,17 +49,32 @@ package. Saved data and provider content remain untrusted display input.
 The current dashboard accepts neither pickle nor SQL from the browser. Historical
 SQL and internal worker serialization have separate trusted-local entry points.
 
+New watchlist saves stage an exclusive unpredictable file in the destination
+directory with mode 0600, flush/fsync it, then atomically replace the watch file.
+A predictable `.tmp` symlink cannot redirect the write; a destination-file
+symlink is replaced without following it. A newly created immediate storage
+directory uses mode 0700. Existing directories/files are not migrated or chmodded.
+Write failure preserves the previous watchlist. Staging cleanup logs safe errors
+without masking the primary write failure. Parent directories remain trusted;
+this is not a symlink-safe importer for arbitrary capture directories, nor a
+cross-process watchlist locking/directory-fsync durability guarantee.
+
 Failures use sanitized operation names, exception classes and traceback locations;
 raw provider content and credentials must not enter logs. See
 [failure handling](error-handling.md) for cleanup and incomplete packages.
+Native discovery failures now expose exception classes in source-stop, refresh
+and catalog error fields, rather than arbitrary exception text. Safe diagnostics
+retain traceback locations; explicitly generated policy/status codes remain in
+their normal dedicated fields. Healthy source isolation is unchanged.
 
 ## Support limits
 
 Remote or shared-user deployment needs authentication, filesystem isolation and a
 TLS/proxy design. Importing untrusted capture directories needs a defined staging
 boundary and symlink-safe file handling. Neither is supported by the current local
-workflow. Global request quotas, body-read deadlines and replay concurrency limits
-are not implemented merely by bounding notification subscriptions.
+workflow. Global request quotas and a connection/header deadline are not
+implemented. The JSON body deadline and notification quota do not cap every
+expensive saved-reader path or authenticate local clients.
 
 Hash-locked dependencies, dependency consistency checks and hosted static analysis
 are complementary checks, not proof that no vulnerable dependency exists. Keychain
@@ -56,3 +82,6 @@ ACLs, provider permissions and platform behavior require separate verification.
 See [development](development.md#pull-request-ci) for the actual CI checks.
 Dated findings and their original validation remain in the
 [security engineering record](history/maintenance-20260928/security.md).
+The [October 1 hardening record](history/maintenance-20261001-security.md) records
+implemented findings, the current source identity, validation and prioritized
+remaining decisions.

@@ -43,7 +43,7 @@ def build_status():
         sports=aggregate(0), periods=aggregate(1), families=aggregate(2),
         source_contribution=coverage['summary']['by_source'],
         acceptance_document='docs/beta-coverage-acceptance.md',
-        authority='../prediction_arb_next_steps.md',
+        authority='docs/configuration.md#saved-review-and-live-collection',
         authorization_changed=False,
     )
 

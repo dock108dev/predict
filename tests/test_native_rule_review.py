@@ -26,7 +26,7 @@ class RuleReviewTests(unittest.TestCase):
    with self.assertRaises(ValueError):conditional_payout('full_game_tie',q)
  def test_ordinary_saved_details_preserves_versions_and_failures(self):
   with patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('credentials')):
-   s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF)
+   s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF,native_interpretation="original")
    for version in (1,2,3):
     expected=json.loads(Path(f'evidence/b6-native-review-20260923-v{version}/review.json').read_text())['calculations']
     self.assertEqual(json.loads(json.dumps({g['id']:product_view.calculate(s,g,{'review':f'atl-gb-native-review-{version}'}) for g in s['games']})),expected)

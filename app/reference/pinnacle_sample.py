@@ -28,6 +28,7 @@ async def capture(folder,key,*,transport=None):
     result=dict(requests_attempted=1,started_at=now(),status=None,headers={},outcome='failed',body_complete=False)
     body=bytearray()
     # This dedicated executable must never log authenticated request URLs.
+    previous_logging = logging.root.manager.disable
     logging.disable(logging.CRITICAL)
     try:
         async with asyncio.timeout(20):
@@ -47,6 +48,8 @@ async def capture(folder,key,*,transport=None):
                         else:result['outcome']='received'
     except Exception as exc:
         result.update(outcome='transport_failure',error_type=type(exc).__name__,received_at=now())
+    finally:
+        logging.disable(previous_logging)
     result.update(body_bytes=len(body),body_sha256=sha256(body).hexdigest(),reserved_credits=1)
     if key.encode() in body or any(key in str(v) for v in result['headers'].values()):
         result.update(outcome='credential_echo_not_retained',headers={},body_retained=False)

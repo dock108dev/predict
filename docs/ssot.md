@@ -14,7 +14,13 @@ The public `opportunity_board.create_app` delegates here; it does not own an
 alternate route implementation.
 
 Known callers: `scripts/opportunity-board`, `app/dashboard/opportunity_board.py`,
-`native_preview.py`, `two_source_preview.py`, browser list/details/import controls.
+`app/dashboard/__main__.py`, `native_preview.py`, `two_source_preview.py`, browser
+list/details/import controls. The generic module command delegates to
+`opportunity_board.main`; it no longer constructs the historical SQL server or
+writes its PID/lock files. Historical `scripts/dashboard` controls fail explicitly
+before database setup, migrations or signals. Its old PID plus module-substring
+check cannot distinguish the newly delegated generic command from an old process;
+cleanup of any historical process needs separately verified ownership.
 
 Domain: Dashboard choices and manual assumptions
 
@@ -97,6 +103,10 @@ selected by ID at a retained cutoff. The unused `reference_for` convenience
 selector is removed; no automatic single-reference selection path remains there.
 
 Known callers: ordinary dashboard/detail routes and retained replay tests.
+`product_view.dashboard(view='feed')` explicitly composes Arb and EV through
+`opportunity_feed.combine`, the same grouping/ranking policy used by the router;
+it no longer falls through to EV alone. The combined feed ranks by percentage
+within declared groups, including when the ordinary-view sort is dollars.
 `reference.product` owns original-input reference validation;
 `resolution.core` owns bound sporting/venue-result calculations. Unknown values
 and negative/zero results remain valid; no source qualification is inferred.
@@ -123,8 +133,10 @@ SSOT module/file: `multi_game.MultiOwner.start_controls` and
 Why this is authoritative: status publishes the selected owner's accepted fields.
 The router rejects unsupported fields before calling Start; the browser uses the
 same declaration for visibility and request construction. Signature tests guard
-against drift. CoverageOwner and QualificationOwner accept duration only;
-MultiOwner also applies a game limit. Owners enforce numeric and frozen-run limits.
+against drift. CoverageOwner normally accepts duration only; an explicitly
+configured product instance with an isolated aggregate endpoint also declares
+`source_settings`. QualificationOwner accepts duration only; MultiOwner also
+applies a game limit. Owners enforce numeric and frozen-run limits.
 
 Known callers: Start/status/dashboard routes, `dashboard.js`, qualification and
 native previews, and synthetic fixtures.
@@ -134,6 +146,8 @@ native previews, and synthetic fixtures.
 The compatibility factory delegates to the current router. Query validation and
 manual assumptions use `query_policy`; body limits use `local_security`.
 Unsupported choices fail explicitly instead of selecting a fallback.
+Current snapshot routes share `multi_game_server.selected_game`; an absent game
+raises an explicit selection error before calculation, sizing or review.
 
 Older saved readers remain dependencies of catalog and research views. MultiOwner
 provides inherited lifecycle helpers and a supported bounded multi-game path.
@@ -144,4 +158,5 @@ collection permissions. Do not replace these distinct contracts with conditional
 product calculations or remove shared helpers without checking their callers.
 
 Candidate-specific changes and test results are retained in the
-[engineering record](history/maintenance-20260928/ssot.md).
+[September engineering record](history/maintenance-20260928/ssot.md) and the
+[October entry-point/feed maintenance record](history/maintenance-20261001-ssot.md).

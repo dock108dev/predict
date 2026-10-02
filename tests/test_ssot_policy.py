@@ -2,23 +2,62 @@
 import unittest
 import inspect
 import tempfile
+import runpy
+import subprocess
 from pathlib import Path
 from app.dashboard.multi_game import MultiOwner
 from app.dashboard.coverage_owner import CoverageOwner
 from app.collection.two_source import QualificationOwner
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from multidict import MultiDict
 from aiohttp.test_utils import AioHTTPTestCase
 
 from app.dashboard import product_view
 from app.dashboard.multi_game import rank_filter
-from app.dashboard.multi_game_server import create_app
+from app.dashboard.multi_game_server import create_app, selected_game
 from app.dashboard.query_policy import validate_http_query, validate_assumptions
 from app.dashboard.session_projection import SessionProjection
 from app.reference.multi_page import rank_research
 
 
 class DirectPolicy(unittest.TestCase):
+    def test_missing_game_selection_is_an_explicit_input_error(self):
+        game = {'id': 'synthetic'}
+        self.assertIs(selected_game([game], 'synthetic'), game)
+        for games in ([], [game]):
+            with self.subTest(games=games), self.assertRaisesRegex(ValueError, 'Unknown selection'):
+                selected_game(games, 'missing')
+
+    def test_public_entrypoints_delegate_to_current_app(self):
+        from app.dashboard import opportunity_board
+        with patch.object(opportunity_board, 'main') as main:
+            runpy.run_module('app.dashboard', run_name='__main__')
+        main.assert_called_once_with()
+        with patch('app.dashboard.multi_game_server.create_app') as factory:
+            result=opportunity_board.create_app(sessions={}, owner='synthetic')
+        factory.assert_called_once_with(sessions={}, owner='synthetic')
+        self.assertIs(result, factory.return_value)
+
+    def test_retired_launcher_fails_before_database_app_or_process_operations(self):
+        source=Path(__file__).resolve().parents[1]/'scripts/dashboard'
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'scripts').mkdir()
+            (root/'.venv/bin').mkdir(parents=True)
+            launcher=root/'scripts/dashboard'
+            launcher.write_bytes(source.read_bytes())
+            # Stubs keep a regression confined to disposable state.
+            for target in (root/'scripts/project-postgres', root/'.venv/bin/python'):
+                target.write_text('#!/bin/sh\ntouch invoked\nexit 0\n')
+                target.chmod(0o700)
+            for args in ([], ['start'], ['start-existing'], ['stop'], ['status'], ['typo']):
+                with self.subTest(args=args):
+                    result=subprocess.run(['/bin/sh', str(launcher), *args],
+                                          cwd=root, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn('scripts/opportunity-board', result.stderr)
+                    self.assertFalse((root/'invoked').exists())
+
     def test_owner_controls_match_start_signatures_and_status(self):
         for owner_type in (MultiOwner, CoverageOwner, QualificationOwner):
             with self.subTest(owner=owner_type.__name__):
@@ -80,6 +119,28 @@ class RoutePolicy(AioHTTPTestCase):
         self.owner.saved.return_value = []
         self.owner.close = AsyncMock()
         return create_app(owner=self.owner, sessions={})
+
+    async def test_snapshot_routes_share_missing_game_rejection(self):
+        snapshot = dict(games=[], data_mode='Local test', state='saved',
+                        started_at='2026-10-02T00:00:00+00:00', durable_cursor='synthetic-cutoff')
+        selection = dict(session='synthetic~missing', hash='synthetic', cutoff='synthetic-cutoff')
+        headers = {'Origin': str(self.client.make_url('/')).rstrip('/')}
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch('app.dashboard.native_reviews.historical_paths', return_value={}), \
+                patch('app.dashboard.session_history.load', return_value=snapshot):
+            self.owner.history_paths.return_value = {'synthetic': Path(tmp)}
+            for route in ('calculate', 'resolution'):
+                response = await self.client.get('/api/' + route, params=selection)
+                self.assertEqual(response.status, 422)
+                self.assertEqual((await response.json())['error'], 'Unknown selection')
+            for route in ('decision-sizes', 'math-scenario'):
+                response = await self.client.post('/api/' + route, json=selection, headers=headers)
+                self.assertEqual(response.status, 422)
+                self.assertEqual((await response.json())['error'], 'Unknown selection')
+            response = await self.client.get('/api/public-contracts',
+                                            params=dict(capture='synthetic', cutoff='synthetic-cutoff', game='missing'))
+            self.assertEqual(response.status, 422)
+            self.assertEqual((await response.json())['error'], 'Unknown selection')
 
     async def test_all_selection_routes_reject_before_loading_data(self):
         for route in ('dashboard', 'calculate', 'sessions', 'resolution'):

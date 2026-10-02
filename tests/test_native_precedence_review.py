@@ -17,7 +17,7 @@ class PrecedenceTests(unittest.TestCase):
   for k in flags:self.assertFalse(shared_suspension('54',league_final=False,**dict(flags,**{k:None}))['available'])
   self.assertIsNone(shared_suspension('54',league_final=False,**flags)['payout'])
  def test_versions_exact_and_unchanged_economics(self):
-  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF)
+  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF,native_interpretation="original")
   for v in (1,2,3,4,5):
    expected=json.loads(Path(f'evidence/b6-native-review-20260923-v{v}/review.json').read_text())['calculations']
    self.assertEqual(json.loads(json.dumps({g['id']:product_view.calculate(s,g,{'review':f'atl-gb-native-review-{v}'}) for g in s['games']})),expected)

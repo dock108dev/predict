@@ -1,6 +1,6 @@
 # Private beta workflow acceptance
 
-October 1, 2026. This document defines engineering readiness and owner acceptance for Predict's private, read-only comparison workflow. The [authoritative tracker](../../prediction_arb_next_steps.md) governs scope and next actions. The [workflow checklist and final verification](../evidence/private-beta-workflow-20261001-v1/README.md) records the candidate-specific decision.
+October 1, 2026. This document defines engineering readiness and owner acceptance for Predict's private, read-only comparison workflow. The [workflow checklist and final verification](../evidence/private-beta-workflow-20261001-v1/README.md) records the candidate-specific decision.
 
 ## Acceptance policy
 

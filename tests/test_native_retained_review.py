@@ -8,7 +8,7 @@ ROOT=Path('evidence/b6-two-source-scope-'+SESSION)/SESSION
 class RetainedReviewTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.snapshot=session_history.load(ROOT,CUTOFF)
+        cls.snapshot=session_history.load(ROOT,CUTOFF,native_interpretation="original")
         cls.oracle=json.loads((ROOT/'qualification-oracle.json').read_text())
     def test_original_unchanged_and_review_stricter(self):
         for game in self.snapshot['games']:
@@ -30,30 +30,32 @@ class RetainedReviewTests(unittest.TestCase):
             with self.assertRaises(ValueError):point_for(s,point,VERSION)
 
 class OrdinaryReviewRouteTests(unittest.IsolatedAsyncioTestCase):
-    async def test_original_and_versioned_calculations_through_saved_details_route(self):
+    async def test_clean_checkout_route_does_not_promote_frozen_legacy_calculations(self):
         from aiohttp.test_utils import TestClient,TestServer
         from app.dashboard.coverage_owner import CoverageOwner
         from app.dashboard.multi_game_server import create_app
         from unittest.mock import patch
-        from app.dashboard.opportunity_board import present
         owner=CoverageOwner(ROOT.parent/'legacy',pilot_output=ROOT.parent,product_mode=True)
         async def forbidden(*args,**kwargs):raise ValueError('Read-only review')
         owner.start=forbidden
-        with patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('no access')):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as catalog, \
+                patch('app.dashboard.native_reviews.DIRECTORY',Path(catalog)), \
+                patch('app.collection.venue_access.load_credentials',side_effect=AssertionError('no access')):
             client=TestClient(TestServer(create_app(owner=owner,sessions={})))
             await client.start_server()
             try:
-                snap=session_history.load(ROOT,CUTOFF)
+                snap=session_history.load(ROOT,CUTOFF,native_interpretation="original")
                 for game in snap['games']:
                     from app.dashboard.native_acquisition_review import VERSION as acquired_version
                     for version in ('',VERSION,acquired_version,'atl-gb-native-review-3','atl-gb-native-review-4','atl-gb-native-review-5','atl-gb-native-review-6','atl-gb-native-review-7'):
                         q=dict(session=SESSION+'~'+game['id'],hash=SESSION,cutoff=CUTOFF,quantity='100',scenario='unknown')
                         if version:q['review']=version
                         response=await client.get('/api/calculate',params=q)
-                        self.assertEqual(response.status,200)
+                        self.assertEqual(response.status,422)
                         data=await response.json()
-                        expected=present(product_view.calculate(snap,game,q))
-                        self.assertEqual(data['candidates'],expected['candidates'])
+                        self.assertEqual(data['error'],'Unknown selection')
+                        self.assertNotIn('candidates',data)
                 response=await client.post('/api/start',json={'duration':90},headers={'Origin':str(client.make_url('/')).rstrip('/')})
                 self.assertEqual(response.status,422)
             finally:await client.close()
@@ -61,7 +63,7 @@ class OrdinaryReviewRouteTests(unittest.IsolatedAsyncioTestCase):
 class AcquiredReviewTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.snapshot=session_history.load(ROOT,CUTOFF)
+        cls.snapshot=session_history.load(ROOT,CUTOFF,native_interpretation="original")
 
     def test_metadata_is_not_promoted_to_historical_fees_or_state(self):
         from app.dashboard.native_acquisition_review import VERSION as acquired_version,HISTORICAL_FEE_GAP

@@ -16,6 +16,21 @@ def feed(snapshot, assumptions=None, **query):
 
 
 class OpportunityFeed(unittest.TestCase):
+    def test_direct_combined_view_uses_shared_groups_and_both_calculations(self):
+        p,rows=projection();g=p.snapshot()['games'][0]
+        add(p,rows,references(g));snapshot=p.snapshot()
+        manual={g['id']+'~'+next(iter(g['sides'])):
+                {'probability':'0','basis':'Explicit synthetic zero'}}
+        for query in ({}, {'sort':'dollars'}, {'scenario':'unknown'},
+                      {'competition':'NBA'}, {'search':'not-an-existing-game'}):
+            with self.subTest(query=query):
+                actual=product_view.dashboard(snapshot,dict(query,view='feed'),manual)
+                self.assertEqual(actual,feed(snapshot,manual,**query))
+        actual=product_view.dashboard(snapshot,{'view':'feed'},manual)
+        self.assertTrue(any(r['calculation_view']=='arb' for r in actual))
+        self.assertTrue(any(r['calculation_view']=='ev' for r in actual))
+        self.assertTrue(any(r.get('probability')=='0' for r in actual))
+
     def test_rank_percent_not_status_dollars_or_input_order(self):
         base=dict(candidate='',probability='.5',legs=[dict(reasons=[])],venues=['kalshi'])
         rows=[dict(base,id=k,return_pct=n,status=status,profit=dollars) for k,n,status,dollars in

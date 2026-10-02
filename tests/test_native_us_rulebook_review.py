@@ -13,7 +13,7 @@ class USRulebookTests(unittest.TestCase):
  def test_effective_date_and_fee_omission_are_not_assumed(self):
   f=facts();self.assertEqual(f['document_date'],'2026-09-14');self.assertIsNone(f['effective_at_historical_cutoff']);self.assertIsNone(f['fees']['settlement_charge']);self.assertFalse(f['net_qualified'])
  def test_original_reviews_and_economics_unchanged(self):
-  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF)
+  s=session_history.load(Path('evidence/b6-two-source-scope-'+SESSION)/SESSION,CUTOFF,native_interpretation="original")
   for v in (1,2,3,4,5,6):
    want=json.loads(Path(f'evidence/b6-native-review-20260923-v{v}/review.json').read_text())['calculations']
    self.assertEqual(json.loads(json.dumps({g['id']:product_view.calculate(s,g,{'review':f'atl-gb-native-review-{v}'}) for g in s['games']})),want)

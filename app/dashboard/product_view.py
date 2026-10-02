@@ -58,6 +58,11 @@ def dashboard(snapshot,q,assumptions,reuse=None):
     validate_assumptions(assumptions)
     items=[];sid=snapshot['session_id'];view=q.get('view','arb')
     if view=='research':return [] # Retrospective research remains on its original saved packages.
+    if view=='feed':
+        from app.dashboard.opportunity_feed import combine
+        if reuse is None:reuse={}
+        return combine(dashboard(snapshot,dict(q,view='ev',sort='roi'),assumptions,reuse=reuse),
+                       dashboard(snapshot,dict(q,view='arb',sort='roi'),assumptions,reuse=reuse))
     for game in snapshot['games']:
         if game.get('aggregated') or game.get('native_raw') or game.get('manual_raw'):continue
         if any(q.get(k) and game['product_identity'].get(k)!=q[k] for k in ('competition','season')):continue

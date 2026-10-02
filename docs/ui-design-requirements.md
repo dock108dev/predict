@@ -37,7 +37,7 @@ Keep design guidance consistent with the implementation. Check affected screens 
 For Predict, the active HTML templates are `dashboard.html` (Compare games) and
 `index.html` (Game details) under `app/dashboard/opportunity_static/`. Keep their
 IDs, accessible labels and display-only focus keys consistent with their renderers.
-The default is All opportunities: percentage-first cards grouped by probability basis, with separate Arbitrage, EV estimates and Saved-page research views. Game, sport and market filters stay visible; sizing, saved selection and scan configuration are secondary. Keep saved/demo
+The default is All opportunities: percentage-first cards grouped by probability basis, with separate Arbitrage, EV estimates and Saved-page research views. Saved-scan selection and game, sport and market filters stay visible; sizing and scan configuration are secondary. Settings and watch/history disclosures stay directly reachable without another enclosing disclosure. Keep saved/demo
 context, current blockers and material assumptions visible; put original inputs
 and diagnostics in named disclosures. Preserve negative, zero and unavailable
 values and the existing calculation, source and persistence contracts.

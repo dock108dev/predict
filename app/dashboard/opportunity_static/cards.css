@@ -70,3 +70,22 @@
 .comparison-card summary{min-height:44px;align-content:center}
 .math-panel textarea{width:100%;box-sizing:border-box;min-width:16em;max-width:100%;font-family:monospace}
 .math-panel label{display:block;margin:.6em 0}.math-panel button{margin:.25em}.math-panel .math-result{overflow-wrap:anywhere}
+
+/* Common saved review stays visible; secondary tools share the existing panel. */
+.dashboard-page .quick-inputs{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,1fr);gap:12px}
+.dashboard-page .secondary-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;border-top:1px solid var(--line);margin-top:8px}
+.dashboard-page .secondary-tools>.secondary-controls{border:0;margin:0;padding:0;min-width:0}
+.dashboard-page .secondary-tools>.secondary-controls[open]{grid-column:1/-1;padding-bottom:12px}
+.dashboard-page .secondary-tools summary{font-size:14px}
+.game-page #cutoff-id{overflow-wrap:anywhere}
+.dashboard-page #product-coverage{display:flex;flex-wrap:wrap;gap:0 12px}
+.dashboard-page #product-coverage>.source-summary{flex-basis:100%}
+.dashboard-page #product-coverage>details{margin:0;min-width:0;max-width:100%}
+.dashboard-page #product-coverage>details[open]{flex-basis:100%}
+@media(max-width:650px){
+ .dashboard-page .quick-inputs{grid-template-columns:1fr;gap:8px}
+ .dashboard-page .capture-choice{display:grid;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:8px}
+ .dashboard-page .secondary-tools{gap:0 12px}
+ .dashboard-page .secondary-tools summary{font-size:13px}
+ .dashboard-page .scan-summary{display:block;margin-top:0}
+}

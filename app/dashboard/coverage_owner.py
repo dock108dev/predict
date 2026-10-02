@@ -126,9 +126,12 @@ class CoverageOwner(MultiOwner):
             self.owner_lock = ((OUTPUT if self.supervised_live else self.pilot_output)/'collector.lock').open('a')
             try:
                 fcntl.flock(self.owner_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            except OSError:
-                self.owner_lock.close()
-                self.owner_lock = None
+            except OSError as exc:
+                failure(__name__, 'coverage_owner_lock', exc)
+                try:
+                    self.release()
+                except Exception as cleanup_error:
+                    failure(__name__, 'coverage_owner_lock_cleanup', cleanup_error)
                 raise ValueError('Another collector owns the pilot') from None
             self.starting = True
             created_session = None
@@ -246,7 +249,7 @@ class CoverageOwner(MultiOwner):
             session = self.session
             # Both transports close before export/replay. No duplicate raw export:
             # The flat journal remains authoritative; segmented mode finalizes separately.
-            if session.persistence_error or session.cleanup_errors:
+            if session.persistence_error or session.cleanup_errors or getattr(session,'monitor_error',None):
                 raise ValueError('collector cleanup or persistence incomplete')
             # Reserve expansion before materializing a JSON journal for native replay.
             replay_allowed = rss()+max(session.journal.bytes, session.journal.expanded_bytes)*6 < LIMITS['rss_bytes']
@@ -268,6 +271,7 @@ class CoverageOwner(MultiOwner):
                         raise ValueError('Replay final journal identity changed')
                     save_json(folder/'replay-resources.json',replay_resources)
                 except Exception as exc:
+                    failure(__name__, 'coverage_isolated_replay', exc)
                     replay_error=type(exc).__name__
                     replay=dict(verified=False,reason=replay_error)
             save_json(folder/'replay.json',replay)
@@ -386,7 +390,7 @@ class CoverageOwner(MultiOwner):
         try:
             await self.session.task
             s = self.session
-            if s.persistence_error or s.cleanup_errors:
+            if s.persistence_error or s.cleanup_errors or getattr(s,'monitor_error',None):
                 raise ValueError('collector cleanup or persistence incomplete')
             if own_trace: tracemalloc.start()
             replay_started = time.monotonic(); replay_baseline = rss()

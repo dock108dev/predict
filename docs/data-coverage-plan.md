@@ -1,6 +1,6 @@
 # Predict workflow delivery plan
 
-October 1, 2026. This plan describes engineering order under the [authoritative tracker](../../prediction_arb_next_steps.md). [Acceptance](beta-coverage-acceptance.md) owns the workflow gate and [verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns final candidate evidence.
+October 1, 2026. This plan describes engineering order for the [project scope](product-roadmap-review.md). [Acceptance](beta-coverage-acceptance.md) owns the workflow gate and [verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns final candidate evidence.
 
 1. Reuse completed integrated transport, matching, calculation and saved-workflow evidence.
 2. Inspect ordinary startup and find concrete discovery, understanding or reopening defects.

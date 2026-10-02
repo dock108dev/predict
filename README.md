@@ -1,33 +1,37 @@
 # Prediction Arb
 
-A local, read-only dashboard for comparing sports prediction prices across venues, calculating conditional arbitrage and what-if expected value, and reopening saved scans. Trading is not implemented.
+A local, read-only dashboard for comparing sports prediction prices across venues, calculating conditional arbitrage and what-if expected value, and reopening saved scans. It does not place trades.
 
-**Beta/V1 supports data ingestion and comparison for manual trading. V2 covers automated trading and execution.** The owner places trades manually. Novig/ProphetX aggregate prices remain usable without native trading access; Pinnacle/DraftKings/BetMGM are reference-only. Missing account costs or probabilities withhold or label dependent calculations while preserving valid raw comparisons. Informational depth/sizing does not guarantee execution. See [current scope](docs/product-roadmap-review.md) and [remaining-gate reconciliation](docs/full-scope-engineering-reconciliation.md).
+Kalshi and Polymarket US have native adapters. Novig and ProphetX observations can come through The Odds API; Pinnacle, DraftKings and BetMGM are reference-only. Actual sport and market availability varies. Missing fees, settlement terms, probabilities or usable depth withhold dependent calculations while preserving valid raw comparisons.
 
 ## Run locally
 
-Requires Python 3.11 or newer. From the repository root:
+Use a macOS source checkout and Python 3.11 or newer. Current local validation and CI use Python 3.14. From the repository root:
 
 ```sh
-python3 -m venv .venv
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -e '.[stream]'
 scripts/opportunity-board start
 ```
 
-Open the address printed by the launcher, normally [localhost:8783](http://127.0.0.1:8783/). The dashboard starts idle. Saved scans reopen retained results; Start scan requires configured sources and an explicit run specification and approval. Live credential access uses macOS Keychain. See [configuration](docs/configuration.md) for requirements and limits.
+Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/). Startup is idle and saved-data review needs no credentials. The dashboard is file-backed; PostgreSQL and a Node.js service are not required.
 
 ```sh
 scripts/opportunity-board status
 scripts/opportunity-board stop
 ```
 
-The dashboard is file-backed and needs no PostgreSQL or Node.js service. Run it from this checkout so saved inputs and static assets are available. Restart the server after source changes.
+For a foreground server, use `.venv/bin/python -m app.dashboard --port 8783`. Run from this checkout so repository assets and tracked saved inputs are available. Restart after source changes. The older `scripts/dashboard` launcher is retired.
 
-## Interpreting results
+Live collection requires an explicitly configured run specification, source endpoints and valid run-specific authorization. Credentials alone do not enable Start scan. See [configuration and operation](docs/configuration.md) for the concrete requirements and [security](docs/security.md) for the loopback browser boundary. Remote, proxy and shared-user hosting are unsupported.
 
-All opportunities combines raw price comparisons and supported return calculations in distinct groups. Arbitrage, manually entered What-if EV and Saved-page research are separate views. Missing probabilities, fees or settlement terms remain unknown. Negative, zero and unavailable results are valid. Saved-page research is retrospective and does not enter live ranking.
+## Use the dashboard
 
-Venue, sport and market coverage is incomplete. A displayed calculation is conditional on its source data and terms; it does not establish executable liquidity or verified support for every venue. See [sports integration](docs/sports-integration.md) and [configuration](docs/configuration.md).
+Choose a scan from **Saved scan**, then filter by sport, venue, market or search. Open **Details** to inspect games and their original cutoff; return to the comparison feed to choose another scan. Saved prices and source ages describe their recorded time, not current quotes.
+
+All opportunities groups raw price comparisons separately from supported return calculations. Arbitrage, What-if EV and Saved-page research are distinct views. Negative, zero and unavailable results are valid. Retrospective research does not supply a live probability, and informational sizing does not guarantee execution.
+
+[Sport and market integration](docs/sports-integration.md) describes implemented handlers. [Data limitations](docs/market-data-gaps.md) explains what those handlers do not establish.
 
 ## Development
 
@@ -38,34 +42,10 @@ Focused offline checks:
 .venv/bin/python -m unittest tests.test_dashboard_security tests.test_ssot_policy tests.test_coverage_failure_handling -q
 ```
 
-These checks use saved inputs, temporary output and mocks. Node 22 is needed for browser regression scripts. The [development guide](docs/development.md) lists component checks and the full CI command.
+The checks use saved fixtures, temporary output and mocks. Node 22 runs the browser regression scripts. See [development and CI](docs/development.md) for component checks and the locked CI installation.
 
-- [Architecture](docs/architecture.md) and [module ownership](docs/ssot.md)
+- [Architecture and data](docs/architecture.md)
+- [Module ownership](docs/ssot.md)
 - [Configuration and operation](docs/configuration.md)
-- [Failure handling](docs/error-handling.md) and [security](docs/security.md)
-- [UI design](docs/ui-design.md)
-
-Older PostgreSQL and collection-preview tools are documented in [implementation history](docs/implementation-history.md).
-
-## Private beta review
-
-[The authoritative tracker](../prediction_arb_next_steps.md) owns scope and next
-steps. [Workflow acceptance](docs/beta-coverage-acceptance.md) and the
-[candidate checklist and walkthrough](evidence/private-beta-workflow-20261001-v1/README.md)
-evaluate useful operation with clear limitations. The 63 requirements and 252
-source records remain factual accounting, without a numeric beta gate.
-
-After source edits, stop/start the launcher so Python and browser assets agree:
-
-```sh
-scripts/opportunity-board stop
-scripts/opportunity-board start
-```
-
-Startup is idle and saved-data review is available. Live Start remains disabled
-until a fresh exact-scope run specification and approval are supplied. Earlier
-spent approvals and sealed unapproved packages cannot enable it. Begin saved review
-with `offline-v1-repair-713fd0fa-20261001` under **Saved scans and settings**;
-its historical Novig/ProphetX winner/spread/total comparisons are recorded prices,
-not current quotes. Return to the comparison feed to switch saved scans; Details
-selects games within the chosen scan and freezes its original cutoff.
+- [Failure handling and recovery](docs/error-handling.md)
+- [UI conventions](docs/ui-design.md)

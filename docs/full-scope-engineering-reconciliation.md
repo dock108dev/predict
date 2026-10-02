@@ -1,6 +1,6 @@
 # Predict engineering gate reconciliation
 
-October 1, 2026. This document maps source facts to the workflow or calculation they affect. The [authoritative tracker](../../prediction_arb_next_steps.md) governs scope; [acceptance](beta-coverage-acceptance.md) defines beta readiness and [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) records evidence. Historical interpretations below are not current completion gates.
+October 1, 2026. This document maps source facts to the workflow or calculation they affect. The [product scope](product-roadmap-review.md) describes the intended workflow; [acceptance](beta-coverage-acceptance.md) defines beta readiness and [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) records evidence. Historical interpretations below are not current completion gates.
 
 ## Workflow and calculation gates
 
@@ -52,7 +52,7 @@ No independent probabilities are required for deterministic exhaustive-state sce
 
 **Engineering first.** The completed reconciliation and repairs below remain retained. September 29's new owner decision selects The Odds API for ProphetX/Novig observations and Pinnacle/DraftKings/BetMGM calculation references. The authorized initial sample is complete; shared ingestion against these records is now locally actionable. Full product engineering and owner/customer validation remain incomplete. No recurring collection is authorized.
 
-The source of truth is the [desktop tracker](../../prediction_arb_next_steps.md). [New evidence](../evidence/full-scope-engineering-20260929/README.md) records entry preservation, reproduced defects, checks and the final working-source identity. Existing uncommitted E1–E5 work is retained. Earlier completion statements establish their scoped deliverables only.
+[New evidence](../evidence/full-scope-engineering-20260929/README.md) records entry preservation, reproduced defects, checks and the final working-source identity. Existing uncommitted E1–E5 work is retained. Earlier completion statements establish their scoped deliverables only.
 
 ## Scope reconciled to implementation
 

@@ -143,10 +143,10 @@ def project_rows(rows, through_cursor=None, native_interpretation="native-book-c
 def load(folder, through_cursor=None, native_interpretation="native-book-comparison-4"):
     data = verified(folder)
     if native_interpretation=='native-book-comparison-4':
-        from app.dashboard.native_reviews import DIRECTORY
+        from app.dashboard.native_reviews import packaged_index
         from app.dashboard.session_projection import stable
-        index=json.loads((DIRECTORY/'index-v4.json').read_text())
-        bound=next((v for v in index.get('historical_paths',{}).values() if (Path(__file__).resolve().parents[2]/v['folder']).resolve()==Path(folder).resolve()),None)
+        index=packaged_index()
+        bound=next((v for v in index.get('historical_paths',{}).values() if (Path(__file__).resolve().parents[2]/v['folder']).resolve()==Path(folder).resolve()),None) if index is not None else None
         chain=['0'*64]
         original_rows=data['rows']
         def anchored_rows():

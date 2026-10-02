@@ -7,7 +7,9 @@ for source in app/dashboard/opportunity_static/*.js; do
 done
 # Collector budgets measure process-lifetime peak RSS. Keep failure-injection
 # fixtures separate from the retained dashboard/replay tests below.
-python -m unittest tests.test_coverage_failure_handling -q
+python -m unittest tests.test_coverage_failure_handling tests.test_packaged_review_portability -q
+python -m unittest tests.test_abend_handling tests.test_novig -q
+python -m unittest tests.test_security_hardening -q
 python -m unittest \
     tests.test_multi_game \
     tests.test_opportunity_board \

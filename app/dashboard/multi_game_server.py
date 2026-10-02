@@ -17,6 +17,14 @@ OWNER_KEY = web.AppKey('owner', object)
 MAX_UPDATE_CLIENTS = 8
 
 
+def selected_game(games, game_id):
+    # StopIteration escaping an async route becomes RuntimeError (HTTP 503).
+    game = next((game for game in games if game['id'] == game_id), None)
+    if game is None:
+        raise ValueError('Unknown selection')
+    return game
+
+
 def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
     if owner is None:
         from app.dashboard.coverage_owner import CoverageOwner
@@ -92,10 +100,14 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
             r=await handler(request)
         except web.HTTPException as exc:
             r=web.json_response({'error':exc.reason},status=exc.status)
+            if exc.status == 408:r.force_close()
             for header in ('Allow','Retry-After'):
                 if header in exc.headers:r.headers[header]=exc.headers[header]
-        except (ValueError,ArithmeticError) as exc:
+        except ValueError as exc:
             r=web.json_response({'error':str(exc)},status=422)
+        except ArithmeticError as exc:
+            failure(__name__, 'dashboard_arithmetic', exc)
+            r=web.json_response({'error':'Calculation unavailable; check inputs and the local log'},status=422)
         except (KeyError,StopIteration):
             r=web.json_response({'error':'Unknown selection'},status=422)
         except Exception as exc:
@@ -136,7 +148,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         q=req.query
         sid,gid=q['session'].split('~',1);d=datasets(sid,catalog_all=False)[sid]
         if q['hash']!=sid or 'product' not in d:raise ValueError('Unbound prediction snapshot')
-        snap=product_cutoff(sid,d,q['cutoff']);game=next(g for g in snap['games'] if g['id']==gid)
+        snap=product_cutoff(sid,d,q['cutoff'])
+        game=selected_game(snap['games'],gid)
         if (game['product_identity'].get('competition'),game['product_identity'].get('season')) not in (('NFL','2026'),('NBA','2026-2027'),('NCAAF','2026'),('NCAAB','2026-2027'),('MLB','2026'),('NHL','2026-2027')):return web.json_response(dict(options=[],unsupported='Resolution mapping unavailable for this competition/season'))
         paths=owner.history_paths() if hasattr(owner,'history_paths') else {};options=[];unavailable=[]
         # Only completed saved sessions expose resolution history; ongoing imports
@@ -191,7 +204,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         if 'product' in d:
             from app.dashboard import session_history,product_view
             snapshot=product_cutoff(sid,d,q['cutoff'])
-            g=next(g for g in snapshot['games'] if g['id']==gid)
+            g=selected_game(snapshot['games'],gid)
             from app.dashboard.price_comparison import comparisons
             if g.get('aggregated') or g.get('native_raw') or g.get('manual_raw'):
                 from app.dashboard.price_comparison import comparisons_for_game
@@ -228,7 +241,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         return web.json_response(r)
     def dashboard_payload(q, ds=None, reuse=None):
         if reuse is None:reuse={}
-        validate_assumptions(json.loads(q.get('assumptions','{}')))
+        assumptions=validate_assumptions(json.loads(q.get('assumptions','{}')))
         ds=datasets(q.get('capture'),catalog_all=False) if ds is None else ds
         if q.get("view", "arb")=="feed":
             from app.dashboard.opportunity_feed import combine
@@ -237,7 +250,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
             ev["rows"]=combine(ev["rows"],arb["rows"])
             ev["total_candidates"]=len(ev["rows"])
             return ev
-        assumptions=validate_assumptions(json.loads(q.get('assumptions','{}')))
         owned=getattr(owner.session,'sid',None)
         sid=q.get('capture') or (owned if owned in ds else list(ds)[-1] if ds else None)
         result=dict(status=owner.status(),captures=[dict(id=s,label=d['label']) for s,d in ds.items()],capture=sid,rows=[],coverage=None)
@@ -336,7 +348,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         d=datasets(sid,catalog_all=False)[sid]
         if 'product' not in d:raise ValueError('Size exploration requires a product journal; original legacy output remains available')
         snapshot=product_cutoff(sid,d,options['cutoff'])
-        game=next(g for g in snapshot['games'] if g['id']==gid)
+        game=selected_game(snapshot['games'],gid)
         if game.get('manual_raw'):
             from app.collection.v1_comparison import size_report as manual_sizes
             return web.json_response(manual_sizes(snapshot,game,options))
@@ -361,7 +373,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         d=datasets(sid,catalog_all=False)[sid]
         if 'product' not in d:raise ValueError('Product journal required')
         snapshot=product_cutoff(sid,d,options['cutoff'])
-        game=next(g for g in snapshot['games'] if g['id']==gid)
+        game=selected_game(snapshot['games'],gid)
         result=evaluate(snapshot,game,options)
         math_downloads[result['sha256']]=result
         while len(math_downloads)>32:math_downloads.pop(next(iter(math_downloads)))
@@ -388,10 +400,18 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         def completed(task):
             nonlocal history_busy
             history_busy=False
-            if not task.cancelled():task.exception()
-        task=asyncio.create_task(asyncio.to_thread(build_history,paths[sid],values))
+        async def build():
+            try:
+                return await asyncio.to_thread(build_history,paths[sid],values), None
+            except Exception as exc:
+                # Return errors as data: newer asyncio runtimes can log raw
+                # shielded exceptions even after a done callback retrieves them.
+                failure(__name__, 'opportunity_history_build', exc)
+                return None, exc
+        task=asyncio.create_task(build())
         task.add_done_callback(completed)
-        report=await asyncio.shield(task)
+        report,error=await asyncio.shield(task)
+        if error is not None:raise error
         if cache_key is not None:
             # Exact immutable files and watch definitions are rechecked before
             # reuse; the download returns the same calculation at every cutoff.
@@ -441,7 +461,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
             if not d or 'product' not in d or not q.get('cutoff') or not q.get('game'):
                 raise ValueError('Exact retained capture, cutoff and game required')
             snapshot=product_cutoff(sid,d,q['cutoff'])
-            game=next(g for g in snapshot['games'] if g['id']==q['game'])
+            game=selected_game(snapshot['games'],q['game'])
             payload=dict(version=VERSION,session_id=sid,cutoff=snapshot['durable_cursor'],game_id=game['id'],
                 details=details(game,snapshot),historical=True,live=False,collection_authorized=False)
         elif q.get('cutoff') or q.get('game'):raise ValueError('Unbound public contract selection')

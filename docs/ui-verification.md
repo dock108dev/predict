@@ -1,5 +1,73 @@
 # Predict UI verification
 
+## October 1, 2026 — saved-review presentation cleanup
+
+Current source only, following the three maintenance passes. The frozen beta
+candidate and original review evidence remain unchanged. Main journeys reviewed:
+compare results, choose a saved scan and open a game. Saved selection is now
+visible, while settings and watch/history share one panel with independent
+disclosures. Group labels and unavailable reasons use familiar words; game
+headers show saved times and keep exact IDs inside the saved-time disclosure.
+No calculation, ranking, eligibility, permission or persistence contract changed.
+
+Matched Chrome desktop 1440×900 and narrow 390×844 screenshots use the same
+isolated `b2-fixture` journal, three synthetic reference inputs, query, saved
+cutoff and 100-contract size. Before assets come from unchanged HEAD UI files;
+both versions run against the same current router. The first result means the
+first displayed return or price, not the later raw-comparison group.
+
+| Screen / first result top | Before | After |
+| --- | --- | --- |
+| Desktop list | 754.5px | 663.5px |
+| Narrow list | 1112.6px | 1055.6px |
+| Desktop game | 442.2px | 442.2px |
+| Narrow game | 631.5px | 610.3px |
+
+Saved-scan selection no longer requires opening settings; settings and watches
+still each take one disclosure action. Desktop results appear earlier in the
+first viewport. Narrow list results still require scrolling; type and 44px
+controls were preserved. These are measured positions, not usability percentages.
+
+Matched screens: [desktop before](../evidence/ux-cleanup-20261001/before-desktop.png)
+/ [after](../evidence/ux-cleanup-20261001/after-desktop.png),
+[narrow before](../evidence/ux-cleanup-20261001/before-narrow.png)
+/ [after](../evidence/ux-cleanup-20261001/after-narrow.png),
+[game before](../evidence/ux-cleanup-20261001/before-game-narrow.png)
+/ [after](../evidence/ux-cleanup-20261001/after-game-narrow.png).
+[Browser checks and measurements](../evidence/ux-cleanup-20261001/checks.json)
+include matched loading, empty, failed/recovery, disabled Start and simulated
+running/Stop states. Stop requests in this comparison are intercepted synthetic
+responses; they do not qualify collector behavior. Both widths also passed
+keyboard disclosure activation, invalid sizing/recovery, watch expansion, open
+Details/focus surviving refresh and 200% CSS magnification with no page overflow.
+Game saved-time disclosures expose the exact retained ID. No page errors occurred.
+In-app browser desktop/narrow inspection also confirmed the current hierarchy.
+
+Nine existing JavaScript checks pass: dashboard failures, board security, concise
+dashboard, source details, native comparisons, aggregate UI, commercial UI,
+session controls and source settings. Updated assertions cover new recovery
+labels, saved timestamp/ID placement and display-only translations. Nineteen
+Python dashboard-security/SSOT tests, changed-JS syntax, preview Python compilation,
+documentation links and diff checks pass. Before/after API rows, comparisons,
+reference inputs and cursor match exactly.
+
+The collector-backed comparison preview timed out waiting for its two synthetic
+connections; the existing discovery follow-up remains separate. The saved-data
+preview instead used temporary storage, an isolated history catalog and watch
+path, with collection disabled. The reusable comparison fixture now also excludes
+the default retained catalog and owner watch path. No live/provider access,
+owner mutation, ordinary app restart, full CI, packaging or release occurred.
+CSS magnification does not establish native browser zoom or screen-reader
+support; Safari and physical-device checks were not run. Owner acceptance remains
+pending.
+
+Two bounded suggestions remain outside presentation scope: investigate the
+collector fixture timeout in a fresh disposable root; and review whether raw
+prices should precede numerous return cards in the combined feed. In this fixture,
+the first raw price is around y=3087 on desktop despite the earlier return result.
+Changing group priority would change the accepted ranking/product contract and
+needs a separate decision.
+
 ## September 23, 2026 — ordinary experience cleanup
 
 Source presentation review, based on `5dd3407044be476a16f5c796034bd39412049449`
@@ -93,19 +161,14 @@ Existing dashboard failure and concise-dashboard checks passed. Browser preview 
 
 ## Retained review
 
-The original report referenced screenshots and browser results in the optional
-`UI Templates/review.html` gallery on the owner's Desktop. That gallery is
-unavailable in the current workspace, so its artifacts were not reverified during
-the September 23 documentation pass. The following remains the September 21
-report, not current-checkout visual evidence. Browser specimens were local
-fixtures or isolated startup states. Web review checked representative
-1440px/390px layouts, page exceptions, and page-level horizontal overflow; it was
-not an exhaustive audit of every state, contrast pair, screen reader, browser,
-installed build, or physical phone.
+This is a historical browser review record, not current-checkout visual evidence.
+Browser specimens used local fixtures or isolated startup states. Representative
+1440px/390px layouts, page exceptions and page-level horizontal overflow were
+checked; the review did not cover every state, contrast pair, screen reader,
+browser, installed build or physical phone. Current styling conventions are in
+[UI design](ui-design.md).
 
-Template gallery search, form submit feedback, dialog opening, and Escape dismissal were exercised. Shared styles include keyboard focus, reduced-motion, and reduced-transparency handling. Native Godot is a basic translucent fallback, not a true blur material. Native games retain their desktop layout and illustrated artwork.
-
-See [design and future template use](ui-design.md). No owner acceptance or release qualification is inferred. Rebuild/relaunch the appropriate source application to see the change; installed or frozen copies remain their original versions.
+No owner acceptance or release qualification is inferred. Rebuild/relaunch the appropriate source application to see the change; installed or frozen copies remain their original versions.
 
 
 ## September 28 presentation cleanup

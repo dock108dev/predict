@@ -1,5 +1,6 @@
 """Explicit, injected, bounded reference refresh. No default transport or key access."""
 from copy import deepcopy
+from app.diagnostics import failure
 from app.reference.product import MAX_BODY, SOURCES, digest, time
 
 class Refresh:
@@ -47,5 +48,11 @@ class Refresh:
             if self.stopped:raise ValueError('Stopped before publication')
             retain(deepcopy(dict(entry,response=value)))
             self.cache[key]=dict(at=at,value=deepcopy(value));return deepcopy(value)
-        except Exception:
-            entry['state']='failed';self.stopped=True;retain(deepcopy(entry));raise
+        except BaseException:
+            # Reservations survive cancellation too; a failure-report write must
+            # never replace the transport/storage error or cancellation.
+            entry['state']='failed';self.stopped=True
+            try:retain(deepcopy(entry))
+            except Exception as report_error:
+                failure(__name__, 'reference_refresh_failure_report', report_error)
+            raise

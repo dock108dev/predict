@@ -67,3 +67,7 @@ A small [GraphQL display bridge](novig-graphql-assessment.md) is implemented at 
 [Continuation evidence](../evidence/b3-continuation-20260921/final-report.md) records focused tests, 124 native/lifecycle checks, product integration and 18-Arb/96-EV reconciliation, and isolated browser verification. Historical evidence above is not promoted. [Access and local setup instructions](venue-access-setup.md) and the [unsent NBX request](novig-access-request.md) are ready. The owner can obtain keys when needed; no issued production provisioning was confirmed, no credentials were inspected and no live collection occurred.
 
 Remaining independent work is optional additional scope fixtures or an affiliate ProphetX adapter if that is the API ultimately provisioned. The requested independent replay, selection and supported listing-association work is complete; unresolved native meanings remain explicit evidence gaps. Venue integration exit still requires four actual production sources and useful ordinary overlap.
+
+The dated B3 reports' `.txt` test transcripts are retained locally and excluded
+from the current Git tree. Their recorded results remain historical; saved
+fixtures and replay inputs remain available in a fresh checkout.

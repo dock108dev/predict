@@ -19,6 +19,7 @@ class WorkflowPolicy(unittest.TestCase):
             self.assertNotIn('minimum_valid_retained_pairs', status)
             self.assertNotIn('met', status)
             self.assertFalse(status['authorization_changed'])
+            self.assertEqual(status['authority'], 'docs/configuration.md#saved-review-and-live-collection')
         self.assertEqual(before, [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths])
 
     def test_historical_and_document_destinations_are_rejected(self):

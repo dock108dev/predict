@@ -1,6 +1,6 @@
 # Predict private beta product scope
 
-October 1, 2026. This document owns current product scope under the [authoritative tracker](../../prediction_arb_next_steps.md). [Acceptance](beta-coverage-acceptance.md) defines the workflow gate; [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns readiness evidence. Older definitions below are historical.
+October 1, 2026. This document records product scope; [configuration](configuration.md) describes supported operation. [Acceptance](beta-coverage-acceptance.md) defines the workflow gate; [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns readiness evidence. Older definitions below are historical.
 
 Predict helps the owner find and inspect useful cross-venue prices, then trade manually outside the app. Beta/V1 covers configured authorized collection, exact matching, useful raw comparisons, sport/venue/market filters, fixed-cutoff Details, timestamps and source health, settlement/fee explanations, supported informational sizing, persistent watches, Stop, history, downloads and exact saved reopening. Preserve the accepted layout and shared implementation.
 
@@ -24,7 +24,7 @@ Updated September 29, 2026. **NOT READY FOR BETA SIGNOFF.** This document owns c
 
 September 29 owner update: complete [E1–E5](commercial-value-engineering.md) before another general owner walkthrough or fresh live qualification attempt. Deliver understandable comparability/economics, intended-size comparisons using existing fee/depth code, saved watchlists with in-app signals, and auditable opportunity history, then verify the integrated ordinary-app workflow. Status: planned, not implemented by this documentation update. Engineering completion does not prove profitable opportunities or customer demand.
 
-The September 28 two-venue supervised session already demonstrated four games/eight comparisons, ordinary Stop, event links and saved reopening; the [Desktop tracker](../../prediction_arb_next_steps.md) retains exact results. The earlier description of this experience as merely planned is superseded. Settlement/economics, real recovery and full beta qualification remain open. Preserve the accepted readable comparison experience and the existing all-four/six-sport scope below. Missing Novig/ProphetX evidence or optional models must not block independent local engineering. Further Kalshi/US outreach remains withdrawn; this update starts no collection.
+The September 28 two-venue supervised session already demonstrated four games/eight comparisons, ordinary Stop, event links and saved reopening; the [dated supervised review](live-comparison-handoff.md) retains the review context. The earlier description of this experience as merely planned is superseded. Settlement/economics, real recovery and full beta qualification remain open. Preserve the accepted readable comparison experience and the existing all-four/six-sport scope below. Missing Novig/ProphetX evidence or optional models must not block independent local engineering. Further Kalshi/US outreach remains withdrawn; this update starts no collection.
 
 ## Product goal
 

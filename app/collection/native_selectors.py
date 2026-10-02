@@ -217,7 +217,7 @@ async def discover_gaps(d,venue):
                 if traversal['state']=='failed':
                     d.stop_source(venue,'invalid_gap_traversal');raise ValueError('invalid_gap_traversal')
                 games,excluded=candidates(d.pages,venue,sport,d.selection_time)
-                # Slice requires explicit kickoff for time-sensitive selection.
+                # Time-sensitive selection requires an explicit kickoff.
                 excluded.extend(dict(id=e['id'],reason='missing_schedule_for_current_selection') for e in games if e['scheduled_start'] is None)
                 games=[e for e in games if e['scheduled_start'] is not None]
                 state.update(state='game_found' if games else 'no_eligible_game_in_bounded_query',exclusions=excluded,traversal=traversal)

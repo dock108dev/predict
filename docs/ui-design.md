@@ -4,7 +4,7 @@ Use the [design requirements](ui-design-requirements.md) and `app/dashboard/oppo
 
 ## Layout and behavior
 
-The dashboard opens All opportunities, with supported EV percentages first in their existing groups and raw price comparisons kept distinct from net-return calculations. Arbitrage, EV estimates and Saved-page research remain separate views. Search, league and market filters stay visible; saved scans, sizing and scan settings share one secondary disclosure. The compact header and controls bring the existing cards earlier on the page. Game names and market scope have separate text hierarchy.
+The dashboard opens All opportunities, with supported EV percentages first in their existing groups and raw price comparisons kept distinct from net-return calculations. Arbitrage, EV estimates and Saved-page research remain separate views. Saved-scan selection, search, league and market filters stay visible. Scan/calculation settings and watch/history each have a direct disclosure in the same controls panel. The compact header and controls bring the existing cards earlier on the page. Game names and market scope have separate text hierarchy.
 
 Keep saved/demo context, source state, fee uncertainty and blockers visible. Put coverage, original inputs and calculation evidence in named disclosures. Unknown and zero metrics use neutral text; negative and unavailable results remain explicit.
 
@@ -24,6 +24,11 @@ saved time.” Routine source setup is inside “Sources and market coverage”;
 unavailable and resynchronization states and supplied reasons stay visible outside.
 Prices, quantities, receipt/source age, settlement uncertainty and EV limitations
 remain beside each result. Source records and calculations are unchanged.
+
+Use familiar display labels such as “Model-based EV” while retaining original
+group values and ordering. Show readable saved times above Game details; exact
+record IDs belong in the existing saved-time disclosure. Unavailable amounts say
+“Unavailable” without a dollar sign, while actual zero remains a numeric value.
 
 Invalid-input feedback points to filters or saved-scan settings, while connection
 failures keep the Refresh recovery message. Matched synthetic screenshots and validation are in

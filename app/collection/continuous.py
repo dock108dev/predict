@@ -24,6 +24,7 @@ from app.collection.transport_session import TransportSession
 from app.collection.odds_http import BudgetStop
 from app.collection.venue_access import ENDPOINTS
 from app.reference.records import packed
+from app.diagnostics import failure
 
 MIB = 1024 * 1024
 LIMITS = dict(rest_per_venue=100, requests_per_second=2, markets_per_venue=100,
@@ -657,21 +658,24 @@ class Discovery:
                     results=[results_by_source[v] for v in self.venues]
                 else:
                     results = await asyncio.gather(*(self.venue(v) for v in self.venues), return_exceptions=True)
-                errors = [type(e).__name__+':'+str(e) for e in results if isinstance(e, BaseException)]
+                errors = [type(e).__name__ for e in results if isinstance(e, BaseException)]
+                for venue,result in zip(self.venues,results):
+                    if isinstance(result,BaseException):
+                        failure(__name__, 'native_discovery_'+venue, result)
                 if errors and (not getattr(self.session,'product_session',False) or (self.completed and not self.session.spec.get('native_sources') and not self.session.spec.get('source_session'))):
                     raise ValueError('; '.join(errors))
                 if isolated_native(self.session.spec):
                     for v,result in zip(self.venues,results):
-                        if isinstance(result,BaseException):self.stop_source(v,str(result))
+                        if isinstance(result,BaseException):self.stop_source(v,type(result).__name__)
                 from .native_books import enabled as book_slice, finish as finish_books
                 if book_slice(self.session.spec):await finish_books(self)
                 cats, markets = self.project()
                 if errors:
                     for v,result in zip(self.venues,results):
                         if isinstance(result,BaseException):
-                            cats[v].update(event_discovery='failed',market_completeness='partial',selection=dict(ids=[],eligible=None),source_error=self.source_stops.get(v,str(result)))
-                            if v not in self.source_stops:self.stop_source(v,str(result))
-                            for item in cats[v]['markets']:item['exclusion']='Source admission stopped: '+str(result)
+                            cats[v].update(event_discovery='failed',market_completeness='partial',selection=dict(ids=[],eligible=None),source_error=self.source_stops.get(v,type(result).__name__))
+                            if v not in self.source_stops:self.stop_source(v,type(result).__name__)
+                            for item in cats[v]['markets']:item['exclusion']='Source admission stopped: '+type(result).__name__
                             cats[v]['counts']=coverage.totals(cats[v])
                             markets[v]={}
                 if getattr(self.session,'profile',None):
@@ -706,7 +710,7 @@ class Discovery:
                 return self.markets
             except BaseException as exc:
                 self.refresh.update(state='interrupted' if isinstance(exc, asyncio.CancelledError) else 'failed',
-                                    reason=type(exc).__name__+':'+str(exc), finished_at=now().isoformat())
+                                    reason=type(exc).__name__, finished_at=now().isoformat())
                 # Durable partial progress is diagnostic only, never a coverage denominator.
                 self.partial = {v:coverage.catalog(self.pages,v,now(),v1_templates=self.session.spec.get('native_review_records',[]) if self.session.spec.get('v1_comparison_policy') else ()) for v in self.venues}
                 for cat in self.partial.values():
@@ -729,7 +733,8 @@ class Discovery:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            self.stop_source(venue,str(exc))
+            failure(__name__, 'native_diagnostic_discovery', exc)
+            self.stop_source(venue,type(exc).__name__)
         catalog_error=None
         try:
             catalog=coverage.catalog(self.pages,venue,now(),v1_templates=self.session.spec.get('native_review_records',[]) if self.session.spec.get('v1_comparison_policy') else ())
@@ -1159,8 +1164,9 @@ class ContinuousSession(TransportSession):
             if self.stop_event.is_set():
                 break
             try:await self.discovery.discover(force=True)
-            except Exception:
+            except Exception as exc:
                 if not getattr(self,'product_session',False):raise
+                failure(__name__, 'product_discovery_refresh', exc)
                 self.emit('session',dict(type='product_coverage_status',coverage=self.status_coverage(),refresh=self.discovery.refresh,safety_exclusions=self.discovery.blocked))
             if self.profile:
                 await self.stop_event.wait()
@@ -1182,7 +1188,27 @@ class ContinuousSession(TransportSession):
                        **p.snapshot()) for v,p in self.producers.items()}
 
     async def run(self):
-        watcher = asyncio.create_task(self.monitor())
+        self.monitor_error = None
+        async def monitored():
+            try:
+                await self.monitor()
+                if not self.stop_event.is_set():
+                    raise RuntimeError('resource monitor ended before Stop')
+            except asyncio.CancelledError as exc:
+                if not self.stop_event.is_set():
+                    failure(__name__, 'resource_monitor', exc)
+                    self.monitor_error = type(exc).__name__
+                    self.intake_closed = True
+                    self.request_stop('resource_monitor_failure:'+self.monitor_error)
+                raise
+            except Exception as exc:
+                failure(__name__, 'resource_monitor', exc)
+                self.monitor_error = type(exc).__name__
+                self.intake_closed = True
+                # A failed safety check cannot leave collection running without
+                # its resource bounds. Terminal writing still belongs to run().
+                self.request_stop('resource_monitor_failure:'+self.monitor_error)
+        watcher = asyncio.create_task(monitored())
         try:
             await super().run()
         finally:
@@ -1190,6 +1216,8 @@ class ContinuousSession(TransportSession):
             self.collection_seconds = self.closed_at-self.started_monotonic
             watcher.cancel()
             await asyncio.gather(watcher,return_exceptions=True)
+            if self.monitor_error:
+                self.state = 'failed'
 
     async def monitor(self):
         while not self.stop_event.is_set():

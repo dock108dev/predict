@@ -9,6 +9,15 @@ DIRECTORY=Path(__file__).resolve().parents[1]/'reviews/native'
 STATES={'UNKNOWN','CONDITIONAL','INCOMPATIBLE','SUPPORTED'}
 
 
+def packaged_index():
+    """Local retained reviews are optional; an existing invalid catalog still fails."""
+    try:
+        text=(DIRECTORY/'index-v4.json').read_text()
+    except FileNotFoundError:
+        return None
+    return json.loads(text)
+
+
 def validate(record):
     r=deepcopy(record);digest=r.pop('sha256',None)
     if digest!=stable(r):raise ValueError('Native review content hash mismatch')
@@ -79,7 +88,8 @@ def records(projection):
     if not explicit and 'native_review_records' not in projection.spec and getattr(projection,'packaged_review_cache_key',None)==cache_key:return projection.packaged_review_cache
     values=list(explicit.values())
     if not explicit and 'native_review_records' not in projection.spec:
-        index=json.loads((DIRECTORY/'index-v4.json').read_text())
+        index=packaged_index()
+        if index is None:return [],{}
         for name in index['historical_sessions'].get(projection.sid,[]):
             digest=index['records'][name]
             if Path(name).name!=name:raise ValueError('Unsafe native review filename')
@@ -144,7 +154,9 @@ def records(projection):
 
 def historical_paths():
     """Only explicitly indexed retained packages; no recursive discovery or acquisition."""
-    index=json.loads((DIRECTORY/'index-v4.json').read_text());root=Path(__file__).resolve().parents[2]
+    index=packaged_index()
+    if index is None:return {}
+    root=Path(__file__).resolve().parents[2]
     result={}
     for sid,binding in sorted(index.get('historical_paths',{}).items(),key=lambda item:(item[1].get('started_at',''),item[0])):
         path=Path(binding['folder'])

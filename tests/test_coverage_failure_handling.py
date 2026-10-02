@@ -115,7 +115,8 @@ class CoverageFailures(unittest.IsolatedAsyncioTestCase):
                 client = TestClient(TestServer(create_app(owner=owner, sessions={})))
                 await client.start_server()
                 try:
-                    with patch(target, side_effect=OSError('SECRET private path')):
+                    with patch('app.dashboard.native_reviews.DIRECTORY', Path(tmp)/'absent-reviews'), \
+                            patch(target, side_effect=OSError('SECRET private path')):
                         with self.assertLogs('app.dashboard.multi_game_server', level='ERROR') as logs:
                             response = await client.get('/api/dashboard?capture=synthetic')
                             data = await response.json()

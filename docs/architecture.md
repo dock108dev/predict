@@ -48,6 +48,10 @@ The product is a local, file-backed sports prediction dashboard. [Module ownersh
 | `POST /api/start`, `/api/stop` | Explicit bounded collection and stop request |
 | `GET /api/updates` | Bounded server-sent update notifications; HEAD returns headers only |
 | `POST /api/references`, `/api/resolutions` | Validate and append retained records to an active product session |
+| `GET/POST /api/watchlists`, `GET /api/signals` | Persist local filter criteria and report eligible current signals |
+| `POST /api/decision-sizes`, `/api/math-scenario` | Evaluate supported quantities and conditional scenarios |
+| `GET /api/opportunity-history`, `/api/math-scenario-download` | Exact saved-history review and scenario downloads |
+| `GET /api/native-reviews`, `/api/source-bindings`, `/api/public-contracts` | Inspect retained judgments and source contracts without starting collection |
 
 Import routes require an active session with a projection; they do not edit a
 completed saved package. Frozen two-source qualification excludes both imports.
@@ -56,6 +60,12 @@ producer tasks and its monitor; Stop requests shutdown, and saving may still be
 in progress when the HTTP response returns. Observe `/api/status` until saving
 finishes. Application cleanup requests Stop and awaits the finalizer. There is
 no independent worker queue, scheduled scan or automatic restart/resume service.
+
+Opportunity-history work runs in a thread with bounded concurrency; cancellation
+of a request does not abandon its active worker. Resolution-history subprocesses
+remain bounded local readers. Neither worker initiates provider collection.
+Watchlists persist in `.local/predict-watchlists.json`; criteria authorize no
+collection. Browser-held What-if assumptions are separate from provider credentials.
 
 ### Stored records
 
@@ -78,7 +88,7 @@ the ordinary collector without overwriting the original prediction.
 PostgreSQL remains separate: `storage/store.py` and migrations retain earlier
 capture, reference, fair-price and opportunity-audit contracts. These are not
 interchangeable with current conditional board results. See
-[PostgreSQL capture](slice-12.md), [reference collection](e2-implementation-report.md),
+[storage CLI](../app/storage/__main__.py), [schema migrations](../app/storage/migrations/001_capture.sql),
 [settlement-aware comparisons contracts](e3-contracts.md) and [reference comparisons contracts](e4-contracts.md).
 
 ## Retained surfaces and limits
@@ -89,7 +99,9 @@ interchangeable with current conditional board results. See
 | Native / two-source qualification panels | Same router and shared owner, with explicit spec/approval and separate attempt constraints |
 | Historical capture readers | Active saved-catalog and research dependencies; original identities retained |
 | All-outcome/depth/audit engines | Distinct calculation contracts, reused where appropriate |
-| research and collection previews and `scripts/dashboard` | Separate historical entry points; shared book/lifecycle helpers remain imported |
+| research and collection previews | Separate retained-evidence entry points; shared book/lifecycle helpers remain imported |
+| Generic `python -m app.dashboard` | Delegates to the ordinary file-backed entry point |
+| Historical `scripts/dashboard` | Process controls retired with explicit failure before database actions or signals |
 | Novig/ProphetX / GraphQL | Native collector extensions; real qualification gaps remain. Display-only prices are not sized opportunities |
 | Trading | No order execution implemented |
 

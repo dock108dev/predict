@@ -48,6 +48,14 @@ exit before restart; repeating Stop does not certify that failed socket's closur
 
 ## Startup and finalization
 
+The continuous collector treats a failed or prematurely ended resource monitor
+as a scan failure. It closes intake and requests Stop with
+`resource_monitor_failure:<exception class>`, logs `resource_monitor`, and marks
+the runtime failed after resource shutdown. Flat and segmented owners refuse a
+completion manifest for this failure, even if the terminal journal was written.
+Normal monitor cancellation during Stop is expected. Preserve the journal and
+diagnostics; a monitor failure does not authorize another live attempt.
+
 `CoverageOwner` enforces prior cleanup failure at Start itself,
 before opening the collector lock or accessing configuration. Hiding/disabling the
 browser button is not the enforcement boundary. Startup errors and cancellation
@@ -80,6 +88,42 @@ captures remain usable. This does not change ordinary input-validation messages.
 
 
 ## Diagnostics and persistence
+
+Shielded opportunity-history workers return failures as data and log
+`opportunity_history_build`, including after browser/request cancellation. The
+worker retains its concurrency slot until it finishes, then releases it. This
+avoids raw exception logging from detached shielded tasks on newer Python
+runtimes. An attached request still receives the normal safe API failure.
+Arithmetic errors use a fixed HTTP 422 calculation message and log
+`dashboard_arithmetic`; ordinary input-validation responses remain unchanged.
+
+Product discovery-refresh failures retain their existing partial/failed status
+and source isolation, with `product_discovery_refresh` logged for each occurrence.
+Isolated replay failures log `coverage_isolated_replay` and withhold completion.
+Collector-lock errors and secondary close errors log `coverage_owner_lock` and
+`coverage_owner_lock_cleanup`; secondary errors do not replace the safe lock
+rejection.
+
+Novig unsubscribe failures log `novig_unsubscribe` and still attempt socket
+closure. Unsubscribe is best effort because confirmed socket closure ends the
+subscription. Actual Novig close failures log `stream_connection_close`, remain
+sticky in `cleanup_errors`, prohibit reconnecting, and cause later `aclose()`
+calls to raise a safe error even after the socket reference is detached. Socket
+closure uses the shared bounded close-result helper with a two-second timeout.
+An active primary exception/cancellation survives secondary finalization errors.
+
+Injected reference refresh retains request/credit reservations on failure and
+cancellation, marks its ledger entry failed, stops acquisition and publishes no
+cache entry. Failure-report writes are best effort; a secondary write failure
+logs `reference_refresh_failure_report` and preserves the original exception or
+cancellation. Missing failure-report persistence never refunds reserved credits.
+
+The dedicated authenticated sample tools temporarily suppress standard logging
+to prevent credential-bearing URLs from third-party HTTP logs. The Pinnacle
+sample now restores the previous logging threshold in `finally`, including on
+cancellation, matching the aggregate acquisition tools. Sanitized result files
+remain the operating diagnostic while suppression is active. These executables
+are separate from the dashboard and require their existing exact authorization.
 
 Transport resource closure attempts every producer and optional reference client.
 Returned exceptions are recorded as source plus exception type in `cleanup_errors`,
@@ -138,3 +182,6 @@ Start in the same process; confirm process exit before restarting.
 The focused shutdown tests are listed in [development](development.md#pull-request-ci).
 Original candidate-specific findings and validation are retained in the
 [engineering record](history/maintenance-20260928/error-handling.md).
+The [October 1 source maintenance record](history/maintenance-20261001-abend.md)
+records this pass and its baseline test limitations. Historical beta candidate
+checks do not qualify the edited source.
