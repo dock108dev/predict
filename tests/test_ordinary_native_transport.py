@@ -28,6 +28,7 @@ from tests.test_native_http_reader import server, fixed
 
 def configuration():
     value=spec();value.update(mode='mock',reference_enabled=False)
+    value['v1_comparison_policy']=None  # Original wire-fixture interpretation.
     value['native_transport']=deepcopy(native_payload.TRANSPORT_CONTRACT)
     value['native_sources']={v:dict(state='enabled',environment='production',
         poll_seconds=10,event_cap=1,market_cap=2) for v in ('kalshi','polymarket_us')}

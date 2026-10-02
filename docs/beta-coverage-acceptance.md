@@ -1,96 +1,33 @@
-# Beta coverage acceptance and post-beta backlog
+# Private beta workflow acceptance
 
-October 1, 2026 owner decision. This is acceptance policy, with no new collection authority.
+October 1, 2026. This document defines engineering readiness and owner acceptance for Predict's private, read-only comparison workflow. The [authoritative tracker](../../prediction_arb_next_steps.md) governs scope and next actions. The [workflow checklist and final verification](../evidence/private-beta-workflow-20261001-v1/README.md) records the candidate-specific decision.
 
-**Beta coverage requires at least 48 of the fixed 63 requirements with valid retained price pairs (76.19%).** 51/63 is desirable only when straightforward. Do not delay beta to chase all 63. Current coverage is 15/63 (23.81%); the shortfall is 33. The next retained-native candidate set can potentially add two requirements after current refresh and actual paired books. This is not evidence that 48/63 is impossible.
+## Acceptance policy
 
-Count exact eligible comparisons between any two of Kalshi, Polymarket US, Novig and ProphetX. Metadata admission, reference-only prices and synthetic engineering fixtures never count. Keep historical retained coverage separate from freshness, current availability and runtime qualification. All four comparison venues must continue contributing useful comparisons; four venues per pair and four venues in every cell are unnecessary.
+The owner must be able to find, understand and revisit useful cross-venue price differences before trading manually outside Predict. Readiness requires the seven-step workflow below with honest limitations, rather than a percentage of market coverage. The former 48/63 gate and optional 51/63 target are withdrawn. The 63 requirements and 252 source records remain factual accounting and the broader roadmap.
 
-| Sport | Valid retained pairs | Fixed requirements |
-| --- | ---: | ---: |
-| NFL | 4 | 8 |
-| NBA | 1 | 8 |
-| MLB | 3 | 17 |
-| NHL | 3 | 14 |
-| NCAAF | 4 | 8 |
-| NCAAB | 0 | 8 |
+| Workflow | Required behavior |
+| --- | --- |
+| Start | Idle startup; configured sources and fresh applicable exact-run authority before live collection; no automatic restart. |
+| Discover | Exact event, participants/orientation, outcome, period, line and applicable season/occurrence match. Raw comparisons remain accessible with dependent calculations unavailable. |
+| Filter | Sport, venue, market, period and search consistently select rows; empty results explain how to recover. |
+| Details | Freeze the selected comparison and cutoff; native prices/units, source/receipt clocks, ages, health, settlement differences, supported fees and unavailable reasons remain understandable. Supported sizing states quantity, units, depth and assumptions. |
+| Watches | Persist selected criteria locally; eligible current data only supports live signals; saved/stale/disconnected observations are distinguished. |
+| Stop and revisit | Cleanup/finalization, history, downloads and fresh-process reopening preserve exact selected results. |
+| Manual decision | Trading occurs outside Predict. Prices, conditional arbitrage return, supported EV and What-if EV retain distinct labels and probability basis. |
 
-| Market family | Valid retained pairs | Fixed requirements |
-| --- | ---: | ---: |
-| moneyline | 8 | 17 |
-| spread | 3 | 17 |
-| total | 4 | 17 |
-| conference_champion | 0 | 6 |
-| league_champion | 0 | 6 |
+Kalshi and Polymarket US use native integrations. Novig and ProphetX use The Odds API. All four remain intended comparison participants, with actual venue/market availability visible; simultaneous availability everywhere is unnecessary. Prioritize full-game winner, spread and total and other supported useful overlap. Missing seasonal/niche offerings and individual cells do not automatically block beta.
 
-| Period group | Valid retained pairs | Fixed requirements |
-| --- | ---: | ---: |
-| full_game | 12 | 18 |
-| first_half | 2 | 12 |
-| season | 0 | 12 |
-| first_3 | 0 | 3 |
-| first_5 | 1 | 3 |
-| first_6 | 0 | 3 |
-| regulation_9 | 0 | 3 |
-| period_1 | 0 | 3 |
-| period_2 | 0 | 3 |
-| period_3 | 0 | 3 |
+## Calculations and limitations
 
-Retained paired requirement contributions: Kalshi 3, Polymarket US 3, Novig 14, ProphetX 14. Counts overlap because a requirement can contain more than one venue pair. These dated counts do not prove healthy current feeds.
+Unknown account costs, settlement cashflows or units withhold only dependent net, guaranteed-profit or sizing outputs. EV requires a supported probability and disclosed basis; deterministic scenario analysis does not require a probability. EV retains the established EV%-first ordering where supported. References from Pinnacle, DraftKings and BetMGM are never comparison legs. Informational depth does not guarantee a fill.
 
-Prioritize exact native counterparts and other missing cells with implemented locators and admitted identities. Use bounded discovery hypotheses for NFL H1 line/availability questions. Avoid repeated engineering or acquisition cycles on unknown segment locators and unavailable observations while easier supported pairs remain. No broad already-covered moneyline or reference-only outright repetition is planned.
+Retained real observations prove their recorded historical cutoffs. Local fixtures prove controlled update, failure and recovery behavior. Neither proves today's prices, real provider recovery, owner acceptance or commercial value. Engineering readiness and owner walkthrough acceptance are separate records. Later live collection needs fresh authority for its exact candidate and scope; sealed counterpart packages stay inert.
 
-Once 48/63 is reached and the ordinary V1 workflow passes, close the beta coverage workstream. Record remaining cells below as post-beta limitations; they no longer block beta solely because coverage is incomplete. Preserve the complete denominator and source evidence. If observed offerings make 48 unattainable, report the exact shortfall, attempted scopes, empty/capped/unknown distinctions and retained evidence; do not silently shrink the scope.
+## Factual coverage and later work
 
-The following is the visible unresolved inventory today. It becomes the post-beta backlog only after the closure gate passes; currently the workstream remains open.
+The retained ledger has 35/63 observed and 15/63 paired requirements, with 76/252 observed and 34/252 paired source records. These are evidence counts, not readiness percentages. Paired requirements by sport: NFL 4/8, NBA 1/8, MLB 3/17, NHL 3/14, NCAAF 4/8, NCAAB 0/8. Overlapping venue contributions: Kalshi 3, Polymarket US 3, Novig 14, ProphetX 14. These dated observations do not assert current feeds.
 
-| Requirement | Current blocker class | Next work |
-| --- | --- | --- |
-| NFL/first_half/spread | missing_counterpart_identity | Specific football H1 offering hypothesis |
-| NFL/first_half/total | missing_counterpart_identity | Specific football H1 offering hypothesis |
-| NFL/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NFL/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/full_game/spread | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/full_game/total | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/first_half/moneyline | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/first_half/spread | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/first_half/total | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NBA/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/full_game/spread | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_3/moneyline | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_3/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_3/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_5/spread | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_5/total | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_6/moneyline | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_6/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/first_6/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/regulation_9/moneyline | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/regulation_9/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/regulation_9/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| MLB/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_1/moneyline | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_1/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_1/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_2/moneyline | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_2/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_2/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_3/moneyline | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_3/spread | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/period_3/total | unknown_locator | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NHL/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAF/first_half/spread | ready_for_fresh_paired_books_after_current_refresh | Bounded native refresh / exact paired books |
-| NCAAF/first_half/total | ready_for_fresh_paired_books_after_current_refresh | Bounded native refresh / exact paired books |
-| NCAAF/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAF/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/full_game/moneyline | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/full_game/spread | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/full_game/total | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/first_half/moneyline | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/first_half/spread | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/first_half/total | offering_unavailable_in_retained_observations | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/season/conference_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
-| NCAAB/season/league_champion | missing_counterpart_identity | Deferred identity/locator/observed-offering evidence; no request planned |
+[Original admission accounting](../evidence/v1-admission-delivery-repair-20261001-v1/coverage-63.json) and [exact unresolved counterpart inventory](../evidence/v1-counterpart-completion-20261001-v1/counterpart-inventory.json) preserve every remaining requirement. Unknown locators, missing exact counterpart facts and unobserved offerings remain visible roadmap work; empty samples do not prove non-support. Automated submission, fills/positions, execution reconciliation and order timing are V2.
+
+The version 2 [coverage generator](../scripts/write_v1_beta_coverage_status.py) writes factual JSON/Markdown to a new workflow accounting namespace. It does not overwrite this acceptance document, historical evidence or sealed packages. Routine regeneration cannot restore the withdrawn numeric gate.

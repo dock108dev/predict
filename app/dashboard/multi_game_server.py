@@ -163,13 +163,22 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         return web.json_response(result,headers={'Content-Disposition':'attachment; filename="predict-resolution.json"'} if q.get('download')=='true' else {})
     async def catalog(req):
         items=[]
-        for sid,d in datasets().items():
+        # A detail page needs games from its selected scan, not every retained
+        # projection. The dashboard owns navigation between saved scans. Reading
+        # all archives here both delayed Details and exhausted replay memory.
+        selected=req.query.get('session','').split('~',1)[0] or None
+        for sid,d in datasets(selected,catalog_all=False).items():
+            if selected and sid!=selected:continue
+            if 'folder' in d and 'product' not in d:continue
             if 'product' in d and req.query.get('session','').startswith(sid+'~') and req.query.get('cutoff'):
                 snap=product_cutoff(sid,d,req.query['cutoff']);d=dict(d,product=snap,games=snap['games'])
             for g in d['games']:
                 if 'product' in d:
                     p=d['product']['points'][g['id']]
-                    items.append(dict(id=sid+'~'+g['id'],hash=sid,label=g['title']+' · '+d['label'],game=g,data_mode=d['product']['data_mode'],default_cutoff=0,timeline=[dict(id=p['id'],at=p['at'],label=p['label'])]))
+                    identity=g['product_identity']
+                    market=' / '.join(str(identity.get(k,'unknown')).replace('_',' ') for k in ('period','family'))
+                    if identity.get('line') is not None:market+=' · line '+str(identity['line'])
+                    items.append(dict(id=sid+'~'+g['id'],hash=sid,label=g['title']+' · '+market+' · '+d['label'],game=g,data_mode=d['product']['data_mode'],default_cutoff=0,timeline=[dict(id=p['id'],at=p['at'],label=p['label'])]))
                     continue
                 timeline,_=project_game(d['rows'],g)
                 point=default_point(timeline)

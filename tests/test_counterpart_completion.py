@@ -126,7 +126,8 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
     code='from app.dashboard.session_history import load;from app.dashboard.session_projection import stable;import sys;print(stable(load(sys.argv[1])))'
     child=await asyncio.create_subprocess_exec(sys.executable,'-c',code,str(o.session.output),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE);out,err=await asyncio.wait_for(child.communicate(),25);self.assertEqual(child.returncode,0,err.decode());self.assertEqual(out.decode().strip(),stable(saved))
     result=dict(classification='SYNTHETIC schedule refresh over retained exact native mappings and synthetic books; engineering only',both_subscriptions=True,details=True,watch=True,history_download_equal=True,stop_cleanup=True,fresh_process_reopening=True,raw_comparisons=len(cs),native_calls=f.native_calls,provider_requests=0,credits=0,credentials=0)
-    (ROOT/'evidence/v1-counterpart-completion-20261001-v1/runtime-verification.json').write_text(json.dumps(result,indent=2)+'\n')
+    # Routine regressions must never rewrite a historical qualification report.
+    (Path(tmp)/'runtime-verification.json').write_text(json.dumps(result,indent=2)+'\n')
    finally:await f.close()
 class Faults(unittest.IsolatedAsyncioTestCase):
  async def test_query_local_failure_keeps_independent_discovery_no_retry(self):

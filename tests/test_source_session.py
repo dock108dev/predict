@@ -62,7 +62,9 @@ class UnifiedFixture(Fixture):
         self.server=TestServer(app);await self.server.start_server();url=str(self.server.make_url('/')).rstrip('/')
         self.endpoints={v:dict(rest=url,ws=url.replace('http:','ws:')+'/ws') for v in ('kalshi','polymarket_us')};self.endpoints['aggregate']=url
         def config():
-            value=spec();value.update(mode='mock',reference_enabled=False);return value
+            value=spec();value.update(mode='mock',reference_enabled=False)
+            value['v1_comparison_policy']=None  # Original winner-wire control.
+            return value
         self.owner=CoverageOwner(Path(path)/'unused',pilot_output=Path(path)/'sessions',endpoints=self.endpoints,product_mode=True,spec_factory=config)
         self.client=TestClient(TestServer(create_app(owner=self.owner,sessions={},watch_path=Path(path)/'watches.json')));await self.client.start_server()
         self.origin={'Origin':str(self.client.make_url('/')).rstrip('/')}

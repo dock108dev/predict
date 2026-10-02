@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('app/dashboard/opportunity_static/dashboard.js','utf8');
 const fields={quantity:{value:'100'},scenario:{value:'cent'}};
-const ctx={URLSearchParams,view:'research',$:id=>fields[id]};vm.createContext(ctx);
+const ctx={URLSearchParams,query:new URLSearchParams(),view:'research',$:id=>fields[id]};vm.createContext(ctx);
 vm.runInContext(source.slice(source.indexOf('function link('),source.indexOf('function render(')),ctx);
 const row={session:'saved~game',hash:'saved',cutoff:'book',candidate:'',contract:'kalshi:yes',probability:'0.23',assumption:'page probability',legs:[]};
 let q=new URLSearchParams(ctx.link(row).split('?')[1]);

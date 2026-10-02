@@ -1,3 +1,18 @@
+# Predict workflow delivery plan
+
+October 1, 2026. This plan describes engineering order under the [authoritative tracker](../../prediction_arb_next_steps.md). [Acceptance](beta-coverage-acceptance.md) owns the workflow gate and [verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns final candidate evidence.
+
+1. Reuse completed integrated transport, matching, calculation and saved-workflow evidence.
+2. Inspect ordinary startup and find concrete discovery, understanding or reopening defects.
+3. Repair shared paths, reconcile current documentation/generation and verify offline with retained real inputs plus separate synthetic controls.
+4. Prepare a directed owner walkthrough once the core workflow is ready. Record owner acceptance separately.
+
+All four comparison participants remain intended; actual venue/market availability is visible. Full-game winner/spread/total take priority. The 63 requirements and 252 source records remain accounting and later roadmap work, without 48/63 or 51/63 readiness targets. Further live acquisition requires fresh applicable authority; sealed packages and spent approvals remain unchanged.
+
+## Historical delivery plans
+
+All earlier scope overrides, coverage thresholds and queued collection actions below are preserved history and superseded by the workflow plan above.
+
 # Current scope override — October 1, 2026
 
 **Current beta coverage acceptance — October 1 owner decision:** at least **48/63** exact eligible valid retained price pairs (76.19%), fixed denominator; 51/63 optional if straightforward. All four comparison venues must continue contributing useful comparisons. Sport/family/period distribution and separate freshness/runtime qualification remain visible. Once this gate and the ordinary V1 workflow pass, close beta coverage and carry remaining cells as visible post-beta limitations. Metadata, reference-only prices and synthetic fixtures never count. No collection authority changes. [Acceptance accounting and backlog](beta-coverage-acceptance.md). This decision supersedes older statements requiring all 63 before beta. Economics remains optional for dependent calculations; automated execution is V2.

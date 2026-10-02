@@ -1,36 +1,16 @@
-# Predict — current Beta/V1 and V2 scope
+# Predict private beta product scope
 
-**Current beta coverage acceptance — October 1 owner decision:** at least **48/63** exact eligible valid retained price pairs (76.19%), fixed denominator; 51/63 optional if straightforward. All four comparison venues must continue contributing useful comparisons. Sport/family/period distribution and separate freshness/runtime qualification remain visible. Once this gate and the ordinary V1 workflow pass, close beta coverage and carry remaining cells as visible post-beta limitations. Metadata, reference-only prices and synthetic fixtures never count. No collection authority changes. [Acceptance accounting and backlog](beta-coverage-acceptance.md). This decision supersedes older statements requiring all 63 before beta. Economics remains optional for dependent calculations; automated execution is V2.
+October 1, 2026. This document owns current product scope under the [authoritative tracker](../../prediction_arb_next_steps.md). [Acceptance](beta-coverage-acceptance.md) defines the workflow gate; [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns readiness evidence. Older definitions below are historical.
 
+Predict helps the owner find and inspect useful cross-venue prices, then trade manually outside the app. Beta/V1 covers configured authorized collection, exact matching, useful raw comparisons, sport/venue/market filters, fixed-cutoff Details, timestamps and source health, settlement/fee explanations, supported informational sizing, persistent watches, Stop, history, downloads and exact saved reopening. Preserve the accepted layout and shared implementation.
 
-Updated October 1, 2026. **Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** The owner will place trades manually initially. Full V1 coverage/data qualification remains open; no beta signoff is claimed. [Current tracker](../../prediction_arb_next_steps.md) · [every remaining gate reconciled](full-scope-engineering-reconciliation.md).
+Kalshi and Polymarket US remain native; Novig and ProphetX use The Odds API. All four are intended participants. Actual availability varies by venue and market. Prioritize full-game winner/spread/total and other supported useful overlap. The six sports, 63 requirements and 252 source records remain the broader roadmap and factual ledger, without a numeric beta coverage gate or a requirement that every seasonal/niche cell be available.
 
-## Beta/V1 completion contract
+Missing costs, probabilities or settlement facts affect the calculations that use them. Keep valid raw prices available. Supported EV retains EV%-first ordering and its probability basis; raw differences, conditional arbitrage and What-if EV are distinct. Pinnacle, DraftKings and BetMGM remain reference-only. Size/depth estimates identify their native units and assumptions and do not guarantee execution.
 
-- Reliable data pulls and independent updates from Kalshi, Polymarket US, Novig and ProphetX. Kalshi/US use existing native integrations; Novig/ProphetX use existing aggregate observations without native trading access.
-- Correct event, outcome, period and line matching across NFL, NBA, MLB, NHL, NCAAF and men’s Division I NCAAB and 63 required cells: full-game W/S/T (18), football/basketball pregame H1 W/S/T (12), MLB cumulative F3/F5/F6/regulation9 W/S/T (12), NHL individual P1/P2/P3 W/S/T (9), current-season conference/league championships (12). Exact participants, season/stage, game number and award predicates apply where necessary. All venues need not list all cells; useful actual overlap is required, and exclusions/seasonal deferrals need explicit owner agreement.
-- Useful price comparisons, honest source and receipt timestamps, stale-data handling and source health. Source data timing/recovery matters for manual decisions; automated order-path timing is V2. Keep the existing freshness safeguards and accepted readable layout; no performance project without a concrete data problem.
-- Clear differences in settlement terms and supported fee estimates. Show effective public fee versions, ranges/assumptions and unknowns. Incompatible contracts may have useful price comparisons when their differences are explicit; unknown outcome/period/line identity cannot be presented as a valid match.
-- Details, filters, informational watches, explicit Start/Stop, history, downloads and exact reopening at the original cutoff. Watches never submit trades.
-- Informational depth/sizing where supported, with cutoff, native units, quantity domain, cost assumptions and limitations. Visible depth is not a promise of fills or guaranteed execution. Unsupported sizing is withheld without suppressing valid raw prices.
+Engineering readiness is evaluated by the [workflow checklist](../evidence/private-beta-workflow-20261001-v1/README.md). Owner acceptance follows a directed walkthrough and remains separate. Retained observations are historical; isolated fixtures are engineering evidence. Further live collection requires fresh applicable authority and exact candidate binding. No acquisition campaign or automatic follow-up is the default next action.
 
-Pinnacle, DraftKings and BetMGM remain optional reference-only sources, never comparison/trading legs. Models, sportsbook-derived estimates, manual scenarios and historical research retain separate labels. Preserve the EV%-first preference where supported EV exists; absent inputs leave EV unavailable, while valid raw comparisons remain usable. Guaranteed arbitrage, complete net economics, an EV model, profitable opportunities and actual account activity are not universal V1 gates.
-
-## Calculation-specific inputs
-
-Account classification, private/program rates, actual fills/positions, execution-specific charges, fractional scales and complete settlement cashflows are required only if a particular displayed calculation depends on them. Withhold or label that calculation and explain the missing input; keep otherwise valid comparisons, Details and lifecycle usable. Explicit hypothetical allocations/fills/positions remain supported scenario inputs and need no actual trade or account export. Unknown costs or incompatible contracts cannot support a guaranteed-profit claim.
-
-The account-document request is **stopped as a prerequisite** and preserved solely as [optional calculation qualification or V2 work](source-dependent-external-facts.md). No response or broad account access is requested.
-
-## V2 — deferred
-
-Automated order submission, execution orchestration, fills/positions synchronization, execution reconciliation and automated-trading timing qualification are outside Beta/V1. Direct Novig/ProphetX trading integrations remain deferred. Preserve existing implementation, decoders, tests and evidence; do not delete or requalify them merely to change scope.
-
-## Current completion boundary and next work
-
-No remaining reproduced defect exists in the October 1 verified supported paths. Completed math, transport, lifecycle, replay and accepted layout remain closed unless a concrete failure is found. Full six-sport/63-cell actual comparable coverage still has exact listing/locator/identity gaps; historical/offline evidence remains distinct from current provider evidence. Resolve these data/matching gaps through existing bindings, keeping unsupported offerings explicit. The [reconciliation](full-scope-engineering-reconciliation.md) splits all 15 fact categories referenced by the 252 source cells into V1, dependent calculations and V2.
-
-Owner walkthroughs and commercial validation remain deferred. Existing historical approvals and consumed attempts are preserved; no new collection, acquisition package, credentials, outreach, trading or recurring run is authorized by this documentation update.
+V2 includes automated trading, submission/orchestration, fills/positions synchronization, execution reconciliation and automated order timing. Direct Novig/ProphetX trading access, complete private account economics, independent probability model development and commercial validation are later work unless explicitly needed for a selected calculation.
 
 ---
 

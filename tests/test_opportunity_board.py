@@ -97,7 +97,15 @@ class HTTPTests(AioHTTPTestCase):
         c=(await (await self.client.get('/api/sessions')).json())[0]
         q=dict(session=c['id'],hash=c['hash'],cutoff=c['timeline'][c['default_cutoff']]['id'],quantity='100')
         response=await self.client.get('/api/calculate',params=q);self.assertEqual(response.status,200)
-        result=await response.json();self.assertIsNone(result['ev']['probability']);self.assertIsNone(result['ev']['expected_profit'])
+        result=await response.json()
+        if 'ev' in result:
+            self.assertIsNone(result['ev']['probability']);self.assertIsNone(result['ev']['expected_profit'])
+        else:
+            # Indexed raw-only saved interpretations expose dependent outputs
+            # per comparison, without manufacturing a calculation payload.
+            self.assertTrue(result['comparisons'])
+            for comparison in result['comparisons']:
+                self.assertIsNone(comparison['ev']);self.assertIsNone(comparison['net'])
         self.assertEqual((await self.client.get('/api/dashboard')).status,200)
         q['hash']='bad';self.assertEqual((await self.client.get('/api/calculate',params=q)).status,422)
         self.assertEqual((await self.client.post('/api/start')).status,403)

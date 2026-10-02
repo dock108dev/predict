@@ -431,9 +431,11 @@ class Discovery:
                 credential=(s.credentials or {}).get(venue))
         client = self.clients[venue]
         client.session = s
+        # Source-local failures need identity even when discovery is isolated by
+        # configured native scopes rather than the bounded acquisition policy.
+        client.source_venue=venue
         if bounded_native(s.spec):
             client.request_ceiling=native_caps(s.spec)[venue]
-            client.source_venue=venue
             if isolated_native(s.spec):
                 client.limits={**client.limits,'discovery_requests':min(client.limits['discovery_requests'],client.request_ceiling)}
                 client.strict_eof=True

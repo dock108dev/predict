@@ -1,26 +1,20 @@
-# Current V1/V2 gate reconciliation — October 1, 2026
+# Predict engineering gate reconciliation
 
-**Current beta coverage acceptance — October 1 owner decision:** at least **48/63** exact eligible valid retained price pairs (76.19%), fixed denominator; 51/63 optional if straightforward. All four comparison venues must continue contributing useful comparisons. Sport/family/period distribution and separate freshness/runtime qualification remain visible. Once this gate and the ordinary V1 workflow pass, close beta coverage and carry remaining cells as visible post-beta limitations. Metadata, reference-only prices and synthetic fixtures never count. No collection authority changes. [Acceptance accounting and backlog](beta-coverage-acceptance.md). This decision supersedes older statements requiring all 63 before beta. Economics remains optional for dependent calculations; automated execution is V2.
+October 1, 2026. This document maps source facts to the workflow or calculation they affect. The [authoritative tracker](../../prediction_arb_next_steps.md) governs scope; [acceptance](beta-coverage-acceptance.md) defines beta readiness and [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) records evidence. Historical interpretations below are not current completion gates.
 
+## Workflow and calculation gates
 
-**Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** The owner places trades manually. This section is current scope authority alongside the [product definition](product-roadmap-review.md) and [desktop tracker](../../prediction_arb_next_steps.md); earlier dated sections below are retained evidence, not current completion gates.
-
-V1 requires reliable native Kalshi/Polymarket US pulls and independent Novig/ProphetX aggregate updates; correct event/outcome/period/line matching across NFL, NBA, MLB, NHL, NCAAF and men’s Division I NCAAB and all 63 required cells; useful price differences; source timestamps/receipt age, stale handling and health; settlement differences and supported fee estimates; Details, filters, watches, Start/Stop, history/download and exact reopening; informational depth/sizing where supported. Pinnacle, DraftKings and BetMGM remain reference-only. Novig/ProphetX aggregate participation requires no native trading access. Each venue must contribute useful comparisons, but all four need not offer every cell. Missing required cells remain open unless the owner explicitly accepts an exclusion or seasonal deferral.
-
-V2 contains automated order submission, execution orchestration, fills/positions synchronization, execution reconciliation and automated-trading timing qualification. Existing execution/account adapters, math and evidence are preserved. Their absence of live qualification is not a V1 completion blocker.
-
-## Remaining V1 gates and completed boundary
-
-| Gate | Current disposition and bounded next action |
+| Concern | Beta effect and next work |
 | --- | --- |
-| Reliable four-venue ingestion and independent updates | Implemented and verified within selected retained/fresh integrated sessions. Finish source coverage and relevant data-update/recovery evidence for V1; no 24/7 SLA or automated-order latency benchmark. Preserve timestamp unknowns instead of inventing source clocks. |
-| Six sports / 63 required cells | Local connected scope/math is verified. Broader actual selected-source offerings, exact IDs/predicates/periods/lines/season-stage-awards and comparable overlap remain open. Resolve exact locators and bind authoritative selected records through existing integrations; account documents do not resolve these gaps. |
-| Useful price comparisons and stale/source-health behavior | Verified supported paths remain complete. Exact identity and data-freshness gates apply to valid comparisons; incompatible settlement and missing account costs do not suppress an otherwise valid raw price difference. Stale/mismatched data remains visibly excluded or labeled. Repair only a concrete reproduced failure. |
-| Settlement differences and supported fee estimates | Public successor bindings are implemented. Show effective public schedule/rounding applicability and settlement incompatibilities, missing terms and calculation exclusions. A supported estimate/range/hypothesis is sufficient under its correct label; complete private account economics is not a universal gate. |
-| Details, filters, watches, Start/Stop, history/download, exact reopening | Completed supported ordinary paths and evidence remain closed. Watches are informational in-app signals, not orders. New coverage must preserve the same lifecycle; do not restart accepted layout, completed replay or math work without a failure. |
-| Informational depth/sizing | Use supplied source depth/units and explicit hypothetical quantities where supported; state data cutoff, size limits, fee/rounding assumptions and no guaranteed fill. Withhold unsupported sizing, keep valid raw rows. Minimum/increment/fractional/partial-fill facts gate only outputs that use them. |
-| V1 completion status | Open for full required real coverage/data qualification; **no new V1 signoff is claimed**. Historical 39 evidenced / 90 awaiting observations / 123 externally blocked describes 252 source cells under earlier mixed gates, not V1 pass/fail counts. Zero qualified-economics cells does not mean zero valid comparisons. |
-| Validation and acquisition boundaries | Owner walkthroughs and commercial validation remain deferred. Exhausted acquisition approvals remain closed; this scope update dispatches no collection and prepares no new acquisition package. It does not revive withdrawn outreach or ask for account documents. |
+| Correct matching | Exact event/outcome/period/line, participants/orientation and applicable season/occurrence are required for each admitted comparison. Missing identities exclude that comparison. |
+| Coverage | All four intended venues retain visible actual availability. The 63/252 ledger is factual coverage and roadmap accounting. Missing individual cells, niche periods or seasonal offerings do not independently block the useful workflow. No numeric acceptance threshold applies. |
+| Update and health | Preserve receipt/source clocks, unknown times, stale exclusions, disconnected states and failure isolation. Retained real evidence and controlled local recovery qualify their own classes; no continuous uptime or order timing claim. |
+| Calculations | Account charges, complete cashflows, native units/depth and probabilities gate only dependent outputs. Raw differences remain usable; unknown economics does not establish guaranteed profit. |
+| Details and lifecycle | Exact selected cutoff, consistent filters, watches, Stop/finalization, history/download and reopening must work through shared ordinary routes. Repair concrete defects and preserve functioning components. |
+| Owner acceptance | Engineering readiness is a walkthrough recommendation. Owner acceptance is still pending. Any live walkthrough needs fresh exact-scope authority. |
+| Later work | Broader offerings/locators and qualified source facts remain visible roadmap work. Automated execution, fills/positions and trading timing are V2. |
+
+The detailed 15-category fact map below is retained as scoped dependency guidance. References to full required coverage in older dated sections do not reinstate a universal all-cell gate. Complete private account economics and probability models remain inputs only for calculations that need them.
 
 ## Every remaining fact category reclassified
 

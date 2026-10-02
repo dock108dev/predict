@@ -73,7 +73,11 @@ class Fixture:
         self.endpoints={v:dict(rest=url,ws=url.replace('http:','ws:')+'/ws') for v in ('kalshi','polymarket_us')}
         from app.dashboard.coverage_owner import spec
         def product_spec():
-            value=spec();value.update(mode='mock',reference_enabled=False);return value
+            value=spec();value.update(mode='mock',reference_enabled=False)
+            # Legacy winner-wire controls exercise their original interpretation;
+            # current literal predicate admission is covered by counterpart tests.
+            value.pop('v1_comparison_policy',None)
+            return value
         self.owner=CoverageOwner(Path(output)/'unused-saved',pilot_output=Path(output)/'pilot',
             endpoints=self.endpoints,mock_segmented=segmented,profile_name=profile_name,product_mode=product_mode,spec_factory=product_spec)
         await self.owner.start(duration=duration)

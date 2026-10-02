@@ -100,10 +100,10 @@ def market_detail_id(path):
 
 def envelope(path):
     """Documented native response shape; independent of any selected event."""
-    if event_detail_id(path) is not None:return 'event'
-    if market_detail_id(path) is not None:return 'market'
     if path == '/trade-api/v2/series/fee_changes':return 'series_fee_change_arr'
     if path == '/trade-api/v2/events/fee_changes':return 'event_fee_changes'
+    if event_detail_id(path) is not None:return 'event'
+    if market_detail_id(path) is not None:return 'market'
     if re.fullmatch(r'/trade-api/v2/series/[A-Za-z0-9_-]{1,160}',path):return 'series'
     if path in ('/trade-api/v2/events', '/v1/events') or re.fullmatch(r'/v2/leagues/[A-Za-z0-9_-]{1,160}/events', path):return 'events'
     if path in ('/trade-api/v2/markets', '/v1/markets'):return 'markets'

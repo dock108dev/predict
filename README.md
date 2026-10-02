@@ -46,3 +46,26 @@ These checks use saved inputs, temporary output and mocks. Node 22 is needed for
 - [UI design](docs/ui-design.md)
 
 Older PostgreSQL and collection-preview tools are documented in [implementation history](docs/implementation-history.md).
+
+## Private beta review
+
+[The authoritative tracker](../prediction_arb_next_steps.md) owns scope and next
+steps. [Workflow acceptance](docs/beta-coverage-acceptance.md) and the
+[candidate checklist and walkthrough](evidence/private-beta-workflow-20261001-v1/README.md)
+evaluate useful operation with clear limitations. The 63 requirements and 252
+source records remain factual accounting, without a numeric beta gate.
+
+After source edits, stop/start the launcher so Python and browser assets agree:
+
+```sh
+scripts/opportunity-board stop
+scripts/opportunity-board start
+```
+
+Startup is idle and saved-data review is available. Live Start remains disabled
+until a fresh exact-scope run specification and approval are supplied. Earlier
+spent approvals and sealed unapproved packages cannot enable it. Begin saved review
+with `offline-v1-repair-713fd0fa-20261001` under **Saved scans and settings**;
+its historical Novig/ProphetX winner/spread/total comparisons are recorded prices,
+not current quotes. Return to the comparison feed to switch saved scans; Details
+selects games within the chosen scan and freezes its original cutoff.

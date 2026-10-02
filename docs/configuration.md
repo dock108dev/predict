@@ -106,3 +106,25 @@ TCP listener. Start can initialize a cluster and change local directory modes.
 these are explicit operations, never a beta startup prerequisite. See
 [PostgreSQL capture](slice-12.md) before any database work. Neither database operations nor
 live verifiers are installation checks.
+
+## Private beta workflow review
+
+The [authoritative tracker](../../prediction_arb_next_steps.md) owns scope and the
+[next action](../evidence/private-beta-workflow-20261001-v1/README.md) provides an
+exact saved-review sequence. Startup and saved selection require no credentials or
+provider requests. The default launcher cannot activate a live run merely because
+credentials exist or a Start control is visible.
+
+An authorized live session must supply `CoverageOwner` with an exact run
+specification, approved native/aggregate endpoint configuration, unused output,
+and a fresh applicable `native_approval_path`. Shared approval/candidate/resource
+gates run before credential resolution or dispatch. Source settings alone do not
+grant authority. No reusable live command is provided by this offline phase;
+consumed attempts and the sealed counterpart package remain closed/inert.
+
+Use `scripts/opportunity-board stop` followed by `scripts/opportunity-board start`
+after source edits. A launcher start reuses an owned existing server; it does not
+reload its imported code. An old process paired with newer browser assets can show
+an input-selection error. Confirm the printed port and refresh after restarting.
+Details lists games in the selected scan; use the feed's saved selector to change
+scans. Historical source ages are ages at the retained cutoff, never today's freshness.

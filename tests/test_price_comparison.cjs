@@ -26,3 +26,11 @@ assert(zeroLine.includes('line 0'));
 const current=context.api.render({comparisons:[{...row,historical:false}]},esc,()=>'/game');
 assert(current.includes('Current observations'));
 assert(!current.includes('At saved time:'));
+
+// Both native and aggregate comparison venues remain selectable; references do not.
+const dashboard=fs.readFileSync('app/dashboard/opportunity_static/dashboard.js','utf8');
+vm.runInContext(dashboard.slice(dashboard.indexOf('function comparisonSources('),dashboard.indexOf('function fmt(')),context);
+const choices=context.comparisonSources([{source_id:'kalshi',role:'prediction'},{source_id:'polymarket_us',role:'prediction'},{source_id:'novig',role:'aggregate_comparison'},{source_id:'prophetx',role:'aggregate_comparison'},{source_id:'pinnacle',role:'reference'}]);
+assert.equal(choices.map(x=>x.source_id).join(','),'kalshi,polymarket_us,novig,prophetx');
+const template=fs.readFileSync('app/dashboard/opportunity_static/dashboard.html','utf8');
+for(const venue of ['kalshi','polymarket_us','novig','prophetx'])assert(template.includes('value="'+venue+'"'));

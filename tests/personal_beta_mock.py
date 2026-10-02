@@ -22,6 +22,8 @@ def verify_local_replay(saved):
 class LocalSession:
     def __init__(self,spec,output,endpoints):
         self.sid=str(uuid4());self.spec=deepcopy(spec);self.spec['mode']='mock';self.output=output
+        # Copied historical frames must retain their original replay policy.
+        self.spec.pop('v1_comparison_policy',None)
         self.state='idle';self.journal=None;self.cleanup_complete=False;self.stop_event=asyncio.Event();self.reason=None
     async def start(self):
         self.journal=ObservationJournal(self.output/'local.jsonl');self.state='running'
