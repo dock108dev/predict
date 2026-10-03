@@ -1,0 +1,1595 @@
+{
+  "provenance": [
+    {
+      "url": "https://gateway.polymarket.us/v1/events",
+      "path": "evidence/u6-winner-20261003/retained-e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 2,
+      "sha256": "e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18",
+      "received_at": "2026-09-28T02:26:27.324347+00:00",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/events",
+      "path": "evidence/u6-winner-20261003/retained-d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 9,
+      "sha256": "d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287",
+      "received_at": "2026-09-28T02:26:29.526776+00:00",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/markets",
+      "path": "evidence/u6-winner-20261003/retained-ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 18,
+      "sha256": "ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b",
+      "received_at": "2026-09-28T02:26:32.256646+00:00",
+      "status": 200,
+      "complete": true
+    }
+  ],
+  "catalogs": {
+    "kalshi": {
+      "event_discovery": "bounded/truncated",
+      "market_completeness": "unestablished",
+      "events": [
+        {
+          "id": "KXNFLGAME-26OCT04INDWAS",
+          "title": "IND Colts vs WAS Commanders",
+          "scheduled_start": "2026-10-04T13:30:00+00:00",
+          "native_aliases": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "terms_references": {
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ]
+          },
+          "participants": {
+            "Washington Commanders": "NFL:WAS",
+            "Indianapolis Colts": "NFL:IND"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-10-04T13:30:00+00:00",
+            [
+              "NFL:IND",
+              "NFL:WAS"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": null,
+            "closed": null,
+            "live": null,
+            "ended": null,
+            "period": null
+          },
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "observed_identity_facts": [
+            {
+              "id": "07e1f415-656d-410b-9c50-8762aafa8b6c",
+              "start_date": "2026-10-04T13:30:00Z",
+              "away_team_id": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf",
+              "home_team_id": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f",
+              "main_game_event_ticker": "KXNFLGAME-26OCT04INDWAS",
+              "season": {
+                "type": "REG",
+                "week": 4,
+                "year": 2026
+              },
+              "status": "scheduled"
+            }
+          ],
+          "related_game_event_id": "KXNFLGAME-26OCT04INDWAS",
+          "source_participant_roles": {
+            "home": "NFL:WAS",
+            "away": "NFL:IND"
+          },
+          "sport": "american_football",
+          "competition": "NFL",
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 4,
+              "path": "/trade-api/v2/events",
+              "params": {
+                "cursor": "",
+                "limit": 5,
+                "series_ticker": "KXNFLGAME",
+                "status": "open",
+                "with_milestones": "true"
+              },
+              "received_at": "2026-09-28T02:26:29.526776+00:00",
+              "body_sha256": "d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287"
+            }
+          ],
+          "_native": {
+            "category": "Sports",
+            "collateral_return_type": "MECNET",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "exchange_index": 0,
+            "last_updated_ts": "2026-09-22T04:13:54.307348Z",
+            "mutually_exclusive": true,
+            "product_metadata": {
+              "competition": "Pro Football",
+              "competition_scope": "Game"
+            },
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "strike_period": "",
+            "sub_title": "IND vs WAS (Oct 4)",
+            "title": "IND Colts vs WAS Commanders"
+          },
+          "conflicting_duplicate": false,
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "KXNFLGAME-26OCT04INDWAS-IND",
+            "KXNFLGAME-26OCT04INDWAS-WAS"
+          ],
+          "source": "kalshi",
+          "identity_field_evidence": {
+            "native_season": null,
+            "native_stage": null,
+            "native_series_label": null,
+            "native_game_id": null,
+            "native_game_number": null,
+            "native_original_start": null,
+            "native_rescheduled_from": null,
+            "qualification": "Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels"
+          },
+          "home": "NFL:WAS",
+          "away": "NFL:IND",
+          "season": "2026",
+          "stage": "regular_season"
+        }
+      ],
+      "markets": [
+        {
+          "id": "KXNFLGAME-26OCT04INDWAS-IND",
+          "event_id": "KXNFLGAME-26OCT04INDWAS",
+          "native_slug": null,
+          "title": "Indianapolis wins",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "rules_primary": "If Indianapolis wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "sides": [
+            {
+              "id": "yes",
+              "label": "Indianapolis",
+              "role": "yes",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            },
+            {
+              "id": "no",
+              "label": "Indianapolis",
+              "role": "no",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "category": null,
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 7,
+              "path": "/trade-api/v2/markets",
+              "params": {
+                "cursor": "",
+                "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+                "limit": 5
+              },
+              "received_at": "2026-09-28T02:26:32.256646+00:00",
+              "body_sha256": "ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b"
+            }
+          ],
+          "_native": {
+            "can_close_early": true,
+            "close_time": "2026-10-06T13:30:00Z",
+            "created_time": "2026-09-22T04:01:09.268023Z",
+            "custom_strike": {
+              "football_team": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf"
+            },
+            "early_close_condition": "This market will close and expire after a winner is declared.",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "exchange_index": 0,
+            "expected_expiration_time": "2026-10-04T16:30:00Z",
+            "expiration_time": "2026-10-06T13:30:00Z",
+            "expiration_value": "",
+            "last_price_dollars": "0.6200",
+            "latest_expiration_time": "2026-10-06T13:30:00Z",
+            "liquidity_dollars": "0.0000",
+            "market_type": "binary",
+            "no_ask_dollars": "0.4000",
+            "no_bid_dollars": "0.3800",
+            "no_sub_title": "Indianapolis",
+            "notional_value_dollars": "1.0000",
+            "occurrence_datetime": "2026-10-04T16:30:00Z",
+            "open_interest_fp": "4296.05",
+            "open_time": "2026-09-22T04:05:00Z",
+            "previous_price_dollars": "0.6800",
+            "previous_yes_ask_dollars": "0.6900",
+            "previous_yes_bid_dollars": "0.6600",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ],
+            "result": "",
+            "rules_primary": "If Indianapolis wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "settlement_timer_seconds": 60,
+            "status": "active",
+            "strike_type": "structured",
+            "ticker": "KXNFLGAME-26OCT04INDWAS-IND",
+            "title": "Indianapolis wins",
+            "updated_time": "2026-09-22T04:05:01.099462Z",
+            "volume_24h_fp": "3962.38",
+            "volume_fp": "6201.64",
+            "yes_ask_dollars": "0.6200",
+            "yes_ask_size_fp": "29867.09",
+            "yes_bid_dollars": "0.6000",
+            "yes_bid_size_fp": "18317.26",
+            "yes_sub_title": "Indianapolis"
+          },
+          "conflicting_duplicate": false,
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "kalshi",
+            "event_id": "KXNFLGAME-26OCT04INDWAS",
+            "market_id": "KXNFLGAME-26OCT04INDWAS-IND",
+            "native_metadata_sha256": "237e60d8894a68ec02e06f851e0e81abc75ff70ea00af3bc6a6e9a0abb5484b6",
+            "predicate": [
+              {
+                "native_id": "yes",
+                "participant": "NFL:IND",
+                "predicate": "win"
+              },
+              {
+                "native_id": "no",
+                "participant": "NFL:IND",
+                "predicate": "not_win"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-04T13:30:00+00:00",
+                [
+                  "NFL:IND",
+                  "NFL:WAS"
+                ]
+              ],
+              "participants": [
+                "NFL:IND",
+                "NFL:WAS"
+              ],
+              "scheduled_start": "2026-10-04T13:30:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "rules_primary": "If Indianapolis wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "native_clauses": {
+                "rules_primary": "If Indianapolis wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "f1fe20cb4d4a51c605d9e31cdbab07d828529bc465d8d11189c70199b418eae8"
+          }
+        },
+        {
+          "id": "KXNFLGAME-26OCT04INDWAS-WAS",
+          "event_id": "KXNFLGAME-26OCT04INDWAS",
+          "native_slug": null,
+          "title": "Washington wins",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "rules_primary": "If Washington wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "sides": [
+            {
+              "id": "yes",
+              "label": "Washington",
+              "role": "yes",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            },
+            {
+              "id": "no",
+              "label": "Washington",
+              "role": "no",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "category": null,
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 6,
+              "path": "/trade-api/v2/markets",
+              "params": {
+                "cursor": "",
+                "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+                "limit": 5
+              },
+              "received_at": "2026-09-28T02:26:32.256646+00:00",
+              "body_sha256": "ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b"
+            }
+          ],
+          "_native": {
+            "can_close_early": true,
+            "close_time": "2026-10-06T13:30:00Z",
+            "created_time": "2026-09-22T04:01:09.268023Z",
+            "custom_strike": {
+              "football_team": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f"
+            },
+            "early_close_condition": "This market will close and expire after a winner is declared.",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "exchange_index": 0,
+            "expected_expiration_time": "2026-10-04T16:30:00Z",
+            "expiration_time": "2026-10-06T13:30:00Z",
+            "expiration_value": "",
+            "last_price_dollars": "0.4000",
+            "latest_expiration_time": "2026-10-06T13:30:00Z",
+            "liquidity_dollars": "0.0000",
+            "market_type": "binary",
+            "no_ask_dollars": "0.6100",
+            "no_bid_dollars": "0.6000",
+            "no_sub_title": "Washington",
+            "notional_value_dollars": "1.0000",
+            "occurrence_datetime": "2026-10-04T16:30:00Z",
+            "open_interest_fp": "9659.69",
+            "open_time": "2026-09-22T04:05:00Z",
+            "previous_price_dollars": "0.3500",
+            "previous_yes_ask_dollars": "0.3500",
+            "previous_yes_bid_dollars": "0.3200",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ],
+            "result": "",
+            "rules_primary": "If Washington wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "settlement_timer_seconds": 60,
+            "status": "active",
+            "strike_type": "structured",
+            "ticker": "KXNFLGAME-26OCT04INDWAS-WAS",
+            "title": "Washington wins",
+            "updated_time": "2026-09-22T04:05:01.099462Z",
+            "volume_24h_fp": "11581.12",
+            "volume_fp": "13185.94",
+            "yes_ask_dollars": "0.4000",
+            "yes_ask_size_fp": "27483.82",
+            "yes_bid_dollars": "0.3900",
+            "yes_bid_size_fp": "27.00",
+            "yes_sub_title": "Washington"
+          },
+          "conflicting_duplicate": false,
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "kalshi",
+            "event_id": "KXNFLGAME-26OCT04INDWAS",
+            "market_id": "KXNFLGAME-26OCT04INDWAS-WAS",
+            "native_metadata_sha256": "3d179824194073e7b81250a9bee6dfe5905e680f74228a53d10cb2172d0f96cc",
+            "predicate": [
+              {
+                "native_id": "yes",
+                "participant": "NFL:WAS",
+                "predicate": "win"
+              },
+              {
+                "native_id": "no",
+                "participant": "NFL:WAS",
+                "predicate": "not_win"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-04T13:30:00+00:00",
+                [
+                  "NFL:IND",
+                  "NFL:WAS"
+                ]
+              ],
+              "participants": [
+                "NFL:IND",
+                "NFL:WAS"
+              ],
+              "scheduled_start": "2026-10-04T13:30:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "rules_primary": "If Washington wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "native_clauses": {
+                "rules_primary": "If Washington wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "b2c7b1e47448e88abdc4b5786ed4186e8887bcc7b5ec09faa1a02f1d4a5bab0c"
+          }
+        }
+      ],
+      "discovery": [
+        {
+          "state": "bounded/truncated",
+          "reason": "continuation not retained",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": "CgYI8LSL1gYSF0tYTkZMR0FNRS0yNk9DVDA0QVJJTllH",
+          "query": {
+            "cursor": "",
+            "limit": 5,
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true"
+          },
+          "path": "/trade-api/v2/events",
+          "filters": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-28T02:26:29.526776+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287"
+            }
+          ]
+        },
+        {
+          "state": "exhausted",
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "cursor": "",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "limit": 5
+          },
+          "path": "/trade-api/v2/markets",
+          "filters": {
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-28T02:26:32.256646+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried"
+    },
+    "polymarket_us": {
+      "event_discovery": "bounded/truncated",
+      "market_completeness": "unestablished",
+      "events": [
+        {
+          "id": "118973",
+          "title": "IND Colts vs. WAS Commanders",
+          "scheduled_start": "2026-10-04T13:30:00+00:00",
+          "native_aliases": {
+            "ticker": "nfl-ind-was-2026-10-04",
+            "slug": "nfl-ind-was-2026-10-04",
+            "seriesSlug": "nfl-2025"
+          },
+          "terms_references": {},
+          "participants": {
+            "Indianapolis Colts": "NFL:IND",
+            "Washington Commanders": "NFL:WAS"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-10-04T13:30:00+00:00",
+            [
+              "NFL:IND",
+              "NFL:WAS"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": true,
+            "closed": false,
+            "live": null,
+            "ended": null,
+            "period": "NS"
+          },
+          "native_binding_revision": "live-native-binding-2",
+          "observed_identity_facts": [],
+          "source_participant_roles": {
+            "home": "NFL:WAS",
+            "away": "NFL:IND"
+          },
+          "sport": "american_football",
+          "competition": "NFL",
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 5,
+              "path": "/v1/events",
+              "params": {
+                "active": "true",
+                "closed": "false",
+                "limit": 5,
+                "offset": 0,
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "sportsMarketTypes": "football_team_full_game_winner",
+                "startTimeMin": "2026-09-28T02:31:26.675113+00:00",
+                "tagSlug": "nfl"
+              },
+              "received_at": "2026-09-28T02:26:27.324347+00:00",
+              "body_sha256": "e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18"
+            }
+          ],
+          "_native": {
+            "id": "118973",
+            "chatChannel": {
+              "id": "nfl-ind-was-2026-10-04",
+              "type": "CHAT_CHANNEL_TYPE_MESSAGING"
+            },
+            "ticker": "nfl-ind-was-2026-10-04",
+            "slug": "nfl-ind-was-2026-10-04",
+            "title": "IND Colts vs. WAS Commanders",
+            "description": "IND Colts vs. WAS Commanders",
+            "startDate": "2026-10-04T13:30:00Z",
+            "endDate": "2026-10-04T23:59:00Z",
+            "active": true,
+            "closed": false,
+            "archived": false,
+            "category": "sports",
+            "createdAt": "2026-09-20T06:00:07Z",
+            "updatedAt": "2026-09-28T02:23:22Z",
+            "startTime": "2026-10-04T13:30:00Z",
+            "seriesSlug": "nfl-2025",
+            "period": "NS",
+            "markets": [
+              {
+                "id": "960578",
+                "question": "Who will win in the upcoming football event Indianapolis Colts vs Washington Commanders scheduled for October 4, 2026 at 1:30 PM UTC?",
+                "slug": "aec-nfl-ind-was-2026-10-04",
+                "endDate": "2026-10-18T17:30:00Z",
+                "category": "sports",
+                "startDate": "2026-09-20T06:00:07Z",
+                "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+                "active": true,
+                "marketType": "moneyline",
+                "closed": false,
+                "createdAt": "2026-09-20T06:00:07Z",
+                "updatedAt": "2026-09-28T02:22:24Z",
+                "archived": false,
+                "orderPriceMinTickSize": 0.0025,
+                "gameStartTime": "2026-10-04T13:30:00Z",
+                "manualActivation": false,
+                "sportsMarketType": "football_team_full_game_winner",
+                "marketSides": [
+                  {
+                    "id": "1920640",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-ind-was-2026-10-04",
+                    "createdAt": "2026-09-20T06:00:07Z",
+                    "updatedAt": "2026-09-20T06:00:07Z",
+                    "description": "Colts",
+                    "price": "0.6050",
+                    "marketId": 960578,
+                    "long": true,
+                    "teamId": 61,
+                    "team": {
+                      "id": 61,
+                      "name": "Indianapolis Colts",
+                      "abbreviation": "ind",
+                      "league": "nfl",
+                      "record": "1-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/IND.png",
+                      "alias": "Colts",
+                      "safeName": "IND Colts",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#002C5F",
+                      "providerId": 14,
+                      "ordering": "away",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                      "displayAbbreviation": "IND",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "14"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "82cf9565-6eb9-4f01-bdbd-5aa0d472fcd9"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                      "color": {
+                        "light": "#002C5F",
+                        "dark": "#386299"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.6075",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  },
+                  {
+                    "id": "1920641",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-ind-was-2026-10-04",
+                    "createdAt": "2026-09-20T06:00:07Z",
+                    "updatedAt": "2026-09-20T06:00:07Z",
+                    "description": "Commanders",
+                    "price": "0.6075",
+                    "marketId": 960578,
+                    "long": false,
+                    "teamId": 79,
+                    "team": {
+                      "id": 79,
+                      "name": "Washington Commanders",
+                      "abbreviation": "was",
+                      "league": "nfl",
+                      "record": "1-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/WSH.png",
+                      "alias": "Commanders",
+                      "safeName": "WAS Commanders",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#5A1414",
+                      "providerId": 35,
+                      "ordering": "home",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                      "displayAbbreviation": "WAS",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "35"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "22052ff7-c065-42ee-bc8f-c4691c50e624"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                      "color": {
+                        "light": "#5A1414",
+                        "dark": "#934A44"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.395",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  }
+                ],
+                "outcomes": "[\"Colts\",\"Commanders\"]",
+                "outcomePrices": "[\"0.6050\",\"0.6075\"]",
+                "ep3Status": "OPEN",
+                "status": "MARKET_STATUS_OPEN",
+                "assetPriceTerms": null,
+                "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+                "hidden": false,
+                "tags": [],
+                "title": "IND Colts vs WAS Commanders",
+                "feeCoefficient": 0.0695,
+                "bestBidQuote": {
+                  "value": "0.6050",
+                  "currency": "USD"
+                },
+                "bestAskQuote": {
+                  "value": "0.6075",
+                  "currency": "USD"
+                },
+                "titleShort": "IND vs WAS",
+                "ep3SyncedAt": "2026-09-25T11:47:09Z",
+                "minimumTradeQty": 0.01,
+                "comboEnabled": true
+              }
+            ],
+            "gameId": 19502,
+            "sportradarGameId": "2f4c7cf5-bb27-4d9f-bab2-adde30ace617",
+            "participants": [],
+            "hidden": false,
+            "tags": [
+              {
+                "id": "1",
+                "label": "NFL",
+                "slug": "nfl",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-09-28T02:23:30Z",
+                "league": {
+                  "id": 1,
+                  "name": "NFL",
+                  "sportId": 3,
+                  "tagId": 1,
+                  "image": "https://static.polymarket.us/images/new-category-icons/Icon-Rugby.png",
+                  "resolution": "https://www.nfl.com/",
+                  "ordering": "away",
+                  "activeSeriesId": 2,
+                  "isOperational": true,
+                  "automaticResolution": false,
+                  "createdAt": "2026-03-05T18:30:42Z",
+                  "slug": "nfl",
+                  "abbreviation": "NFL"
+                },
+                "subtags": [],
+                "hub": null
+              },
+              {
+                "id": "2",
+                "label": "Sports",
+                "slug": "sports",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-09-28T02:23:30Z",
+                "subtags": [],
+                "hub": null
+              },
+              {
+                "id": "3",
+                "label": "Games",
+                "slug": "games",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-09-28T02:23:30Z",
+                "subtags": [],
+                "hub": null
+              },
+              {
+                "id": "13",
+                "label": "Football",
+                "slug": "football",
+                "createdAt": "2026-03-05T18:30:42Z",
+                "updatedAt": "2026-09-28T02:23:30Z",
+                "sport": {
+                  "id": 3,
+                  "name": "Football",
+                  "tagId": 13,
+                  "createdAt": "2026-03-05T18:30:42Z",
+                  "slug": "football"
+                },
+                "subtags": [],
+                "hub": null
+              },
+              {
+                "id": "1419",
+                "label": "Week 4",
+                "slug": "week-4",
+                "updatedAt": "2026-09-28T02:23:30Z",
+                "tradable": false,
+                "subtags": [],
+                "hub": null
+              }
+            ],
+            "teams": [
+              {
+                "id": 61,
+                "name": "Indianapolis Colts",
+                "abbreviation": "ind",
+                "league": "nfl",
+                "record": "1-2",
+                "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/IND.png",
+                "alias": "Colts",
+                "safeName": "IND Colts",
+                "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingRight_Icon%40160x160.png",
+                "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingLeft_Icon%40160x160.png",
+                "colorPrimary": "#002C5F",
+                "providerId": 14,
+                "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                "displayAbbreviation": "IND",
+                "conference": "",
+                "providerIds": [
+                  {
+                    "provider": "PROVIDER_SPORTSDATAIO",
+                    "providerId": "14"
+                  },
+                  {
+                    "provider": "PROVIDER_SPORTRADAR",
+                    "providerId": "82cf9565-6eb9-4f01-bdbd-5aa0d472fcd9"
+                  }
+                ],
+                "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                "color": {
+                  "light": "#002C5F",
+                  "dark": "#386299"
+                },
+                "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+              },
+              {
+                "id": 79,
+                "name": "Washington Commanders",
+                "abbreviation": "was",
+                "league": "nfl",
+                "record": "1-2",
+                "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/WSH.png",
+                "alias": "Commanders",
+                "safeName": "WAS Commanders",
+                "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingRight_Icon%40160x160.png",
+                "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingLeft_Icon%40160x160.png",
+                "colorPrimary": "#5A1414",
+                "providerId": 35,
+                "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                "displayAbbreviation": "WAS",
+                "conference": "",
+                "providerIds": [
+                  {
+                    "provider": "PROVIDER_SPORTSDATAIO",
+                    "providerId": "35"
+                  },
+                  {
+                    "provider": "PROVIDER_SPORTRADAR",
+                    "providerId": "22052ff7-c065-42ee-bc8f-c4691c50e624"
+                  }
+                ],
+                "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                "color": {
+                  "light": "#5A1414",
+                  "dark": "#934A44"
+                },
+                "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+              }
+            ],
+            "sortType": "manual",
+            "marketGroups": [
+              {
+                "id": "PRIMARY",
+                "title": "Primary",
+                "order": 0,
+                "marketIds": [
+                  "960578"
+                ],
+                "initialCollapsed": false,
+                "live": false
+              }
+            ],
+            "primaryTag": {
+              "id": "1",
+              "label": "NFL",
+              "slug": "nfl",
+              "createdAt": "2025-09-25T16:13:27Z",
+              "updatedAt": "2026-09-28T02:23:30Z",
+              "league": {
+                "id": 1,
+                "name": "NFL",
+                "sportId": 3,
+                "tagId": 1,
+                "image": "https://static.polymarket.us/images/new-category-icons/Icon-Rugby.png",
+                "resolution": "https://www.nfl.com/",
+                "ordering": "away",
+                "activeSeriesId": 2,
+                "isOperational": true,
+                "automaticResolution": false,
+                "createdAt": "2026-03-05T18:30:42Z",
+                "slug": "nfl",
+                "abbreviation": "NFL"
+              },
+              "subtags": [],
+              "hub": null
+            },
+            "streamProvider": "",
+            "streamRequiresAuth": false,
+            "featureAvailability": {
+              "lineups": true,
+              "timeline": false,
+              "stats": false
+            },
+            "combos": {
+              "enabled": true,
+              "numMarkets": 388,
+              "numSpreadsAndTotalsMarkets": 292
+            },
+            "marketCounts": {
+              "numMarkets": 397,
+              "numSpreadsAndTotalsMarkets": 292
+            }
+          },
+          "conflicting_duplicate": false,
+          "market_discovery": "embedded_only",
+          "market_ids": [
+            "960578"
+          ],
+          "source": "polymarket_us",
+          "source_game_id": "19502",
+          "identity_field_evidence": {
+            "native_season": null,
+            "native_stage": null,
+            "native_series_label": "nfl-2025",
+            "native_game_id": 19502,
+            "native_game_number": null,
+            "native_original_start": null,
+            "native_rescheduled_from": null,
+            "qualification": "Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels"
+          },
+          "season": "2026",
+          "stage": "regular_season",
+          "shared_identity_provenance": {
+            "source": "kalshi",
+            "event_ids": [
+              "KXNFLGAME-26OCT04INDWAS"
+            ],
+            "facts": [
+              {
+                "id": "07e1f415-656d-410b-9c50-8762aafa8b6c",
+                "start_date": "2026-10-04T13:30:00Z",
+                "away_team_id": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf",
+                "home_team_id": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f",
+                "main_game_event_ticker": "KXNFLGAME-26OCT04INDWAS",
+                "season": {
+                  "type": "REG",
+                  "week": 4,
+                  "year": 2026
+                },
+                "status": "scheduled"
+              }
+            ],
+            "qualification": "Exact two-participant schedule correspondence; no MLB occurrence inferred"
+          }
+        }
+      ],
+      "markets": [
+        {
+          "id": "960578",
+          "event_id": "118973",
+          "native_slug": "aec-nfl-ind-was-2026-10-04",
+          "title": "IND Colts vs WAS Commanders",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "sides": [
+            {
+              "id": "1920640",
+              "label": "Colts",
+              "role": "Long",
+              "purchase_support": "supported",
+              "basis": "native Long offers in existing adapter"
+            },
+            {
+              "id": "1920641",
+              "label": "Commanders",
+              "role": "Short",
+              "purchase_support": "unsupported",
+              "basis": "Short purchase ladder not reconstructed by existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 6,
+              "path": "/v1/events",
+              "params": {
+                "active": "true",
+                "closed": "false",
+                "limit": 5,
+                "offset": 0,
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "sportsMarketTypes": "football_team_full_game_winner",
+                "startTimeMin": "2026-09-28T02:31:26.675113+00:00",
+                "tagSlug": "nfl"
+              },
+              "received_at": "2026-09-28T02:26:27.324347+00:00",
+              "body_sha256": "e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18"
+            }
+          ],
+          "_native": {
+            "id": "960578",
+            "question": "Who will win in the upcoming football event Indianapolis Colts vs Washington Commanders scheduled for October 4, 2026 at 1:30 PM UTC?",
+            "slug": "aec-nfl-ind-was-2026-10-04",
+            "endDate": "2026-10-18T17:30:00Z",
+            "category": "sports",
+            "startDate": "2026-09-20T06:00:07Z",
+            "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+            "active": true,
+            "marketType": "moneyline",
+            "closed": false,
+            "createdAt": "2026-09-20T06:00:07Z",
+            "updatedAt": "2026-09-28T02:22:24Z",
+            "archived": false,
+            "orderPriceMinTickSize": 0.0025,
+            "gameStartTime": "2026-10-04T13:30:00Z",
+            "manualActivation": false,
+            "sportsMarketType": "football_team_full_game_winner",
+            "marketSides": [
+              {
+                "id": "1920640",
+                "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                "identifier": "aec-nfl-ind-was-2026-10-04",
+                "createdAt": "2026-09-20T06:00:07Z",
+                "updatedAt": "2026-09-20T06:00:07Z",
+                "description": "Colts",
+                "price": "0.6050",
+                "marketId": 960578,
+                "long": true,
+                "teamId": 61,
+                "team": {
+                  "id": 61,
+                  "name": "Indianapolis Colts",
+                  "abbreviation": "ind",
+                  "league": "nfl",
+                  "record": "1-2",
+                  "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/IND.png",
+                  "alias": "Colts",
+                  "safeName": "IND Colts",
+                  "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingRight_Icon%40160x160.png",
+                  "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingLeft_Icon%40160x160.png",
+                  "colorPrimary": "#002C5F",
+                  "providerId": 14,
+                  "ordering": "away",
+                  "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                  "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                  "displayAbbreviation": "IND",
+                  "conference": "",
+                  "providerIds": [
+                    {
+                      "provider": "PROVIDER_SPORTSDATAIO",
+                      "providerId": "14"
+                    },
+                    {
+                      "provider": "PROVIDER_SPORTRADAR",
+                      "providerId": "82cf9565-6eb9-4f01-bdbd-5aa0d472fcd9"
+                    }
+                  ],
+                  "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                  "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                  "color": {
+                    "light": "#002C5F",
+                    "dark": "#386299"
+                  },
+                  "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                },
+                "quote": {
+                  "value": "0.6075",
+                  "currency": "USD"
+                },
+                "tradable": true
+              },
+              {
+                "id": "1920641",
+                "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                "identifier": "aec-nfl-ind-was-2026-10-04",
+                "createdAt": "2026-09-20T06:00:07Z",
+                "updatedAt": "2026-09-20T06:00:07Z",
+                "description": "Commanders",
+                "price": "0.6075",
+                "marketId": 960578,
+                "long": false,
+                "teamId": 79,
+                "team": {
+                  "id": 79,
+                  "name": "Washington Commanders",
+                  "abbreviation": "was",
+                  "league": "nfl",
+                  "record": "1-2",
+                  "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/WSH.png",
+                  "alias": "Commanders",
+                  "safeName": "WAS Commanders",
+                  "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingRight_Icon%40160x160.png",
+                  "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingLeft_Icon%40160x160.png",
+                  "colorPrimary": "#5A1414",
+                  "providerId": 35,
+                  "ordering": "home",
+                  "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                  "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                  "displayAbbreviation": "WAS",
+                  "conference": "",
+                  "providerIds": [
+                    {
+                      "provider": "PROVIDER_SPORTSDATAIO",
+                      "providerId": "35"
+                    },
+                    {
+                      "provider": "PROVIDER_SPORTRADAR",
+                      "providerId": "22052ff7-c065-42ee-bc8f-c4691c50e624"
+                    }
+                  ],
+                  "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                  "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                  "color": {
+                    "light": "#5A1414",
+                    "dark": "#934A44"
+                  },
+                  "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                },
+                "quote": {
+                  "value": "0.395",
+                  "currency": "USD"
+                },
+                "tradable": true
+              }
+            ],
+            "outcomes": "[\"Colts\",\"Commanders\"]",
+            "outcomePrices": "[\"0.6050\",\"0.6075\"]",
+            "ep3Status": "OPEN",
+            "status": "MARKET_STATUS_OPEN",
+            "assetPriceTerms": null,
+            "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+            "hidden": false,
+            "tags": [],
+            "title": "IND Colts vs WAS Commanders",
+            "feeCoefficient": 0.0695,
+            "bestBidQuote": {
+              "value": "0.6050",
+              "currency": "USD"
+            },
+            "bestAskQuote": {
+              "value": "0.6075",
+              "currency": "USD"
+            },
+            "titleShort": "IND vs WAS",
+            "ep3SyncedAt": "2026-09-25T11:47:09Z",
+            "minimumTradeQty": 0.01,
+            "comboEnabled": true
+          },
+          "conflicting_duplicate": false,
+          "subscription_evidence_exclusion": null,
+          "subscription_evidence_basis": "native ID, unique slug, resolved event and side teams, explicit roles, native terms; completeness independent",
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "polymarket_us",
+            "event_id": "118973",
+            "market_id": "960578",
+            "native_metadata_sha256": "8705ba8013da84433eb237f487f70901a11460ea78ad1787ff365e44171cadb2",
+            "predicate": [
+              {
+                "native_id": "1920640",
+                "participant": "NFL:IND",
+                "predicate": "win",
+                "native_direction": "long"
+              },
+              {
+                "native_id": "1920641",
+                "participant": "NFL:WAS",
+                "predicate": "win",
+                "native_direction": "short"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-04T13:30:00+00:00",
+                [
+                  "NFL:IND",
+                  "NFL:WAS"
+                ]
+              ],
+              "participants": [
+                "NFL:IND",
+                "NFL:WAS"
+              ],
+              "scheduled_start": "2026-10-04T13:30:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+              },
+              "native_clauses": {
+                "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "locator": {
+              "version": "public-contract-bindings-1",
+              "native_type": "football_team_full_game_winner",
+              "status": "DOCUMENTED_LOCATOR",
+              "original": {
+                "id": "960578",
+                "question": "Who will win in the upcoming football event Indianapolis Colts vs Washington Commanders scheduled for October 4, 2026 at 1:30 PM UTC?",
+                "slug": "aec-nfl-ind-was-2026-10-04",
+                "endDate": "2026-10-18T17:30:00Z",
+                "category": "sports",
+                "startDate": "2026-09-20T06:00:07Z",
+                "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+                "active": true,
+                "marketType": "moneyline",
+                "closed": false,
+                "createdAt": "2026-09-20T06:00:07Z",
+                "updatedAt": "2026-09-28T02:22:24Z",
+                "archived": false,
+                "orderPriceMinTickSize": 0.0025,
+                "gameStartTime": "2026-10-04T13:30:00Z",
+                "manualActivation": false,
+                "sportsMarketType": "football_team_full_game_winner",
+                "marketSides": [
+                  {
+                    "id": "1920640",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-ind-was-2026-10-04",
+                    "createdAt": "2026-09-20T06:00:07Z",
+                    "updatedAt": "2026-09-20T06:00:07Z",
+                    "description": "Colts",
+                    "price": "0.6050",
+                    "marketId": 960578,
+                    "long": true,
+                    "teamId": 61,
+                    "team": {
+                      "id": 61,
+                      "name": "Indianapolis Colts",
+                      "abbreviation": "ind",
+                      "league": "nfl",
+                      "record": "1-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/IND.png",
+                      "alias": "Colts",
+                      "safeName": "IND Colts",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_IndianapolisColts_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#002C5F",
+                      "providerId": 14,
+                      "ordering": "away",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                      "displayAbbreviation": "IND",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "14"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "82cf9565-6eb9-4f01-bdbd-5aa0d472fcd9"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_IndianapolisColts_R@320x320.png",
+                      "color": {
+                        "light": "#002C5F",
+                        "dark": "#386299"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.6075",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  },
+                  {
+                    "id": "1920641",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-ind-was-2026-10-04",
+                    "createdAt": "2026-09-20T06:00:07Z",
+                    "updatedAt": "2026-09-20T06:00:07Z",
+                    "description": "Commanders",
+                    "price": "0.6075",
+                    "marketId": 960578,
+                    "long": false,
+                    "teamId": 79,
+                    "team": {
+                      "id": 79,
+                      "name": "Washington Commanders",
+                      "abbreviation": "was",
+                      "league": "nfl",
+                      "record": "1-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/WSH.png",
+                      "alias": "Commanders",
+                      "safeName": "WAS Commanders",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_WashingtonCommanders_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#5A1414",
+                      "providerId": 35,
+                      "ordering": "home",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                      "displayAbbreviation": "WAS",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "35"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "22052ff7-c065-42ee-bc8f-c4691c50e624"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_WashingtonCommanders_R@320x320.png",
+                      "color": {
+                        "light": "#5A1414",
+                        "dark": "#934A44"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.395",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  }
+                ],
+                "outcomes": "[\"Colts\",\"Commanders\"]",
+                "outcomePrices": "[\"0.6050\",\"0.6075\"]",
+                "ep3Status": "OPEN",
+                "status": "MARKET_STATUS_OPEN",
+                "assetPriceTerms": null,
+                "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+                "hidden": false,
+                "tags": [],
+                "title": "IND Colts vs WAS Commanders",
+                "feeCoefficient": 0.0695,
+                "bestBidQuote": {
+                  "value": "0.6050",
+                  "currency": "USD"
+                },
+                "bestAskQuote": {
+                  "value": "0.6075",
+                  "currency": "USD"
+                },
+                "titleShort": "IND vs WAS",
+                "ep3SyncedAt": "2026-09-25T11:47:09Z",
+                "minimumTradeQty": 0.01,
+                "comboEnabled": true
+              },
+              "collection_authorized": false,
+              "competition": "NFL",
+              "period": "full_game",
+              "family": "moneyline",
+              "total_scope": null,
+              "strike_magnitude": null,
+              "long_participant_id": null,
+              "source": {
+                "id": "us-schema",
+                "url": "https://docs.polymarket.us/trader-guide/sports-schema.md",
+                "final_url": "https://docs.polymarket.us/trader-guide/sports-schema.md",
+                "status": 200,
+                "retrieved_at": "2026-10-01T03:29:55.131781+00:00",
+                "path": "evidence/public-contract-bindings-20260930-v1/public/us-schema.md",
+                "sha256": "2867ed92cd65105a25fa7baa2718c374f9ee327602434cc806a28c3528b9736d",
+                "clause": "market_sport_type identifies sport, scope, period and type; registered enums may precede listings. Generic enums carry no period. Football team first-half total is selected-team, game first-half total combined.",
+                "applicability": "Typed institutional metadata or retail sportsMarketType; no inferred signed spread orientation",
+                "effective_date": null,
+                "conflicts": [],
+                "evidence_class": "official_public_document"
+              },
+              "missing": [
+                "Exact game/season/stage",
+                "Signed line and native payout predicate",
+                "Effective settlement/fees"
+              ]
+            },
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "14d2321db478c326c41d16e695aa93bec52e6fd872a46bc06481187a65912b8b"
+          }
+        }
+      ],
+      "discovery": [
+        {
+          "state": "bounded/truncated",
+          "reason": "continuation not retained",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": 5,
+          "query": {
+            "active": "true",
+            "closed": "false",
+            "limit": 5,
+            "offset": 0,
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "startTimeMin": "2026-09-28T02:31:26.675113+00:00",
+            "tagSlug": "nfl"
+          },
+          "path": "/v1/events",
+          "filters": {
+            "active": "true",
+            "closed": "false",
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "startTimeMin": "2026-09-28T02:31:26.675113+00:00",
+            "tagSlug": "nfl"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-09-28T02:26:27.324347+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried"
+    }
+  }
+}

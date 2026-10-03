@@ -155,6 +155,7 @@ class AggregateWorker:
             if not key:self.startup_error='Approved aggregate source credential unavailable'
         policy=http_policy(self.settings);self._budget=Budget(policy)
         self.http=None if self.startup_error else AggregateHTTP(session.endpoints['aggregate'],policy,self.capture,real_key=key)
+        if self.http and session.spec['mode']=='real':self.http.shared_owner=getattr(session,'acquisition_ownership',None)
         if self.http and self.settings.get('quota_startup'):
             self.http.budget=StartupBudget(policy)
             self.http.acquisition_settings=self.settings

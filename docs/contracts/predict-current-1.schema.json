@@ -687,6 +687,182 @@
             },
             "additionalProperties": false
           }
+        },
+        "native_predicate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "participant",
+            "predicate",
+            "native_outcome_id",
+            "domain",
+            "binding_sha256",
+            "original_result_policy"
+          ],
+          "properties": {
+            "version": {
+              "const": "predict-direct-win-1"
+            },
+            "participant": {
+              "type": "string"
+            },
+            "predicate": {
+              "const": "win"
+            },
+            "native_outcome_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "binding_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "original_result_policy": {
+              "type": "string",
+              "minLength": 1
+            },
+            "domain": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "participant",
+                  "predicate",
+                  "signed_line",
+                  "label",
+                  "native_outcome_id"
+                ],
+                "properties": {
+                  "participant": {
+                    "type": "string"
+                  },
+                  "predicate": {
+                    "enum": [
+                      "win",
+                      "not_win"
+                    ]
+                  },
+                  "signed_line": {
+                    "type": "null"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "native_outcome_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "book_confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "basis",
+            "venue",
+            "event_id",
+            "market_id",
+            "generation",
+            "request_id",
+            "requested_at",
+            "subscription_id",
+            "sequence",
+            "confirmed_at",
+            "received_at",
+            "provider_source_at",
+            "payload_sha256",
+            "content_sha256",
+            "sha256"
+          ],
+          "properties": {
+            "version": {
+              "const": "predict-book-confirmation-1"
+            },
+            "basis": {
+              "enum": [
+                "kalshi-complete-snapshot-send-1",
+                "us-complete-book-transact-1"
+              ]
+            },
+            "venue": {
+              "type": "string"
+            },
+            "event_id": {
+              "type": "string"
+            },
+            "market_id": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "requested_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "subscription_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sequence": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            },
+            "confirmed_at": {
+              "type": "string"
+            },
+            "received_at": {
+              "type": "string"
+            },
+            "provider_source_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "payload_sha256": {
+              "type": "string"
+            },
+            "content_sha256": {
+              "type": "string"
+            },
+            "sha256": {
+              "type": "string"
+            }
+          }
+        },
+        "confirmation_age_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "comparison_age_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
         }
       }
     },

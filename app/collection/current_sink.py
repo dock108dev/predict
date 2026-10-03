@@ -22,6 +22,9 @@ def normalized_records(projection, states, previous):
     records = []
     excluded = []
     for venue, cat in sorted(projection.inventory.items()):
+        if venue in ('kalshi','polymarket_us'):
+            from .current_occurrence import annotate as occurrence
+            cat = occurrence(deepcopy(cat), venue)
         events = {e['id']: e for e in cat['events']}
         for market in cat['markets']:
             event = events.get(market['event_id'])
@@ -65,10 +68,12 @@ def normalized_records(projection, states, previous):
                     participant=meaning['participant'];kind=meaning['predicate'];signed=None
                     if fact:
                         op=meaning['operator']
-                        if op not in ('gt','le'):raise ValueError('Unsupported exact score outcome')
-                        if ident['family']=='total':participant=None;kind='over' if op=='gt' else 'under';signed=canonical_line
+                        if op not in ('gt','le','lt','ge') or abs(Decimal(canonical_line)%1)!=Decimal('.5'):raise ValueError('Exact score outcome requires supported half-point orientation')
+                        if ident['family']=='total':
+                            if op not in ('gt','le'):raise ValueError('Unsupported combined-score direction')
+                            participant=None;kind='over' if op=='gt' else 'under';signed=canonical_line
                         else:
-                            if op=='le':participant=event['away'] if participant==event['home'] else event['home']
+                            participant=event['home'] if op in ('gt','ge') else event['away']
                             kind='cover';signed=canonical_line if participant==anchor else str(-Decimal(canonical_line))
                     name=next((n for n,cid in event['participants'].items() if cid==participant),None)
                     selections[native]=dict(participant=participant,predicate=kind,signed_line=signed,
@@ -77,24 +82,8 @@ def normalized_records(projection, states, previous):
                     ladder = ladders.get(native)
                     if not ladder or not ladder['asks']:
                         continue
-                    # Equality/three-way score predicates need a richer current
-                    # outcome contract; keep them as explicit exclusions.
-                    participant = meaning['participant']
-                    kind = meaning['predicate']
-                    signed = None
-                    if fact:
-                        op = meaning['operator']
-                        if op not in ('gt', 'le'):
-                            raise ValueError('Unsupported exact score outcome')
-                        if ident['family'] == 'total':
-                            participant = None
-                            kind = 'over' if op == 'gt' else 'under'
-                            signed = canonical_line
-                        else:
-                            if op == 'le':
-                                participant = event['away'] if participant == event['home'] else event['home']
-                            kind = 'cover'
-                            signed = canonical_line if participant == anchor else str(-Decimal(canonical_line))
+                    selection=selections[native]
+                    participant=selection['participant'];kind=selection['predicate'];signed=selection['signed_line']
                     levels = sorted(ladder['asks']['levels'], key=lambda x: Decimal(x['price']['value']))
                     if not levels:continue  # known empty side remains an outcome without a price
                     if len(levels) > 4096 or any(Decimal(l['quantity']['value']) <= 0 for l in levels):
@@ -123,6 +112,8 @@ def normalized_records(projection, states, previous):
                         depth=[dict(price=str(l['price']['value']), quantity=str(l['quantity']['value'])) for l in levels],
                         freshness_policy=dict(version=venue+'-book-age-engineering-1', maximum_age_seconds=30),
                         provenance=dict(mode='current', real_source=True, sha256=binding['sha256']))
+                    if book.get('book_confirmation'):
+                        q['book_confirmation']=deepcopy(book['book_confirmation'])
                     name = next((n for n, cid in event['participants'].items() if cid == participant), None)
                     selection = dict(participant=participant, predicate=kind, signed_line=signed,
                                      label=kind.capitalize() if name is None else name+(' does not win' if kind == 'not_win' else ''))
@@ -135,9 +126,21 @@ def normalized_records(projection, states, previous):
                         orientation_evidence=[binding['version']+':'+binding['sha256']], verified=event_scope is None,
                         outcome_cardinality=2, outcome_selections=list(selections.values()),
                         result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
+                    from .current_occurrence import direct, VERSION as DIRECT_VERSION
+                    if event_scope is None and direct(normalized, market, native, selection):
+                        normalized['result_policy']=DIRECT_VERSION+':normal-full-game-win'
+                        normalized['period_boundary']='Full game including applicable overtime; direct win only; exceptional cashflows differ'
+                        normalized['outcome_selections']=[dict(participant=event[role],predicate='win',signed_line=None,label=next(n for n,c in event['participants'].items() if c==event[role])) for role in ('away','home')]
+                        normalized['orientation_evidence'].append(DIRECT_VERSION+':'+market['direct_win_binding']['sha256'])
+                        q['native_predicate']=dict(version=DIRECT_VERSION,participant=participant,predicate=kind,
+                            native_outcome_id=native,domain=[dict(item,native_outcome_id=side) for side,item in selections.items()],
+                            binding_sha256=market['direct_win_binding']['sha256'],
+                            original_result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
+                        q['rule_note']='Direct full-game win gross quote comparison only. Original native outcome domain is preserved. Tie pays 0.50; Kalshi postponement window is 48 hours, US is two weeks; fair-price/refund/cancellation treatment differs or remains unqualified. Kalshi NO is not opponent YES.'
+                        q['rules_differ']=True
                     if event_scope is not None:normalized['event_scope']=event_scope
                     instrument = stable([source, selection, key])
-                    fingerprint = stable([{k: q[k] for k in ('source', 'original', 'state', 'rule_note', 'cost_note', 'depth', 'freshness_policy')},binding['sha256']])
+                    fingerprint = stable([{k: q[k] for k in ('source', 'original', 'state', 'rule_note', 'cost_note', 'depth', 'freshness_policy')},binding['sha256'],q.get('native_predicate')])
                     prior = previous.get(instrument)
                     if prior:
                         q['revision'] = prior['revision'] + (fingerprint != prior['fingerprint'])
@@ -165,13 +168,36 @@ class LatestStateSink:
         self.sequence = 0
         self.revisions = {}
         self.exclusions = []
-        self.metrics = dict(last_commit_ms=0, max_commit_ms=0, retained_bytes=0, max_transient_encoded_bytes=0)
+        self.aggregate_records = {}
+        self.aggregate_receipts = {}
+        self.metrics = dict(admitted_observations=0, rejected_observations=0, last_commit_ms=0, max_commit_ms=0, retained_bytes=0, max_transient_encoded_bytes=0)
 
     def commit(self, row, states):
-        if len(packed(row)) > self.config['ingress_bytes']:
+        try:
+            result=self._commit(row,states)
+        except Exception:
+            self.metrics["rejected_observations"]+=1
+            raise
+        self.metrics["admitted_observations"]+=1
+        return result
+
+    def _commit(self, row, states):
+        if len(packed({k:v.decode() if isinstance(v,bytes) else v for k,v in row.items()})) > self.config['ingress_bytes']:
             raise ValueError('Current ingress observation capacity')
         tick = perf_counter()
         candidate = deepcopy(self.reducer)
+        aggregate_records = deepcopy(self.aggregate_records)
+        aggregate_receipts = deepcopy(self.aggregate_receipts)
+        if row['type']=='current_aggregate':
+            from .current_aggregate_admission import admit_venues
+            sport=row['sport']
+            if aggregate_receipts.get(sport) and row['received_at']<=aggregate_receipts[sport]:
+                raise ValueError('Stale aggregate response')
+            accepted,rejected=admit_venues(row['body'],sport,row['received_at'])
+            if len(rejected)==2:raise ValueError('Malformed aggregate response')
+            prior=aggregate_records.get(sport,[])
+            aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected]+[r for batch in accepted.values() for r in batch]
+            aggregate_receipts[sport]=row['received_at']
         if row['type']=='prediction_book' and row['book']['sync']=='synchronized':
             from app.dashboard.current_contract import bounded_decimal, stamp
             book=row['book'];ref=book['raw']['ref'];source=row['source']
@@ -180,6 +206,9 @@ class LatestStateSink:
             if source!=ref['venue'] or market is None or book['quantity_unit']!='contracts':raise ValueError('Unadmitted current book identity or units')
             if {o['outcome_id'] for o in book['outcomes']}!={s['id'] for s in market['sides']}:raise ValueError('Incomplete current outcome set')
             stamp(book['raw']['received_at']);stamp(book['raw'].get('exchange_at'),True)
+            if book.get('book_confirmation'):
+                from .current_confirmation import validate
+                validate(book['book_confirmation'],ref,book)
             for outcome in book['outcomes']:
                 for name in ('asks','bids'):
                     ladder=outcome[name]
@@ -193,15 +222,29 @@ class LatestStateSink:
                         prices.add(price)
             candidate.reduce_observation(dict(row,type='source_health',state='connected',market_ids=[row['book']['raw']['ref']['market_id']]))
         elif row['type']=='prediction_book':raise ValueError('Incomplete native image requires resynchronization')
-        candidate.reduce_observation(row)
-        record_count = len(candidate.books)+len(candidate.metadata)+sum(len(c['events'])+len(c['markets']) for c in candidate.inventory.values())
+        if row['type']!='current_aggregate':candidate.reduce_observation(row)
+        record_count = len(candidate.books)+len(candidate.metadata)+sum(len(r) for r in aggregate_records.values())+sum(len(c['events'])+len(c['markets']) for c in candidate.inventory.values())
         if record_count > self.config['ingress_records']:
             raise ValueError('Current retained record capacity')
         retained = len(packed(dict(inventory=candidate.inventory, books={str(k):v for k,v in candidate.books.items()},
-                                  metadata={str(k):v for k,v in candidate.metadata.items()})))
+                                  metadata={str(k):v for k,v in candidate.metadata.items()},aggregate=aggregate_records)))
         if retained > 16*1024*1024:
             raise ValueError('Current reducer retained capacity')
         records, excluded = normalized_records(candidate, states, self.revisions)
+        for batch in aggregate_records.values():
+            for record in batch:
+                r=deepcopy(record);q=r['quote']
+                state=states[q['venue']]['state']
+                q['state']=state if state in ('stopped','error','unavailable') else 'budget_delayed'
+                r['_fingerprint']=stable([record['_fingerprint'],q['state']])
+                prior=self.revisions.get(r['_instrument'])
+                if prior:
+                    from app.dashboard.current_contract import stamp
+                    old_time=prior['times']['source_at'];new_time=q['times']['source_at']
+                    if old_time and (new_time is None or stamp(new_time)<stamp(old_time)):raise ValueError('Aggregate source time regressed')
+                    q['revision']=prior['revision']+(r['_fingerprint']!=prior['fingerprint'])
+                    if q['original']==prior['original']:q['times']=deepcopy(prior['times'])
+                records.append(r)
         revisions = {r.pop('_instrument'): dict(fingerprint=r.pop('_fingerprint'), revision=r['quote']['revision'], times=deepcopy(r['quote']['times']),
             original=deepcopy(r['quote']['original']),source=r['quote']['venue']) for r in records}
         raw = deepcopy(self.envelope)
@@ -212,8 +255,9 @@ class LatestStateSink:
         if not self.store.commit(raw):
             raise ValueError('Current commit sequence rejected')
         self.reducer, self.revisions, self.exclusions = candidate, revisions, excluded
+        self.aggregate_records,self.aggregate_receipts=aggregate_records,aggregate_receipts
         self.sequence += 1
         elapsed = (perf_counter()-tick)*1000
-        self.metrics.update(last_commit_ms=elapsed, max_commit_ms=max(elapsed, self.metrics['max_commit_ms']),
+        self.metrics.update(admitted_records=len(records),identity_excluded_records=len(excluded),last_commit_ms=elapsed, max_commit_ms=max(elapsed, self.metrics['max_commit_ms']),
             retained_bytes=retained, max_transient_encoded_bytes=max(self.metrics['max_transient_encoded_bytes'], 2*retained+3*encoded))
         return dict(acknowledgment=self.acknowledgment, service_sequence=self.sequence)

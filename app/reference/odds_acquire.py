@@ -104,6 +104,9 @@ def validate_odds(event, selected):
                 raise ValueError('Missing outcomes list')
 
 
+from app.collection.shared_odds_guard import shared_capture
+
+@shared_capture
 async def capture(folder, key, authorization, *, transport=None, clock=now,
                   monotonic=monotonic_time.monotonic):
     folder = Path(folder)

@@ -63,12 +63,9 @@ class CurrentStore:
             for g in e['groups']:
                 for o in g['outcomes']:
                     for q in quotes_of(o):
-                        source=stamp(q['times']['source_at'],True)
-                        if source is None:continue
-                        age=(clock-source).total_seconds();q['age_seconds']=None if age<0 else age
-                        policy=q.get('freshness_policy')
-                        stale=age<0 or policy is None or age>policy['maximum_age_seconds']
-                        if stale!=q['stale']:
+                        from .current_contract import age_basis
+                        old_stale=q['stale'];age_basis(q,clock)
+                        if old_stale!=q['stale']:
                             changed=True
         if changed:
             state['state_revision']+=1
@@ -105,6 +102,10 @@ class CurrentStore:
                     content=lambda v:dict({k:v.get(k) for k in ('original','source','state','rule_note','binding','calculation_inputs','depth','freshness_policy','rules_differ','cost_note')},source_time_kind=v['times']['source_time_kind'])
                     if q['revision']==prev['revision'] and content(q)!=content(prev):raise ValueError('Quote changed without a coherent revision')
                     if q['revision']>prev['revision'] and content(q)==content(prev):raise ValueError('Heartbeat cannot reprice a quote')
+                    new=q.get('book_confirmation');prior=prev.get('book_confirmation')
+                    if new and prior and new!=prior:
+                        if new['generation']<prior['generation'] or stamp(new['confirmed_at'])<=stamp(prior['confirmed_at']) or new['payload_sha256']==prior['payload_sha256']:
+                            raise ValueError('Replayed or regressed book confirmation')
                     if q['times']['source_at'] is not None and q['times']['source_at']!=prev['times']['source_at'] and q['original']==prev['original'] and q.get('observation_time_evidence') is None:
                         raise ValueError('Identical repeat cannot reset source age without explicit observation-time evidence')
         else:

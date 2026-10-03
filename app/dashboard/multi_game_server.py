@@ -534,7 +534,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     from .current_state import mount as mount_current
     mount_current(app,current_provider)
     async def current_admin(req):
-        from .current_state import CURRENT_KEY
+        from .current_state import CURRENT_KEY, SelectionError
         provider=app[CURRENT_KEY].provider
         if req.method=='GET':
             status=getattr(provider,'status',None)
@@ -542,15 +542,23 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         body=await read_json(req)
         if body==dict(action='stop'):
             await provider.close()
-        elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us') and hasattr(provider,'pause'):
+        elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
             await provider.pause(body['source'])
+        elif set(body)=={'action','runtime_id','candidate_digest'} and body['action']=='recover' and hasattr(provider,'recover'):
+            try:await provider.recover(body['runtime_id'],body['candidate_digest'])
+            except SelectionError as exc:
+                return web.json_response(exc.body,status=exc.status)
         else:raise ValueError('Exact native admin control required')
         return web.json_response(provider.status())
+    async def historical_issue(req):
+        return web.FileResponse(static_root/'current-u4-issue.json')
+    app.router.add_get('/api/admin/u4-issue',historical_issue)
+    app.router.add_get('/api/admin/status',current_admin)
     app.router.add_get('/api/admin/current',current_admin)
     app.router.add_post('/api/admin/current',current_admin)
     async def current_asset(req):
         name=req.match_info['name']
-        allowed={'admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        allowed={'admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])
     app.router.add_get('/current/assets/{name}',current_asset)

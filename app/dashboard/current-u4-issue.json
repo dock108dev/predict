@@ -1,0 +1,45 @@
+{
+  "schema": "predict-u4-site-issues-1",
+  "issues": [
+    {
+      "provider": "the_odds_api",
+      "website": "https://the-odds-api.com",
+      "affected_venue": "novig",
+      "query": "/v4/sports/americanfootball_ncaaf/odds",
+      "bookmakers": [
+        "novig",
+        "prophetx"
+      ],
+      "markets": [
+        "h2h",
+        "spreads",
+        "totals"
+      ],
+      "candidate_digest": "ad5ffbe226db5f7593c4918fd1a37babb0a4821334b2a636338e9a6e0e34bd23",
+      "attempt_id": "08bb72c1-9396-4eb5-a177-6d25a3b3f72a",
+      "observed_at": "2026-10-03T05:21:49.121844+00:00",
+      "http_status": 200,
+      "code": "aggregate_offering_unobserved",
+      "response_sha256": [
+        "9cad683657ce9abe2045abd7eea5a1ee9111657208d19b2b76c6785c5037404d"
+      ],
+      "credits": 3,
+      "retries": 0,
+      "impact": "No Novig comparison legs observed in this NCAAF response; ProphetX and independent native sources remain useful.",
+      "meaning": "Observed query only; no universal non-support or entitlement conclusion.",
+      "next_action": "At a normally due affordable shared slot, retain one useful sport query expected to contain Novig; investigate provider offering if still absent, without repeated broad searching."
+    }
+  ],
+  "local_recorder_faults": [
+    {
+      "run": "attempt-1",
+      "code": "partial_response_read",
+      "impact": "No retained MLB browser/current coverage proof; charge preserved."
+    },
+    {
+      "run": "attempt-2",
+      "code": "recorder_current_read_cap",
+      "impact": "Retained first aggregate checkpoint; no full shutdown witness or live Details proof from this attempt."
+    }
+  ]
+}

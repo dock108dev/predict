@@ -1,4 +1,4 @@
-> **October 2: U0–U2 local engineering complete; U3 is next.** Ordinary `/` opens the grouped board with both price formats and held-price Details. Current acquisition is not connected yet, so ordinary startup honestly shows unavailable prices. [Sprint status](docs/usability-sprint-plan.md) · [U1/U2 evidence and screenshots](evidence/u1-u2-integration-20261002/README.md) · [U3 handoff](docs/u3-current-handoff.md). Live operation and owner acceptance remain outstanding.
+> **October 3: U0–U4 local engineering complete; U5 is next.** Ordinary startup owns bounded native feeds and shared budgeted Novig/ProphetX acquisition. Actual ProphetX delivery was observed; Novig was unobserved in the retained NCAAF query. Wider coverage, native occurrence matching, sustained cadence and owner acceptance remain unqualified. [Sprint status](docs/usability-sprint-plan.md) · [U4 evidence](evidence/u4-current-20261003/README.md) · [Aggregate operation](docs/u4-aggregate-operation.md) · [U5 handoff](docs/u5-current-handoff.md).
 
 # Prediction Arb
 
@@ -16,7 +16,7 @@ python3.14 -m venv .venv
 scripts/opportunity-board start
 ```
 
-Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/). The current provider returns unavailable until U3 connects automatic acquisition. Startup does not load saved quotes or synthetic prices. PostgreSQL and a Node.js service are not required.
+Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/). The ordinary current provider automatically acquires the configured native scope, or reports source-specific connecting/unavailable states. Startup does not load saved quotes or synthetic prices. PostgreSQL and a Node.js service are not required.
 
 ```sh
 scripts/opportunity-board status
@@ -25,13 +25,13 @@ scripts/opportunity-board stop
 
 For a foreground server, use `.venv/bin/python -m app.dashboard --port 8783`. The board assets also ship in the Python package; retained development fixtures remain separately available in the checkout. Restart after source changes. The older `scripts/dashboard` launcher is retired.
 
-Live collection requires an explicitly configured run specification, source endpoints and valid run-specific authorization. Credentials alone do not enable Start scan. See [configuration and operation](docs/configuration.md) for the concrete requirements and [security](docs/security.md) for the loopback browser boundary. Remote, proxy and shared-user hosting are unsupported.
+Ordinary native operation uses bounded configuration, fixed read-only endpoints, guarded credentials and a fresh consumed runtime record derived from the standing grant; see [native operation](docs/u3-native-operation.md). Retained finite qualification still requires its sealed run specification and run-specific authorization; see [configuration](docs/configuration.md). [Security](docs/security.md) describes the loopback browser boundary. Remote, proxy and shared-user hosting are unsupported.
 
 ## Use the dashboard
 
 Compare a same-selection row, use local league/market/period/venue/search filters, and select a price for Details. A review keeps its original revision while the board updates; adopting a newer price is explicit. Manual What-if requires your probability, every cost and payout quantity. Missing inputs withhold dependent results; zero and negative results remain valid.
 
-**Admin** links to preserved retained inspection at `/admin/retained`; full source administration is U5. Saved prices establish only their recorded state. The isolated design remains `/preview/u0`. For populated integration testing, run `.venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797` and follow the [test workflow](evidence/u1-u2-integration-20261002/README.md). This test provider uses production interfaces and labels every screen as synthetic.
+**Admin** provides minimal native/aggregate status, shared quota and pause/stop controls, plus preserved inspection at `/admin/retained`; full observability remains U5. Saved prices establish only their recorded state. The isolated design remains `/preview/u0`. For populated integration testing, run `.venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797` and follow the [test workflow](evidence/u1-u2-integration-20261002/README.md). This test provider uses production interfaces and labels every screen as synthetic.
 
 [Sport and market integration](docs/sports-integration.md) describes implemented handlers. [Data limitations](docs/market-data-gaps.md) explains what those handlers do not establish.
 

@@ -3,6 +3,7 @@ import asyncio
 from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime,timezone
+from datetime import timedelta
 import json
 from types import SimpleNamespace
 import unittest
@@ -93,7 +94,32 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(worker.failed);self.assertEqual(worker.metrics['connections'],3)
         self.assertEqual(states[-1][1],'error')
 
+    async def test_worker_clock_highwater_survives_new_subscription_engine(self):
+        from app.adapters.polymarket_us import next_market_data,source_time_value
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+            source_state=lambda *a:None,issue=lambda *a:None,book=lambda *a:self.fail('regressed image was admitted'))
+        service.config['backoff_seconds']=[.001]*5
+        worker=NativeWorker(service,'polymarket_us');worker.credential=Credential()
+        worker.client=SimpleNamespace(budget=PredictionBudget(dict(session_bytes=16*1024*1024)))
+        m=replace(us_market(),state=MarketState.ACTIVE);key=next_market_data(m)['slug']
+        future=source_time_value((datetime.now(timezone.utc)+timedelta(hours=1)).isoformat());worker.source_highwater[key]=future
+        class Connector:
+            def __init__(self,*a,**kw):pass
+            def __await__(self):
+                async def build():return Socket('polymarket_us',1)
+                return build().__await__()
+        with patch('app.collection.current_native.connect',Connector):await worker.stream([m])
+        self.assertTrue(worker.failed);self.assertEqual(worker.metrics['connections'],3)
+        self.assertEqual(worker.source_highwater[key],future)
+
 class PurchaseSemantics(unittest.TestCase):
+    def test_useful_family_rotation_respects_parser_cap(self):
+        from app.collection.current_native import balanced_markets
+        rows=[dict(id=f+str(i),market_type=f) for f in ('moneyline','spread','total') for i in range(30)]
+        selected=balanced_markets(rows,20,['moneyline','spread','total'])
+        self.assertEqual(len(selected),20)
+        self.assertEqual([m['market_type'] for m in selected[:6]],['moneyline','spread','total']*2)
+        self.assertEqual(len({m['id'] for m in selected}),20)
     def test_native_kalshi_original_bids_preserved_and_asks_separate(self):
         original=engine().feed(frame(1),1,NOW);derived=current_purchase_book(original)
         self.assertIsNone(original.outcomes[0].asks)

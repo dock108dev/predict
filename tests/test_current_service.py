@@ -162,6 +162,15 @@ class SinkAdmission(unittest.IsolatedAsyncioTestCase):
         b=deepcopy(self.book);b['raw']['ref']['market_id']=m['id'];self.service.book('kalshi',b)
         groups=self.store.snapshot()['events'][0]['groups']
         self.assertEqual(len(groups),2);self.assertTrue(all(len(g['outcomes'])==2 for g in groups))
+    async def test_away_spread_literal_half_point_orientation(self):
+        cat=deepcopy(self.cat);e=cat['events'][0];m=cat['markets'][0];m['market_type']='spread'
+        b=m['v1_raw_binding'];b['identity'].update(family='spread',line='-9.5',roles={'home':e['home'],'away':e['away']})
+        b['source_predicate']=dict(family='spread',participant=e['away'],line='-9.5',outcomes=[dict(native_id='yes',operator='gt'),dict(native_id='no',operator='le')])
+        self.service.catalog('kalshi',cat);self.service.book('kalshi',self.book)
+        group=self.store.snapshot()['events'][0]['groups'][0]
+        actual={(o['participant'],o['signed_line']) for o in group['outcomes']}
+        self.assertEqual(actual,{(e['away'],'-9.5'),(e['home'],'9.5')})
+        self.assertEqual(group['anchor_participant'],e['away'])
     async def test_held_prices_update_aging_catalog_retirement_shutdown(self):
         held=self.store.create(request(self.store));frozen=deepcopy(held['review'])
         changed=deepcopy(self.book);changed['outcomes'][0]['asks']['levels'][0]['price']['value']='.49'

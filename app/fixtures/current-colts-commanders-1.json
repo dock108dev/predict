@@ -1,0 +1,223 @@
+{
+  "version": "predict-direct-win-1",
+  "event": {
+    "competition": "NFL",
+    "sport": "american_football",
+    "season": "2026",
+    "stage": "regular_season",
+    "game_id": "aa29dd21-4feb-11f1-abca-2c54536568a9",
+    "original_start": "2026-10-04T13:30:00+00:00",
+    "scheduled_start": "2026-10-04T13:30:00+00:00",
+    "schedule_status": "scheduled",
+    "home": "NFL:WAS",
+    "away": "NFL:IND",
+    "participants": {
+      "Indianapolis Colts": "NFL:IND",
+      "Washington Commanders": "NFL:WAS"
+    },
+    "title": "Indianapolis Colts at Washington Commanders"
+  },
+  "evidence": [
+    {
+      "url": "https://www.colts.com/news/colts-release-2026-regular-season-schedule",
+      "path": "evidence/u6-winner-20261003/schedule-0.html",
+      "sha256": "0595399f5bc9406f759f26df4e70d79f861affc540da082d67043dd84ef35dd9",
+      "received_at": "2026-10-03T13:32:55.293826+00:00",
+      "clock_basis": "local file receipt write after complete HTTP 200",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://www.colts.com/game-day/2026/reg-week4/colts-at-commanders/",
+      "path": "evidence/u6-winner-20261003/schedule-1.html",
+      "sha256": "30f987f810367ab5a2755a5303cfbec31c7371c617115740bcb2a59702956997",
+      "received_at": "2026-10-03T13:32:55.529745+00:00",
+      "clock_basis": "local file receipt write after complete HTTP 200",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://gateway.polymarket.us/v1/events",
+      "path": "evidence/u6-winner-20261003/retained-e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 2,
+      "sha256": "e9e07ff051e92bfa7f031931674e917011abc6a748b06b37a2cd349ac7b74c18",
+      "received_at": "2026-09-28T02:26:27.324347+00:00",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/events",
+      "path": "evidence/u6-winner-20261003/retained-d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 9,
+      "sha256": "d802dd6fd5994dd9586fea4c730dcf1a06f4bbef3b17cf559059946292f45287",
+      "received_at": "2026-09-28T02:26:29.526776+00:00",
+      "status": 200,
+      "complete": true
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/markets",
+      "path": "evidence/u6-winner-20261003/retained-ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b.json",
+      "original_journal": "evidence/live-freshness-run-b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87/b2391410-91d5-4c1a-aa19-cf5c94f6ae87.jsonl",
+      "journal_line": 18,
+      "sha256": "ffe7222156e7f010a16a986b09f3034f1c451f7ad107b78108a4eb9be6e8007b",
+      "received_at": "2026-09-28T02:26:32.256646+00:00",
+      "status": 200,
+      "complete": true
+    }
+  ],
+  "original_start_evidence": {
+    "source": {
+      "url": "https://www.colts.com/news/colts-release-2026-regular-season-schedule",
+      "path": "evidence/u6-winner-20261003/schedule-0.html",
+      "sha256": "0595399f5bc9406f759f26df4e70d79f861affc540da082d67043dd84ef35dd9",
+      "received_at": "2026-10-03T13:32:55.293826+00:00",
+      "clock_basis": "local file receipt write after complete HTTP 200",
+      "status": 200,
+      "complete": true
+    },
+    "location": "May 14 2026 release table, Week 4, Oct 4, at Washington, Tottenham, 9:30 a.m. Eastern; EDT conversion to 13:30 UTC",
+    "basis": "original published regular-season schedule"
+  },
+  "schedule_status_evidence": {
+    "source": {
+      "url": "https://www.colts.com/game-day/2026/reg-week4/colts-at-commanders/",
+      "path": "evidence/u6-winner-20261003/schedule-1.html",
+      "sha256": "30f987f810367ab5a2755a5303cfbec31c7371c617115740bcb2a59702956997",
+      "received_at": "2026-10-03T13:32:55.529745+00:00",
+      "clock_basis": "local file receipt write after complete HTTP 200",
+      "status": 200,
+      "complete": true
+    },
+    "location": "data-gameid; game center Week 4 SUN 10/04 9:30 AM EDT, PREGAME; linked milestone status scheduled",
+    "basis": "current official game center and linked native milestone"
+  },
+  "sources": {
+    "kalshi": {
+      "event_id": "KXNFLGAME-26OCT04INDWAS",
+      "milestone": {
+        "id": "07e1f415-656d-410b-9c50-8762aafa8b6c",
+        "start_date": "2026-10-04T13:30:00Z",
+        "season": {
+          "type": "REG",
+          "week": 4,
+          "year": 2026
+        },
+        "main_game_event_ticker": "KXNFLGAME-26OCT04INDWAS",
+        "home_team_id": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f",
+        "away_team_id": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf",
+        "status": "scheduled"
+      },
+      "markets": {
+        "KXNFLGAME-26OCT04INDWAS-IND": {
+          "material": {
+            "ticker": "KXNFLGAME-26OCT04INDWAS-IND",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "rules_primary": "If Indianapolis wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "custom_strike": {
+              "football_team": "fe5f8219-fef4-4498-83d5-f6cc6f2cb7bf"
+            },
+            "strike_type": "structured"
+          },
+          "material_sha256": "7b610bfdc18570987bb8256bf394a9275774a2d6c28d8474193dac83c4dd0922",
+          "outcomes": {
+            "yes": {
+              "participant": "NFL:IND",
+              "predicate": "win"
+            },
+            "no": {
+              "participant": "NFL:IND",
+              "predicate": "not_win"
+            }
+          }
+        },
+        "KXNFLGAME-26OCT04INDWAS-WAS": {
+          "material": {
+            "ticker": "KXNFLGAME-26OCT04INDWAS-WAS",
+            "event_ticker": "KXNFLGAME-26OCT04INDWAS",
+            "rules_primary": "If Washington wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the IND Colts vs WAS Commanders Pro Football game originally scheduled for Oct 4, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "custom_strike": {
+              "football_team": "aa65dda6-9cb8-4c8b-812b-d0c1feaae54f"
+            },
+            "strike_type": "structured"
+          },
+          "material_sha256": "5ef77fbfd02d3f3d035d5851f80da78c59faa9d87f6990e116ba0efb6abe09e0",
+          "outcomes": {
+            "yes": {
+              "participant": "NFL:WAS",
+              "predicate": "win"
+            },
+            "no": {
+              "participant": "NFL:WAS",
+              "predicate": "not_win"
+            }
+          }
+        }
+      }
+    },
+    "polymarket_us": {
+      "event_id": "118973",
+      "game_id": "19502",
+      "markets": {
+        "960578": {
+          "material": {
+            "id": "960578",
+            "sportsMarketType": "football_team_full_game_winner",
+            "description": "This market will settle to the winner of the Indianapolis Colts vs Washington Commanders NFL game scheduled for Oct 4, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+            "gameStartTime": "2026-10-04T13:30:00Z",
+            "marketSides": [
+              {
+                "id": "1920640",
+                "marketId": "960578",
+                "long": true,
+                "team_id": "61",
+                "team_name": "Indianapolis Colts"
+              },
+              {
+                "id": "1920641",
+                "marketId": "960578",
+                "long": false,
+                "team_id": "79",
+                "team_name": "Washington Commanders"
+              }
+            ]
+          },
+          "material_sha256": "9d568e351f91c006750ae1c1b171529d9578a3c00543b9470cdd32464b5961c0",
+          "outcomes": {
+            "1920640": {
+              "participant": "NFL:IND",
+              "predicate": "win",
+              "long": true
+            },
+            "1920641": {
+              "participant": "NFL:WAS",
+              "predicate": "win",
+              "long": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "applicability": {
+    "start": "2026-10-03T13:32:54+00:00",
+    "end": "2026-10-04T13:30:00+00:00",
+    "scope": "Only this evidenced occurrence and listed direct full-game winner instruments; current metadata revalidation required"
+  },
+  "limitations": [
+    "Kalshi NO is not-win, never opponent YES",
+    "Tie fractional payout and distinct postponement/fair-value policies retained; no net arbitrage equivalence"
+  ],
+  "evidence_paths": {
+    "kalshi_event": "$.events[?(@.event_ticker == KXNFLGAME-26OCT04INDWAS)]",
+    "kalshi_milestone": "$.milestones[?(@.id == 07e1f415-656d-410b-9c50-8762aafa8b6c)].details.{season,status,main_game_event_ticker,home_team_id,away_team_id}; .start_date",
+    "kalshi_markets": "$.markets[?(@.ticker == KXNFLGAME-26OCT04INDWAS-IND or @.ticker == KXNFLGAME-26OCT04INDWAS-WAS)]",
+    "us_event": "$.events[?(@.id == 118973)].{gameId,startDate,startTime,rescheduledFromGameId,originalStartTime}",
+    "us_market": "$.events[?(@.id == 118973)].markets[?(@.id == 960578)].marketSides[?(@.id == 1920640 or @.id == 1920641)].{id,marketId,long,team.id,team.name}",
+    "official_game": "[data-gameid=aa29dd21-4feb-11f1-abca-2c54536568a9]; original May 14 release Week 4 schedule row"
+  },
+  "sha256": "9b28a8bccbd1746043506e8b116405512625b27c72a81b7dad6725b178e025ee"
+}

@@ -98,7 +98,20 @@ def quote_identity(q,outcome_id):
 
 
 def current_eligible(q):
-    return q['comparison']['eligible'] and q['state']=='available' and not q['stale'] and q['display']['supported'] and q['age_seconds'] is not None
+    return q['comparison']['eligible'] and q['state']=='available' and not q['stale'] and q['display']['supported'] and q.get('comparison_age_seconds',q['age_seconds']) is not None
+
+def age_basis(q,clock):
+    source=stamp(q['times']['source_at'],True)
+    source_age=None if source is None else (clock-source).total_seconds()
+    confirmation=q.get('book_confirmation')
+    confirmed=None if confirmation is None else (clock-stamp(confirmation['confirmed_at'])).total_seconds()
+    q['age_seconds']=None if source_age is None or source_age<0 else source_age
+    q['confirmation_age_seconds']=None if confirmed is None or confirmed<0 else confirmed
+    age=confirmed if confirmation is not None else source_age
+    q['comparison_age_seconds']=None if age is None or age<0 else age
+    policy=q.get('freshness_policy')
+    q['stale']=age is not None and (age<0 or policy is None or age>policy['maximum_age_seconds'])
+    return age
 
 
 def comparisons(outcome):
@@ -127,6 +140,17 @@ def comparisons(outcome):
                 gap['exact'] = diff
                 gap['display_value']=display_decimal(gap['value'],1,True)+'c'
                 gap['interpretation'] = 'Lowest other eligible venue price minus selected price; gross only'
+            # Supported arithmetic on source-local aggregate originals remains
+            # inspectable when cadence/freshness excludes current-price cues.
+            if q['source']['provider']=='the_odds_api' and q['binding']['verified'] and q['display']['supported'] and q['venue'] in vs and not gap['eligible']:
+                observed=[x for x in quotes if x['venue'] in vs and x['venue']!=q['venue'] and x['source']['provider']=='the_odds_api' and x['binding']['verified'] and x['display']['supported']]
+                if observed:
+                    best=min(observed,key=lambda x:(price(x),x['id']))
+                    basis=dict(version=VERSION,inputs=[dict(quote_id=x['id'],quote_revision=x['revision']) for x in (q,best)])
+                    diff=exact_wire((price(best)-price(q))*100)
+                    gap=result(diff['decimal_approx'],'cents',basis=basis)
+                    gap.update(exact=diff,display_value=display_decimal(gap['value'],1,True)+'c',
+                        interpretation='Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim.')
             contexts[key] = dict(cue=cue, raw_difference=gap)
         q['comparison']['contexts'] = contexts
         q['calculations']['raw_difference'] = deepcopy(contexts['+'.join(VENUES)]['raw_difference'])
@@ -210,7 +234,19 @@ def _serialize(raw, *, allow_synthetic):
                 candidates=[*o['quotes'].values(),*(q for qs in o.get('alternatives',{}).values() for q in qs)]; unique={}
                 if len(candidates)>64:raise ValueError('Exact-selection instrument capacity exceeded')
                 for q in candidates:
-                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence'})
+                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation'})
+                    native=q.get('native_predicate')
+                    if native is not None:
+                        fields(native,{'version','participant','predicate','native_outcome_id','domain','binding_sha256','original_result_policy'})
+                        if native['version']!='predict-direct-win-1' or native['predicate']!='win' or native['participant']!=o['participant'] or native['native_outcome_id']!=q['source']['native_outcome_id']:
+                            raise ValueError('Native direct-win correspondence conflict')
+                        if not isinstance(native['domain'],list) or len(native['domain'])!=2:raise ValueError('Complete native domain required')
+                        for item in native['domain']:
+                            fields(item,{'participant','predicate','signed_line','label','native_outcome_id'})
+                            if item['participant'] not in {p['id'] for p in ps} or item['predicate'] not in ('win','not_win') or item['signed_line'] is not None:raise ValueError('Invalid native winner domain')
+                            text(item['label'])
+                            text(item['native_outcome_id'])
+                        text(native['binding_sha256']);text(native['original_result_policy'])
                     original=q['original']
                     fields(original,{'value','units','payout','payout_units','quantity_units','role'},{'native_value','native_units','transformation'})
                     if original['role']!='comparison':
@@ -263,17 +299,19 @@ def _serialize(raw, *, allow_synthetic):
                     q['display'].pop('what_if',None)
                     if original['payout_units']!='USD':q['display']=dict(supported=False,american=None,cents=None,equivalent=None,reason='USD payout basis required')
                     at=stamp(q['times']['source_at'],True)
-                    age=None if at is None else (clock-at).total_seconds()
-                    q['age_seconds']=None if age is None or age<0 else age
+                    if q.get('book_confirmation') is not None:
+                        from app.collection.current_confirmation import validate
+                        validate(q['book_confirmation'],dict(venue=q['venue'],event_id=q['source']['native_event_id'],market_id=q['source']['native_market_id']))
                     policy=q.get('freshness_policy')
                     if policy is not None:
                         fields(policy,{'version','maximum_age_seconds'})
                         text(policy['version']);integer(policy['maximum_age_seconds'])
-                    q['stale']=age is not None and (age<0 or policy is None or age>policy['maximum_age_seconds'])
+                    age=age_basis(q,clock)
                     reasons=[]
                     if not b['verified']:reasons.append('Selection binding unverified')
                     if age is None:reasons.append('Source time unknown')
-                    if age is not None and age<0:reasons.append('Source clock is ahead of evaluation clock')
+                    if age is not None and age<0 or at is not None and at>clock:reasons.append('Source clock is ahead of evaluation clock')
+                    if q.get('book_confirmation') and stamp(q['book_confirmation']['received_at'])>clock:reasons.append('Confirmation receipt is ahead of evaluation clock')
                     if q['stale']:reasons.append('Stale or unqualified source age policy')
                     if q['state']!='available':reasons.append('Source '+q['state'].replace('_',' '))
                     if not q['display']['supported']:reasons.append(q['display']['reason'])
@@ -461,7 +499,7 @@ def snapshot_inputs(payload):
         for g in e['groups']:
             for o in g['outcomes']:
                 for q in quotes_of(o):
-                    for key in ('display','age_seconds','stale','comparison','calculations'):
+                    for key in ('display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations'):
                         q.pop(key,None)
                     bundle=q.pop('calculation_inputs',None)
                     if bundle is not None:q['engine_inputs']=bundle

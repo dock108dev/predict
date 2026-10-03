@@ -159,7 +159,16 @@ class OddsHTTP:
     async def _request(self):
         if self.total_bytes >= self.policy.session_bytes:
             raise BudgetStop('session_byte_cap')
-        self.budget.reserve(self.reservation_cost() if hasattr(self,'reservation_cost') else None)
+        cost=self.reservation_cost() if hasattr(self,'reservation_cost') else self.policy.reserve_per_request
+        self.budget.reserve(cost)
+        shared=None; shared_attempt=None
+        if self.real:
+            from .current_quota import QuotaLedger, load_window
+            from .current_policy import candidate
+            shared=QuotaLedger()
+            shared.bind_window(load_window())
+            shared_attempt=shared.reserve(getattr(self,'shared_owner',None),candidate()[0],self.metadata(),cost)
+            shared.dispatched(shared_attempt,self.shared_owner)
         before_dispatch=getattr(self,'before_dispatch',None)
         if before_dispatch:before_dispatch(self.metadata(),self.budget.snapshot())
         started = utc()
@@ -182,6 +191,9 @@ class OddsHTTP:
                     if key in ('x-requests-used','x-requests-remaining','x-requests-last','retry-after'):
                         headers.append((key, value if re.fullmatch(r'[0-9]{1,12}', value) else 'invalid'))
                 self.budget.reconcile(headers)
+                if shared:
+                    shared.reconcile(shared_attempt,headers)
+                    if shared.snapshot()['pause']:self.budget.reason=shared.snapshot()['pause']
                 cap = min(self.policy.response_bytes, self.policy.session_bytes-self.total_bytes)
                 while True:
                     room = cap-len(body)

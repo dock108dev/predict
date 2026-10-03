@@ -314,6 +314,7 @@ class TransportSession:
                 key_options=dict(real_key=os.environ.get('ODDS_API_KEY'))
                 if not key_options['real_key']:raise ValueError('optional ODDS_API_KEY unavailable')
             self.reference=OddsHTTP(self.endpoints['reference'],self.spec['sources']['the_odds_api']['event_id'],HTTPPolicy(**p),ref_sink,**key_options)
+        if self.reference and self.spec['mode']=='real':self.reference.shared_owner=getattr(self,'acquisition_ownership',None)
         if self.spec.get('native_discovery'):
             self.credentials={}  # Public listing probe: no account or stream access.
         if self.spec['mode']=='real' and self.credentials is None:

@@ -20,6 +20,9 @@ def save(folder,name,value):
     with (folder/name).open('x') as f:
         json.dump(value,f,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
 
+from app.collection.shared_odds_guard import shared_capture
+
+@shared_capture
 async def capture(folder,key,*,transport=None):
     """Called only after preflight; durable attempt precedes the single HTTP call."""
     save(folder,'attempt.json',dict(started_at=now(),endpoint=ENDPOINT,params=PARAMS,
@@ -33,7 +36,10 @@ async def capture(folder,key,*,transport=None):
     try:
         async with asyncio.timeout(20):
             async with httpx.AsyncClient(transport=transport,trust_env=False,follow_redirects=False,timeout=20) as client:
+                from app.collection.shared_odds_guard import before_request, reconcile
+                shared=before_request(ENDPOINT,PARAMS,1,client)
                 async with client.stream('GET',ENDPOINT,params=dict(PARAMS,apiKey=key),headers={'Accept-Encoding':'identity'}) as response:
+                    reconcile(shared,list(response.headers.multi_items()))
                     result.update(status=response.status_code,headers={k:v for k,v in response.headers.items() if k in ('x-requests-last','x-requests-used','x-requests-remaining','date')})
                     async for chunk in response.aiter_bytes():
                         remaining=LIMIT-len(body)

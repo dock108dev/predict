@@ -113,8 +113,11 @@ async def bounded_request(client, folder, key, endpoint, params, *,
         async with asyncio.timeout(timeout_seconds):
             if before_dispatch is not None:
                 before_dispatch()
+            from app.collection.shared_odds_guard import before_request, reconcile
+            shared=before_request(endpoint,params,reserved_credits,client)
             async with client.stream('GET', endpoint, params=dict(params, apiKey=key),
                                      headers={'Accept-Encoding':'identity'}) as response:
+                reconcile(shared,list(response.headers.multi_items()))
                 result.update(status=response.status_code, headers={k:v for k,v in response.headers.items()
                               if k in ('x-requests-last','x-requests-used','x-requests-remaining','date')})
                 async for chunk in response.aiter_bytes():
@@ -171,6 +174,9 @@ async def request(client, folder, key, sport):
     return result
 
 
+from app.collection.shared_odds_guard import shared_capture
+
+@shared_capture
 async def capture(folder, key, *, transport=None, sports=None):
     if not key or len(key) < 16:
         raise ValueError('Missing credential')

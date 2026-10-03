@@ -9,7 +9,7 @@ VERSION = 'predict-native-current-1'
 GRANT = 'predict-standing-native-20261002'
 MIB = 1024 * 1024
 SPORTS = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL']
-DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True,
+DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True,
     sports=['NFL'],
     families=['moneyline', 'spread', 'total'], duration_seconds=3600,
     rediscovery_seconds=120, markets_per_source=20, events_per_source=24,
@@ -21,9 +21,12 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True,
 
 
 def validate(value):
+    # Existing exact-key configurations retain their former aggregate behavior.
+    if isinstance(value, dict) and set(value) == set(DEFAULT)-{'aggregate_enabled'}:
+        value = dict(value, aggregate_enabled=True)
     if not isinstance(value, dict) or set(value) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
-    if value['schema'] != VERSION or value['authority'] != GRANT or type(value['enabled']) is not bool:
+    if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
         raise ValueError('Native operational authority/schema conflict')
     for k in ('sports', 'families'):
         allowed=SPORTS if k=='sports' else DEFAULT[k]
@@ -52,7 +55,7 @@ def candidate():
     # Same canonical application manifest definition as the U1/U2 handoff.
     manifest = {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest()
                 for p in sorted((ROOT/'app').rglob('*')) if p.is_file()
-                and '__pycache__' not in p.parts and p.suffix != '.pyc'}
+                and '__pycache__' not in p.parts and p.suffix in {'.py','.json','.js','.html','.css'}}
     return sha256(json.dumps(manifest, sort_keys=True, separators=(',', ':')).encode()).hexdigest(), manifest
 
 
@@ -68,7 +71,12 @@ def consume(directory, runtime, config, digest):
     value = dict(schema=VERSION, authority=GRANT, runtime_id=runtime, attempt_id=runtime,
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
-        grant='Owner approves necessary live-data attempts and retries; U3 native read-only scope')
+        grant='Owner approves necessary live-data attempts and retries; bounded native and shared aggregate read-only scope',
+        aggregate_policy=dict(version='predict-shared-odds-quota-1',requests=3,bootstrap_requests=1,
+            shared_batches=2,worst_case_credits=6,monthly_ceiling=500,engineering_reserve=50,
+            response_bytes=2*MIB,total_bytes=4*MIB,timeout_seconds=20,retries=0,
+            endpoint='https://api.the-odds-api.com/v4/sports',bookmakers=['novig','prophetx'],
+            markets=['h2h','spreads','totals'],minimum_global_interval_seconds=21600))
     import os
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:

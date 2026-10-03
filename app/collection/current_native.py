@@ -26,6 +26,14 @@ from .odds_http import BudgetStop
 class CatalogResync(Exception):
     """Local identity enrichment requires a fresh subscription image."""
 
+def balanced_markets(markets, cap, families):
+    """A large spread ladder cannot consume every common-family subscription."""
+    pools={family:[m for m in markets if m.get('v1_raw_binding',{}).get('identity',{}).get('family',m.get('market_type'))==family] for family in families}
+    chosen=[]
+    while len(chosen)<cap and any(pools.values()):
+        for family in families:
+            if pools[family] and len(chosen)<cap:chosen.append(pools[family].pop(0))
+    return chosen
 class NativeWorker:
     def __init__(self, service, venue):
         self.service, self.venue = service, venue
@@ -47,6 +55,31 @@ class NativeWorker:
         self.findings = []
         self.reconcile_needed = False
         self.wake_task = None
+        self.source_highwater = {}
+        from .current_confirmation import Confirmations
+        self.confirmations = Confirmations(venue)
+
+    async def snapshots(self, engine, markets, pending):
+        """At most one batched request per 20 seconds; same native request budget."""
+        while True:
+            await asyncio.sleep(20)
+            self.guard()
+            if engine.sid is None or pending:continue
+            if self.metrics.get('snapshot_requests',0)>=max(0,(self.config['duration_seconds']-35)//20):return
+            # Leave a final 35-second age-out window in every attended runtime.
+            if self.service.deadline-time.monotonic()<35:return
+            if self.client.budget.requests>=self.config['requests_per_source']:
+                raise BudgetStop('current_snapshot_request_cap')
+            self.client.budget.requests+=1
+            self.metrics['requests']=self.client.budget.requests
+            self.metrics['snapshot_requests']=self.metrics.get('snapshot_requests',0)+1
+            request_id=100000+self.metrics['snapshot_requests']
+            requested=utc()
+            for m in markets:pending[m.raw.ref.market_id]=(request_id,requested)
+            command=dict(id=request_id,cmd='update_subscription',params=dict(sid=engine.sid,
+                market_tickers=[m.raw.ref.market_id for m in markets],action='get_snapshot'))
+            wire=json.dumps(command);self.client.budget.charge_bytes(len(wire.encode()))
+            await asyncio.wait_for(self.socket.send(wire),3)
 
     def request_resync(self):
         self.reconcile_needed = True
@@ -177,6 +210,8 @@ class NativeWorker:
                     _,data=coverage.decode_page(page)
                     selection['markets'] += [str(m['id']) for m in data['markets']]
         cat = coverage.catalog(self.pages, self.venue, now, compact_output=False,current_selection=selection)
+        from .current_occurrence import annotate as occurrence
+        occurrence(cat, self.venue)
         if len(cat['events']) > 200 or len(cat['markets']) > 512 or len(json.dumps(cat, default=str).encode()) > 2*1024*1024:
             raise BudgetStop('native_source_inventory_cap')
         from .continuous import select_inventory
@@ -184,8 +219,10 @@ class NativeWorker:
         events_by_id={e['id']:e for e in cat['events']}
         eligible_markets=[m for m in cat['markets'] if m['id'] in ids and not events_by_id[m['event_id']].get('exclusion')]
         eligible_markets.sort(key=lambda m:(m.get('market_type')!='moneyline',events_by_id[m['event_id']]['scheduled_start'],m['id']))
-        ids=[m['id'] for m in eligible_markets[:self.config['markets_per_source']]]
-        for m in eligible_markets[self.config['markets_per_source']:]:m['subscription_exclusion']='subscription_limit'
+        chosen=balanced_markets(eligible_markets,self.config['markets_per_source'],self.config['families'])
+        ids=[m['id'] for m in chosen]
+        for m in eligible_markets:
+            if m['id'] not in ids:m['subscription_exclusion']='subscription_limit'
         cat['selection'] = dict(ids=ids)
         parsed = {}
         from app.adapters import kalshi, polymarket_us
@@ -206,6 +243,9 @@ class NativeWorker:
         # Retire unselected/closed catalogs deliberately; leases are independent.
         self.metrics['generations'] += 1
         self.catalog, self.markets = cat, parsed
+        from app.adapters.polymarket_us import next_market_data
+        active_clock_keys=set(parsed) if self.venue=='kalshi' else {next_market_data(m)['slug'] for m in parsed.values()}
+        for key in set(self.source_highwater)-active_clock_keys:self.source_highwater.pop(key)
         self.metrics['catalog_events'] = len(cat['events'])
         self.metrics['catalog_markets'] = len(cat['markets'])
         self.metrics['selected_markets'] = len(parsed)
@@ -235,14 +275,16 @@ class NativeWorker:
         from app.adapters.polymarket_us_stream import MarketStream, subscription
         from .native_semantics import current_purchase_book
         failures = malformed = 0
-        highwater = {}
+        highwater = self.source_highwater
         while not self.closed and not self.failed and self.service.dispatch:
             engine = None
+            snapshot_task = None
             try:
                 self.guard()
                 if self.metrics['connections'] >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
+                self.confirmations.begin(self.metrics['connections'])
                 self.service.source_state(self.venue, 'resyncing', 'Waiting for a complete native book image.')
                 headers = self.credential.headers()
                 class NoRedirect(connect):
@@ -263,11 +305,15 @@ class NativeWorker:
                     request_id = str(uuid4())
                     generation = engine.begin_subscription(request_id)
                     command = subscription(tuple(engine.markets), request_id)
+                requested=utc()
+                pending={m.raw.ref.market_id:(command['id'],requested) for m in markets} if self.venue=='kalshi' else {}
                 await asyncio.wait_for(self.socket.send(json.dumps(command)), 3)
+                if self.venue=='kalshi':snapshot_task=asyncio.create_task(self.snapshots(engine,markets,pending))
                 initial_deadline = time.monotonic()+15
                 seen = set()
                 while True:
                     self.guard()
+                    if snapshot_task and snapshot_task.done():snapshot_task.result()
                     timeout = max(.01, initial_deadline-time.monotonic()) if len(seen)<len(markets) else 30
                     try: body = await asyncio.wait_for(self.socket.recv(), timeout)
                     except TimeoutError:
@@ -294,6 +340,8 @@ class NativeWorker:
                         raise ValueError('incomplete_native_image')
                     if book.source_time_progress==SourceTimeProgress.REGRESSED:
                         raise ValueError('regressed_native_source_clock')
+                    if book.raw.exchange_at is not None and book.raw.exchange_at>datetime.now(timezone.utc):
+                        raise ValueError('future_native_source_clock')
                     if self.venue=='kalshi':
                         selected = next(m for m in markets if m.raw.ref.market_id==book.raw.ref.market_id)
                         book = replace(book, state=selected.state)
@@ -303,6 +351,15 @@ class NativeWorker:
                     seen.add(book.raw.ref.market_id)
                     book = current_purchase_book(book)
                     value = json.loads(json.dumps(asdict(book), default=lambda v:v.isoformat() if isinstance(v,datetime) else str(v)))
+                    from .current_confirmation import validate
+                    request=pending.pop(book.raw.ref.market_id,None) if data.get('type')=='orderbook_snapshot' else None
+                    confirmation=self.confirmations.observe(value,data,raw,generation=self.metrics['connections'],
+                        request_id=(request[0] if request else engine.request_id) if self.venue=='kalshi' else request_id,
+                        requested_at=request[1] if request else None,sid=engine.sid if self.venue=='kalshi' else None,
+                        sequence=engine.seq if self.venue=='kalshi' else None)
+                    if confirmation:
+                        validate(confirmation,value['raw']['ref'],value)
+                        value['book_confirmation']=confirmation
                     tick = time.perf_counter()
                     self.service.book(self.venue, value)
                     self.metrics['receipt_projection_ms'] = (time.perf_counter()-tick)*1000
@@ -349,11 +406,14 @@ class NativeWorker:
                     self.service.source_state(self.venue, 'error', 'Repeated native feed failures; source paused.')
                     return
             finally:
+                if snapshot_task:
+                    snapshot_task.cancel();await asyncio.gather(snapshot_task,return_exceptions=True)
                 if self.socket:
                     await self.socket.close()
                     self.socket = None
             delay = max(self.config['backoff_seconds'][min(failures-1,4)], self.backoff_until-time.monotonic())
             self.metrics['retries'] += 1
+            self.backoff_until=time.monotonic()+delay
             await asyncio.sleep(delay)
 
     async def stop_stream(self):

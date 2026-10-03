@@ -18,9 +18,14 @@ def catalog_from_normalized(envelope, records):
         if record.get('event_scope') is not None:
             scope=record['event_scope']
             fields(scope,{'policy','source','native_event_id'})
-            if scope['policy']!='native-event-unverified-1' or record['verified'] is not False or scope['source']!=q['venue'] or scope['native_event_id']!=event['id']:
+            if scope['policy']=='aggregate-provider-event-1':
+                if record['verified'] is not True or scope['source']!='the_odds_api' or q['source']['provider']!='the_odds_api' or scope['native_event_id']!=event['id']:
+                    raise ValueError('Exact aggregate source-local event required')
+                key=['aggregate-provider-event-1',event['competition'],event['id'],event['scheduled_start'],event['home'],event['away']]
+            elif scope['policy']!='native-event-unverified-1' or record['verified'] is not False or scope['source']!=q['venue'] or scope['native_event_id']!=event['id']:
                 raise ValueError('Exact source-scoped unverified event required')
-            key=['native-event-unverified-1',scope['source'],scope['native_event_id'],event['scheduled_start'],sorted(event['participants'].values())]
+            else:
+                key=['native-event-unverified-1',scope['source'],scope['native_event_id'],event['scheduled_start'],sorted(event['participants'].values())]
         else:
             key=event_key(event)  # Existing registry/event rules, including rematch identity.
         if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition'),('season','season'),('stage','stage')]):
