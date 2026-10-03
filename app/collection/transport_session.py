@@ -29,6 +29,19 @@ class StorageFailure(OSError):
         super().__init__('storage failure at '+stage)
 
 
+class JournalSink:
+    """Explicit durable admission; success means fsync completed, never latest state."""
+    acknowledgment = 'durable-journal-acknowledgment'
+
+    def __init__(self, journal):
+        self.journal = journal
+
+    def commit(self, row):
+        self.journal.save(row)
+        return dict(acknowledgment=self.acknowledgment, cursor=self.journal.count,
+                    chain=self.journal.previous)
+
+
 class ObservationJournal:
     """Bounded fsynced E6 observations; untouched E2 synthetic schema is not relabeled."""
     def __init__(self, path, *, encoding=None):
@@ -227,7 +240,7 @@ class TransportSession:
     def save_observed(self, row):
         from time import perf_counter
         tick=perf_counter()
-        self.journal.save(row)
+        JournalSink(self.journal).commit(row)
         acknowledged=perf_counter()
         acknowledged_at=utc()
         observer=getattr(self,'acknowledged_observer',None)
@@ -261,6 +274,25 @@ class TransportSession:
         return ObservationJournal(self.output/(self.sid+'.jsonl'),**options)
 
     async def start(self):
+        # Current and all retained real collectors share one local ownership
+        # boundary. Finite deadlines, seals and durable admission are unchanged.
+        if self.spec.get('mode')=='real':
+            from .local_ownership import LocalOwnership
+            self.acquisition_ownership=LocalOwnership()
+            self.acquisition_ownership.acquire(self.sid)
+        try:
+            result=await self._start_owned()
+        except BaseException:
+            if not self.producers or self.cleanup_complete:
+                if getattr(self,'acquisition_ownership',None):self.acquisition_ownership.release()
+            raise
+        if self.task and getattr(self,'acquisition_ownership',None):
+            def release_if_safe(task):
+                if self.cleanup_complete:self.acquisition_ownership.release()
+            self.task.add_done_callback(release_if_safe)
+        return result
+
+    async def _start_owned(self):
         if self.spec.get('native_sources') and self.spec['mode']=='real' and not getattr(self,'native_authorized',False):
             raise ValueError('Native collection requires approved bounded qualification')
         result=preflight(self.spec, supervised_live=True) if getattr(self,'supervised_live',False) else preflight(self.spec)

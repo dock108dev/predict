@@ -43,6 +43,29 @@ def purchase_book(book):
         return replace(book,outcomes=sides,quantity_unit='contracts')
 
 
+def current_purchase_book(book):
+    """Explicit current sink interpretation; legacy native ladders stay unchanged.
+
+    Kalshi native books publish bids only. Reuse the adapter's exact ask rule,
+    applying it independently to every opposite level with the same contracts.
+    """
+    if book.raw.ref.venue.value!='kalshi':return purchase_book(book)
+    from app.adapters.kalshi import quotes
+    tops={q.outcome_id:q.ask for q in quotes(book)}
+    outcomes={o.outcome_id:o for o in book.outcomes}
+    result=[]
+    with localcontext() as ctx:
+        ctx.prec=600
+        for side,opposite in (('yes','no'),('no','yes')):
+            source=outcomes[opposite].bids
+            asks=None if source is None else Ladder(depth=source.depth,levels=tuple(
+                BookLevel(price=Probability(value=Decimal(1)-level.price.value),quantity=level.quantity)
+                for level in source.levels))
+            if asks and asks.levels and asks.levels[0].price!=tops[side].price:raise ValueError('Kalshi adapter ask rule conflict')
+            result.append(replace(outcomes[side],asks=asks))
+    return replace(book,outcomes=tuple(result))
+
+
 def purchase_saved_book(row, outcomes):
     """Versioned derived view of a validated saved US image; originals remain intact.
 

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Odds board</title><link rel="stylesheet" href="/current/assets/board.css"><script type="module" src="/current/assets/current.js"></script></head>
+<body>
+<div id="test-notice" class="preview-notice" hidden>SYNTHETIC INTEGRATION TEST · No live data or trading</div>
+<header class="app-header"><a class="brand" href="/">predict<span class="brand-dot">.</span></a><span class="nav-current">Odds board</span><a class="admin-link" href="/admin">Admin</a></header>
+<main>
+<div class="page-heading"><div><p class="eyebrow">SPORTS PRICE COMPARISON</p><h1>Find your price.</h1><p class="intro">Compare the same selection across venues. Inspect a price before deciding.</p></div><span id="flow" class="flow">Connecting to current prices</span></div>
+<form class="filters" id="filters" aria-label="Filter available prices">
+<label>Sport / league<select id="league"><option value="">All sports</option><option>NFL</option><option>NBA</option><option>MLB</option><option>NHL</option><option>NCAAF</option><option>NCAAB</option></select></label>
+<label>Market<select id="market"><option value="winner">Winner</option><option value="spread">Spread</option><option value="total">Total</option><option value="">All common markets</option></select></label>
+<label>Period<select id="period"><option value="full_game">Full game</option></select></label>
+<label>Venue<select id="venue"><option value="">All venues</option><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
+<label class="search-label">Find a game<input id="search" type="search" placeholder="Team or game name" autocomplete="off"></label>
+<button type="reset" class="reset">Clear filters</button>
+</form>
+<div class="board-meta"><span id="count"></span><span>c = contract cents · c eq = equivalent cents</span></div>
+<div class="workspace"><section id="board" aria-label="Venue odds board"></section><aside id="details" class="details" aria-label="Selected price details"><div class="detail-placeholder"><span class="detail-icon">↗</span><h2>A closer look</h2><p>Select any price to inspect its original quote, rules and supported calculations.</p></div></aside></div>
+<p class="legend"><span class="quote-cue">Better quote</span> Lower gross price for the same selection. Costs, settlement and available quantity may differ.</p>
+<div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+
+<footer>Prices are for inspection. Trading takes place outside Predict.</footer>
+</main></body></html>

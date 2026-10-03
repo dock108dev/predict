@@ -25,7 +25,7 @@ def selected_game(games, game_id):
     return game
 
 
-def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
+def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_provider=None):
     if owner is None:
         from app.dashboard.coverage_owner import CoverageOwner
         owner=CoverageOwner(output,spec_factory=configuration,product_mode=True,pilot_output=ROOT/'evidence/product-sessions')
@@ -33,14 +33,18 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
     watches=WatchStore(watch_path or ROOT/'.local/predict-watchlists.json')
     signals=Signals()
     history_busy=False
-    retained_sessions=load_sessions() if sessions is None else sessions
+    retained_sessions=sessions
+    def retained():
+        nonlocal retained_sessions
+        if retained_sessions is None:retained_sessions=load_sessions()
+        return retained_sessions
     from app.dashboard.saved_snapshot_cache import SavedSnapshotCache
     saved_cache=SavedSnapshotCache()
     from app.dashboard.resolution_history_worker import ResolutionHistoryCache
     resolution_cache=ResolutionHistoryCache()
     def datasets(selected=None, catalog_all=True):
         values={}
-        for sid,(p,rows) in retained_sessions.items():
+        for sid,(p,rows) in retained().items():
             spec=rows[0]['spec'];src=spec['sources']
             game=dict(id=src['kalshi']['event_id']+'__'+src['polymarket_us']['event_id'],title=p['event'],scheduled_start=p['kickoff'],teams=list(TEAMS),sides={k:dict(v,**({'native_label':'Long' if k.endswith('1315440') else 'Short'} if k.startswith('polymarket') else {})) for k,v in SIDES.items()},sources=src,candidates=CANDIDATES)
             values[sid]=dict(rows=rows,games=[game],coverage=dict(selected=1,found={},common=1,excluded=[],truncated_by_limit=0),live=False,label='Saved · '+p['capture_start']+' · 1 game · Completed')
@@ -117,10 +121,14 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         return r
     app=web.Application(middlewares=[guard],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
     async def state(req):return web.json_response(owner.status())
-    async def coverage_page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/coverage.html')
+    async def coverage_page(req):
+        from pathlib import Path
+        return web.FileResponse(Path(__file__).parent/'opportunity_static/coverage.html')
     app.router.add_get('/coverage',coverage_page)
     async def start(req):
         options=await read_json(req)
+        if current_provider is not None and getattr(current_provider,'ownership',None) and current_provider.ownership.file:
+            return web.json_response(dict(error='acquisition_owned',reason='The automatic native service owns acquisition. Stop it safely before a finite qualification.'),status=409)
         if not isinstance(options,dict) or set(options)-owner.start_controls:raise ValueError('Unknown scan controls')
         return web.json_response(dict(session=await owner.start(**options)))
     async def stop(req):
@@ -516,12 +524,43 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None):
         finally:update_clients.discard(token)
         return response
     app.router.add_get('/api/updates',updates)
-    async def page(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/dashboard.html')
-    async def game(req):return web.FileResponse(ROOT/'app/dashboard/opportunity_static/index.html')
-    async def style(req):return web.FileResponse(ROOT/'app/dashboard/static/style.css')
-    async def shared(req):return web.FileResponse(ROOT/'app/dashboard/e5_static/state.js')
+    from pathlib import Path
+    static_root=Path(__file__).parent
+    async def page(req):return web.FileResponse(static_root/'opportunity_static/current/index.html')
+    async def admin(req):return web.FileResponse(static_root/'opportunity_static/current/admin.html')
+    async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
+    app.router.add_get('/admin',admin)
+    app.router.add_get('/admin/retained',retained_page)
+    from .current_state import mount as mount_current
+    mount_current(app,current_provider)
+    async def current_admin(req):
+        from .current_state import CURRENT_KEY
+        provider=app[CURRENT_KEY].provider
+        if req.method=='GET':
+            status=getattr(provider,'status',None)
+            return web.json_response(status() if status else dict(state='unavailable',reason='No native current service configured'))
+        body=await read_json(req)
+        if body==dict(action='stop'):
+            await provider.close()
+        elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us') and hasattr(provider,'pause'):
+            await provider.pause(body['source'])
+        else:raise ValueError('Exact native admin control required')
+        return web.json_response(provider.status())
+    app.router.add_get('/api/admin/current',current_admin)
+    app.router.add_post('/api/admin/current',current_admin)
+    async def current_asset(req):
+        name=req.match_info['name']
+        allowed={'admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        if name not in allowed:raise web.HTTPNotFound()
+        return web.FileResponse(allowed[name])
+    app.router.add_get('/current/assets/{name}',current_asset)
+    async def game(req):return web.FileResponse(static_root/'opportunity_static/index.html')
+    async def style(req):return web.FileResponse(static_root/'static/style.css')
+    async def shared(req):return web.FileResponse(static_root/'e5_static/state.js')
     app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
-    app.router.add_static('/view/',ROOT/'app/dashboard/opportunity_static')
+    app.router.add_static('/view/',static_root/'opportunity_static')
+    from app.dashboard.u0_preview import mount as mount_design_preview
+    mount_design_preview(app)
     async def cleanup(app):
         await resolution_cache.close()
         await owner.close()

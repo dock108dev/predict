@@ -1,8 +1,8 @@
-> **October 2 product reset: major usability sprints are next.** The owner rejected the current presentation and stopped the walkthrough. The target is a familiar automatic odds board with American odds and cents, faster native Kalshi/Polymarket US data, budgeted Novig/ProphetX data, a separate admin view and no new quote-history requirement. [Audit](docs/usability-audit-20261002.md) · [sprint work order](docs/usability-sprint-plan.md) · [current acceptance](docs/beta-coverage-acceptance.md). The instructions below describe the existing test-session app; the replacement product is planned, not implemented.
+> **October 2: U0–U2 local engineering complete; U3 is next.** Ordinary `/` opens the grouped board with both price formats and held-price Details. Current acquisition is not connected yet, so ordinary startup honestly shows unavailable prices. [Sprint status](docs/usability-sprint-plan.md) · [U1/U2 evidence and screenshots](evidence/u1-u2-integration-20261002/README.md) · [U3 handoff](docs/u3-current-handoff.md). Live operation and owner acceptance remain outstanding.
 
 # Prediction Arb
 
-A local, read-only dashboard for comparing sports prediction prices across venues, calculating conditional arbitrage and what-if expected value, and reopening saved scans. It does not place trades.
+A local, read-only odds board for comparing exact sports selections across venues and inspecting original prices, conditional calculations and explicit-assumption What-if results. It does not place trades.
 
 Kalshi and Polymarket US have native adapters. Novig and ProphetX observations can come through The Odds API; Pinnacle, DraftKings and BetMGM are reference-only. Actual sport and market availability varies. Missing fees, settlement terms, probabilities or usable depth withhold dependent calculations while preserving valid raw comparisons.
 
@@ -16,22 +16,22 @@ python3.14 -m venv .venv
 scripts/opportunity-board start
 ```
 
-Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/). Startup is idle and saved-data review needs no credentials. The dashboard is file-backed; PostgreSQL and a Node.js service are not required.
+Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/). The current provider returns unavailable until U3 connects automatic acquisition. Startup does not load saved quotes or synthetic prices. PostgreSQL and a Node.js service are not required.
 
 ```sh
 scripts/opportunity-board status
 scripts/opportunity-board stop
 ```
 
-For a foreground server, use `.venv/bin/python -m app.dashboard --port 8783`. Run from this checkout so repository assets and tracked saved inputs are available. Restart after source changes. The older `scripts/dashboard` launcher is retired.
+For a foreground server, use `.venv/bin/python -m app.dashboard --port 8783`. The board assets also ship in the Python package; retained development fixtures remain separately available in the checkout. Restart after source changes. The older `scripts/dashboard` launcher is retired.
 
 Live collection requires an explicitly configured run specification, source endpoints and valid run-specific authorization. Credentials alone do not enable Start scan. See [configuration and operation](docs/configuration.md) for the concrete requirements and [security](docs/security.md) for the loopback browser boundary. Remote, proxy and shared-user hosting are unsupported.
 
 ## Use the dashboard
 
-Choose a scan from **Saved scan**, then filter by sport, venue, market or search. Open **Details** to inspect games and their original cutoff; return to the comparison feed to choose another scan. Saved prices and source ages describe their recorded time, not current quotes.
+Compare a same-selection row, use local league/market/period/venue/search filters, and select a price for Details. A review keeps its original revision while the board updates; adopting a newer price is explicit. Manual What-if requires your probability, every cost and payout quantity. Missing inputs withhold dependent results; zero and negative results remain valid.
 
-All opportunities groups raw price comparisons separately from supported return calculations. Arbitrage, What-if EV and Saved-page research are distinct views. Negative, zero and unavailable results are valid. Retrospective research does not supply a live probability, and informational sizing does not guarantee execution.
+**Admin** links to preserved retained inspection at `/admin/retained`; full source administration is U5. Saved prices establish only their recorded state. The isolated design remains `/preview/u0`. For populated integration testing, run `.venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797` and follow the [test workflow](evidence/u1-u2-integration-20261002/README.md). This test provider uses production interfaces and labels every screen as synthetic.
 
 [Sport and market integration](docs/sports-integration.md) describes implemented handlers. [Data limitations](docs/market-data-gaps.md) explains what those handlers do not establish.
 

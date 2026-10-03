@@ -1,0 +1,42 @@
+{
+  "schema": "predict-current-1",
+  "mode": "current",
+  "runtime_id": "a5cddc5b-ab8d-403b-b174-78147905b741",
+  "state_revision": 1,
+  "projected_at": "2026-10-03T02:44:22.416702+00:00",
+  "clock_at": "2026-10-03T02:44:22.416702+00:00",
+  "state": "unavailable",
+  "events": [],
+  "source_status": {
+    "kalshi": {
+      "state": "unavailable",
+      "reason_code": "current_provider_pending",
+      "reason": "Automatic current prices are not connected yet.",
+      "next_due_at": null
+    },
+    "polymarket_us": {
+      "state": "unavailable",
+      "reason_code": "current_provider_pending",
+      "reason": "Automatic current prices are not connected yet.",
+      "next_due_at": null
+    },
+    "novig": {
+      "state": "unavailable",
+      "reason_code": "current_provider_pending",
+      "reason": "Automatic current prices are not connected yet.",
+      "next_due_at": null
+    },
+    "prophetx": {
+      "state": "unavailable",
+      "reason_code": "current_provider_pending",
+      "reason": "Automatic current prices are not connected yet.",
+      "next_due_at": null
+    }
+  },
+  "selection_policy": {
+    "ttl_seconds": 300,
+    "maximum_per_client": 1,
+    "restart_expires": true
+  },
+  "admin_href": "/admin"
+}

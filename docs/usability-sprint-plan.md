@@ -1,6 +1,6 @@
 # Predict major usability sprint plan
 
-October 2, 2026. **Planned, not implemented. Current UI rejected; walkthrough stopped.** This plan is the active work order following the [audit](usability-audit-20261002.md). It supersedes the old card-layout preservation rule, saved-data walkthrough next action, manual-scan product loop and universal history/reopening acceptance requirements. Preserve original evidence and calculations; do not preserve the failed presentation merely because earlier browser checks passed.
+October 2, 2026. **U0–U2 local engineering complete. U3–U6 runtime/qualification remain planned. Replacement UI owner feedback and acceptance remain outstanding; status stays REVISE / not user-ready.** This plan is the active work order following the [audit](usability-audit-20261002.md). It supersedes the old card-layout preservation rule, saved-data walkthrough next action, manual-scan product loop and universal history/reopening acceptance requirements. Preserve original evidence and calculations; do not preserve the failed presentation merely because earlier browser checks passed.
 
 ## Product outcome
 
@@ -24,9 +24,9 @@ The owner gets a separate admin surface for source operation, metrics, quota, di
 
 | Sprint | Outcome | Dependency | Current state |
 | --- | --- | --- | --- |
-| U0 | Complete IA and presentation contract, with a realistic user-ready design | Audit | Next |
-| U1 | Replace the main and Details interfaces with a coherent odds-board experience | U0 | Planned |
-| U2 | Implement compact dual-price data presentation and exact quote-selection semantics | U0; integrates with U1 | Planned |
+| U0 | Complete IA and presentation contract, with a realistic user-ready design | Audit | Complete local engineering; owner feedback outstanding |
+| U1 | Replace the main and Details interfaces with a coherent odds-board experience | U0 | Complete local engineering |
+| U2 | Implement compact dual-price data presentation and exact quote-selection semantics | U0; integrates with U1 | Complete local engineering |
 | U3 | Automatic native runtime and bounded latest-state storage | U0/U2 contract; U1 consumer | Planned |
 | U4 | Cheap shared Novig/ProphetX flow under 500/month | U3 lifecycle/budget ownership | Planned |
 | U5 | Separate admin operation, observability and source-issue handling | U3/U4 status contracts | Planned |
@@ -113,6 +113,8 @@ Acceptance: an owner can find why a site is unavailable and what must happen nex
 
 ## U6 — Integrated qualification and readiness decision
 
+Baseline maintenance is already complete locally: the latest [CI portability follow-up](history/ci-repair-20261002.md#follow-up--aggregate-checks-portable-without-local-archives) records a full clean-export pass without ignored aggregate archives. Do not queue that repair again. Hosted Linux CI/fresh locked installation remains unverified. The recorded local checks qualify their own revision; affected verification for new sprint changes is still required.
+
 Run appropriate affected route/owner/security/matching/math/browser checks after each implemented seam. Update tests that encode the superseded ordinary-user scan/history layout; preserve tests for retained archive readers, once-consumed qualification, economic/identity rules and security. Do not lower assertions merely to achieve a green suite.
 
 Verify desktop and narrow product screens with realistic mixed venue states, long names, exact spread/total lines, price updates, source disconnect/resync, open Details, keyboard focus, and one unavailable venue. Explicitly check both price formats and independent native/aggregate cadence. Use temporary local controls for fault cases, separately from fresh provider evidence. Source-specific live failures get issue records; no universal coverage-count gate.
@@ -123,6 +125,23 @@ Acceptance for the new product: owner can open, find a useful same-selection com
 
 ## Concrete next action
 
-Begin **U0**, producing the complete ordinary board/Details design and versioned display/live-state contract using the audited shared seams. Continue into U1/U2 once concrete; native/live acquisition and quota work are already authorized within the stated limits. Do not resume the old saved-workflow walkthrough, start another arbitrary coverage campaign, or undertake a quote-history/storage expansion.
+Proceed next with **U3**, following the [concrete provider/service handoff](u3-current-handoff.md), [U1/U2 evidence and exact identity](../evidence/u1-u2-integration-20261002/README.md), [predict-current-1 contract/schema/examples](contracts/predict-current-1.md) and [integration map](u0-integration-map.md). The ordinary board, exact current serializer and bounded immutable selection store are implemented. Native acquisition and quota work remain follow-on scope under the standing grant and documented limits. U1/U2 performs no source attempt.
 
 Implementation handoff must include the exact source identity, sprint status, changes/checks, actual provider observations, quota use, outstanding site issues and owner decision. Update this plan and the Desktop tracker after each completed sprint. This audit/planning pass itself ran no provider attempt and made no application change.
+
+## U0 completion record — October 2
+
+Complete local U0 design and contracts, with an ordinary-launcher `--u0-preview` seam and `/preview/u0` route; the ordinary default has not yet been replaced. All fixtures, IDs and matches are explicitly synthetic. Desktop and narrow rendering, all required state cases, local filters, exact lines, keyboard focus, held revision/newer adoption, expiration/restart, mixed cadence and zero/negative manual results were exercised. The versioned payload/schema, original-input Decimal rules, bounded lease/service/sink/quota/admin interfaces and exact U1–U5 reuse/replace/factor map are delivered. No unresolved U0 design blocker remains; owner feedback is outstanding and does not add an approval gate.
+
+Entry HEAD `b2e7ad28…` and canonical digest `893a457d…` (649 files) matched. Final source identity is recorded in the evidence manifest; HEAD unchanged, no commit. Incoming dirty documentation was preserved. Affected Python checks: 42 pass; exact browser arithmetic assertions pass. Preservation checks: 109/110 pass; the sole normalization-registry-disagreement eligibility assertion also fails on untouched starting HEAD. Economic/identity/security/replay assertions remain intact. No fresh provider acquisition, credit use, credentials/watch/capture edits, deployment, recurring jobs or history/database expansion occurred. Completed CI portability work was not reopened. At U0 closeout, U1–U6 implementation/qualification and owner acceptance remained ahead.
+
+
+## U1/U2 completion record — October 2
+
+Ordinary `/` now opens the grouped board and readable Details; default current provider is honestly unavailable without archive or synthetic fallback. Preserved engineering inspection is `/admin/retained`; `/preview/u0` remains isolated. Shared keyed rendering retains local filters, exact group lines/periods, native alternatives, both price formats, concise mixed source states, scroll/focus stability and an inert narrow Details dialog. Current server serialization preserves exact original financial strings and binds all 15 venue-filter comparison contexts. Independent engine outputs and explicit-assumption What-if remain separate. Atomic bounded commits/notices, age transitions, slow-consumer limits and immutable reviews handle runtime/revision changes, TTL, explicit adoption/release, failed adoption and capacity without eviction.
+
+Entry HEAD/digest matched the requested `b2e7ad28…` / `cfdf61033…`, 656 source files. Final HEAD remains `b2e7ad28b5b35e04d0f8d608e37b150aa40a89bc`; canonical digest `e093350e0da58a749f9ee148ef4dcd85e0a6e3c04f623b97d833b9dbe47a70b1` over 663 application source files. Exact identity/manifests, test logs, final wheel SHA, screenshots, browser coverage and isolated populated workflow are in [the evidence package](../evidence/u1-u2-integration-20261002/README.md). Five existing application files were factored/hardened for integration; 651 entry files match their hashes, with seven new interface/serializer/provider assets. Incoming U0 and unrelated work remains preserved.
+
+Final affected checks: 69 + 19 tests pass in separate bounded processes; retained routes 49, isolated product integration 1, security hardening 9 pass. Seven browser/client scripts pass. Contract examples pass structural/timestamp and exact semantic reproduction checks, with U0 structural compatibility; source-checkout and isolated packaged routes/assets pass. Preserved invariant/replay checks: 165/166 pass; the unchanged normalization-registry-disagreement baseline failure remains separately recorded. Combined-process RSS cap failures and an intermediate test invocation error are retained; final isolated checks keep the original caps/assertions. Initial exact-zero scenario and browser scroll/focus defects were repaired and reverified.
+
+No provider request, source entitlement check, credit use, credential/watch/capture/consumed-authority edit, trading, deployment, recurring job, history/database expansion, commit or push occurred. Live access/cadence, source-owned freshness facts, U4 quota, U5 admin operation, U6 qualification, owner acceptance and product readiness remain outstanding. Stop at U1/U2; [U3 handoff](u3-current-handoff.md) is delivered for the next sprint.

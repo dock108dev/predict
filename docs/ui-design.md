@@ -31,3 +31,7 @@ Design the board and Details together for desktop and narrow screens, long names
 The ordinary router/assets are the integration point. Existing normalized matching, exact quote arithmetic, stable update/focus behavior and security checks should be reused where suitable. Automatic collection and ephemeral latest-state projection need their own explicit runtime contract; removing controls or journal writes alone is insufficient.
 
 U0 produces a realistic complete design and data contract; U1–U5 implement it; U6 qualifies the replacement with live source evidence and owner feedback. [Requirements](ui-design-requirements.md) define review criteria. No application implementation or fresh provider qualification occurred in the audit/documentation pass.
+
+## U0 concrete design — October 2
+
+U0 now has a runnable isolated [board/Details preview](../evidence/u0-design-20261002/README.md), reusable ordinary-app assets, [predict-current-1 contract and payload examples](contracts/predict-current-1.md), and the [U1–U5 integration map](u0-integration-map.md). Use these concrete artifacts for implementation. Compact desktop venue columns become labeled venue grids on narrow screens; selected revision is held with newer-price and expiration states. Fixtures and state controls are visibly synthetic and never populate the ordinary default. U0 local engineering verification is separate from owner feedback and production/live qualification. U1–U5 remain implementation work; the owner has not accepted the replacement design.

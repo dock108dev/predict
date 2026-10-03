@@ -361,7 +361,15 @@ def market_record(venue, page, body, native, eid, index, series_id='KXNFLGAME'):
     return record
 
 
-def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compact_output=True):
+def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compact_output=True, current_selection=None):
+    # Current mode may parse only exact listing-selected native IDs while keeping
+    # original complete response bytes, hashes and row positions unchanged.
+    # Historical callers retain their full catalog behavior.
+    selected_events=selected_markets=None
+    if current_selection is not None:
+        if set(current_selection)!={'events','markets'}:raise ValueError('Exact current catalog selection required')
+        selected_events=set(current_selection['events']);selected_markets=set(current_selection['markets'])
+        if len(selected_events)>24 or len(selected_markets)>72:raise ValueError('Current catalog selection capacity')
     groups = defaultdict(list)
     linked_milestones=[]
     for page in pages:
@@ -391,6 +399,7 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
     for page, body, data in event_pages:
         for native in data['events']:
             row_index += 1
+            if selected_events is not None and str(native.get('event_ticker' if venue=='kalshi' else 'id')) not in selected_events:continue
             proof = provenance(page,row_index,body)
             record = event_record(venue,page,body,native,row_index,as_of,linked_milestones if page.get('v1_coverage_policy') else ())
             from .native_payload import event_detail_id
@@ -403,10 +412,12 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
                 events[record['id']]['market_discovery'] = 'embedded_only' if isinstance(embedded,list) else 'unknown'
                 for m in (embedded if isinstance(embedded,list) else []):
                     row_index += 1
+                    if selected_markets is not None and str(m.get('id')) not in selected_markets:continue
                     insert(markets,market_record(venue,page,body,m,record['id'],row_index,native.get('series_ticker','KXNFLGAME')),m,provenance(page,row_index,body))
     for page, body, data in market_pages:
         for native in data['markets']:
             row_index += 1
+            if selected_markets is not None and str(native.get('ticker' if venue=='kalshi' else 'id')) not in selected_markets:continue
             if venue == 'polymarket_us':
                 candidates = [e['id'] for e in events.values()
                               if str(e['_native'].get('gameId')) == str(params(page).get('gameId'))

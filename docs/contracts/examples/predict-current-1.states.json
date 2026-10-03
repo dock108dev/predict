@@ -1,0 +1,110 @@
+{
+  "schema": "predict-current-1",
+  "mode": "synthetic",
+  "examples_only": true,
+  "source_states": [
+    {
+      "source": "syn:kalshi",
+      "state": "connecting",
+      "reason": "Connecting to prices"
+    },
+    {
+      "source": "syn:prophetx",
+      "state": "unavailable",
+      "reason": "No quote admitted for this exact selection"
+    },
+    {
+      "source": "syn:novig",
+      "state": "budget_delayed",
+      "age_seconds": 7200,
+      "next_due_at": "2026-10-04T22:00:00Z",
+      "comparison_eligible": false
+    },
+    {
+      "source": "syn:kalshi",
+      "state": "error",
+      "reason": "Source unavailable; independent sources continue"
+    },
+    {
+      "source": "syn:polymarket_us",
+      "state": "available",
+      "source_at": null,
+      "received_at": "2026-10-04T16:00:00Z",
+      "age_seconds": null,
+      "comparison_eligible": false
+    },
+    {
+      "source": "syn:kalshi",
+      "state": "stale",
+      "age_seconds": 18008,
+      "comparison_eligible": false
+    }
+  ],
+  "calculations": [
+    {
+      "kind": "raw_difference",
+      "eligible": true,
+      "value": "0",
+      "unit": "cents",
+      "basis": "exact original-input gross comparison"
+    },
+    {
+      "kind": "manual_what_if",
+      "eligible": true,
+      "value": "-0.02",
+      "unit": "USD_per_payout_unit",
+      "probability": "0.5",
+      "cost_assumption": "0",
+      "source": "synthetic manual assumption"
+    },
+    {
+      "kind": "supported_ev",
+      "eligible": false,
+      "value": null,
+      "reason": "No supported independent probability model"
+    }
+  ],
+  "leases": [
+    {
+      "lease_id": "syn:lease-1",
+      "runtime_id": "syn:runtime-1",
+      "status": "held",
+      "quote_id": "syn:nfl-1:full_game:winner:None:0:kalshi",
+      "quote_revision": 1,
+      "ttl_remaining_seconds": 300
+    },
+    {
+      "lease_id": "syn:lease-1",
+      "runtime_id": "syn:runtime-1",
+      "status": "newer_available",
+      "quote_id": "syn:nfl-1:full_game:winner:None:0:kalshi",
+      "quote_revision": 1,
+      "newest_revision": 2,
+      "ttl_remaining_seconds": 280
+    },
+    {
+      "lease_id": "syn:lease-1",
+      "status": "expired",
+      "http_status": 410,
+      "reason": "selection_expired",
+      "cause": "runtime_restart"
+    }
+  ],
+  "updates": [
+    {
+      "schema": "predict-current-1",
+      "runtime_id": "syn:runtime-1",
+      "state_revision": 2
+    }
+  ],
+  "admin": {
+    "schema": "predict-admin-1",
+    "provider": "the_odds_api",
+    "nominal_monthly_credits": 500,
+    "engineering_reserve": 50,
+    "remaining": null,
+    "reset_at": null,
+    "reservations": "durable; implementation pending U4",
+    "state": "unverified"
+  }
+}

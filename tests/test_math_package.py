@@ -177,7 +177,8 @@ class MathRoutes(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.status,200,await response.text());self.assertEqual(await response.json(),result)
                 download=await c.get('/api/math-scenario-download?sha256='+result['sha256'])
                 self.assertEqual(download.status,200);self.assertIn('attachment',download.headers['Content-Disposition']);self.assertEqual(await download.json(),result)
-                html=await (await c.get('/')).text();self.assertIn('/view/math-scenarios.js',html)
+                html=await (await c.get('/admin/retained')).text();self.assertIn('/view/math-scenarios.js',html)
+                ordinary=await (await c.get('/')).text();self.assertIn('/current/assets/current.js',ordinary);self.assertNotIn('/view/math-scenarios.js',ordinary)
                 self.assertEqual((await c.get('/view/math-scenarios.js')).status,200)
             finally:await c.close()
 

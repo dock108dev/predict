@@ -64,6 +64,11 @@ class SessionProjection:
             if stable(row)!=self.last_row_hash:raise ValueError('conflicting cursor')
             return
         if cursor!=self.cursor+1: raise ValueError('noncontiguous durable cursor')
+        self.reduce_observation(row, durable_cursor=cursor)
+        self.cursor=cursor; self.chain=stable([self.chain,row]); self.last=row['observed_at'];self.last_row_hash=stable(row)
+
+    def reduce_observation(self, row, *, durable_cursor=None):
+        """Reusable reduction; sink owns ordering and acknowledgment semantics."""
         typ=row['type']; source=row.get('source'); at=row['observed_at']
         if self.spec.get('aggregate_version') and typ in ('coverage_inventory','prediction_book','market_selected','product_reference'):
             raise ValueError('Historical aggregate session cannot mix source paths')
@@ -166,7 +171,8 @@ class SessionProjection:
             if self.spec.get('mode')!='mock' and r['evidence_mode']=='synthetic':raise ValueError('Synthetic resolution in real session')
             if r['id'] not in self.resolutions:
                 if len(self.resolutions)>=MAX_RECORDS or sum(len(json.dumps(v).encode()) for v in self.resolutions.values())+len(json.dumps(r).encode())>8*1024*1024:raise ValueError('Resolution bound')
-                self.resolutions[r['id']]=dict(record=r,observed_at=at,cursor=cursor)
+                if durable_cursor is None:raise ValueError('Resolution reduction requires durable acknowledgment')
+                self.resolutions[r['id']]=dict(record=r,observed_at=at,cursor=durable_cursor)
         elif typ in ('aggregate_snapshot','aggregate_award_snapshot','aggregate_inventory','aggregate_status'):
             from app.collection.source_session import VERSION as SESSION_VERSION
             from app.reference.aggregate import VERSION
@@ -217,7 +223,6 @@ class SessionProjection:
             else:ref.update(observation_id=row.get('ingress_id'),received_at=at)
             if ref.get('schema_version')!='b4-reference-1' or ref['id'] not in self.references:self.references[ref['id']]=ref
         elif typ=='session_finished': self.finished=at;self.stop_reason=row.get('reason')
-        self.cursor=cursor; self.chain=stable([self.chain,row]); self.last=at;self.last_row_hash=stable(row)
 
     def memberships(self):
         result={}
