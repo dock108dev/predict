@@ -1,7 +1,3 @@
-# Current work order — October 2, 2026
-
-The [major usability sprint plan](usability-sprint-plan.md) supersedes the E1–E5 work order below as the next action. Existing calculations/identity/fee work may be reused with its exact evidence boundaries. History/download/permanent saved reopening and a watch/history product loop are deferred for the new ordinary UI. No new quote-archive expansion or accepted-card-layout preservation is required. Automatic prices, compact dual-format comparisons, lightweight state and separate admin observability come first. Earlier completed engineering remains historical evidence, not owner acceptance.
-
 # Current scope override — October 1, 2026
 
 **Beta/V1: data ingestion and comparison for manual trading. V2: automated trading and execution.** [Current definition](product-roadmap-review.md) and [complete gate reconciliation](full-scope-engineering-reconciliation.md) supersede earlier completion/next-action language below. V1 requires reliable independent four-venue data, correct six-sport/63-cell matching, useful raw comparisons, timestamps/stale/health, settlement differences/supported fee estimates, Details/filters/watches/Start/Stop/history/download/exact reopening, and informational sizing where supported. Pinnacle/DraftKings/BetMGM remain reference-only; Novig/ProphetX aggregate prices require no native trading access.

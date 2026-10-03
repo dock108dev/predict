@@ -1,0 +1,50 @@
+{
+  "purpose": "Pre-reset documentation snapshot; historical requirements, not current work order",
+  "date": "2026-10-02",
+  "files": {
+    "README.md": {
+      "saved_as": "repository-readme.md",
+      "sha256": "e4d9047e80698c1d44eedf9eb5509f5cc22e5d47a9dfcf393387787c90e24ee8"
+    },
+    "docs/product-roadmap-review.md": {
+      "saved_as": "product-roadmap-review.md",
+      "sha256": "6c5480d189076e4491f4d9466586e1e491d3653559f7ccbc292fdda0a0cec5f1"
+    },
+    "docs/data-coverage-plan.md": {
+      "saved_as": "data-coverage-plan.md",
+      "sha256": "d12dd729155df0179dc87880af17a8db48c11c226722f16c435d55e7e2c55701"
+    },
+    "docs/beta-coverage-acceptance.md": {
+      "saved_as": "beta-coverage-acceptance.md",
+      "sha256": "856c6e7339f3f6479121b69de724bdaf788113655a3f615ccc8796c22f8cdd2b"
+    },
+    "docs/ui-design.md": {
+      "saved_as": "ui-design.md",
+      "sha256": "6507cce281998729a57a85b2e4c080554306cbbd81305e4e02499544c013a9a4"
+    },
+    "docs/ui-design-requirements.md": {
+      "saved_as": "ui-design-requirements.md",
+      "sha256": "316e3d09c59d4ddb5f19ecfcb149899c618d23262d6cab2778439c1872715df5"
+    },
+    "docs/configuration.md": {
+      "saved_as": "configuration.md",
+      "sha256": "99833f03415fbcf0a7e2df643d6d0ace5f2f23ffa1023a8651094d9e87fcc068"
+    },
+    "docs/architecture.md": {
+      "saved_as": "architecture.md",
+      "sha256": "5ca4e69e4b0f0d08468ff3d942e53bb5329a724fe58986ec63cc21236d8aa624"
+    },
+    "docs/venue-access-status.md": {
+      "saved_as": "venue-access-status.md",
+      "sha256": "f3ae7dc769497ecbce2b877ab99834bfd3c7897e1bcba41e13097772672d8e9e"
+    },
+    "docs/commercial-value-engineering.md": {
+      "saved_as": "commercial-value-engineering.md",
+      "sha256": "cd46f05a136b4b1c49666773b6cbad97b13ee5d78720e9e11e14c79c8b5cd739"
+    },
+    "docs/market-data-gaps.md": {
+      "saved_as": "market-data-gaps.md",
+      "sha256": "75f569875c06929631570b05ec3e7d9230f9682f2443e62cdfad42e3b71911bb"
+    }
+  }
+}

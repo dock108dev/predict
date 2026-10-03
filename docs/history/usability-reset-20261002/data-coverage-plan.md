@@ -1,17 +1,13 @@
 # Predict workflow delivery plan
 
-October 2, 2026. The [major usability sprint series](usability-sprint-plan.md) is the governing work order. The [audit](usability-audit-20261002.md) records why the current presentation failed owner review; [acceptance](beta-coverage-acceptance.md) defines the replacement product's gate. This documentation pass is complete; application implementation remains pending.
+October 1, 2026. This plan describes engineering order for the [project scope](product-roadmap-review.md). [Acceptance](beta-coverage-acceptance.md) owns the workflow gate and [verification](../evidence/private-beta-workflow-20261001-v1/README.md) owns final candidate evidence.
 
-1. U0: complete the ordinary odds-board/Details design, information hierarchy and dual-price/live-state contract.
-2. U1–U2: implement the user-facing board and exact compact data presentation.
-3. U3: automatic native lifecycle and bounded latest-state storage, separate from finite archived qualification.
-4. U4: shared, budgeted Novig/ProphetX flow within 500/month; slower cadence and explicit ages.
-5. U5: separate admin metrics, quota, lifecycle controls and site issue records.
-6. U6: integrated live/browser/failure qualification and explicit owner review of the replacement UI.
+1. Reuse completed integrated transport, matching, calculation and saved-workflow evidence.
+2. Inspect ordinary startup and find concrete discovery, understanding or reopening defects.
+3. Repair shared paths, reconcile current documentation/generation and verify offline with retained real inputs plus separate synthetic controls.
+4. Prepare a directed owner walkthrough once the core workflow is ready. Record owner acceptance separately.
 
-All four comparison participants remain intended. Available full-game winner/spread/total come first. The six sports, 63 requirements and 252 source records remain roadmap/accounting, without numeric coverage gates. Necessary fresh live attempts/retries are owner-authorized within the sprint plan; generate new bindings and preserve consumed authorities. A site problem is recorded and reported without preventing independent usable paths.
-
-The ordinary user does not operate scans. New quote history, history exports, saved-scan selection and permanent reopening are deferred; existing evidence and archived test paths remain intact. The prior saved-data walkthrough is stopped, not the next action. Earlier plans below are historical where inconsistent.
+All four comparison participants remain intended; actual venue/market availability is visible. Full-game winner/spread/total take priority. The 63 requirements and 252 source records remain accounting and later roadmap work, without 48/63 or 51/63 readiness targets. Further live acquisition requires fresh applicable authority; sealed packages and spent approvals remain unchanged.
 
 ## Historical delivery plans
 

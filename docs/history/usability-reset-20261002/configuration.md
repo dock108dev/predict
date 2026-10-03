@@ -1,7 +1,3 @@
-# October 2 target and live-attempt authority
-
-[Usability sprints](usability-sprint-plan.md) govern the replacement product. Automatic service-owned data flow, an ordinary board without scan/saved-history controls, lightweight current state and separate admin operation are required. The owner has authorized necessary live-data attempts/retries; Novig/ProphetX share a 500/month Odds API ceiling. Fresh scoped machine records must bind the current candidate and budget to that standing instruction; no repeated per-attempt approval question is required. Existing consumed records stay closed. The following sections describe the currently implemented finite session app, not the target automatic runtime.
-
 # Configuration and operation
 
 Use the [README](../README.md) for installation and [development guide](development.md)

@@ -1,5 +1,3 @@
-> **October 2 product reset: major usability sprints are next.** The owner rejected the current presentation and stopped the walkthrough. The target is a familiar automatic odds board with American odds and cents, faster native Kalshi/Polymarket US data, budgeted Novig/ProphetX data, a separate admin view and no new quote-history requirement. [Audit](docs/usability-audit-20261002.md) · [sprint work order](docs/usability-sprint-plan.md) · [current acceptance](docs/beta-coverage-acceptance.md). The instructions below describe the existing test-session app; the replacement product is planned, not implemented.
-
 # Prediction Arb
 
 A local, read-only dashboard for comparing sports prediction prices across venues, calculating conditional arbitrage and what-if expected value, and reopening saved scans. It does not place trades.

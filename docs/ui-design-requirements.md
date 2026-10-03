@@ -1,43 +1,41 @@
-# Predict UI design requirements
+# Predict usability requirements
 
+October 2, 2026. **Active replacement requirements. Current product: REVISE / not user-ready.** The owner stopped the walkthrough and rejected the presentation. [Audit](usability-audit-20261002.md), [design direction](ui-design.md), [sprint plan](usability-sprint-plan.md) and [acceptance](beta-coverage-acceptance.md) govern. [Previous requirements](history/usability-reset-20261002/ui-design-requirements.md) remain historical.
 
-## Direction
+## Information hierarchy
 
-Use a light iOS Liquid Glass-inspired appearance: cool white surfaces, restrained translucency, subtle blue/lavender ambient background, soft depth, rounded controls, and native system typography. Do not recreate the former beige, forest-green, yellow-tinted dashboard theme.
+1. Identify the game and start time.
+2. Identify outcome, market, period and exact signed line.
+3. Read comparable venue prices with both American odds and cents visible.
+4. See concise observation age, availability and material rule limitations.
+5. Open readable Details for the exact selected revision and relevant calculations.
 
-## Foundations
+Group related outcomes and align venue columns. Avoid large repeated source panels, multi-sentence diagnostic blocks and four-decimal implied percentages as the dominant content. Show aggregate cents as equivalents; original quotes and transformation basis remain inspectable. Price advantages never imply executable profit or positive EV without supported inputs.
 
-- Use `app/dashboard/opportunity_static/glass.css` for tokens and components. Default action accent is blue (#0969df); primary text is deep slate (#182338), secondary text #54647b.
-- Use the platform system font stack. Favor natural sentence case; reserve small uppercase labels for occasional context. Avoid oversized headings and widely spaced labels throughout the interface.
-- Use an 8-ish pixel spacing rhythm (8, 12, 16, 20, 24, 32). Keep related controls close and groups visibly distinct.
-- Panels generally use 22–26px radii; controls 12–14px; status pills fully rounded. Avoid applying pills to every piece of information.
-- Glass is a surface treatment, not decoration to stack endlessly. Use subtle borders, a white top highlight, restrained shadows, and approximately 24px backdrop blur. Keep text and dense data on sufficiently opaque surfaces.
-- Blue communicates action/selection. Green is reserved for meaningful success/positive values; amber for caution; red for error/destructive states. Pair color with text or icons. Preserve negative, zero, unknown, stale, and unavailable states accurately.
+## Ordinary-user workflow
 
-## Layout and common patterns
+Opening Predict presents the current price board and automatic data flow. Users can filter available data and inspect Details without starting/stopping scans, selecting saved data, setting acquisition duration, importing source files or interpreting source budgets. Those controls and technical metrics belong to admin. App shutdown and admin stop/pause remain effective.
 
-Use dashboard summaries for overview, list/table layouts for comparison, grouped forms for editing, sidebar settings for preferences, and detail views for records. Put secondary diagnostics in disclosures; retain necessary provenance and limits. Give each view a clear title and primary next action. Import/setup/debug controls should not displace the main product heading.
+Current live absence has an honest connecting/empty/unavailable state. Do not use historical observations as a default live fallback. Existing evidence is preserved for engineering; routine quote-history storage, replay, download and permanent bookmarks are deferred. Small operational preference, authorization and quota records are allowed.
 
-Use compact tables on desktop, deliberate horizontal scrolling or readable record cards on phones. Long names, timestamps, and values must wrap or remain accessible. Avoid clipped selects, overlapping controls, and page-level horizontal scrolling. Keep useful data near the first viewport; do not sacrifice usability for giant empty hero sections.
+## Honest prices and states
 
-## Interaction and accessibility
+Preserve source units, precision and selection identity. Distinguish unavailable, zero, negative, stale and budget-delayed results. Missing inputs withhold only dependent calculations. Material settlement differences must be discoverable before a trading decision and concisely indicated where comparisons are shown. References never become comparison legs.
 
-- Use native buttons, links, labels, inputs, and dialog semantics. Provide visible keyboard focus and accessible names. Aim for at least 44px primary touch targets.
-- Refreshing data must preserve open disclosures and keyboard focus by record/control identity, including when rows reorder or their links change. Capture focus immediately before replacing markup. Do not steal focus moved during a request, focus a different record when one disappears, or scroll merely to restore focus.
-- Body text should meet 4.5:1 contrast; large text and meaningful component boundaries should meet applicable 3:1 contrast requirements. Check actual composited colors because transparency changes contrast.
-- Honor reduced motion and reduced transparency; provide opaque fallback surfaces when blur is unsupported. Do not animate large backgrounds or use glass effects that impair reading.
-- Distinguish loading, empty, error, disabled, selected, and successful states in words. Do not make a control look active when unavailable.
-- A light theme is included. Do not claim dark-mode support without implementing and checking it.
-- Preserve Predict's calculation, persistence and source-label contracts when changing controls or rendering.
+Treat Kalshi and Polymarket US cadence as a source-specific fact to qualify. Novig/ProphetX share the owner-reported 500 monthly Odds API allowance and may update much more slowly. Source-time age, local receipt age and browser connection state are distinct. Filtering and multiple tabs must not multiply paid requests.
 
-## Maintaining the interface
+Open Details retains one coherent selected revision temporarily; updates do not silently substitute new prices. Expired selections/restarts say so. No permanent historical cutoff guarantee is required for the new product.
 
-Keep design guidance consistent with the implementation. Check affected screens and interactions at supported sizes; record any remaining limitations. Preserve data contracts, calculations, permissions, persistence and game rules.
+## Interaction and appearance
 
-For Predict, the active HTML templates are `dashboard.html` (Compare games) and
-`index.html` (Game details) under `app/dashboard/opportunity_static/`. Keep their
-IDs, accessible labels and display-only focus keys consistent with their renderers.
-The default is All opportunities: percentage-first cards grouped by probability basis, with separate Arbitrage, EV estimates and Saved-page research views. Saved-scan selection and game, sport and market filters stay visible; sizing and scan configuration are secondary. Settings and watch/history disclosures stay directly reachable without another enclosing disclosure. Keep saved/demo
-context, current blockers and material assumptions visible; put original inputs
-and diagnostics in named disclosures. Preserve negative, zero and unavailable
-values and the existing calculation, source and persistence contracts.
+Use familiar, restrained sportsbook comparison patterns, understandable names, readable text, consistent units and clear row/column associations. Desktop and narrow layouts must support long games, different lines, partial venues and repeated price changes without page-level clipping or confusion. Do not mandate old glass styling or rejected card preservation.
+
+Keyboard selection, meaningful labels, visible focus, adequate contrast and reduced-motion behavior remain required. Automatic updates preserve focus, selection, open Details and useful scroll position. Empty/error states explain what is happening in plain language; routine reconnection is automatic when safe.
+
+## Verification and acceptance
+
+Qualify implemented changes through meaningful affected math, identity, matching, route, lifecycle, quota, security and browser checks. Retain old evidence/oracle readers and once-consumed qualification behavior. Revise only assertions that encode superseded ordinary-user presentation requirements.
+
+Use realistic mixed-cadence and unavailable-source states. Fresh provider checks record exact candidate, scope, actual observations, resource use and credits. Source-specific failures are recorded for the owner; counts remain factual accounting without a percentage acceptance gate.
+
+Owner acceptance is explicit and separate from engineering checks. Readability, practical usefulness and replacement workflow must be reviewed after implementation. Remote deployment, 24/7 availability, universal source coverage and automated trading are not established by these requirements.

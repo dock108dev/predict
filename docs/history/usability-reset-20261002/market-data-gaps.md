@@ -1,7 +1,3 @@
-# October 2 live-data disposition
-
-Necessary new data attempts/retries are authorized for the [usability sprints](usability-sprint-plan.md), with fresh recorded scope/candidate/budgets and a shared 500/month Odds API ceiling. Native Kalshi/Polymarket US speed and availability must be verified rather than assumed; Novig/ProphetX may remain explicitly slower. No fresh provider attempt occurred in the [audit](usability-audit-20261002.md), so no new site failure is asserted. Report actual later failures by provider/venue and continue unaffected paths. Historical prices and source counts do not establish present availability. The limitations below remain relevant; old saved-scan/manual-Start requirements are superseded for the target ordinary workflow.
-
 # Data coverage and limitations
 
 The dashboard supports comparisons only when source observations establish the

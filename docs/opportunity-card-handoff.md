@@ -1,3 +1,5 @@
+> **October 2 product reset:** the owner rejected the UI and stopped the saved-data walkthrough. [Audit](usability-audit-20261002.md), [major usability sprint plan](usability-sprint-plan.md) and [current acceptance](beta-coverage-acceptance.md) govern new work. Historical scan/history/card-layout requirements and owner-review next actions below are superseded; existing technical behavior and candidate evidence retain their own boundaries. Necessary new live attempts are authorized within the plan and shared 500/month Odds API allowance.
+
 # Opportunity-card local candidate — September 26, 2026
 
 Engineering package complete locally. **Real-source qualification OPEN; beta NOT READY FOR SIGNOFF; owner acceptance NOT OBSERVED.** This supersedes the presentation package's earlier “specified, not implemented” status, not the retained source gates.

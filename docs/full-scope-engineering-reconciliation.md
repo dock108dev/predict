@@ -1,3 +1,5 @@
+> **October 2 product reset:** the owner rejected the UI and stopped the saved-data walkthrough. [Audit](usability-audit-20261002.md), [major usability sprint plan](usability-sprint-plan.md) and [current acceptance](beta-coverage-acceptance.md) govern new work. Historical scan/history/card-layout requirements and owner-review next actions below are superseded; existing technical behavior and candidate evidence retain their own boundaries. Necessary new live attempts are authorized within the plan and shared 500/month Odds API allowance.
+
 # Predict engineering gate reconciliation
 
 October 1, 2026. This document maps source facts to the workflow or calculation they affect. The [product scope](product-roadmap-review.md) describes the intended workflow; [acceptance](beta-coverage-acceptance.md) defines beta readiness and [candidate verification](../evidence/private-beta-workflow-20261001-v1/README.md) records evidence. Historical interpretations below are not current completion gates.

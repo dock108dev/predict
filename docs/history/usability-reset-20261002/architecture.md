@@ -1,7 +1,3 @@
-# October 2 architecture work order
-
-The [audit](usability-audit-20261002.md) and [usability sprints](usability-sprint-plan.md) require a shared automatic latest-price runtime, separate user/admin surfaces, coherent in-memory quote revisions and a small durable quota/configuration ledger. New ordinary operation has no quote-history archive requirement. Current projection and error recovery depend on durable journal acknowledgment; factor that boundary deliberately rather than disabling writes underneath it. Existing captures and qualification/replay paths remain preserved. The architecture below describes the current implementation; the replacement is not yet built.
-
 # Architecture and data
 
 The product is a local, file-backed sports prediction dashboard. [Module ownership](ssot.md) documents authoritative components and retained subsystems. Venue and market support varies; inspect source coverage and calculation blockers before interpreting a result.
