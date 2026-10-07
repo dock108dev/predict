@@ -1,6 +1,14 @@
 # Predict major usability sprint plan
 
-October 3, 2026. **U0–U5 local engineering complete, with bounded earlier native/ProphetX qualification and isolated U5 admin proof. U6 is partially qualified: one-game binding is preserved and eligible native Compare was observed intermittently with separate complete-book confirmation; paid aggregate Details is pending both ordinary gates; Novig remains an exact observed offering gap. Replacement UI owner feedback and acceptance remain outstanding; status stays REVISE / not user-ready.** This plan is the active work order following the [audit](usability-audit-20261002.md). It supersedes the old card-layout preservation rule, saved-data walkthrough next action, manual-scan product loop and universal history/reopening acceptance requirements. Preserve original evidence and calculations; do not preserve the failed presentation merely because earlier browser checks passed.
+Updated October 6, 2026. **U0–U5 local engineering complete; U6 partial / REVISE / not user-ready; owner decision pending.**
+
+**Blocked before owner usability review — October 6 restart recovery and current-selection qualification.** Restart-safe accounting recovery and a current Tampa Bay–Dallas direct-win binding are implemented. An ordinary free bootstrap observed 248 used/252 remaining; the single normally selected NBA batch charged 3 credits, leaving a dated observation of 251 used/249 remaining, zero unresolved reservations, ceiling 500/reserve 50. Novig failed venue admission (`aggregate_venue_admission_failed`); ProphetX had no admitted records in that exact NBA batch. Active aggregate board-to-Details therefore remains unproved. This assignment's one paid batch is consumed; no second batch or catch-up is permitted.
+
+The final 681-file application candidate is `e6e348d39e52018e76ef2fb6c3924c02344f3913a468615aca4969630a0154f6`, HEAD `75c98a7ecc192eba55724eea7da0aef007040608`. A separate final-candidate native-only 180-second window demonstrated a useful eligible gross comparison, active desktop/390px Details, original American/cents inputs, immutable held evidence, explicit newer-review adoption and safe Stop/expiry. Confirmation and original price clocks stay separate; eligibility was intermittent. The new binding applies only before October 9 00:15 UTC (October 8 8:15 p.m. EDT), with exact current metadata revalidation. Kalshi NO remains not-win; differing exceptional settlement and dependent economics remain withheld. The expired Colts–Commanders evidence is unchanged.
+
+[Current evidence](../evidence/u6-restart-recovery-20261006/README.md) distinguishes the accounting candidate `7ff0566c930cd9d75b7009192ec48a56613f2685afd767769a6050164785d169` from the final matching/clock-validation candidate. Final revised local offline CI passed **995 Python executions and 13 client scripts**, including **144 current-source executions**, zero failures/skips; no new hosted, packaging or owner-acceptance claim. **U6 partial / REVISE / not user-ready; owner decision pending.**
+
+**Smallest next action:** add bounded, redacted response retention and precise local admission diagnostics before a future aggregate attempt. The ordinary transport retained the NBA response hash and charge, then discarded the body; this packet cannot establish which Novig field caused rejection or support a corrective replay. Preserve the charged attempt and due times. A future paid acquisition requires a new bounded assignment, valid current accounting and both ordinary gates; never purchase another batch under this assignment. No follow-up, server or automation remains running.
 
 ## Product outcome
 
@@ -27,10 +35,10 @@ The owner gets a separate admin surface for source operation, metrics, quota, di
 | U0 | Complete IA and presentation contract, with a realistic user-ready design | Audit | Complete local engineering; owner feedback outstanding |
 | U1 | Replace the main and Details interfaces with a coherent odds-board experience | U0 | Complete local engineering |
 | U2 | Implement compact dual-price data presentation and exact quote-selection semantics | U0; integrates with U1 | Complete local engineering |
-| U3 | Automatic native runtime and bounded latest-state storage | U0/U2 contract; U1 consumer | Planned |
+| U3 | Automatic native runtime and bounded latest-state storage | U0/U2 contract; U1 consumer | Complete local engineering; bounded ten-minute NFL native qualification; broader coverage/freshness open |
 | U4 | Cheap shared Novig/ProphetX flow under 500/month | U3 lifecycle/budget ownership | Complete engineering; bounded ProphetX proof; Novig gap |
 | U5 | Separate admin operation, observability and source-issue handling | U3/U4 status contracts | Complete local engineering; offline/synthetic proof |
-| U6 | Integrated live qualification and owner review of the replacement product | U1–U5 | Partial; binding verified, eligible native Compare observed intermittently, paid Details and owner acceptance pending |
+| U6 | Integrated live qualification and owner review of the replacement product | U1–U5 | Blocked before review; active native Details proved; current identity, accounting continuity and paid Details pending |
 
 These are substantial engineering increments, not a sequence of copy tweaks. Do useful independent work when one provider is stuck. A blocked source does not stop the design, board, unaffected native feed, quota work or admin implementation.
 
@@ -113,7 +121,7 @@ Acceptance: an owner can find why a site is unavailable and what must happen nex
 
 ## U6 — Integrated qualification and readiness decision
 
-Baseline maintenance is already complete locally: the latest [CI portability follow-up](history/ci-repair-20261002.md#follow-up--aggregate-checks-portable-without-local-archives) records a full clean-export pass without ignored aggregate archives. Do not queue that repair again. Hosted Linux CI/fresh locked installation remains unverified. The recorded local checks qualify their own revision; affected verification for new sprint changes is still required.
+Baseline maintenance is already complete locally: the latest [CI portability follow-up](history/ci-repair-20261002.md#follow-up--aggregate-checks-portable-without-local-archives) records a full clean-export pass without ignored aggregate archives. Do not queue that repair again. Hosted Linux CI and its locked dependency installation passed October 6 on HEAD `75c98a7ecc192eba55724eea7da0aef007040608`. The October 6 qualification pass adds the current-source/admin/U6 groups to offline CI, with isolated RSS-sensitive processes and production assertions preserved. Local results are retained in the new evidence package; these uncommitted edits have no new hosted result. This does not establish complete packaged-app installation or live qualification. The recorded local checks qualify their own revision; affected verification for new sprint changes is still required.
 
 Run appropriate affected route/owner/security/matching/math/browser checks after each implemented seam. Update tests that encode the superseded ordinary-user scan/history layout; preserve tests for retained archive readers, once-consumed qualification, economic/identity rules and security. Do not lower assertions merely to achieve a green suite.
 
@@ -125,7 +133,7 @@ Acceptance for the new product: owner can open, find a useful same-selection com
 
 ## Concrete next action
 
-Continue **U6's remaining paid Details and owner gates**, using the [current report](../evidence/u6-freshness-20261003/README.md), [handoff](u6-current-handoff.md) and [owner review](u6-owner-review.md). Native occurrence/direct-win binding is preserved and one real eligible Colts Compare was observed; sustained availability remains unqualified. Paid Details requires both ordinary batch and fresh-bootstrap gates: October 3 15:31:12 and 19:14:15 UTC, respectively, with safe ownership/accounting/attendance. Recheck before at most one normal shared batch with three worst-case credits, demonstrate real held aggregate Details/expiry, reconcile and shut down. Owner acceptance stays pending. No follow-up scheduled; no purchase, budget or cadence expansion. Preserve immutable reviews, sealed binding, consumed attempts and quota.
+Add bounded redacted aggregate-response retention and precise, sanitized admission diagnostics without new provider requests. The permitted NBA batch was charged but admitted no current prices; retain the actual failure without assigning an unsupported provider cause. Then a separately bounded future assignment can qualify an ordinary scheduled delivery and active aggregate Details. Clock recovery, current native selection correspondence and eligible gross comparison are now demonstrated within their exact evidence limits. Owner review stays blocked until active aggregate Details is proved. Preserve the 500-credit ceiling, 50-credit reserve, charged attempts, original due times and source facts.
 
 Implementation handoff must include the exact source identity, sprint status, changes/checks, actual provider observations, quota use, outstanding site issues and owner decision. Update this plan and the Desktop tracker after each completed sprint. This audit/planning pass itself ran no provider attempt and made no application change.
 
@@ -201,7 +209,7 @@ Four separate results: **occurrence/predicate verified; actual eligible Compare 
 Dated balance remains 248 used/252 remaining at 13:14:15 UTC, zero reserved, active ceiling 500/reserve 50. Paid due 15:31:12 UTC; fresh scheduler bootstrap due 19:14:15 UTC (3:14:15 p.m. Eastern) also applies. Preserve rotation 2, due times and consumed authorities. **Next authorized bounded action:** at normally permitted gates, recheck identity/ledger/attendance and admit one shared batch up to three worst-case credits for held real aggregate Details; obtain real qualified native price clocks for Compare without threshold changes. Then owner workflow/decision. No paid refresh or diagnostic bypass. **U6 partial / REVISE / not user-ready.** Stop after this continuation.
 
 
-## U6 bounded freshness continuation — current October 3 boundary
+## Historical U6 bounded freshness continuation — October 3 boundary
 
 Application digest **`4a50f1ff4f9677b05749538176761312aab2244337f52be508186be28d7a7adf`**, 679 files; HEAD `a8e6b570915b6cc8a9bb0bc59f047a5ce813fdb4` unchanged. [Current evidence](../evidence/u6-freshness-20261003/README.md) supplies the frozen manifest, semantics table, exact live proof, checks and cleanup. The sealed Colts–Commanders occurrence/direct-win binding is preserved; Kalshi NO remains separate, exceptional settlement differs, and applicability ends October 4 13:30 UTC with current metadata revalidation.
 
@@ -215,7 +223,7 @@ Final frozen confirmation/native/contract/state group: 40 pass; wire/budget 12 p
 
 Read-only ledger check at 14:38:57 UTC: dated usage observation 248 used/252 remaining at 13:14:15 UTC, zero reserved, ceiling 500/reserve 50/rotation 2 and consumed attempts preserved. Paid due 15:31:12 UTC; fresh-bootstrap due 19:14:15 UTC (3:14:15 p.m. Eastern) also applies. Neither gate is accelerated; no aggregate startup, paid request or scheduled follow-up occurred. **Next bounded action:** when both ordinary gates permit, recheck exact candidate/ownership/ledger/attendance and admit at most one normal shared batch with three worst-case credits, then qualify real aggregate held Details/expiry/reconciliation and safe shutdown. Obtain explicit owner workflow/decision separately. **U6 partial / REVISE / not user-ready.** This continuation is stopped.
 
-## U6 paid continuation preflight — October 3, 10:59:51 a.m. Eastern
+## Historical U6 paid continuation preflight — October 3, 10:59:51 a.m. Eastern
 
 [Fresh read-only evidence](../evidence/u6-paid-preflight-20261003/README.md) confirms the exact 679-file frozen candidate and expected HEAD, valid ledger/account-window evidence, zero reservations, preserved five consumed attempts and rotation 2. Usage remains the dated 13:14:15 UTC observation of 248 used / 252 remaining; it was not refreshed. Paid batch due 11:31:12 a.m. Eastern and fresh bootstrap due 3:14:15 p.m. Eastern are both future. **Stopped before acquisition under the requested due-gate rule.** No source request, startup, new reservation, consumed attempt, credit, wait or scheduled follow-up.
 

@@ -8,6 +8,8 @@ from app.dashboard.session_projection import stable
 from app.dashboard.current_contract import stamp
 VERSION='predict-direct-win-1'
 PATH=Path(__file__).resolve().parents[1]/'fixtures/current-colts-commanders-1.json'
+HISTORICAL_PATH=PATH
+CURRENT_PATH=PATH.with_name('current-buccaneers-cowboys-20261006.json')
 
 def material(venue,native):
     if venue=='kalshi':
@@ -15,9 +17,9 @@ def material(venue,native):
     return dict(id=str(native.get('id')),sportsMarketType=native.get('sportsMarketType'),description=native.get('description'),
         gameStartTime=native.get('gameStartTime'),marketSides=sorted([dict(id=str(s.get('id')),marketId=str(s.get('marketId')),long=s.get('long'),team_id=str((s.get('team') or {}).get('id')),team_name=(s.get('team') or {}).get('name')) for s in native.get('marketSides',[])],key=lambda s:s['id']))
 
-@lru_cache(maxsize=1)
-def _load(signature):
-    b=json.loads(PATH.read_text())
+@lru_cache(maxsize=2)
+def _load(path,signature):
+    b=json.loads(Path(path).read_text())
     if b['version']!=VERSION or b['sha256']!=stable({k:v for k,v in b.items() if k!='sha256'}):raise ValueError('Occurrence evidence seal changed')
     from app.resolution.core import event_key
     event_key(b['event'])
@@ -25,7 +27,12 @@ def _load(signature):
     return b
 
 def load():
-    s=PATH.stat();return deepcopy(_load((s.st_mtime_ns,s.st_size)))
+    path=PATH
+    if path==HISTORICAL_PATH:
+        s=CURRENT_PATH.stat();current=_load(str(CURRENT_PATH),(s.st_mtime_ns,s.st_size))
+        if stamp(current['applicability']['start'])<=datetime.now(timezone.utc)<=stamp(current['applicability']['end']):
+            return deepcopy(current)
+    s=path.stat();return deepcopy(_load(str(path),(s.st_mtime_ns,s.st_size)))
 
 def annotate(cat,venue):
     """Revalidate each catalog generation; invalid target retains local exclusion."""
@@ -52,6 +59,9 @@ def annotate(cat,venue):
         valid=valid and all(roles.get(k) in (None,expected[k]) for k in ('home','away'))
         if venue=='polymarket_us':
             valid=valid and str(native.get('id'))==target['event_id'] and str(native.get('gameId'))==target['game_id']
+            if target.get('shared_game_id'):
+                valid=valid and native.get('sportradarGameId')==target['shared_game_id']
+                valid=valid and native.get('active') is True and native.get('closed') is False and native.get('period')=='NS'
             valid=valid and native.get('rescheduledFromGameId') in (None,0,'0') and native.get('originalStartTime') in (None,expected['original_start'])
             valid=valid and all(native.get(k) is None or stamp(native[k])==stamp(expected['scheduled_start']) for k in ('startDate','startTime'))
         else:
@@ -64,6 +74,8 @@ def annotate(cat,venue):
             m=target['markets'][market['id']]
             binding=market.get('v1_raw_binding',{})
             good=valid and stable(material(venue,raw))==m['material_sha256']
+            if target.get('shared_game_id'):
+                good=good and raw.get('active') is True and raw.get('closed') is False
             good=good and binding.get('sha256')==stable({k:v for k,v in binding.items() if k!='sha256'}) and binding.get('status')=='BOUND_RAW_PREDICATE'
             good=good and binding.get('identity',{}).get('family')=='moneyline' and binding['identity']['period']=='full_game'
             if good:market['direct_win_binding']=dict(version=VERSION,sha256=b['sha256'],outcomes=m['outcomes'])

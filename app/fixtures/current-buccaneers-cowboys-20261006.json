@@ -1,0 +1,260 @@
+{
+  "version": "predict-direct-win-1",
+  "event": {
+    "competition": "NFL",
+    "sport": "american_football",
+    "season": "2026",
+    "stage": "regular_season",
+    "game_id": "aa6b58bf-4feb-11f1-abca-2c54536568a9",
+    "original_start": "2026-10-09T00:15:00+00:00",
+    "scheduled_start": "2026-10-09T00:15:00+00:00",
+    "schedule_status": "scheduled",
+    "home": "NFL:DAL",
+    "away": "NFL:TB",
+    "participants": {
+      "Tampa Bay Buccaneers": "NFL:TB",
+      "Dallas Cowboys": "NFL:DAL"
+    },
+    "title": "Tampa Bay Buccaneers at Dallas Cowboys"
+  },
+  "evidence": [
+    {
+      "url": "https://gateway.polymarket.us/v1/events",
+      "path": "evidence/u6-restart-recovery-20261006/live-1/metadata/polymarket_us-720e4531a1fd12a2d80aedb616c1f8692a5d5f6aaddbe390a0117d8d0a48a54d.json",
+      "sha256": "f9dd97b8102c30af37c409c8f872636e4df2f7948a37108b81696fda34f47573",
+      "body_sha256": "720e4531a1fd12a2d80aedb616c1f8692a5d5f6aaddbe390a0117d8d0a48a54d",
+      "received_at": "2026-10-07T00:07:19.335640+00:00",
+      "status": 200,
+      "complete": true,
+      "params": {
+        "tagSlug": "nfl",
+        "active": "true",
+        "closed": "false",
+        "orderBy": "startTime",
+        "orderDirection": "asc",
+        "sportsMarketTypes": "football_team_full_game_winner",
+        "startTimeMin": "2026-10-07T00:12:18.688657+00:00",
+        "startTimeMax": "2026-10-14T00:07:18.688657+00:00",
+        "limit": 1,
+        "offset": 0
+      }
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/markets",
+      "path": "evidence/u6-restart-recovery-20261006/live-1/metadata/kalshi-3e8c975e60c6a7a5995cbfe6151e19ba51b983aeb38263f70807acb4d5106c92.json",
+      "sha256": "e6a82d56b4574d98eefb35745246297bacff19bcce4ecf0761b75a0a2f575aad",
+      "body_sha256": "3e8c975e60c6a7a5995cbfe6151e19ba51b983aeb38263f70807acb4d5106c92",
+      "received_at": "2026-10-07T00:07:21.096143+00:00",
+      "status": 200,
+      "complete": true,
+      "params": {
+        "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+        "limit": 50
+      }
+    },
+    {
+      "url": "https://gateway.polymarket.us/v1/market/id/1030131",
+      "path": "evidence/u6-restart-recovery-20261006/live-1/metadata/polymarket_us-5ab33983e9c71efe80a185d02da56ff647f8f9c12a318ec7a6aafcc58487d5fa.json",
+      "sha256": "eab0729bff7d1209dc035bcf05182b31a18ec89795fccb365e161b2fa630846f",
+      "body_sha256": "5ab33983e9c71efe80a185d02da56ff647f8f9c12a318ec7a6aafcc58487d5fa",
+      "received_at": "2026-10-07T00:09:21.695433+00:00",
+      "status": 200,
+      "complete": true,
+      "params": {}
+    },
+    {
+      "url": "https://external-api.kalshi.com/trade-api/v2/events",
+      "path": "evidence/u6-restart-recovery-20261006/live-1/metadata/kalshi-76e813fb2a32d5568747eeef41d61fd2f3d4101827cba14ff40b1f08ed7fcd84.json",
+      "sha256": "340f49220f0ecb8e369d49a61fc11d0143d0158095917a6b97095a6847e6da35",
+      "body_sha256": "76e813fb2a32d5568747eeef41d61fd2f3d4101827cba14ff40b1f08ed7fcd84",
+      "received_at": "2026-10-07T00:09:22.356352+00:00",
+      "status": 200,
+      "complete": true,
+      "params": {
+        "series_ticker": "KXNFLGAME",
+        "status": "open",
+        "with_milestones": "true",
+        "with_nested_markets": "false",
+        "limit": 5
+      }
+    },
+    {
+      "url": "https://www.buccaneers.com/news/nfl-schedule-2026-bucs-information-regular-season-opponents-preseason",
+      "path": "evidence/u6-restart-recovery-20261006/schedule-0.html",
+      "sha256": "225d18cfbf4f36bbae2cae0971e9f208054e7742561f15cb6d4a77d9d2e89417",
+      "received_at": "2026-10-07T00:10:01.738953+00:00",
+      "bytes": 471848,
+      "status": 200,
+      "complete": true,
+      "clock_basis": "complete local HTTP receipt"
+    },
+    {
+      "url": "https://www.buccaneers.com/game-day/2026/reg-week5/buccaneers-at-cowboys/",
+      "path": "evidence/u6-restart-recovery-20261006/schedule-1.html",
+      "sha256": "77bbcb24766e32e44f5c9e8d4113c5a0e52748a9dbcde02105316294ece70dae",
+      "received_at": "2026-10-07T00:10:01.783629+00:00",
+      "bytes": 353154,
+      "status": 200,
+      "complete": true,
+      "clock_basis": "complete local HTTP receipt"
+    }
+  ],
+  "original_start_evidence": {
+    "source": {
+      "url": "https://www.buccaneers.com/news/nfl-schedule-2026-bucs-information-regular-season-opponents-preseason",
+      "path": "evidence/u6-restart-recovery-20261006/schedule-0.html",
+      "sha256": "225d18cfbf4f36bbae2cae0971e9f208054e7742561f15cb6d4a77d9d2e89417",
+      "received_at": "2026-10-07T00:10:01.738953+00:00",
+      "bytes": 471848,
+      "status": 200,
+      "complete": true,
+      "clock_basis": "complete local HTTP receipt"
+    },
+    "location": "May 15 original schedule release, primetime table: Dallas Thurs Oct 8 8:15 PM ET; corroborated UTC kickoff in current game center",
+    "basis": "original published regular-season schedule"
+  },
+  "schedule_status_evidence": {
+    "source": {
+      "url": "https://www.buccaneers.com/game-day/2026/reg-week5/buccaneers-at-cowboys/",
+      "path": "evidence/u6-restart-recovery-20261006/schedule-1.html",
+      "sha256": "77bbcb24766e32e44f5c9e8d4113c5a0e52748a9dbcde02105316294ece70dae",
+      "received_at": "2026-10-07T00:10:01.783629+00:00",
+      "bytes": 353154,
+      "status": 200,
+      "complete": true,
+      "clock_basis": "complete local HTTP receipt"
+    },
+    "location": "NFL game ID, Week 5 pregame kickoff, native linked milestone scheduled",
+    "basis": "official current game center plus exact native linked milestone"
+  },
+  "sources": {
+    "kalshi": {
+      "event_id": "KXNFLGAME-26OCT08TBDAL",
+      "milestone": {
+        "id": "86e22826-33ee-4da5-9b78-0affd18b8a8e",
+        "source_id": "2b3761cb-3c86-43de-89d9-85175f844221",
+        "start_date": "2026-10-09T00:15:00Z",
+        "season": {
+          "type": "REG",
+          "week": 5,
+          "year": 2026
+        },
+        "main_game_event_ticker": "KXNFLGAME-26OCT08TBDAL",
+        "home_team_id": "62b97b7c-5503-461c-b328-fd8543219b22",
+        "away_team_id": "1105fa0d-c798-4020-9e24-f377a334b3d9",
+        "status": "scheduled"
+      },
+      "markets": {
+        "KXNFLGAME-26OCT08TBDAL-DAL": {
+          "material": {
+            "ticker": "KXNFLGAME-26OCT08TBDAL-DAL",
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "rules_primary": "If Dallas wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "custom_strike": {
+              "football_team": "62b97b7c-5503-461c-b328-fd8543219b22"
+            },
+            "strike_type": "structured"
+          },
+          "material_sha256": "f762d482100d2c7f558636e543bf74763c2809032a7b251927620f0521095953",
+          "outcomes": {
+            "yes": {
+              "participant": "NFL:DAL",
+              "predicate": "win"
+            },
+            "no": {
+              "participant": "NFL:DAL",
+              "predicate": "not_win"
+            }
+          }
+        },
+        "KXNFLGAME-26OCT08TBDAL-TB": {
+          "material": {
+            "ticker": "KXNFLGAME-26OCT08TBDAL-TB",
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "rules_primary": "If Tampa Bay wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "custom_strike": {
+              "football_team": "1105fa0d-c798-4020-9e24-f377a334b3d9"
+            },
+            "strike_type": "structured"
+          },
+          "material_sha256": "e8dc9885c631d851dd78b879b111cc9bc98fecdc6d2721e443fc1c84856f3e6b",
+          "outcomes": {
+            "yes": {
+              "participant": "NFL:TB",
+              "predicate": "win"
+            },
+            "no": {
+              "participant": "NFL:TB",
+              "predicate": "not_win"
+            }
+          }
+        }
+      }
+    },
+    "polymarket_us": {
+      "event_id": "124724",
+      "game_id": "19519",
+      "shared_game_id": "2b3761cb-3c86-43de-89d9-85175f844221",
+      "markets": {
+        "1030131": {
+          "material": {
+            "id": "1030131",
+            "sportsMarketType": "football_team_full_game_winner",
+            "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+            "gameStartTime": "2026-10-09T00:15:00Z",
+            "marketSides": [
+              {
+                "id": "2059746",
+                "marketId": "1030131",
+                "long": true,
+                "team_id": "77",
+                "team_name": "Tampa Bay Buccaneers"
+              },
+              {
+                "id": "2059747",
+                "marketId": "1030131",
+                "long": false,
+                "team_id": "56",
+                "team_name": "Dallas Cowboys"
+              }
+            ]
+          },
+          "material_sha256": "c36d99f3ab8952f499c42c7d569f6167020606fa093cd4214f9e5f05bb3377ce",
+          "outcomes": {
+            "2059746": {
+              "participant": "NFL:TB",
+              "predicate": "win"
+            },
+            "2059747": {
+              "participant": "NFL:DAL",
+              "predicate": "win"
+            }
+          }
+        }
+      }
+    }
+  },
+  "applicability": {
+    "start": "2026-10-07T00:10:01.783629+00:00",
+    "end": "2026-10-09T00:15:00+00:00",
+    "scope": "Only this original scheduled pregame occurrence and listed direct full-game win instruments; exact metadata, shared identifier, roles, market material and status revalidated on every catalog"
+  },
+  "limitations": [
+    "Kalshi NO is not opponent YES",
+    "Tie pays 0.50; Kalshi 48-hour postponement differs from US two-week window; exceptional fair-price, refund and cancellation meanings remain separate. No net economics qualification."
+  ],
+  "evidence_paths": {
+    "kalshi_milestone": "Exact linked milestone source_id plus structured home/away IDs, season REG week5 and scheduled status",
+    "us_event": "124724 gameId 19519, sportradarGameId, startDate/startTime, period NS; no rescheduledFromGameId",
+    "official_game": "data-gameid=aa6b58bf-4feb-11f1-abca-2c54536568a9"
+  },
+  "shared_identifier_evidence": {
+    "kalshi_field": "linked milestone.source_id",
+    "us_field": "event.sportradarGameId",
+    "value": "2b3761cb-3c86-43de-89d9-85175f844221",
+    "basis": "exact shared opaque native game identifier; corroboration by official original schedule and typed native participants, not labels/time alone"
+  },
+  "sha256": "2924f6508a38af4271939723195133e70ef8cd51b79e093fff71c4db8ba8575a"
+}

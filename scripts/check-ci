@@ -5,6 +5,26 @@ python -m compileall -q app tests
 for source in app/dashboard/opportunity_static/*.js; do
     node --check "$source"
 done
+# Current-source contracts use only disposable state and injected transports.
+# Run these before retained-data tests, whose process-lifetime RSS can be high.
+python -m unittest \
+    tests.test_current_contract \
+    tests.test_current_state \
+    tests.test_current_native \
+    tests.test_current_confirmation \
+    tests.test_current_occurrence \
+    tests.test_current_occurrence_october8 \
+    tests.test_current_quota \
+    tests.test_current_clock_recovery \
+    tests.test_current_odds_transport \
+    -q
+# Lifecycle/admin cases exercise the actual RSS watchdog. Each gets a fresh
+# process so retained fixture allocations cannot change the memory gate.
+python -m unittest tests.test_current_service -q
+python -m unittest tests.test_current_aggregate -q
+python -m unittest tests.test_current_admin -q
+python -m unittest tests.test_u6_native_only -q
+node tests/test_current_client.cjs
 # Collector budgets measure process-lifetime peak RSS. Keep failure-injection
 # fixtures separate from the retained dashboard/replay tests below.
 python -m unittest tests.test_coverage_failure_handling tests.test_packaged_review_portability -q

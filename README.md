@@ -1,4 +1,4 @@
-> **October 3: U0–U4 local engineering complete; U5 is next.** Ordinary startup owns bounded native feeds and shared budgeted Novig/ProphetX acquisition. Actual ProphetX delivery was observed; Novig was unobserved in the retained NCAAF query. Wider coverage, native occurrence matching, sustained cadence and owner acceptance remain unqualified. [Sprint status](docs/usability-sprint-plan.md) · [U4 evidence](evidence/u4-current-20261003/README.md) · [Aggregate operation](docs/u4-aggregate-operation.md) · [U5 handoff](docs/u5-current-handoff.md).
+> **October 6: U6 blocked before owner usability review; REVISE / not user-ready.** Restart-safe accounting recovery and a currently applicable native gross comparison are qualified. The one ordinary NBA batch charged 3 credits but admitted no prices: Novig admission failed, ProphetX unobserved in that batch. Active aggregate Details remains blocked. [Current evidence](evidence/u6-restart-recovery-20261006/README.md) · [U6 handoff](docs/u6-current-handoff.md).
 
 # Prediction Arb
 
@@ -31,7 +31,7 @@ Ordinary native operation uses bounded configuration, fixed read-only endpoints,
 
 Compare a same-selection row, use local league/market/period/venue/search filters, and select a price for Details. A review keeps its original revision while the board updates; adopting a newer price is explicit. Manual What-if requires your probability, every cost and payout quantity. Missing inputs withhold dependent results; zero and negative results remain valid.
 
-**Admin** provides minimal native/aggregate status, shared quota and pause/stop controls, plus preserved inspection at `/admin/retained`; full observability remains U5. Saved prices establish only their recorded state. The isolated design remains `/preview/u0`. For populated integration testing, run `.venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797` and follow the [test workflow](evidence/u1-u2-integration-20261002/README.md). This test provider uses production interfaces and labels every screen as synthetic.
+**Admin** provides native/aggregate status, shared quota, sanitized source issues, pause/stop and guarded recovery controls, plus preserved inspection at `/admin/retained`; U5 local engineering is complete. Saved prices establish only their recorded state. The isolated design remains `/preview/u0`. For populated integration testing, run `.venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797` and follow the [test workflow](evidence/u1-u2-integration-20261002/README.md). This test provider uses production interfaces and labels every screen as synthetic.
 
 [Sport and market integration](docs/sports-integration.md) describes implemented handlers. [Data limitations](docs/market-data-gaps.md) explains what those handlers do not establish.
 

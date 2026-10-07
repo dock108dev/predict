@@ -8,13 +8,14 @@ from datetime import datetime, timezone
 import fcntl
 from hashlib import sha256
 import json
+import math
 import os
 from pathlib import Path
 import re
-import time
 from uuid import uuid4
 from app.dashboard.current_contract import packed, stamp
 from .current_policy import ROOT
+from .current_clock import continuous, boot_evidence
 
 SCHEMA = 'predict-shared-odds-quota-1'
 DIRECTORY = ROOT / '.local/predict-odds'
@@ -75,10 +76,11 @@ def headers(items):
 
 
 class QuotaLedger:
-    def __init__(self, directory=DIRECTORY, *, clock=now, monotonic=None):
+    def __init__(self, directory=DIRECTORY, *, clock=now, monotonic=None, boot_loader=None):
         self.directory = Path(directory)
         self.clock = clock
-        self.monotonic=monotonic if monotonic is not None else time.monotonic if clock is now else None
+        self.monotonic=monotonic if monotonic is not None else continuous if clock is now else None
+        self.boot_loader=boot_loader if boot_loader is not None else boot_evidence if clock is now else lambda:None
         self.failed = None
 
     def _read(self):
@@ -87,7 +89,8 @@ class QuotaLedger:
             if (self.directory/'initialized').exists():raise QuotaStop('quota_ledger_missing')
             return dict(schema=SCHEMA, ceiling=CEILING, engineering_reserve=RESERVE,
                 window=None, windows=[], observation=None, attempts={}, next_due_at=None,
-                rotation=0, bootstrap_due_at=None, last_clock=None, clock_anchor=None, pause=None)
+                rotation=0, bootstrap_due_at=None, last_clock=None, clock_anchor=None, pause=None,
+                clock_recoveries=[], accounting_epoch=None)
         if path.is_symlink() or path.stat().st_size > 512*1024:
             raise QuotaStop('quota_ledger_corrupt_or_oversize')
         try:
@@ -95,7 +98,14 @@ class QuotaLedger:
             if set(envelope)!={'value','sha256'} or sha256(packed(envelope['value'])).hexdigest()!=envelope['sha256']:raise ValueError()
             value=envelope['value']
             required = {'schema','ceiling','engineering_reserve','window','windows','observation','attempts','next_due_at','rotation','bootstrap_due_at','last_clock','clock_anchor','pause'}
-            if set(value) != required or value['schema'] != SCHEMA or value['ceiling'] != CEILING or value['engineering_reserve'] != RESERVE:
+            if set(value) not in (required, required|{'clock_recoveries','accounting_epoch'}) or value['schema'] != SCHEMA or value['ceiling'] != CEILING or value['engineering_reserve'] != RESERVE:
+                raise ValueError()
+            value.setdefault('clock_recoveries',[])
+            value.setdefault('accounting_epoch',None)
+            if not isinstance(value['clock_recoveries'],list) or len(value['clock_recoveries'])>12:
+                raise ValueError()
+            epoch=value['accounting_epoch']
+            if epoch is not None and (not isinstance(epoch,dict) or epoch.get('state') not in ('awaiting_bootstrap','current') or epoch.get('id') not in [r['id'] for r in value['clock_recoveries']]):
                 raise ValueError()
             window(value['window'])
             if not isinstance(value['attempts'], dict) or len(value['attempts']) > 512 or not isinstance(value['windows'], list) or len(value['windows']) > 12:
@@ -107,6 +117,13 @@ class QuotaLedger:
                 raise ValueError()
             for k in ('next_due_at','bootstrap_due_at','last_clock'):
                 stamp(value[k], True)
+            anchor=value['clock_anchor']
+            if anchor is not None:
+                stamp(anchor['at'])
+                if type(anchor['monotonic']) not in (int,float) or not math.isfinite(anchor['monotonic']) or anchor['monotonic']<0:raise ValueError()
+                if anchor.get('boot') is not None:
+                    boot=anchor['boot'];stamp(boot['started_at'])
+                    if not isinstance(boot['id'],str) or not boot['id'] or type(boot['uptime']) not in (int,float) or not math.isfinite(boot['uptime']) or boot['uptime']<0:raise ValueError()
             o=value['observation']
             if o is not None:
                 if any(type(o[k]) is not int or o[k]<0 for k in ('used','remaining','last')) or o['used']+o['remaining'] != CEILING:
@@ -137,7 +154,77 @@ class QuotaLedger:
         finally:
             path.unlink(missing_ok=True)
 
-    def transact(self, action):
+    def _anchor(self, at, mono, boot):
+        return dict(at=at,monotonic=mono,boot=deepcopy(boot),clock_kind='suspend_inclusive_v1')
+
+    def _clock_reason(self, value, at, mono, boot):
+        if value['last_clock'] and stamp(at)<stamp(value['last_clock']):
+            return 'clock_regression'
+        anchor=value['clock_anchor']
+        if anchor and mono is not None:
+            old_boot=anchor.get('boot')
+            if self.clock is now and (not boot or not old_boot):
+                return 'clock_continuity_unknown'
+            if old_boot and (not boot or old_boot['id']!=boot['id']):
+                return 'clock_continuity_unknown'
+            # A legacy monotonic counter has no supported cross-clock identity.
+            if anchor.get('clock_kind') is None and boot is not None:
+                return 'clock_continuity_unknown'
+            elapsed=mono-anchor['monotonic']
+            if elapsed<0 or abs((stamp(at)-stamp(anchor['at'])).total_seconds()-elapsed)>120:
+                return 'clock_continuity_unknown'
+        return None
+
+    def _restart_reason(self, v, at, mono, boot, evidence):
+        if self.failed:return self.failed
+        if v['pause'] not in (None,'clock_continuity_unknown'):return v['pause']
+        if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):return 'ambiguous_dispatch_unresolved'
+        if evidence is None:return 'reset_window_evidence_unverified'
+        if not stamp(evidence['starts_at'])<=stamp(at)<stamp(evidence['ends_at']):return 'reset_window_not_current'
+        if v['window']!=evidence and (v['window'] is None or stamp(evidence['starts_at'])<stamp(v['window']['ends_at'])):return 'reset_window_evidence_unverified'
+        anchor=v['clock_anchor']
+        if v['last_clock'] and stamp(at)<stamp(v['last_clock']):return 'clock_regression'
+        if not anchor or not boot or mono is None:return 'restart_identity_unknown'
+        try:
+            age=(stamp(at)-stamp(boot['started_at'])).total_seconds()
+            if not boot['id'] or age<0 or abs(age-boot['uptime'])>120 or abs(mono-boot['uptime'])>5:return 'restart_clock_evidence_contradictory'
+            if stamp(boot['started_at'])<=stamp(anchor['at']):return 'restart_not_established'
+            if anchor.get('boot') and anchor['boot']['id']==boot['id']:return 'restart_not_established'
+        except (KeyError,TypeError,ValueError):return 'restart_identity_unknown'
+        if len(v['clock_recoveries'])>=12:return 'quota_record_capacity'
+        return None
+
+    def prepare_clock(self, owner, candidate, evidence, *, cleanup_safe):
+        """Owned, durable epoch transition. It grants only an ordinarily due free
+        bootstrap; it never clears spending, attempts, due times or reservations.
+        New-process startup holds the exclusive lifecycle lock; in-process
+        recovery must finish cleanup before constructing the next scheduler.
+        """
+        if not cleanup_safe:raise QuotaStop('cleanup_safety_unresolved')
+        if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
+        evidence=window(evidence)
+        def prepare(v,at):
+            mono=self.monotonic() if self.monotonic else None
+            boot=self.boot_loader()
+            reason=self._clock_reason(v,at,mono,boot)
+            if reason is None:
+                if v['pause']:raise QuotaStop(v['pause'])
+                if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+                return
+            failure=self._restart_reason(v,at,mono,boot,evidence)
+            if failure:raise QuotaStop(failure)
+            identity=str(uuid4())
+            v['clock_recoveries'].append(dict(id=identity,at=at,old_anchor=deepcopy(v['clock_anchor']),
+                old_last_clock=v['last_clock'],old_pause=v['pause'],new_anchor=self._anchor(at,mono,boot),
+                runtime_id=owner_runtime(owner),candidate_digest=candidate,account_window=deepcopy(evidence),
+                reason='os_evidenced_restart',authority='free_accounting_bootstrap_only'))
+            v['clock_anchor']=self._anchor(at,mono,boot)
+            v['last_clock']=at
+            v['pause']=None
+            v['accounting_epoch']=dict(id=identity,state='awaiting_bootstrap',window_id=evidence['id'])
+        self.transact(prepare,clock_recovery=True)
+
+    def transact(self, action, *, clock_recovery=False):
         if self.failed:
             raise QuotaStop(self.failed)
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -147,18 +234,16 @@ class QuotaLedger:
             try:
                 value=self._read()
                 at=self.clock()
-                if self.monotonic is not None:
-                    mono=self.monotonic();anchor=value['clock_anchor']
-                    value['clock_anchor']=dict(at=at,monotonic=mono)
-                    if anchor and (mono<anchor['monotonic'] or abs((stamp(at)-stamp(anchor['at'])).total_seconds()-(mono-anchor['monotonic']))>120):
-                        value['pause']='clock_continuity_unknown'
+                if not clock_recovery:
+                    mono=self.monotonic() if self.monotonic else None
+                    boot=self.boot_loader() if self.monotonic else None
+                    reason=self._clock_reason(value,at,mono,boot)
+                    if reason:
+                        value['pause']=reason
                         self._write(value)
-                        raise QuotaStop('clock_continuity_unknown')
-                if value['last_clock'] and stamp(at)<stamp(value['last_clock']):
-                    value['pause']='clock_regression'
-                    self._write(value)
-                    raise QuotaStop('clock_regression')
-                value['last_clock']=at
+                        raise QuotaStop(reason)
+                    if mono is not None:value['clock_anchor']=self._anchor(at,mono,boot)
+                    value['last_clock']=at
                 result=action(value, at)
                 self._write(value)
                 return result
@@ -183,11 +268,19 @@ class QuotaLedger:
             observation_age_seconds=None if o is None or stamp(self.clock())<stamp(o['at']) else (stamp(self.clock())-stamp(o['at'])).total_seconds(),
             observation_clock_skew=o is not None and stamp(self.clock())<stamp(o['at']),
             ledger_encoded_bytes=len(packed(v)),ledger_byte_ceiling=512*1024,attempt_ceiling=512,
-            last_clock=v['last_clock'],clock_anchor=deepcopy(v['clock_anchor']))
+            last_clock=v['last_clock'],clock_anchor=deepcopy(v['clock_anchor']),
+            clock_recoveries=deepcopy(v['clock_recoveries']),accounting_epoch=deepcopy(v['accounting_epoch']))
 
     def recovery_reason(self, evidence):
         """Read-only preflight; dispatch still locks/rechecks the exact facts."""
         q=self.snapshot()
+        if q.get('pause')=='quota_ledger_unavailable':return 'quota_ledger_unavailable'
+        v=self._read()
+        at=self.clock();mono=self.monotonic() if self.monotonic else None
+        boot=self.boot_loader() if self.monotonic else None
+        clock_reason=self._clock_reason(v,at,mono,boot)
+        if clock_reason:
+            return self._restart_reason(v,at,mono,boot,evidence)
         if q.get('pause'):return q['pause']
         if q.get('unresolved_attempts'):return 'ambiguous_dispatch_unresolved'
         if q.get('observation') is None:return 'quota_unknown'
@@ -195,10 +288,6 @@ class QuotaLedger:
         at=self.clock()
         if not stamp(evidence['starts_at'])<=stamp(at)<stamp(evidence['ends_at']):return 'reset_window_not_current'
         if q.get('last_clock') and stamp(at)<stamp(q['last_clock']):return 'clock_regression'
-        anchor=q.get('clock_anchor')
-        if anchor and self.monotonic is not None:
-            elapsed=self.monotonic()-anchor['monotonic']
-            if elapsed<0 or abs((stamp(at)-stamp(anchor['at'])).total_seconds()-elapsed)>120:return 'clock_continuity_unknown'
         return None
 
     def bind_window(self, evidence):
@@ -254,6 +343,7 @@ class QuotaLedger:
                     raise QuotaStop('bootstrap_budget_delayed')
                 v['bootstrap_due_at']=(stamp(at)+timedelta(hours=6)).isoformat()
             else:
+                if v['accounting_epoch'] and v['accounting_epoch']['state']!='current':raise QuotaStop('restart_accounting_refresh_required')
                 if v['window'] is None: raise QuotaStop('reset_window_unknown')
                 if not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at']):
                     raise QuotaStop('reset_window_expired')
@@ -283,6 +373,8 @@ class QuotaLedger:
         def mark(v,at):
             a=v['attempts'][aid]
             if a['state']!='reserved' or v['pause']: raise QuotaStop('dispatch_not_reserved')
+            if a['runtime_id']!=owner_runtime(owner):raise QuotaStop('reservation_owner_conflict')
+            if not a['bootstrap'] and v['accounting_epoch'] and v['accounting_epoch']['state']!='current':raise QuotaStop('restart_accounting_refresh_required')
             if not a['bootstrap'] and (not v['window'] or not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at'])):
                 raise QuotaStop('reset_window_expired')
             a['state']='uncertain';a['dispatch_at']=at
@@ -311,6 +403,9 @@ class QuotaLedger:
                 return
             v['observation']=dict(q,at=at,attempt_id=aid)
             a.update(state='confirmed',charged=q['last'],reconciled_at=at)
+            epoch=v['accounting_epoch']
+            if epoch and epoch['state']=='awaiting_bootstrap' and a['bootstrap'] and a['window_id']==epoch['window_id'] and stamp(a['dispatch_at'])>=stamp(v['clock_recoveries'][-1]['at']):
+                epoch.update(state='current',attempt_id=aid,validated_at=at)
             # Unrelated uncertain attempts remain reserved even after bootstrap.
         self.transact(reconcile)
 

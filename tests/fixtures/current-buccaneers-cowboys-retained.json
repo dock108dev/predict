@@ -1,0 +1,1646 @@
+{
+  "evidence_class": "Retained production metadata subset; test books, prices and clocks are controlled",
+  "catalogs": {
+    "kalshi": {
+      "event_discovery": "bounded/truncated",
+      "market_completeness": "unestablished",
+      "events": [
+        {
+          "id": "KXNFLGAME-26OCT08TBDAL",
+          "title": "TB Buccaneers vs DAL Cowboys",
+          "scheduled_start": "2026-10-09T00:15:00+00:00",
+          "native_aliases": {
+            "series_ticker": "KXNFLGAME"
+          },
+          "terms_references": {
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ]
+          },
+          "participants": {
+            "Dallas Cowboys": "NFL:DAL",
+            "Tampa Bay Buccaneers": "NFL:TB"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-10-09T00:15:00+00:00",
+            [
+              "NFL:DAL",
+              "NFL:TB"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": null,
+            "closed": null,
+            "live": null,
+            "ended": null,
+            "period": null
+          },
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "observed_identity_facts": [
+            {
+              "id": "86e22826-33ee-4da5-9b78-0affd18b8a8e",
+              "source_id": "2b3761cb-3c86-43de-89d9-85175f844221",
+              "start_date": "2026-10-09T00:15:00Z",
+              "away_team_id": "1105fa0d-c798-4020-9e24-f377a334b3d9",
+              "home_team_id": "62b97b7c-5503-461c-b328-fd8543219b22",
+              "main_game_event_ticker": "KXNFLGAME-26OCT08TBDAL",
+              "season": {
+                "type": "REG",
+                "week": 5,
+                "year": 2026
+              },
+              "status": "scheduled"
+            }
+          ],
+          "related_game_event_id": "KXNFLGAME-26OCT08TBDAL",
+          "source_participant_roles": {
+            "home": "NFL:DAL",
+            "away": "NFL:TB"
+          },
+          "sport": "american_football",
+          "competition": "NFL",
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 1,
+              "path": "/trade-api/v2/events",
+              "params": {
+                "series_ticker": "KXNFLGAME",
+                "status": "open",
+                "with_milestones": "true",
+                "with_nested_markets": "false",
+                "limit": 5
+              },
+              "received_at": "2026-10-07T00:09:22.356352+00:00",
+              "body_sha256": "76e813fb2a32d5568747eeef41d61fd2f3d4101827cba14ff40b1f08ed7fcd84"
+            }
+          ],
+          "_native": {
+            "category": "Sports",
+            "collateral_return_type": "MECNET",
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "exchange_index": 0,
+            "last_updated_ts": "2026-09-29T04:02:34.475096Z",
+            "mutually_exclusive": true,
+            "product_metadata": {
+              "competition": "Pro Football",
+              "competition_scope": "Game"
+            },
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "strike_period": "",
+            "sub_title": "TB vs DAL (Oct 8)",
+            "title": "TB Buccaneers vs DAL Cowboys"
+          },
+          "conflicting_duplicate": false,
+          "market_discovery": "exhausted",
+          "market_ids": [
+            "KXNFLGAME-26OCT08TBDAL-DAL",
+            "KXNFLGAME-26OCT08TBDAL-TB"
+          ],
+          "source": "kalshi",
+          "identity_field_evidence": {
+            "native_season": null,
+            "native_stage": null,
+            "native_series_label": null,
+            "native_game_id": null,
+            "native_game_number": null,
+            "native_original_start": null,
+            "native_rescheduled_from": null,
+            "qualification": "Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels"
+          },
+          "home": "NFL:DAL",
+          "away": "NFL:TB",
+          "season": "2026",
+          "stage": "regular_season"
+        }
+      ],
+      "markets": [
+        {
+          "id": "KXNFLGAME-26OCT08TBDAL-DAL",
+          "event_id": "KXNFLGAME-26OCT08TBDAL",
+          "native_slug": null,
+          "title": "Dallas wins",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "rules_primary": "If Dallas wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "sides": [
+            {
+              "id": "yes",
+              "label": "Dallas",
+              "role": "yes",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            },
+            {
+              "id": "no",
+              "label": "Dallas",
+              "role": "no",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "category": null,
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 6,
+              "path": "/trade-api/v2/markets",
+              "params": {
+                "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+                "limit": 50
+              },
+              "received_at": "2026-10-07T00:07:21.096143+00:00",
+              "body_sha256": "3e8c975e60c6a7a5995cbfe6151e19ba51b983aeb38263f70807acb4d5106c92"
+            }
+          ],
+          "_native": {
+            "can_close_early": true,
+            "close_time": "2026-10-11T00:15:00Z",
+            "created_time": "2026-09-29T04:01:07.17746Z",
+            "custom_strike": {
+              "football_team": "62b97b7c-5503-461c-b328-fd8543219b22"
+            },
+            "early_close_condition": "This market will close and expire after a winner is declared.",
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "exchange_index": 0,
+            "expected_expiration_time": "2026-10-09T03:15:00Z",
+            "expiration_time": "2026-10-11T00:15:00Z",
+            "expiration_value": "",
+            "last_price_dollars": "0.7900",
+            "latest_expiration_time": "2026-10-11T00:15:00Z",
+            "market_type": "binary",
+            "no_ask_dollars": "0.2100",
+            "no_bid_dollars": "0.2000",
+            "no_sub_title": "Dallas",
+            "notional_value_dollars": "1.0000",
+            "occurrence_datetime": "2026-10-09T03:15:00Z",
+            "open_interest_fp": "1775282.33",
+            "open_time": "2026-09-29T04:05:00Z",
+            "previous_price_dollars": "0.8200",
+            "previous_yes_ask_dollars": "0.8300",
+            "previous_yes_bid_dollars": "0.8200",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ],
+            "result": "",
+            "rules_primary": "If Dallas wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "settlement_bounds_type": "default",
+            "settlement_timer_seconds": 60,
+            "status": "active",
+            "strike_type": "structured",
+            "ticker": "KXNFLGAME-26OCT08TBDAL-DAL",
+            "title": "Dallas wins",
+            "updated_time": "2026-09-29T04:05:00.889551Z",
+            "volume_24h_fp": "1676142.38",
+            "volume_fp": "1833641.58",
+            "yes_ask_dollars": "0.8000",
+            "yes_ask_size_fp": "12947165.40",
+            "yes_bid_dollars": "0.7900",
+            "yes_bid_size_fp": "371176.42",
+            "yes_sub_title": "Dallas"
+          },
+          "conflicting_duplicate": false,
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "kalshi",
+            "event_id": "KXNFLGAME-26OCT08TBDAL",
+            "market_id": "KXNFLGAME-26OCT08TBDAL-DAL",
+            "native_metadata_sha256": "86f4530039781eb5a63f6c68693784b869130fd4bcaf249883498d0e3f0de501",
+            "predicate": [
+              {
+                "native_id": "yes",
+                "participant": "NFL:DAL",
+                "predicate": "win"
+              },
+              {
+                "native_id": "no",
+                "participant": "NFL:DAL",
+                "predicate": "not_win"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-09T00:15:00+00:00",
+                [
+                  "NFL:DAL",
+                  "NFL:TB"
+                ]
+              ],
+              "participants": [
+                "NFL:DAL",
+                "NFL:TB"
+              ],
+              "scheduled_start": "2026-10-09T00:15:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "rules_primary": "If Dallas wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "native_clauses": {
+                "rules_primary": "If Dallas wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "5b7427c70650e7d6fdeef9b5a07ebbee374926f6d98036ac3739bc3e7a6ae28e"
+          }
+        },
+        {
+          "id": "KXNFLGAME-26OCT08TBDAL-TB",
+          "event_id": "KXNFLGAME-26OCT08TBDAL",
+          "native_slug": null,
+          "title": "Tampa Bay wins",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "rules_primary": "If Tampa Bay wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "sides": [
+            {
+              "id": "yes",
+              "label": "Tampa Bay",
+              "role": "yes",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            },
+            {
+              "id": "no",
+              "label": "Tampa Bay",
+              "role": "no",
+              "purchase_support": "supported",
+              "basis": "opposite native bid complement in existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "native_scope_binding": {
+            "award_variant": null,
+            "category": null,
+            "conference_id": null,
+            "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+            "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+            "family": "moneyline",
+            "last_updated_ts": "2026-09-11T03:12:33.028974Z",
+            "milestone_type": "football_game",
+            "period": "full_game",
+            "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+            "series_ticker": "KXNFLGAME",
+            "settlement_sources": [
+              {
+                "name": "the Governing League",
+                "url": "https://www.nfl.com/"
+              }
+            ],
+            "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+            "source_path": "evidence/phase-0/kalshi-series.json",
+            "source_record_sha256": "e0a57dc44f78a63d2bc586566960b3d8b7db872b92175f788cf2a7f92cb2a890",
+            "sport": "NFL",
+            "tags": [
+              "Football"
+            ],
+            "title": "Professional Football Game"
+          },
+          "category": null,
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 7,
+              "path": "/trade-api/v2/markets",
+              "params": {
+                "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+                "limit": 50
+              },
+              "received_at": "2026-10-07T00:07:21.096143+00:00",
+              "body_sha256": "3e8c975e60c6a7a5995cbfe6151e19ba51b983aeb38263f70807acb4d5106c92"
+            }
+          ],
+          "_native": {
+            "can_close_early": true,
+            "close_time": "2026-10-11T00:15:00Z",
+            "created_time": "2026-09-29T04:01:07.17746Z",
+            "custom_strike": {
+              "football_team": "1105fa0d-c798-4020-9e24-f377a334b3d9"
+            },
+            "early_close_condition": "This market will close and expire after a winner is declared.",
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "exchange_index": 0,
+            "expected_expiration_time": "2026-10-09T03:15:00Z",
+            "expiration_time": "2026-10-11T00:15:00Z",
+            "expiration_value": "",
+            "last_price_dollars": "0.2100",
+            "latest_expiration_time": "2026-10-11T00:15:00Z",
+            "market_type": "binary",
+            "no_ask_dollars": "0.8000",
+            "no_bid_dollars": "0.7900",
+            "no_sub_title": "Tampa Bay",
+            "notional_value_dollars": "1.0000",
+            "occurrence_datetime": "2026-10-09T03:15:00Z",
+            "open_interest_fp": "532876.72",
+            "open_time": "2026-09-29T04:05:00Z",
+            "previous_price_dollars": "0.1800",
+            "previous_yes_ask_dollars": "0.1800",
+            "previous_yes_bid_dollars": "0.1700",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ],
+            "result": "",
+            "rules_primary": "If Tampa Bay wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+            "settlement_bounds_type": "default",
+            "settlement_timer_seconds": 60,
+            "status": "active",
+            "strike_type": "structured",
+            "ticker": "KXNFLGAME-26OCT08TBDAL-TB",
+            "title": "Tampa Bay wins",
+            "updated_time": "2026-09-29T04:05:00.889551Z",
+            "volume_24h_fp": "335261.60",
+            "volume_fp": "643384.52",
+            "yes_ask_dollars": "0.2100",
+            "yes_ask_size_fp": "10364605.68",
+            "yes_bid_dollars": "0.2000",
+            "yes_bid_size_fp": "111953.59",
+            "yes_sub_title": "Tampa Bay"
+          },
+          "conflicting_duplicate": false,
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "kalshi",
+            "event_id": "KXNFLGAME-26OCT08TBDAL",
+            "market_id": "KXNFLGAME-26OCT08TBDAL-TB",
+            "native_metadata_sha256": "99cbf87a2f23d712b1dfc60197a6665b885b8ccfd8c25d05571327ffa4c896c2",
+            "predicate": [
+              {
+                "native_id": "yes",
+                "participant": "NFL:TB",
+                "predicate": "win"
+              },
+              {
+                "native_id": "no",
+                "participant": "NFL:TB",
+                "predicate": "not_win"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-09T00:15:00+00:00",
+                [
+                  "NFL:DAL",
+                  "NFL:TB"
+                ]
+              ],
+              "participants": [
+                "NFL:DAL",
+                "NFL:TB"
+              ],
+              "scheduled_start": "2026-10-09T00:15:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "rules_primary": "If Tampa Bay wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "native_clauses": {
+                "rules_primary": "If Tampa Bay wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026, then the market resolves to Yes.",
+                "rules_secondary": "The following market refers to the team who wins the TB Buccaneers vs DAL Cowboys Pro Football game originally scheduled for Oct 8, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "02e7925c6fb875850d4a243fa0e3d1608bc5be65bb1a33c4b2e16d6bbde778af"
+          }
+        }
+      ],
+      "discovery": [
+        {
+          "state": "bounded/truncated",
+          "reason": "continuation not retained",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": "CgYI8Kmw1gYSF0tYTkZMR0FNRS0yNk9DVDExSE9VVEVO",
+          "query": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false",
+            "limit": 5
+          },
+          "path": "/trade-api/v2/events",
+          "filters": {
+            "series_ticker": "KXNFLGAME",
+            "status": "open",
+            "with_milestones": "true",
+            "with_nested_markets": "false"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-10-07T00:09:22.356352+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "76e813fb2a32d5568747eeef41d61fd2f3d4101827cba14ff40b1f08ed7fcd84"
+            }
+          ]
+        },
+        {
+          "state": "exhausted",
+          "reason": "terminal empty cursor",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": null,
+          "query": {
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL",
+            "limit": 50
+          },
+          "path": "/trade-api/v2/markets",
+          "filters": {
+            "event_ticker": "KXNFLGAME-26OCT08TBDAL"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-10-07T00:07:21.096143+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "3e8c975e60c6a7a5995cbfe6151e19ba51b983aeb38263f70807acb4d5106c92"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried",
+      "selection": {
+        "ids": [
+          "KXNFLGAME-26OCT08TBDAL-DAL",
+          "KXNFLGAME-26OCT08TBDAL-TB"
+        ]
+      }
+    },
+    "polymarket_us": {
+      "event_discovery": "bounded/truncated",
+      "market_completeness": "unestablished",
+      "events": [
+        {
+          "id": "124724",
+          "title": "TB Buccaneers vs. DAL Cowboys",
+          "scheduled_start": "2026-10-09T00:15:00+00:00",
+          "native_aliases": {
+            "ticker": "nfl-tb-dal-2026-10-08",
+            "slug": "nfl-tb-dal-2026-10-08",
+            "seriesSlug": "nfl-2025"
+          },
+          "terms_references": {},
+          "participants": {
+            "Tampa Bay Buccaneers": "NFL:TB",
+            "Dallas Cowboys": "NFL:DAL"
+          },
+          "identity": "resolved",
+          "canonical_key": [
+            "2026-10-09T00:15:00+00:00",
+            [
+              "NFL:DAL",
+              "NFL:TB"
+            ]
+          ],
+          "exclusion": null,
+          "status": {
+            "status": null,
+            "active": true,
+            "closed": false,
+            "live": null,
+            "ended": null,
+            "period": "NS"
+          },
+          "native_binding_revision": "live-native-binding-2",
+          "observed_identity_facts": [],
+          "source_participant_roles": {
+            "home": "NFL:DAL",
+            "away": "NFL:TB"
+          },
+          "sport": "american_football",
+          "competition": "NFL",
+          "occurrences": 1,
+          "provenance": [
+            {
+              "inventory_row": 1,
+              "path": "/v1/events",
+              "params": {
+                "tagSlug": "nfl",
+                "active": "true",
+                "closed": "false",
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "sportsMarketTypes": "football_team_full_game_winner",
+                "startTimeMin": "2026-10-07T00:12:18.688657+00:00",
+                "startTimeMax": "2026-10-14T00:07:18.688657+00:00",
+                "limit": 1,
+                "offset": 0
+              },
+              "received_at": "2026-10-07T00:07:19.335640+00:00",
+              "body_sha256": "720e4531a1fd12a2d80aedb616c1f8692a5d5f6aaddbe390a0117d8d0a48a54d"
+            }
+          ],
+          "_native": {
+            "id": "124724",
+            "chatChannel": {
+              "id": "nfl-tb-dal-2026-10-08",
+              "type": "CHAT_CHANNEL_TYPE_MESSAGING",
+              "chatMemberCount": 18454
+            },
+            "ticker": "nfl-tb-dal-2026-10-08",
+            "slug": "nfl-tb-dal-2026-10-08",
+            "title": "TB Buccaneers vs. DAL Cowboys",
+            "description": "TB Buccaneers vs. DAL Cowboys",
+            "startDate": "2026-10-09T00:15:00Z",
+            "endDate": "2026-10-08T23:59:00Z",
+            "active": true,
+            "closed": false,
+            "archived": false,
+            "category": "sports",
+            "createdAt": "2026-09-24T06:00:10Z",
+            "updatedAt": "2026-10-07T00:01:58Z",
+            "startTime": "2026-10-09T00:15:00Z",
+            "seriesSlug": "nfl-2025",
+            "period": "NS",
+            "markets": [
+              {
+                "id": "1030131",
+                "question": "Who will win in the upcoming football event Tampa Bay Buccaneers vs Dallas Cowboys scheduled for October 9, 2026 at 12:15 AM UTC?",
+                "slug": "aec-nfl-tb-dal-2026-10-08",
+                "endDate": "2026-10-23T04:15:00Z",
+                "category": "sports",
+                "startDate": "2026-09-24T06:00:10Z",
+                "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+                "active": true,
+                "marketType": "moneyline",
+                "closed": false,
+                "createdAt": "2026-09-24T06:00:10Z",
+                "updatedAt": "2026-10-06T23:56:35Z",
+                "archived": false,
+                "orderPriceMinTickSize": 0.0025,
+                "gameStartTime": "2026-10-09T00:15:00Z",
+                "manualActivation": false,
+                "sportsMarketType": "football_team_full_game_winner",
+                "marketSides": [
+                  {
+                    "id": "2059746",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-tb-dal-2026-10-08",
+                    "createdAt": "2026-09-24T06:00:10Z",
+                    "updatedAt": "2026-09-24T06:00:10Z",
+                    "description": "Buccaneers",
+                    "price": "0.2025",
+                    "marketId": 1030131,
+                    "long": true,
+                    "teamId": 77,
+                    "team": {
+                      "id": 77,
+                      "name": "Tampa Bay Buccaneers",
+                      "abbreviation": "tb",
+                      "league": "nfl",
+                      "record": "0-4",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/TB.png",
+                      "alias": "Buccaneers",
+                      "safeName": "TB Buccaneers",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#D50A0A",
+                      "providerId": 33,
+                      "ordering": "away",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                      "displayAbbreviation": "TB",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "33"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "4254d319-1bc7-4f81-b4ab-b5e6f3402b69"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                      "color": {
+                        "light": "#D50A0A",
+                        "dark": "#D50A0A"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.2050",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  },
+                  {
+                    "id": "2059747",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-tb-dal-2026-10-08",
+                    "createdAt": "2026-09-24T06:00:10Z",
+                    "updatedAt": "2026-09-24T06:00:10Z",
+                    "description": "Cowboys",
+                    "price": "0.2050",
+                    "marketId": 1030131,
+                    "long": false,
+                    "teamId": 56,
+                    "team": {
+                      "id": 56,
+                      "name": "Dallas Cowboys",
+                      "abbreviation": "dal",
+                      "league": "nfl",
+                      "record": "2-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/DAL.png",
+                      "alias": "Cowboys",
+                      "safeName": "DAL Cowboys",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#041E42",
+                      "providerId": 9,
+                      "ordering": "home",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                      "displayAbbreviation": "DAL",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "9"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "e627eec7-bbae-4fa4-8e73-8e1d6bc5c060"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                      "color": {
+                        "light": "#041E42",
+                        "dark": "#46638C"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.7975",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  }
+                ],
+                "outcomes": "[\"Buccaneers\",\"Cowboys\"]",
+                "outcomePrices": "[\"0.2025\",\"0.2050\"]",
+                "ep3Status": "OPEN",
+                "status": "MARKET_STATUS_OPEN",
+                "assetPriceTerms": null,
+                "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+                "hidden": false,
+                "tags": [],
+                "title": "TB Buccaneers vs DAL Cowboys",
+                "feeCoefficient": 0.0695,
+                "bestBidQuote": {
+                  "value": "0.2025",
+                  "currency": "USD"
+                },
+                "bestAskQuote": {
+                  "value": "0.2050",
+                  "currency": "USD"
+                },
+                "titleShort": "TB vs DAL",
+                "ep3SyncedAt": "2026-10-06T22:04:55Z",
+                "minimumTradeQty": 0.01,
+                "comboEnabled": true
+              }
+            ],
+            "gameId": 19519,
+            "sportradarGameId": "2b3761cb-3c86-43de-89d9-85175f844221",
+            "participants": [],
+            "hidden": false,
+            "tags": [
+              {
+                "id": "1",
+                "label": "NFL",
+                "slug": "nfl",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-10-06T23:58:07Z",
+                "league": {
+                  "id": 1,
+                  "name": "NFL",
+                  "sportId": 3,
+                  "tagId": 1,
+                  "image": "https://static.polymarket.us/images/new-category-icons/Icon-Rugby.png",
+                  "resolution": "https://www.nfl.com/",
+                  "ordering": "away",
+                  "activeSeriesId": 2,
+                  "isOperational": true,
+                  "automaticResolution": false,
+                  "createdAt": "2026-03-05T18:30:42Z",
+                  "slug": "nfl",
+                  "abbreviation": "NFL"
+                },
+                "parentId": 13,
+                "subtags": [],
+                "hub": null,
+                "featuredEventIds": []
+              },
+              {
+                "id": "2",
+                "label": "Sports",
+                "slug": "sports",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-10-06T23:58:07Z",
+                "subtags": [],
+                "hub": null,
+                "featuredEventIds": []
+              },
+              {
+                "id": "3",
+                "label": "Games",
+                "slug": "games",
+                "createdAt": "2025-09-25T16:13:27Z",
+                "updatedAt": "2026-10-06T23:58:07Z",
+                "subtags": [],
+                "hub": null,
+                "featuredEventIds": []
+              },
+              {
+                "id": "13",
+                "label": "Football",
+                "slug": "football",
+                "createdAt": "2026-03-05T18:30:42Z",
+                "updatedAt": "2026-10-06T23:58:07Z",
+                "sport": {
+                  "id": 3,
+                  "name": "Football",
+                  "tagId": 13,
+                  "createdAt": "2026-03-05T18:30:42Z",
+                  "slug": "football"
+                },
+                "subtags": [
+                  {
+                    "id": "1",
+                    "label": "NFL",
+                    "slug": "nfl",
+                    "createdAt": "2025-09-25T16:13:27Z",
+                    "updatedAt": "2026-10-06T23:58:07Z",
+                    "league": {
+                      "id": 1,
+                      "name": "NFL",
+                      "sportId": 3,
+                      "tagId": 1,
+                      "image": "https://static.polymarket.us/images/new-category-icons/Icon-Rugby.png",
+                      "resolution": "https://www.nfl.com/",
+                      "ordering": "away",
+                      "activeSeriesId": 2,
+                      "isOperational": true,
+                      "automaticResolution": false,
+                      "createdAt": "2026-03-05T18:30:42Z",
+                      "slug": "nfl",
+                      "abbreviation": "NFL"
+                    },
+                    "parentId": 13,
+                    "subtags": [],
+                    "hub": null,
+                    "featuredEventIds": []
+                  }
+                ],
+                "hub": null,
+                "featuredEventIds": []
+              },
+              {
+                "id": "1645",
+                "label": "Week 5",
+                "slug": "week5",
+                "updatedAt": "2026-10-06T23:58:07Z",
+                "tradable": false,
+                "subtags": [],
+                "hub": null,
+                "featuredEventIds": []
+              }
+            ],
+            "teams": [
+              {
+                "id": 77,
+                "name": "Tampa Bay Buccaneers",
+                "abbreviation": "tb",
+                "league": "nfl",
+                "record": "0-4",
+                "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/TB.png",
+                "alias": "Buccaneers",
+                "safeName": "TB Buccaneers",
+                "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingRight_Icon%40160x160.png",
+                "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingLeft_Icon%40160x160.png",
+                "colorPrimary": "#D50A0A",
+                "providerId": 33,
+                "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                "displayAbbreviation": "TB",
+                "conference": "",
+                "providerIds": [
+                  {
+                    "provider": "PROVIDER_SPORTSDATAIO",
+                    "providerId": "33"
+                  },
+                  {
+                    "provider": "PROVIDER_SPORTRADAR",
+                    "providerId": "4254d319-1bc7-4f81-b4ab-b5e6f3402b69"
+                  }
+                ],
+                "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                "color": {
+                  "light": "#D50A0A",
+                  "dark": "#D50A0A"
+                },
+                "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+              },
+              {
+                "id": 56,
+                "name": "Dallas Cowboys",
+                "abbreviation": "dal",
+                "league": "nfl",
+                "record": "2-2",
+                "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/DAL.png",
+                "alias": "Cowboys",
+                "safeName": "DAL Cowboys",
+                "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingRight_Icon%40160x160.png",
+                "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingLeft_Icon%40160x160.png",
+                "colorPrimary": "#041E42",
+                "providerId": 9,
+                "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                "displayAbbreviation": "DAL",
+                "conference": "",
+                "providerIds": [
+                  {
+                    "provider": "PROVIDER_SPORTSDATAIO",
+                    "providerId": "9"
+                  },
+                  {
+                    "provider": "PROVIDER_SPORTRADAR",
+                    "providerId": "e627eec7-bbae-4fa4-8e73-8e1d6bc5c060"
+                  }
+                ],
+                "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                "color": {
+                  "light": "#041E42",
+                  "dark": "#46638C"
+                },
+                "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+              }
+            ],
+            "sortType": "manual",
+            "marketGroups": [
+              {
+                "id": "PRIMARY",
+                "title": "Primary",
+                "order": 0,
+                "marketIds": [
+                  "1030131"
+                ],
+                "initialCollapsed": false,
+                "live": false
+              }
+            ],
+            "primaryTag": {
+              "id": "1",
+              "label": "NFL",
+              "slug": "nfl",
+              "createdAt": "2025-09-25T16:13:27Z",
+              "updatedAt": "2026-10-06T23:58:07Z",
+              "league": {
+                "id": 1,
+                "name": "NFL",
+                "sportId": 3,
+                "tagId": 1,
+                "image": "https://static.polymarket.us/images/new-category-icons/Icon-Rugby.png",
+                "resolution": "https://www.nfl.com/",
+                "ordering": "away",
+                "activeSeriesId": 2,
+                "isOperational": true,
+                "automaticResolution": false,
+                "createdAt": "2026-03-05T18:30:42Z",
+                "slug": "nfl",
+                "abbreviation": "NFL"
+              },
+              "parentId": 13,
+              "subtags": [],
+              "hub": null,
+              "featuredEventIds": []
+            },
+            "streamProvider": "",
+            "streamRequiresAuth": false,
+            "featureAvailability": {
+              "lineups": true,
+              "timeline": false,
+              "stats": false
+            },
+            "combos": {
+              "enabled": true,
+              "numMarkets": 698,
+              "numSpreadsAndTotalsMarkets": 300
+            },
+            "marketCounts": {
+              "numMarkets": 718,
+              "numSpreadsAndTotalsMarkets": 300
+            }
+          },
+          "conflicting_duplicate": false,
+          "market_discovery": "embedded_only",
+          "market_ids": [
+            "1030131"
+          ],
+          "source": "polymarket_us",
+          "source_game_id": "19519",
+          "identity_field_evidence": {
+            "native_season": null,
+            "native_stage": null,
+            "native_series_label": "nfl-2025",
+            "native_game_id": 19519,
+            "native_game_number": null,
+            "native_original_start": null,
+            "native_rescheduled_from": null,
+            "qualification": "Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels"
+          },
+          "season": "2026",
+          "stage": "regular_season",
+          "shared_identity_provenance": {
+            "source": "kalshi",
+            "event_ids": [
+              "KXNFLGAME-26OCT08TBDAL"
+            ],
+            "facts": [
+              {
+                "id": "86e22826-33ee-4da5-9b78-0affd18b8a8e",
+                "source_id": "2b3761cb-3c86-43de-89d9-85175f844221",
+                "start_date": "2026-10-09T00:15:00Z",
+                "away_team_id": "1105fa0d-c798-4020-9e24-f377a334b3d9",
+                "home_team_id": "62b97b7c-5503-461c-b328-fd8543219b22",
+                "main_game_event_ticker": "KXNFLGAME-26OCT08TBDAL",
+                "season": {
+                  "type": "REG",
+                  "week": 5,
+                  "year": 2026
+                },
+                "status": "scheduled"
+              }
+            ],
+            "qualification": "Exact two-participant schedule correspondence; no MLB occurrence inferred"
+          }
+        }
+      ],
+      "markets": [
+        {
+          "id": "1030131",
+          "event_id": "124724",
+          "native_slug": "aec-nfl-tb-dal-2026-10-08",
+          "title": "Who will win in the upcoming football event Tampa Bay Buccaneers vs Dallas Cowboys scheduled for October 9, 2026 at 12:15 AM UTC?",
+          "market_type": "moneyline",
+          "period": "full_game",
+          "status": "active",
+          "exclusion": null,
+          "terms": {
+            "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "sides": [
+            {
+              "id": "2059746",
+              "label": "Buccaneers",
+              "role": "Long",
+              "purchase_support": "supported",
+              "basis": "native Long offers in existing adapter"
+            },
+            {
+              "id": "2059747",
+              "label": "Cowboys",
+              "role": "Short",
+              "purchase_support": "unsupported",
+              "basis": "Short purchase ladder not reconstructed by existing adapter"
+            }
+          ],
+          "native_binding_revision": "live-native-binding-2",
+          "occurrences": 2,
+          "provenance": [
+            {
+              "inventory_row": 2,
+              "path": "/v1/events",
+              "params": {
+                "tagSlug": "nfl",
+                "active": "true",
+                "closed": "false",
+                "orderBy": "startTime",
+                "orderDirection": "asc",
+                "sportsMarketTypes": "football_team_full_game_winner",
+                "startTimeMin": "2026-10-07T00:12:18.688657+00:00",
+                "startTimeMax": "2026-10-14T00:07:18.688657+00:00",
+                "limit": 1,
+                "offset": 0
+              },
+              "received_at": "2026-10-07T00:07:19.335640+00:00",
+              "body_sha256": "720e4531a1fd12a2d80aedb616c1f8692a5d5f6aaddbe390a0117d8d0a48a54d"
+            },
+            {
+              "inventory_row": 3,
+              "path": "/v1/market/id/1030131",
+              "params": {},
+              "received_at": "2026-10-07T00:09:21.695433+00:00",
+              "body_sha256": "5ab33983e9c71efe80a185d02da56ff647f8f9c12a318ec7a6aafcc58487d5fa"
+            }
+          ],
+          "_native": {
+            "id": "1030131",
+            "question": "Who will win in the upcoming football event Tampa Bay Buccaneers vs Dallas Cowboys scheduled for October 9, 2026 at 12:15 AM UTC?",
+            "slug": "aec-nfl-tb-dal-2026-10-08",
+            "endDate": "2026-10-23T04:15:00Z",
+            "category": "sports",
+            "startDate": "2026-09-24T06:00:10Z",
+            "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+            "active": true,
+            "marketType": "moneyline",
+            "closed": false,
+            "createdAt": "2026-09-24T06:00:10Z",
+            "updatedAt": "2026-10-06T23:56:35Z",
+            "archived": false,
+            "orderPriceMinTickSize": 0.0025,
+            "gameStartTime": "2026-10-09T00:15:00Z",
+            "manualActivation": false,
+            "sportsMarketType": "football_team_full_game_winner",
+            "marketSides": [
+              {
+                "id": "2059746",
+                "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                "identifier": "aec-nfl-tb-dal-2026-10-08",
+                "createdAt": "2026-09-24T06:00:10Z",
+                "updatedAt": "2026-09-24T06:00:10Z",
+                "description": "Buccaneers",
+                "price": "0.2050",
+                "marketId": 1030131,
+                "long": true,
+                "teamId": 77,
+                "team": {
+                  "id": 77,
+                  "name": "Tampa Bay Buccaneers",
+                  "abbreviation": "tb",
+                  "league": "nfl",
+                  "record": "0-4",
+                  "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/TB.png",
+                  "alias": "Buccaneers",
+                  "safeName": "TB Buccaneers",
+                  "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingRight_Icon%40160x160.png",
+                  "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingLeft_Icon%40160x160.png",
+                  "colorPrimary": "#D50A0A",
+                  "providerId": 33,
+                  "ordering": "away",
+                  "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                  "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                  "displayAbbreviation": "TB",
+                  "conference": "",
+                  "providerIds": [
+                    {
+                      "provider": "PROVIDER_SPORTSDATAIO",
+                      "providerId": "33"
+                    },
+                    {
+                      "provider": "PROVIDER_SPORTRADAR",
+                      "providerId": "4254d319-1bc7-4f81-b4ab-b5e6f3402b69"
+                    }
+                  ],
+                  "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                  "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                  "color": {
+                    "light": "#D50A0A",
+                    "dark": "#D50A0A"
+                  },
+                  "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                },
+                "quote": {
+                  "value": "0.2050",
+                  "currency": "USD"
+                },
+                "tradable": true
+              },
+              {
+                "id": "2059747",
+                "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                "identifier": "aec-nfl-tb-dal-2026-10-08",
+                "createdAt": "2026-09-24T06:00:10Z",
+                "updatedAt": "2026-09-24T06:00:10Z",
+                "description": "Cowboys",
+                "price": "0.7975",
+                "marketId": 1030131,
+                "long": false,
+                "teamId": 56,
+                "team": {
+                  "id": 56,
+                  "name": "Dallas Cowboys",
+                  "abbreviation": "dal",
+                  "league": "nfl",
+                  "record": "2-2",
+                  "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/DAL.png",
+                  "alias": "Cowboys",
+                  "safeName": "DAL Cowboys",
+                  "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingRight_Icon%40160x160.png",
+                  "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingLeft_Icon%40160x160.png",
+                  "colorPrimary": "#041E42",
+                  "providerId": 9,
+                  "ordering": "home",
+                  "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                  "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                  "displayAbbreviation": "DAL",
+                  "conference": "",
+                  "providerIds": [
+                    {
+                      "provider": "PROVIDER_SPORTSDATAIO",
+                      "providerId": "9"
+                    },
+                    {
+                      "provider": "PROVIDER_SPORTRADAR",
+                      "providerId": "e627eec7-bbae-4fa4-8e73-8e1d6bc5c060"
+                    }
+                  ],
+                  "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                  "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                  "color": {
+                    "light": "#041E42",
+                    "dark": "#041E42"
+                  },
+                  "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                },
+                "quote": {
+                  "value": "0.7975",
+                  "currency": "USD"
+                },
+                "tradable": true
+              }
+            ],
+            "outcomes": "[\"Buccaneers\",\"Cowboys\"]",
+            "outcomePrices": "[\"0.2050\",\"0.7975\"]",
+            "ep3Status": "OPEN",
+            "status": "MARKET_STATUS_OPEN",
+            "assetPriceTerms": null,
+            "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+            "hidden": false,
+            "tags": [],
+            "feeCoefficient": 0.0695,
+            "bestBidQuote": {
+              "value": "0.2025",
+              "currency": "USD"
+            },
+            "bestAskQuote": {
+              "value": "0.2050",
+              "currency": "USD"
+            },
+            "ep3SyncedAt": "2026-10-06T22:04:55Z",
+            "minimumTradeQty": 0.01,
+            "comboEnabled": true
+          },
+          "conflicting_duplicate": false,
+          "representation_review": "manual-comparison-2: identity-equivalent expanded metadata; settlement terms independently qualified",
+          "subscription_evidence_exclusion": null,
+          "subscription_evidence_basis": "native ID, unique slug, resolved event and side teams, explicit roles, native terms; completeness independent",
+          "v1_raw_binding": {
+            "version": "manual-comparison-2",
+            "source": "polymarket_us",
+            "event_id": "124724",
+            "market_id": "1030131",
+            "native_metadata_sha256": "416ca6082277c44eda9fc9235d5e9b6d14572db15a18c8f0cb3c3c2695aabc2d",
+            "predicate": [
+              {
+                "native_id": "2059746",
+                "participant": "NFL:TB",
+                "predicate": "win",
+                "native_direction": "long"
+              },
+              {
+                "native_id": "2059747",
+                "participant": "NFL:DAL",
+                "predicate": "win",
+                "native_direction": "short"
+              }
+            ],
+            "identity": {
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "period": "full_game",
+              "family": "moneyline",
+              "category": null,
+              "event": [
+                "2026-10-09T00:15:00+00:00",
+                [
+                  "NFL:DAL",
+                  "NFL:TB"
+                ]
+              ],
+              "participants": [
+                "NFL:DAL",
+                "NFL:TB"
+              ],
+              "scheduled_start": "2026-10-09T00:15:00+00:00",
+              "line": null,
+              "game_identity": {
+                "game_id": null,
+                "game_number": null,
+                "original_start": null,
+                "schedule_status": null
+              }
+            },
+            "blockers": [],
+            "settlement": {
+              "status": "UNKNOWN",
+              "terms": {
+                "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+              },
+              "native_clauses": {
+                "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+              },
+              "reason": "Raw predicate correspondence does not establish identical payout treatment"
+            },
+            "net": null,
+            "ev": null,
+            "collection_authorized": false,
+            "locator": {
+              "version": "public-contract-bindings-1",
+              "native_type": "football_team_full_game_winner",
+              "status": "DOCUMENTED_LOCATOR",
+              "original": {
+                "id": "1030131",
+                "question": "Who will win in the upcoming football event Tampa Bay Buccaneers vs Dallas Cowboys scheduled for October 9, 2026 at 12:15 AM UTC?",
+                "slug": "aec-nfl-tb-dal-2026-10-08",
+                "endDate": "2026-10-23T04:15:00Z",
+                "category": "sports",
+                "startDate": "2026-09-24T06:00:10Z",
+                "description": "This market will settle to the winner of the Tampa Bay Buccaneers vs Dallas Cowboys NFL game scheduled for Oct 8, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+                "active": true,
+                "marketType": "moneyline",
+                "closed": false,
+                "createdAt": "2026-09-24T06:00:10Z",
+                "updatedAt": "2026-10-06T23:56:35Z",
+                "archived": false,
+                "orderPriceMinTickSize": 0.0025,
+                "gameStartTime": "2026-10-09T00:15:00Z",
+                "manualActivation": false,
+                "sportsMarketType": "football_team_full_game_winner",
+                "marketSides": [
+                  {
+                    "id": "2059746",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-tb-dal-2026-10-08",
+                    "createdAt": "2026-09-24T06:00:10Z",
+                    "updatedAt": "2026-09-24T06:00:10Z",
+                    "description": "Buccaneers",
+                    "price": "0.2050",
+                    "marketId": 1030131,
+                    "long": true,
+                    "teamId": 77,
+                    "team": {
+                      "id": 77,
+                      "name": "Tampa Bay Buccaneers",
+                      "abbreviation": "tb",
+                      "league": "nfl",
+                      "record": "0-4",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/TB.png",
+                      "alias": "Buccaneers",
+                      "safeName": "TB Buccaneers",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_TampaBayBuccaneers_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#D50A0A",
+                      "providerId": 33,
+                      "ordering": "away",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                      "displayAbbreviation": "TB",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "33"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "4254d319-1bc7-4f81-b4ab-b5e6f3402b69"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_TampaBayBuccaneers_R@320x320.png",
+                      "color": {
+                        "light": "#D50A0A",
+                        "dark": "#D50A0A"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.2050",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  },
+                  {
+                    "id": "2059747",
+                    "marketSideType": "MARKET_SIDE_TYPE_INSTRUMENT",
+                    "identifier": "aec-nfl-tb-dal-2026-10-08",
+                    "createdAt": "2026-09-24T06:00:10Z",
+                    "updatedAt": "2026-09-24T06:00:10Z",
+                    "description": "Cowboys",
+                    "price": "0.7975",
+                    "marketId": 1030131,
+                    "long": false,
+                    "teamId": 56,
+                    "team": {
+                      "id": 56,
+                      "name": "Dallas Cowboys",
+                      "abbreviation": "dal",
+                      "league": "nfl",
+                      "record": "2-2",
+                      "logo": "https://polymarket-upload.s3.us-east-2.amazonaws.com/NFL+Team+Logos/DAL.png",
+                      "alias": "Cowboys",
+                      "safeName": "DAL Cowboys",
+                      "homeIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingRight_Icon%40160x160.png",
+                      "awayIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/Polymarket_DallasCowboys_FacingLeft_Icon%40160x160.png",
+                      "colorPrimary": "#041E42",
+                      "providerId": 9,
+                      "ordering": "home",
+                      "longIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                      "shortIcon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                      "displayAbbreviation": "DAL",
+                      "conference": "",
+                      "providerIds": [
+                        {
+                          "provider": "PROVIDER_SPORTSDATAIO",
+                          "providerId": "9"
+                        },
+                        {
+                          "provider": "PROVIDER_SPORTRADAR",
+                          "providerId": "e627eec7-bbae-4fa4-8e73-8e1d6bc5c060"
+                        }
+                      ],
+                      "longIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_L@320x320.png",
+                      "shortIconDark": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-logos/NFL/Polymarket_NFL_DallasCowboys_R@320x320.png",
+                      "color": {
+                        "light": "#041E42",
+                        "dark": "#041E42"
+                      },
+                      "imageDisplayType": "IMAGE_DISPLAY_TYPE_LOGO"
+                    },
+                    "quote": {
+                      "value": "0.7975",
+                      "currency": "USD"
+                    },
+                    "tradable": true
+                  }
+                ],
+                "outcomes": "[\"Buccaneers\",\"Cowboys\"]",
+                "outcomePrices": "[\"0.2050\",\"0.7975\"]",
+                "ep3Status": "OPEN",
+                "status": "MARKET_STATUS_OPEN",
+                "assetPriceTerms": null,
+                "sportsMarketTypeV2": "SPORTS_MARKET_TYPE_MONEYLINE",
+                "hidden": false,
+                "tags": [],
+                "feeCoefficient": 0.0695,
+                "bestBidQuote": {
+                  "value": "0.2025",
+                  "currency": "USD"
+                },
+                "bestAskQuote": {
+                  "value": "0.2050",
+                  "currency": "USD"
+                },
+                "ep3SyncedAt": "2026-10-06T22:04:55Z",
+                "minimumTradeQty": 0.01,
+                "comboEnabled": true
+              },
+              "collection_authorized": false,
+              "competition": "NFL",
+              "period": "full_game",
+              "family": "moneyline",
+              "total_scope": null,
+              "strike_magnitude": null,
+              "long_participant_id": null,
+              "source": {
+                "id": "us-schema",
+                "url": "https://docs.polymarket.us/trader-guide/sports-schema.md",
+                "final_url": "https://docs.polymarket.us/trader-guide/sports-schema.md",
+                "status": 200,
+                "retrieved_at": "2026-10-01T03:29:55.131781+00:00",
+                "path": "evidence/public-contract-bindings-20260930-v1/public/us-schema.md",
+                "sha256": "2867ed92cd65105a25fa7baa2718c374f9ee327602434cc806a28c3528b9736d",
+                "clause": "market_sport_type identifies sport, scope, period and type; registered enums may precede listings. Generic enums carry no period. Football team first-half total is selected-team, game first-half total combined.",
+                "applicability": "Typed institutional metadata or retail sportsMarketType; no inferred signed spread orientation",
+                "effective_date": null,
+                "conflicts": [],
+                "evidence_class": "official_public_document"
+              },
+              "missing": [
+                "Exact game/season/stage",
+                "Signed line and native payout predicate",
+                "Effective settlement/fees"
+              ]
+            },
+            "status": "BOUND_RAW_PREDICATE",
+            "sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38"
+          }
+        }
+      ],
+      "discovery": [
+        {
+          "state": "bounded/truncated",
+          "reason": "continuation not retained",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": 1,
+          "query": {
+            "tagSlug": "nfl",
+            "active": "true",
+            "closed": "false",
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "startTimeMin": "2026-10-07T00:12:18.688657+00:00",
+            "startTimeMax": "2026-10-14T00:07:18.688657+00:00",
+            "limit": 1,
+            "offset": 0
+          },
+          "path": "/v1/events",
+          "filters": {
+            "active": "true",
+            "closed": "false",
+            "orderBy": "startTime",
+            "orderDirection": "asc",
+            "sportsMarketTypes": "football_team_full_game_winner",
+            "startTimeMax": "2026-10-14T00:07:18.688657+00:00",
+            "startTimeMin": "2026-10-07T00:12:18.688657+00:00",
+            "tagSlug": "nfl"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-10-07T00:07:19.335640+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "720e4531a1fd12a2d80aedb616c1f8692a5d5f6aaddbe390a0117d8d0a48a54d"
+            }
+          ]
+        },
+        {
+          "state": "bounded/truncated",
+          "reason": "continuation not retained",
+          "retained_pages": 1,
+          "used_pages": 1,
+          "unused_pages": 0,
+          "next_position": 1,
+          "query": {
+            "limit": 1,
+            "offset": 0,
+            "id": [
+              "1030131"
+            ]
+          },
+          "path": "/v1/market/id/1030131",
+          "filters": {
+            "id": "['1030131']"
+          },
+          "page_evidence": [
+            {
+              "received_at": "2026-10-07T00:09:21.695433+00:00",
+              "status": 200,
+              "complete": true,
+              "body_sha256": "5ab33983e9c71efe80a185d02da56ff647f8f9c12a318ec7a6aafcc58487d5fa"
+            }
+          ]
+        }
+      ],
+      "active_subscriptions": null,
+      "subscription_basis": "offline inventory; no live subscription state queried",
+      "selection": {
+        "ids": [
+          "1030131"
+        ]
+      }
+    }
+  }
+}

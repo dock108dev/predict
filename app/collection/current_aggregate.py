@@ -149,7 +149,10 @@ class AggregateScheduler:
     async def step(self):
         self.permitted()
         if not self.bootstrapped:
-            self.ledger.bind_window(self.window_loader())
+            evidence=self.window_loader()
+            self.ledger.prepare_clock(self.service.ownership,self.service.digest,evidence,
+                cleanup_safe=not self.service.closing and not self.service.closed and not self.service.cleanup_errors)
+            self.ledger.bind_window(evidence)
             response=await self.dispatch(dict(path='/v4/sports',params={}),0,bootstrap=True)
             from app.reference.odds_acquire import strict_json
             sports=strict_json(response['body'])

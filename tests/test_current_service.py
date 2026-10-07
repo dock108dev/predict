@@ -49,7 +49,11 @@ class ServiceLifecycle(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
         FakeWorker.starts=[]
-        self.service=CurrentService(directory=self.root/'state',ownership=LocalOwnership(self.root/'owner.lock'),worker_factory=FakeWorker)
+        # This U3 fixture owns native lifecycle only. Never construct the real
+        # aggregate scheduler against the developer's ledger or credentials.
+        # Shared aggregate lifecycle is covered with injected Wire/QuotaLedger
+        # in test_current_aggregate and test_current_admin.
+        self.service=CurrentService(config=dict(DEFAULT,aggregate_enabled=False),directory=self.root/'state',ownership=LocalOwnership(self.root/'owner.lock'),worker_factory=FakeWorker)
         self.store=CurrentStore(self.service)
     async def asyncTearDown(self):await self.store.close();self.temp.cleanup()
     async def test_start_attachment_single_workers_consumed_record_shutdown(self):

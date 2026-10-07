@@ -99,7 +99,8 @@ class MultiPageTests(unittest.TestCase):
 class MultiPageRoutes(unittest.IsolatedAsyncioTestCase):
     async def test_research_drilldown_same_basis_and_separation(self):
         from app.dashboard.multi_game_server import create_app
-        client=TestClient(TestServer(create_app(sessions={})));await client.start_server()
+        from app.dashboard.multi_game import MultiOwner
+        client=TestClient(TestServer(create_app(owner=MultiOwner(OUTPUT),sessions={})));await client.start_server()
         try:
             async def get(path,**q):
                 response=await client.get(path,params=q);self.assertEqual(response.status,200);return await response.json()

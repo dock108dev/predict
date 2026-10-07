@@ -193,3 +193,32 @@ class BrowserLifecycle(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result.status,200);self.assertFalse(service.workers['kalshi'].closed);self.assertTrue(wire.closed)
                 a.close();b.close()
             self.assertTrue(service.cleanup_complete);self.assertIsNone(service.ownership.file)
+
+class RestartScheduler(unittest.IsolatedAsyncioTestCase):
+    asyncSetUp=SchedulerTests.asyncSetUp
+    asyncTearDown=SchedulerTests.asyncTearDown
+    async def test_evidenced_restart_holds_paid_until_free_receipt(self):
+        at=[datetime.now(timezone.utc)-timedelta(days=1)];mono=[100.0]
+        boot=[dict(id='CONTROLLED-old',started_at=(at[0]-timedelta(seconds=100)).isoformat(),uptime=100)]
+        self.q=QuotaLedger(self.root/'restart',clock=lambda:at[0].isoformat(),monotonic=lambda:mono[0],boot_loader=lambda:deepcopy(boot[0]))
+        self.scheduler.ledger=self.q;self.q.bind_window(self.window)
+        a=self.q.reserve(self.service.ownership,'c',{},0,bootstrap=True);self.q.dispatched(a,self.service.ownership);self.q.reconcile(a,quota(20))
+        at[0]=datetime.now(timezone.utc);mono[0]=60;boot[0]=dict(id='CONTROLLED-new',started_at=(at[0]-timedelta(seconds=60)).isoformat(),uptime=60)
+        self.store.subscribers.add(asyncio.Queue(maxsize=1));self.wire.hold=asyncio.Event()
+        task=asyncio.create_task(self.scheduler.step())
+        for _ in range(50):
+            if self.wire.calls:break
+            await asyncio.sleep(.005)
+        self.assertEqual(len(self.wire.calls),1);self.assertEqual(self.wire.calls[0]['path'],'/v4/sports')
+        self.assertEqual(self.q.snapshot()['accounting_epoch']['state'],'awaiting_bootstrap')
+        with self.assertRaisesRegex(QuotaStop,'refresh_required'):self.q.reserve(self.service.ownership,'c',{},3)
+        self.wire.hold.set();await task
+        self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.scheduler.metrics['batches'],1)
+        self.assertEqual(self.q.snapshot()['accounting_epoch']['state'],'current')
+        self.assertEqual(self.q.snapshot()['used'],23);self.assertEqual(self.q.snapshot()['reserved'],0)
+        await self.scheduler.step();self.assertEqual(len(self.wire.calls),2)
+    async def test_failed_cleanup_never_loads_credentials_or_transport(self):
+        self.store.subscribers.add(asyncio.Queue(maxsize=1));self.service.cleanup_errors=['CONTROLLED-unclosed-client']
+        with patch.object(self.scheduler,'key_loader',side_effect=AssertionError('credentials')):
+            with self.assertRaisesRegex(QuotaStop,'cleanup'):await self.scheduler.step()
+        self.assertEqual(self.wire.calls,[]);self.assertEqual(self.q.snapshot()['attempts'],0)

@@ -276,7 +276,7 @@ def event_record(venue, page, body, native, index, as_of, linked_milestones=()):
         if page.get('v1_comparison_policy')=='manual-comparison-2':
             # Keep only identity fields of exact linked milestones, never the
             # injury/lineup payload, and never inherit unrelated game records.
-            record['observed_identity_facts']=[dict(id=m.get('id'),start_date=m.get('start_date'),**{k:v for k,v in m.get('details',{}).items() if k in ('season','main_game_event_ticker','home_team_id','away_team_id','game_number','original_start','schedule_status','status')}) for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[])]
+            record['observed_identity_facts']=[dict(id=m.get('id'),source_id=m.get('source_id'),start_date=m.get('start_date'),**{k:v for k,v in m.get('details',{}).items() if k in ('season','main_game_event_ticker','home_team_id','away_team_id','game_number','original_start','schedule_status','status')}) for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[])]
 
         if page.get('v1_comparison_policy')in ('manual-comparison-1','manual-comparison-2') and venue=='kalshi':
             links={m.get('details',{}).get('main_game_event_ticker') for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[]) and m.get('details',{}).get('main_game_event_ticker') in m.get('related_event_tickers',[])}

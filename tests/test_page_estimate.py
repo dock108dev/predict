@@ -80,7 +80,10 @@ class PageRouteTests(unittest.IsolatedAsyncioTestCase):
     async def test_separate_from_manual_and_rankings(self):
         from app.dashboard.multi_game_server import create_app
         x,a=retained();sid=a['binding']['session'];g=x['target_identity']
-        client=TestClient(TestServer(create_app(sessions={})));await client.start_server()
+        # This retained research oracle needs the legacy multi-game catalog;
+        # the ordinary product now defaults to CoverageOwner.
+        from app.dashboard.multi_game import MultiOwner
+        client=TestClient(TestServer(create_app(owner=MultiOwner(OUTPUT),sessions={})));await client.start_server()
         try:
             catalog=await (await client.get('/api/sessions')).json();item=next(i for i in catalog if i['id']==sid+'~'+g['id'])
             query=dict(session=item['id'],hash=sid,cutoff=item['timeline'][item['default_cutoff']]['id'],quantity='10',scenario='cent',contract='kalshi:yes')
