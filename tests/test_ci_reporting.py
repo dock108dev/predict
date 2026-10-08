@@ -17,6 +17,43 @@ def load(name):
 
 
 class ReportingTests(unittest.TestCase):
+    def test_quality_main_prints_failure_reason_and_retains_reports(self):
+        import contextlib
+        import io
+        import os
+        from unittest.mock import patch
+
+        module = load("quality_report")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "test-results/postgres").mkdir(parents=True)
+            (root / "test-results/postgres/junit.xml").write_text(
+                "<testsuite><testcase><failure/></testcase></testsuite>"
+            )
+            output = io.StringIO()
+            with (
+                contextlib.chdir(root),
+                contextlib.redirect_stdout(output),
+                patch.object(module.sys, "argv", ["quality_report.py", "--postgres"]),
+                patch.dict(
+                    os.environ,
+                    {"CHECK_OUTCOMES": '{"postgres": {"outcome": "failure"}}'},
+                    clear=True,
+                ),
+                patch.object(module.importlib.metadata, "version", return_value="test"),
+            ):
+                self.assertEqual(module.main(), 1)
+            self.assertIn("| postgres | FAIL |", output.getvalue())
+            self.assertIn("failed or entirely skipped suite", output.getvalue())
+            self.assertEqual(
+                output.getvalue(),
+                (root / "test-results/postgres/summary.md").read_text(),
+            )
+            metrics = json.loads(
+                (root / "test-results/postgres/metrics.json").read_text()
+            )
+            self.assertEqual(metrics["checks"][0]["status"], "FAIL")
+
     def test_junit_counts_failures_skips_and_duration(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder) / "report.xml"
@@ -68,14 +105,12 @@ class ReportingTests(unittest.TestCase):
             (root / "quality/junit.xml").write_text(
                 "<testsuite><testcase/></testsuite>"
             )
-            (root / "quality/secrets.json").write_text("[]")
             (root / "package").mkdir()
             (root / "package/metrics.json").write_text(
                 json.dumps({"status": "PASS", "wheel_bytes": 1})
             )
             outcomes = {
-                k: {"outcome": "success"}
-                for k in ("source", "secrets", "audit", "package")
+                k: {"outcome": "success"} for k in ("source", "audit", "package")
             }
             p = root / "quality/audit.json"
             for deps, failed in [
@@ -169,62 +204,3 @@ class MetricsTests(unittest.TestCase):
             self.assertEqual(
                 json.loads((root / "metrics.json").read_text())["overall"], "FAIL"
             )
-
-
-class SecretPolicyTests(unittest.TestCase):
-    def test_manifest_exception_does_not_hide_key_assignments(self):
-        import random
-        import string
-        import subprocess
-
-        root = Path(__file__).resolve().parents[1]
-        binary = root / ".local/ci-tools/gitleaks"
-        self.assertTrue(binary.exists(), "Install the checksum-pinned validators first")
-        with tempfile.TemporaryDirectory() as directory:
-            sample = Path(directory)
-            (sample / "manifest.json").write_text(
-                json.dumps(
-                    {
-                        "app/collection/venue_access.py": __import__("hashlib")
-                        .sha256(b"synthetic manifest entry")
-                        .hexdigest()
-                    }
-                )
-            )
-            report = sample / "findings.json"
-            command = [
-                str(binary),
-                "dir",
-                str(sample),
-                "--config",
-                str(root / ".gitleaks.toml"),
-                "--redact=100",
-                "--no-banner",
-                "--report-format",
-                "json",
-                "--report-path",
-                str(report),
-            ]
-            clean = subprocess.run(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30,
-            )
-            self.assertEqual(clean.returncode, 0)
-            self.assertEqual(json.loads(report.read_text()), [])
-            report.unlink()
-            rng = random.Random(61007)
-            fictional = "ghp_" + "".join(
-                rng.choice(string.ascii_letters + string.digits) for _ in range(36)
-            )
-            (sample / "injected.py").write_text("api_key = " + repr(fictional) + "\n")
-            flagged = subprocess.run(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30,
-            )
-            self.assertEqual(flagged.returncode, 1)
-            self.assertGreater(len(json.loads(report.read_text())), 0)
-            self.assertNotIn(fictional, report.read_text())

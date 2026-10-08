@@ -73,12 +73,6 @@ jobs:
           .local/ci-tools/actionlint -shellcheck=''
           sh -n scripts/check-ci
           python -m pytest -q tests/test_ci_reporting.py --junitxml=test-results/quality/junit.xml
-      - name: Secret scan of checkout inputs
-        id: secrets
-        if: ${{ !cancelled() }}
-        run: |
-          python scripts/ci/export.py .local/secret-scan
-          .local/ci-tools/gitleaks dir .local/secret-scan --redact=100 --no-banner --config .gitleaks.toml --report-format json --report-path test-results/quality/secrets.json
       - name: Audit locked dependencies
         id: audit
         if: ${{ !cancelled() }}

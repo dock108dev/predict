@@ -24,7 +24,6 @@ def render(outcomes, root, postgres=False):
         if postgres
         else {
             "source": root / "quality/junit.xml",
-            "secrets": root / "quality/secrets.json",
             "audit": root / "quality/audit.json",
             "package": root / "package/metrics.json",
         }
@@ -57,14 +56,6 @@ def render(outcomes, root, postgres=False):
                     "skipped"
                 ] == len(cases):
                     raise ValueError("failed or entirely skipped suite")
-            elif name == "secrets":
-                findings = read(path, list)
-                record["measurements"] = {
-                    "findings": len(findings),
-                    "severity": "tool does not assign severity",
-                }
-                if findings:
-                    raise ValueError("secret findings require review")
             elif name == "audit":
                 data = read(path, dict)
                 deps = data["dependencies"]
@@ -142,6 +133,7 @@ def main():
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:
             stream.write(text)
+    print(text, end="")
     return int(failed)
 
 

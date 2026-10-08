@@ -13,7 +13,6 @@ CI checks source, portable offline behavior, dependencies and package assets. It
 | Quote identity, conditional math, clocks, quotas, failure/Stop/recovery, persistence, routes | Same / `scripts/ci/suites.json` exact pytest groups | Same | Required policy | Existing portable suites plus adapter/model/math/transport/current-revision boundaries. Fresh process per group preserves peak-RSS gates |
 | Browser behavior, escaping, saved state and keyboard focus | Same / `node tests/test_*.cjs` excluding explicit entries in `scripts/ci/browser-suites.json` | Same | Required policy | Dependency-free simulated DOM checks; real browser/device accessibility and usability testing remain separate |
 | JUnit/report failure and missing-data semantics | Quality job / `python -m pytest -q tests/test_ci_reporting.py` | Same | Required policy | Missing/malformed/zero/all-skipped reports, scan outages, command exits and escaping |
-| Secrets in checkout inputs | Quality job / Gitleaks 8.30.1 CLI, redacted JSON | Same | Required policy; known findings block | Scans tracked plus nonignored files, including historical evidence; never scans ignored owner state. Exceptions apply only to file/content identity hashes, with review date 2027-01-07 |
 | Known dependency vulnerabilities | Quality job / `python -m pip_audit -r requirements-ci.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json` | Same | Required policy | Includes runtime/stream/build/test tools; no vulnerability suppression. Outage, missing report or skipped dependency cannot become zero findings |
 | Production package/assets/import/entry point | Quality job / `python scripts/ci/package_smoke.py` | Same | Required policy | Build sdist/wheel, install hashes in fresh env, install wheel without resolving, import outside checkout, assets and `--help`. Does not launch ordinary providers |
 | Coverage and wheel size | Offline JSON/XML; package `metrics.json` | Same | Advisory metrics | Line/branch evidence and bytes; no arbitrary coverage/size budget or unequal baseline comparison |
@@ -82,7 +81,7 @@ main pushes and manually requested/scheduled work are not cancelled by PR activi
 
 Native summaries contain candidate/ref/event, environment, per-check outcomes,
 counts and durations; `metrics.json` retains nulls for unavailable baselines.
-JUnit and coverage JSON/XML, redacted scan JSON, package bytes and relevant logs
+JUnit and coverage JSON/XML, dependency audit JSON, package bytes and relevant logs
 are in unique run/attempt artifacts with **14-day retention**. No source archives,
 private credentials or owner captures are uploaded. Tools never execute report
 contents. Summary values are escaped; test logs remain diagnostics. No PR comments
@@ -124,7 +123,9 @@ Jobs use read-only repository permissions, do not persist checkout credentials,
 and do not expose provider secrets to PRs. Reports remain in GitHub Actions or
 ignored local output. Hosted retention and billing depend on repository settings.
 
-Actionlint and Gitleaks run as pinned local binaries. Pip-audit queries the PyPI
+Secret scanning is handled by the repository’s existing GitHub secret scanning.
+CI does not install or run a separate secret scanner. Actionlint runs as a pinned
+local binary. Pip-audit queries the PyPI
 advisory service for dependency names/versions; it does not upload source. Outages
 and missing reports remain failures, not zero findings. No external coverage
 upload service or hosted application deployment is configured.
