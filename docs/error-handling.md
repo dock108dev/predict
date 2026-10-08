@@ -1,5 +1,7 @@
 # Failure handling and recovery
 
+The ordinary app reports current source issues and guarded recovery through `/admin`. Stop revokes dispatch and closes workers before releasing ownership. Recovery preserves spend, reservations, uncertain charges and due times; it does not reset accounting. The saved-session behavior below applies to the separate retained collectors.
+
 Collection stops on persistence or unconfirmed resource cleanup failures. A saved
 journal is not a completion receipt; only successful finalization publishes a
 completed package. Use `/api/status` to distinguish stopping, saving and failed
@@ -179,9 +181,4 @@ and runtime diagnostics for investigation; there is no automatic repair, retry o
 failed finalization, retention pruning or migration. A failed cleanup blocks another
 Start in the same process; confirm process exit before restarting.
 
-The focused shutdown tests are listed in [development](development.md#pull-request-ci).
-Original candidate-specific findings and validation are retained in the
-[engineering record](history/maintenance-20260928/error-handling.md).
-The [October 1 source maintenance record](history/maintenance-20261001-abend.md)
-records this pass and its baseline test limitations. Historical beta candidate
-checks do not qualify the edited source.
+The focused shutdown tests are listed in [development](development.md#focused-checks).

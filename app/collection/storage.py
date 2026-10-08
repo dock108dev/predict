@@ -1,4 +1,4 @@
-"""Explicit-connection durable owner. Reuses capture/reference/E3/E4 stores."""
+"""Explicit-connection durable owner reusing capture, reference and pricing stores."""
 import json
 from pathlib import Path
 from hashlib import sha256

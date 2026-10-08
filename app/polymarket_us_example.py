@@ -80,5 +80,5 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.live_public and not args.owner_confirmed_terms:
-        parser.error('live run requires owner-confirmed terms; see docs/slice-2.md')
+        parser.error('live run requires owner-confirmed terms; see docs/configuration.md#external-access')
     asyncio.run(run(args.live_public, args.output))

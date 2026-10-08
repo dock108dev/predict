@@ -1,0 +1,337 @@
+[
+  {
+    "name": "python-01",
+    "tests": [
+      "tests/test_current_contract.py",
+      "tests/test_current_state.py",
+      "tests/test_current_native.py",
+      "tests/test_current_confirmation.py",
+      "tests/test_current_occurrence.py",
+      "tests/test_current_occurrence_october8.py",
+      "tests/test_current_quota.py",
+      "tests/test_current_clock_recovery.py",
+      "tests/test_current_odds_transport.py"
+    ]
+  },
+  {
+    "name": "python-02",
+    "tests": [
+      "tests/test_current_service.py"
+    ]
+  },
+  {
+    "name": "python-03",
+    "tests": [
+      "tests/test_current_aggregate.py"
+    ]
+  },
+  {
+    "name": "python-04",
+    "tests": [
+      "tests/test_current_admin.py"
+    ]
+  },
+  {
+    "name": "python-05",
+    "tests": [
+      "tests/test_u6_native_only.py"
+    ]
+  },
+  {
+    "name": "python-06",
+    "tests": [
+      "tests/test_coverage_failure_handling.py",
+      "tests/test_packaged_review_portability.py"
+    ]
+  },
+  {
+    "name": "python-07",
+    "tests": [
+      "tests/test_abend_handling.py",
+      "tests/test_novig.py"
+    ]
+  },
+  {
+    "name": "python-08",
+    "tests": [
+      "tests/test_security_hardening.py"
+    ]
+  },
+  {
+    "name": "python-09",
+    "tests": [
+      "tests/test_multi_game.py",
+      "tests/test_opportunity_board.py",
+      "tests/test_personal_beta.py",
+      "tests/test_failure_handling.py",
+      "tests/test_dashboard_security.py",
+      "tests/test_ssot_policy.py",
+      "tests/test_page_estimate.py",
+      "tests/test_multi_page.py",
+      "tests/test_math_reconciliation.py"
+    ]
+  },
+  {
+    "name": "python-10",
+    "tests": [
+      "tests/test_two_source_qualification.py",
+      "tests/test_native_retained_review.py",
+      "tests/test_native_public_review.py",
+      "tests/test_native_rule_review.py",
+      "tests/test_native_filing_review.py",
+      "tests/test_native_precedence_review.py",
+      "tests/test_native_us_rulebook_review.py",
+      "tests/test_precedence_deadlines.py",
+      "tests/test_public_request_deadline.py",
+      "tests/test_public_research_package.py",
+      "tests/test_public_research_repair.py",
+      "tests/test_future_qualification.py",
+      "tests/test_public_doc_package.py",
+      "tests/test_session_projection.py",
+      "tests/test_product_integration.py",
+      "tests/test_native_integration.py",
+      "tests/test_native_continuation.py",
+      "tests/test_reference_integration.py",
+      "tests/test_pinnacle_sample.py",
+      "tests/test_odds_sample.py",
+      "tests/test_odds_acquire.py",
+      "tests/test_odds_bindings.py",
+      "tests/test_actual_references.py",
+      "tests/test_nhl.py",
+      "tests/test_mlb.py",
+      "tests/test_nba.py",
+      "tests/test_ncaaf.py",
+      "tests/test_ncaab.py",
+      "tests/test_score_lines.py",
+      "tests/test_nfl_lines.py",
+      "tests/test_ncaaf_lines.py",
+      "tests/test_mlb_lines.py",
+      "tests/test_nhl_lines.py",
+      "tests/test_nfl_first_half.py",
+      "tests/test_ncaaf_first_half.py",
+      "tests/test_nba_first_half.py",
+      "tests/test_ncaab_first_half.py",
+      "tests/test_nfl_resolution.py",
+      "tests/test_nba_resolution.py",
+      "tests/test_ncaaf_resolution.py",
+      "tests/test_ncaab_resolution.py",
+      "tests/test_diamond_ice_resolution.py",
+      "tests/test_periods.py",
+      "tests/test_futures.py",
+      "tests/test_college_expansion.py",
+      "tests/test_payout_extensions.py"
+    ]
+  },
+  {
+    "name": "python-11",
+    "tests": [
+      "tests/test_normalization.py",
+      "tests/test_matching.py",
+      "tests/test_coverage.py"
+    ]
+  },
+  {
+    "name": "python-12",
+    "tests": [
+      "tests/test_moneyline.py"
+    ]
+  },
+  {
+    "name": "python-13",
+    "tests": [
+      "tests/test_price_comparison.py",
+      "tests/test_multi_comparison.py",
+      "tests/test_opportunity_feed.py",
+      "tests/test_polymarket_us_stream.py"
+    ]
+  },
+  {
+    "name": "python-14",
+    "tests": [
+      "tests/test_freshness_repair.py",
+      "tests/test_calculation_reuse.py"
+    ]
+  },
+  {
+    "name": "python-15",
+    "tests": [
+      "tests/test_supervised_observer.py",
+      "tests/test_supervised_observer_integration.py",
+      "tests/test_observer_capacity.py"
+    ]
+  },
+  {
+    "name": "python-16",
+    "tests": [
+      "tests/test_commercial_engineering.py"
+    ]
+  },
+  {
+    "name": "python-17",
+    "tests": [
+      "tests/test_full_scope_engineering.py"
+    ]
+  },
+  {
+    "name": "python-18",
+    "tests": [
+      "tests/test_aggregate_portable.py"
+    ]
+  },
+  {
+    "name": "python-19",
+    "tests": [
+      "tests/test_aggregate_assessment_portable.py"
+    ]
+  },
+  {
+    "name": "python-20",
+    "tests": [
+      "tests/test_math_package.py"
+    ]
+  },
+  {
+    "name": "python-21",
+    "tests": [
+      "tests/test_source_session.py"
+    ]
+  },
+  {
+    "name": "models",
+    "tests": [
+      "tests/test_models.py"
+    ]
+  },
+  {
+    "name": "adapter",
+    "tests": [
+      "tests/test_adapter.py"
+    ]
+  },
+  {
+    "name": "pricing",
+    "tests": [
+      "tests/test_pricing.py"
+    ]
+  },
+  {
+    "name": "fees",
+    "tests": [
+      "tests/test_fees.py"
+    ]
+  },
+  {
+    "name": "opportunities",
+    "tests": [
+      "tests/test_opportunities.py"
+    ]
+  },
+  {
+    "name": "arbitrage",
+    "tests": [
+      "tests/test_arbitrage.py"
+    ]
+  },
+  {
+    "name": "depth",
+    "tests": [
+      "tests/test_depth.py"
+    ]
+  },
+  {
+    "name": "edge_contracts",
+    "tests": [
+      "tests/test_edge_contracts.py"
+    ]
+  },
+  {
+    "name": "prophetx",
+    "tests": [
+      "tests/test_prophetx.py"
+    ]
+  },
+  {
+    "name": "polymarket_us",
+    "tests": [
+      "tests/test_polymarket_us.py"
+    ]
+  },
+  {
+    "name": "polymarket_us_hardening",
+    "tests": [
+      "tests/test_polymarket_us_hardening.py"
+    ]
+  },
+  {
+    "name": "kalshi",
+    "tests": [
+      "tests/test_kalshi.py"
+    ]
+  },
+  {
+    "name": "kalshi_expiry",
+    "tests": [
+      "tests/test_kalshi_expiry.py"
+    ]
+  },
+  {
+    "name": "native_http_reader",
+    "tests": [
+      "tests/test_native_http_reader.py"
+    ]
+  },
+  {
+    "name": "ordinary_native_transport",
+    "tests": [
+      "tests/test_ordinary_native_transport.py"
+    ]
+  },
+  {
+    "name": "refresh_worker",
+    "tests": [
+      "tests/test_refresh_worker.py"
+    ]
+  },
+  {
+    "name": "capture_diagnostics",
+    "tests": [
+      "tests/test_capture_diagnostics.py"
+    ]
+  },
+  {
+    "name": "capture_repair",
+    "tests": [
+      "tests/test_capture_repair.py"
+    ]
+  },
+  {
+    "name": "e6_storage_failure",
+    "tests": [
+      "tests/test_e6_storage_failure.py"
+    ]
+  },
+  {
+    "name": "u0_display",
+    "tests": [
+      "tests/test_u0_display.py"
+    ]
+  },
+  {
+    "name": "public_contract_integration",
+    "tests": [
+      "tests/test_public_contract_integration.py"
+    ]
+  },
+  {
+    "name": "source_dependent_workflow",
+    "tests": [
+      "tests/test_source_dependent_workflow.py"
+    ]
+  },
+  {
+    "name": "current_revision",
+    "tests": [
+      "tests/test_current_revision.py"
+    ]
+  }
+]

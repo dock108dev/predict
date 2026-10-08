@@ -97,7 +97,7 @@ def project(service, raw):
             active_sports=getattr(worker,'active_sports',None),metrics=metrics))
     raw.update(admin_schema='predict-admin-1',observed_at=utc(),sources=panels,
         service_state='running' if service.dispatch else 'stopped' if service.cleanup_complete else 'blocked',
-        deadline_remaining_seconds=None if service.deadline is None else max(0,service.deadline-time.monotonic()),
+        deadline_remaining_seconds=None if service.deadline is None or service.deadline==float('inf') else max(0,service.deadline-time.monotonic()),
         attendance=bool(store and store.subscribers),
         resources=dict(state_encoded_bytes=None if state is None else len(packed(state)),state_ceiling_bytes=64*1024*1024,
             sampled_rss_bytes=service.sampled_rss,sampled_highwater_rss_bytes=service.peak_rss,rss_ceiling_bytes=service.config['rss_bytes'],
@@ -105,7 +105,7 @@ def project(service, raw):
             transport_queue_ceiling=1,transport_queue_sample=None,
             reviews=0 if store is None else len(store.leases),issue_records=len(service.issues),issue_encoded_bytes=len(packed(service.issues)),
             issue_record_ceiling=service.config['issue_records'],issue_byte_ceiling=service.config['issue_bytes']),
-        recovery=dict(mode='fresh_service_runtime',expires_reviews=True,requires_attended_board=True,reason=service.recovery_reason()),
+        recovery=dict(mode='fresh_service_runtime',expires_reviews=True,requires_attended_board=False,reason=service.recovery_reason()),
         historical_issues=[dict(provider='the_odds_api',affected_venues=['novig'],category='query_offering_gap',
             observed_at='2026-10-03T05:21:49.121844+00:00',scope='NCAAF winner / spread / total; Novig and ProphetX query',
             impact='No Novig rows in this exact retained response. ProphetX supplied 322 quotes across 53 events.',credits=3,

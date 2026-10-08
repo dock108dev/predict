@@ -52,7 +52,7 @@ class CurrentSelections(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(o['predicate'],'win')
     for q in o['quotes'].values():
      self.assertTrue(q['binding']['verified']);self.assertTrue(q['comparison']['eligible']);self.assertTrue(q['rules_differ'])
-     self.assertFalse(q['calculations']['arbitrage']['eligible']);self.assertFalse(q['calculations']['ev']['eligible'])
+     self.assertTrue(q['calculations']['arbitrage']['eligible']);self.assertFalse(q['calculations']['net_arbitrage']['eligible']);self.assertFalse(q['calculations']['ev']['eligible'])
    nos=[q for e in snap['events'] for g in e['groups'] for o in g['outcomes'] for q in o['quotes'].values() if q['source']['native_side']=='no']
    self.assertEqual(len(nos),2);self.assertTrue(all('native_predicate' not in q for q in nos))
   finally:await store.close()

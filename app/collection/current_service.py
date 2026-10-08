@@ -7,7 +7,7 @@ import json
 import os
 import time
 from uuid import uuid4
-from .current_policy import load, candidate, consume, ROOT, VERSION
+from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION
 from .local_ownership import LocalOwnership
 from .current_sink import LatestStateSink, utc
 from app.dashboard.current_state import unavailable
@@ -18,7 +18,7 @@ class CurrentService:
     allow_synthetic = False
 
     def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None):
-        self.config = load() if config is None else __import__('app.collection.current_policy',fromlist=['validate']).validate(config)
+        self.config = load() if config is None else validate(config)
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
@@ -43,7 +43,8 @@ class CurrentService:
         self.deadline = None
         self.peak_rss = 0
         self.sampled_rss = None
-        self.clock_wall, self.clock_mono = time.time(), time.monotonic()
+        from .current_clock import continuous
+        self.clock_wall, self.clock_mono = time.time(), continuous()
         self._control_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
         self.states = self.initial_state()['source_status']
@@ -54,7 +55,7 @@ class CurrentService:
         for venue in ('kalshi','polymarket_us'):
             raw['source_status'][venue] = dict(state='connecting', reason_code='native_connecting', reason='Connecting to the native feed.', next_due_at=None)
         for venue in ('novig','prophetx'):
-            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate delivery waits for an attended board and evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
+            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(self.config['sports']) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
         return raw
 
     async def start(self, store):
@@ -79,7 +80,7 @@ class CurrentService:
             for venue in ('kalshi','polymarket_us','novig','prophetx'): self.source_state(venue,'unavailable','Native acquisition ownership or operational authority is unavailable.')
             self.issue('service','ownership','ownership_or_authority_unavailable')
             return
-        self.deadline = time.monotonic()+self.config['duration_seconds']
+        self.deadline = float('inf') if self.config['duration_seconds']==APP_RUNNING_DURATION else time.monotonic()+self.config['duration_seconds']
         self.dispatch = True
         from .current_native import NativeWorker
         factory = self.worker_factory or NativeWorker
@@ -310,19 +311,29 @@ class CurrentService:
         if self.closing:return 'cleanup_in_progress'
         if self.cleanup_errors:return 'cleanup_safety_unresolved'
         if self.store is None or self.store.closed:return 'store_closed'
-        if not self.store.subscribers:return 'attendance_required'
         if not self.config['enabled']:return 'configuration_disabled'
         if self.config_loader:
             try:
                 if self.config_loader()!=self.config:return 'configuration_changed'
             except (ValueError,OSError):return 'configuration_invalid'
-        if abs((time.time()-self.clock_wall)-(time.monotonic()-self.clock_mono))>120:return 'clock_continuity_unknown'
+        if abs((time.time()-self.clock_wall)-(__import__('app.collection.current_clock',fromlist=['continuous']).continuous()-self.clock_mono))>120:return 'clock_continuity_unknown'
         worker=self.workers.get('the_odds_api')
         if worker and hasattr(worker,'ledger'):
             try:reason=worker.ledger.recovery_reason(worker.window_loader())
             except (ValueError,OSError):return 'reset_window_evidence_unverified'
             if reason:return reason
         return None
+
+    async def refresh_aggregate(self,sports,identity,reference=False):
+        from app.dashboard.current_state import SelectionError
+        from .current_policy import SPORTS
+        from .current_quota import QuotaStop
+        if not isinstance(sports,list) or not sports or len(sports)!=len(set(sports)) or set(sports)-set(SPORTS):raise SelectionError(400,'scope_invalid','Choose supported sports for this refresh.')
+        worker=self.workers.get('the_odds_api')
+        if not self.dispatch or worker is None or worker.closed:raise SelectionError(409,'aggregate_stopped','Start a fresh runtime before refreshing a stopped source.')
+        if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Reopen Predict to load the current revision.')
+        try:await worker.refresh(sports,identity,reference=reference)
+        except QuotaStop as exc:raise SelectionError(409,str(exc),'Refresh blocked: '+str(exc).replace('_',' ')+'.') from None
 
     async def recover(self, runtime, digest):
         from app.dashboard.current_state import SelectionError
@@ -347,7 +358,7 @@ class CurrentService:
             self.runtime_id=str(uuid4());self.started=False;self.closed=False
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
             self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None
-            self.clock_wall,self.clock_mono=time.time(),time.monotonic()
+            self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
             self.store.commit(self.initial_state())
             await self.start(self.store)
             if not self.dispatch:raise SelectionError(409,'ownership_or_authority_unavailable','Fresh runtime could not obtain exclusive ownership or authority.')

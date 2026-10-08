@@ -1,4 +1,4 @@
-"""E3 durable proof in a newly created, identity-checked socket-only cluster.
+"""Offline pricing persistence checks in an isolated socket-only database cluster.
 
 No default DB connection helper is called. Existing E2 evidence is read-only.
 """

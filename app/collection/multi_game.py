@@ -1,4 +1,4 @@
-"""One bounded multi-game run, using E6's journal, lifecycle and native streams."""
+"""One bounded multi-game run using shared journals, lifecycle and native streams."""
 import asyncio
 from dataclasses import asdict
 from datetime import datetime, timezone, timedelta

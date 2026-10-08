@@ -1,127 +1,55 @@
-# Predict current state and display contract — predict-current-1
+# Current state API: predict-current-1
 
-October 2, 2026. U1/U2 current-state, display and temporary-selection contract. The ordinary board and production interfaces are implemented locally; U3–U5 supply acquisition, quota and full admin operation. U0 remains an isolated synthetic design preview. Existing retained-session contracts and economic oracles remain intact. The [integration map](../u0-integration-map.md) defines ownership and acceptance.
+The ordinary board consumes validated current snapshots and bounded revision
+notices. Shared source admission supplies verified normalized identities; the
+serializer derives stable event/group/outcome/instrument IDs, displays and
+calculations from original inputs. Saved and synthetic data cannot silently
+replace ordinary source observations.
 
-## Product hierarchy and decisions
+## Routes
 
-Open → compare → narrow → inspect Details → decide whether to investigate or trade manually elsewhere. Default: all leagues, full-game winner, all four comparison venues, blank search. Full-game winner/spread/total are the common-market choices; “All common markets” is available. Period options derive from admitted offerings in the selected league/market; full game stays the default, and a now-inapplicable period resets to full game. A broader period is added only when an exact supported offering exists. MLB segments and NHL periods cannot leak into NFL choices.
+- `GET /api/current`: latest coherent validated snapshot.
+- `GET /api/current/updates`: small coalesced post-commit revision notices.
+- `GET /api/arbs`: opposing-leg results from current state.
+- `POST /api/selections`: temporary immutable calculation lease.
+- `GET /api/selections/{token}`: inspect a live lease.
+- `POST /api/selections/{token}/release`: release a lease.
+- `POST /api/selections/{token}/what-if`: explicit manual probability/cost/quantity calculation.
 
-Desktop uses game headers, market/period/line group headers, outcome rows and four fixed venue columns. Right-hand Details is sticky and independently scrollable. At 800px and below, each outcome contains a labeled two-column venue grid, preserving the Kalshi → Polymarket US → Novig → ProphetX order. Details becomes a bounded dialog, with focus containment, Escape/Close and return to the originating price or search if filtered away. Long names wrap. No horizontal page scroll is required.
+Live Details follows current quote revisions and does not acquire a lease.
+Manual What-if binds its calculation to a temporary lease. Expiry, restart and
+recovery invalidate leases; stale selections fail rather than substitute data.
 
-American odds lead; cents remain visible directly below. Native USD/contract or cents/contract display `c`; aggregate decimal odds display `c eq`. Column equivalents also carry `eq`. Every quote has a concise age and relevant delayed/stale/state cue; material known rule differences carry “Rules differ” and are explained in Details. Price advantage uses a restrained pale green background and text “Better quote”; exact ties use neutral “Tied quote.” These mean gross quoted price only, never profit, fee-adjusted superiority, liquidity or settlement equivalence. Filtered venue columns are hidden; cues recompute among visible eligible comparison venues only.
+## State and identity
 
-Details hierarchy: outcome and signed line → game/period/market → chosen venue and revision → dual price → original quote and conversion → source, receipt and projection times → settlement/cost differences → independent raw difference, arbitrage, supported EV and manual What-if → expandable exact IDs. Deep transport JSON, counters, imports and engineering history belong to admin. Missing facts are short reasons under the dependent output. Zero and negative supported results retain their signs and wording.
+`current_contract.serialize` admits normalized inputs; `validate_snapshot`
+reproduces derived values. Runtime identity and increasing state revisions define
+update ordering. Duplicate/regressing revisions cannot replace committed state;
+conflicting same-revision content is rejected. Native instruments retain exact
+source IDs and original values. Time, orientation, period, result policy and
+cardinality are validated before comparison; labels alone do not prove equivalence.
 
-## Identity and admission
+Quote receipt time, source time and provider connection health stay separate.
+Monotonic aging can remove eligibility without changing original observations.
+Unknown source clocks, fees, payout terms, depth or probability withhold dependent
+results. Signed gross Arb percentages and manual dollar What-if have distinct
+input requirements. Original units and rational conversion basis remain available.
 
-All string IDs are opaque, case-sensitive and stable within their identity version. Labels do not establish identity. The following tuples define grouping, independent of source and display labels:
+Notices include runtime and revision identities. There are at most eight streams,
+one pending notice per stream and a bounded slow-write deadline. HEAD does not
+subscribe. Restart resets runtime and leases. Browser notices and heartbeats do
+not establish provider freshness or dispatch a paid refresh.
 
-| Object | Required identity |
-| --- | --- |
-| Event | sport, league, season, stage, exact scheduled instant, normalized home/away participant IDs (or explicit non-home/away roles), event discriminator for rematches/doubleheaders; source event IDs and verified binding IDs retained |
-| Market group | event ID, family (`winner`, `spread`, `total`), period enum with explicit boundary/overtime policy, canonical decimal line or null, spread anchor participant, outcome cardinality |
-| Outcome | group ID, participant ID or null for total, predicate (`win`, `cover`, `over`, `under`, separately `draw`/`not_win` when applicable), signed line and result interpretation |
-| Instrument/quote | venue, provider, native event/market/outcome IDs, native side/orientation, binding version and ID, quote side (`buy`), units and payout basis; quote ID hashes this identity, not the price |
+## Schema and examples
 
-Canonical lines normalize decimal trailing zeros and signed zero for grouping; original source line remains retained in the binding. Example: spread group `away=-3.5` contains Away −3.5 and Home +3.5. Away −4.5 belongs to a separate group. Total 47.5 contains Over 47.5 and Under 47.5; 48.5 is separate. Null is never zero. Winner has null line. Native NO/short is never silently relabeled an opposing YES: retain its original predicate, and require evidence of the displayed outcome correspondence. Different cancellation/draw/push predicates are material rule facts. Three-way winners require three distinct outcomes; a draw is not merged into another team. A reference book has role `reference` and never participates as a comparison quote or arbitrage leg.
+The [JSON schema](predict-current-1.schema.json) describes structural fields;
+semantic validation remains authoritative in `app/dashboard/current_contract.py`.
+The [snapshot example](examples/predict-current-1.snapshot.json) is synthetic.
+The [unavailable example](examples/predict-current-1.unavailable.json) illustrates
+missing data, and [state fragments](examples/predict-current-1.states.json) are
+illustrative fragments rather than a complete snapshot.
 
-Partial bindings can be inspected in admin but never acquire a same-selection cue. Unknown/conflicting event, line, period, orientation or payout facts set comparison eligibility false with a reason. Known exceptional-settlement differences may still permit explicitly labeled *gross* price inspection for an evidenced same normal-win selection; they separately withhold unsupported portfolio/return outputs. Conversion cannot promote identity eligibility.
-
-## Envelope and quote fields
-
-The [JSON Schema](predict-current-1.schema.json) validates structural types; semantic admission below is required as well. The normative compact examples are [current snapshot](examples/predict-current-1.snapshot.json), [states and leases](examples/predict-current-1.states.json). Decimal financial values travel as strings. Null means unknown/unavailable, never zero. `0` and negative values are supported numeric results when eligibility is true.
-
-| Field | Meaning / requirement |
-| --- | --- |
-| `schema` | Literal `predict-current-1`; incompatible versions are rejected by consumer |
-| `mode` | `current`, `synthetic`, or `historical`. Production `/api/current` allows only current, never a retained fallback. Preview mode is permanently synthetic. Historical is explicitly selected admin inspection only. |
-| `runtime_id`, `state_revision` | New opaque runtime on restart; strictly increasing committed snapshot revision within runtime, including meaningful health changes |
-| `projected_at`, `clock_at`, `state` | UTC projection instant, age-evaluation clock, service state (`connecting`, `available`, `empty`, `degraded`, `stopped`, `unavailable`); preview scenarios are separate local test controls |
-| `events[].id`, participants/start/scopes | Exact identity/bindings, label, start instant and stable market groups; sorted once by start then stable event ID, no price-ranked reordering |
-| `source_status` | Per-source concise state, reason code/label, source/receipt times, next due (nullable); no credentials, quota counters or raw errors in ordinary payload |
-| `quotes[venue].id`, `revision` | Stable instrument quote ID and positive monotonic revision. Increment on changed admitted original price, meaningful depth/quantity/state/rule/basis content. Identical repeats/heartbeats do not increment the quote revision or reset source age. |
-| `original` | Exact decimal string, units, normal-win payout amount and currency, quantity units, role. Preserve raw native value and orientation. Other payout states remain separate rule evidence. |
-| `source` | Provider and exact native IDs/side plus verified binding ID/version; source URLs only from validated provider origins, never arbitrary response-provided link text |
-| `display` | Supported flag, signed whole American string, one-decimal cents string, equivalent flag, unavailable reason and conversion basis. Display precision is presentation only. |
-| `times` | `source_at`, `received_at`, `projected_at` nullable RFC3339 UTC instants; source-time kind (`provider_quote`, `provider_book`, `unknown`, `synthetic`). Preserve provider meaning, never invent source time from receipt. |
-| `age_seconds`, `stale`, `state` | Age evaluated at `clock_at` from known quote source time; unknown age null. Clock skew has a separate reason, never clamp into freshness. Illustrative preview ages are fixed synthetic-clock values. Production stale policy is per-source, supplied with qualified policy version/threshold. |
-| `comparison` | Boolean eligible, reason codes + concise labels; original normal-win price comparison admissibility only. Production delivers server-derived exact cue and raw gap so client does not set economic eligibility. |
-| `calculations` | Independent objects for raw difference, arbitrage, EV, sizing, and manual scenario. Each contains eligible flag, decimal result strings or null, unit, basis version/input quote IDs+revisions, reasons and assumptions/probability provenance when required. No truthiness check for a zero result. |
-| `rule_note`, `provenance` | Concise material rules plus deeper typed rule differences/evidence bindings; mode, fixture or retained artifact/hash identity. No fabricated real cross-source matches. |
-
-Availability enums: `connecting`, `available`, `not_offered`, `unavailable`, `budget_delayed`, `stale`, `error`, `stopped`, `resyncing`. `stale` can also be true independently of transport state. A connected browser or newly received health record is not quote freshness. Unknown source time shows “Source age unknown”; receipt age is available in Details but cannot qualify better-price/current-dependent calculations. Budget-delayed quotes remain selectable for inspection and show their observed age; they do not receive best-current-price cues. Partial venue coverage keeps remaining columns with concise unavailable cells. No comparable selection means fewer than two eligible quotes for an exact outcome; a single quote can still be inspected. No listed events and no filter matches use different messages.
-
-## Decimal and rounding rules
-
-Original inputs must be finite decimal strings (no JSON floats), strictly within the supported numeric domain. Inputs are bounded to 256 characters and exponent magnitude 256; larger encodings are unsupported, not clipped. All conversion arithmetic uses Decimal with at least 60 significant digits (increased for original magnitude/precision as needed) for divisions and ROUND_HALF_UP for display. Keep originals and the symbolic operation as the calculation authority. Repeating divisions in `decimal_approx`/`price_approx` are explicitly approximations; do not substitute them for original exact inputs. Compare prices and ties with exact rational cross-products or equivalent exact original arithmetic. U0's client cue uses BigInt rational originals; U2 should publish the authoritative cue server-side.
-
-For a normal-win $1 claim, `usd_per_contract` uses original `p`; `cents_per_contract` uses `p=c/100`. Supported domain is **0 < p < 1**. Decimal odds `d=1/p`. Aggregate `decimal_odds` requires **d > 1** and represents `p=1/d`; equivalent cents `100/d`. For American odds: `100(d−1)` when `d≥2`, otherwise `−100/(d−1)`. Native algebra can compute positive `100(1−p)/p` for `p≤0.5`, otherwise `−100p/(1−p)` without rounding an intermediate reciprocal. `d=2` / `p=0.5` displays `+100`.
-
-Display American odds rounded to whole numbers with explicit plus sign, cents to 0.1 cent. A valid tiny price may round to `0.0c` or `100.0c`; it remains the original price and Details reveals it. Do not infer impossibility or certainty from rounded boundaries. Actual p=0, p=1, negative, ≥1, d≤1, nonfinite, malformed, unsupported units or non-$1 payout basis yield null American/cents and a concise unavailable reason. Keep the original inspectable. Do not normalize payout multipliers, unknown currency, refund/push units or unverified unit definitions into this conversion. Native USD strings retain all fractional cent precision even though the cell rounds to 0.1c.
-
-| Original | Display | Consequence |
-| --- | --- | --- |
-| USD/contract `0.48` | `+108`, `48.0c` | Raw p remains 0.48 |
-| native cents `52` | `−108`, `52.0c` | p=52/100, not display-derived |
-| decimal `1.91` | `−110`, `52.4c eq` | p=1/1.91, not 0.524 |
-| decimal `2.005` | `+101`, `49.9c eq` | Half-up rounds American 100.5 to 101 |
-| USD `0.50001` and `0.5` | `−100`/`+100`, both `50.0c` | Not tied originals |
-
-Raw difference is the lowest other eligible quote p minus selected p, shown in cents: positive is cheaper at the selected venue, negative is more expensive, zero is tied. It does not use outcome complements or sum different lines. Raw gap is separate from complete portfolio arbitrage return. Arbitrage requires supported exhaustive result states/cashflows, fees, quantity/depth and applicability. Supported EV additionally requires an independent evidenced probability input/model. Manual What-if uses explicitly labeled user assumptions, never masquerades as provider facts or supported EV. U0 shows a fixed synthetic 50% / zero-cost scenario with positive, zero and negative outcomes; it is not a connected calculation workspace. Missing probability withholds EV, not deterministic payoff or raw price conversion. Missing costs withhold cost-dependent outputs, not all gross inspection. References remain references.
-
-## Coherent selection lease
-
-Production requests `POST /api/selections` with `{schema,runtime_id,state_revision,quote_id,quote_revision}`. Atomically validate the requested *current exact revision* and create one immutable bounded in-memory review containing the selected event/outcome/quote plus exact comparison quote revisions and calculation inputs used. If the advertised revision already advanced and has no admitted retained lease, return **409 selection_changed** with newest identity; never pick latest implicitly. No perpetual quote-version store is required. Bound active leases to one per client, eight total, 2 MiB total, max 300 seconds measured on server monotonic clock. Admission failure returns 429 and a concise retry reason, not eviction of someone else's active review. Close explicitly releases a lease; TTL bounds orphaned leases. Local client IDs are not hosted authentication.
-
-`GET /api/selections/{opaque_id}` returns the frozen review, TTL remaining, selected IDs+revisions, status `held|newer_available|expired`, latest quote identity if present, and `runtime_id`. Quote updates publish a newer indication without overwriting the review or calculations. Adopt-newer is an explicit new selection request; immutable review replacement is atomic only after success. Unknown lease/runtime, TTL expiry, restart or shutdown returns **410 selection_expired**. Previous selected content may remain crossed out for inspection; it is not eligible for current calculations. A newer unavailable quote cannot replace an active review as a usable price. Filtering away a row keeps Details and says it is outside the filters. Return focus to the exact originating button if still visible, otherwise search. Automatic updates do not reorder, replace button nodes or move focused controls. Capture a stable scroll anchor before a structural catalog commit; insert/remove games outside the reading anchor and preserve offset. If focused instrument disappears, keep an explicit unavailable row through focus handback rather than detaching the focus target.
-
-The U0 preview uses a client-local immutable copy and monotonic 300-second timer, with explicit expire/restart simulation. Switching a board scenario establishes a fresh synthetic fixture runtime and expires an existing selection; advancing the native quote is a single controlled revision per scenario. It does **not** implement production cross-tab/server leases. A browser refresh discards it; U2/U3 implement the endpoints above. The provided states example distinguishes held/newer/expired. No durable bookmark/cutoff promise applies.
-
-## Shared updates, filtering and admin
-
-Production `GET /api/current` returns only the service's current committed bounded state, including honest empty/connecting/degraded states. `GET /api/current/updates` emits coalesced snapshot notices `{schema,runtime_id,state_revision}` after commit; browser pulls the shared snapshot when needed. Heartbeats carry connection status only. Eight browser streams maximum, slow consumers coalesce to latest rather than accumulating a journal; 1 MiB maximum pending data per client. A runtime mismatch requires fresh state and lease expiration. Out-of-order/duplicate state revisions are ignored; incompatible schema fails visibly. A missing stream or reconnect does not create a new collector. Local filters operate over the admitted snapshot and send no requests, including no priced acquisition calls. Details creates a bounded lease only.
-
-Separate `GET /api/admin/status` reports runtime ownership/epoch, source lifecycle, admission/rejections, request/byte/memory/backlog/latency, bounded sanitized issues, and shared quota accounting. Owner commands under `/api/admin/*` act on the existing service; they never create duplicate source workers. Preserve strict loopback Host/Origin/Fetch-Site/body limits/CSP; POST JSON only, no untrusted raw HTML. `/admin` is a responsibility split, not hosted access control. U0's `/preview/u0/admin` is an unconnected responsibility map, not a functioning admin service.
-
-U0 originally delivered design only. U1/U2 now replace the ordinary default and implement current payloads and server selections as specified below. No source acquisition, journal removal or quota runtime is included. Proceed with U3–U5 under the existing authorization; owner feedback remains separate from engineering completion.
-
-## U1/U2 implemented refinement — October 2, 2026
-
-The ordinary launcher and `/` now consume `/api/current`. Production starts with `CurrentStateProvider`'s explicit **current / unavailable** state, four concise source statuses and no events. Neither current requests nor subscriptions read retained sessions or instantiate collectors. `/admin/retained` preserves the former inspection page and its original APIs; `/admin` is the engineering entry, with full operator controls deferred to U5. `/preview/u0` remains isolated. The explicitly invoked `tests.current_integration_server --synthetic-test` injects a synthetic provider through these same production routes, serializer, renderer and lease store. It cannot be enabled from the ordinary launcher or an environment variable.
-
-`current_contract.serialize` admits bounded normalized inputs and derives stable event/group/outcome/instrument IDs, conversion, age/eligibility, exact comparisons and independent calculation outputs. `validate_snapshot` reproduces all these outputs from the original inputs. `current_normalized.catalog_from_normalized` accepts the existing reviewed event/market identities, invokes the existing registry/event validators, checks their exact correspondence and requires explicit selection orientation, period boundary, cardinality and evidence. It never infers a score predicate from YES/NO or Long/Short labels. U3 must supply source admission and actual verified binding evidence; this interface does not manufacture that evidence. `result_policy` and outcome `result_interpretation` retain draw/push distinctions in identity. Conflicting native-instrument assignments are rejected. Identical instruments deduplicate; legitimate alternatives are separate buttons and original inputs, with separate native sides and liquidity.
-
-Every quote's `binding` has `verified`, bounded evidence IDs, and the complete `selection` context (`event_id`, `group_id`, `outcome_id`, participant, predicate, signed line, period boundary, cardinality, result interpretation). Missing/conflicting context rejects the commit atomically. An unverified complete binding remains inspectable without comparison eligibility. An absent/unqualified `freshness_policy` excludes current cues. Policies contain version and maximum source age; no real provider threshold has been invented. Source kind `unknown` requires null source time. Clock skew remains explicit. A documented new observation clock for identical values requires `observation_time_evidence`; heartbeats cannot refresh it. Quote revisions also cover meaningful depth, cost/rule and input-bundle changes. Server monotonic elapsed time advances evaluation age independently of source time and lease TTL; eligibility transitions publish a committed notice, without repricing quotes.
-
-`comparison.contexts` contains all **15 nonempty subsets** of the four venues, keyed in canonical Kalshi → Polymarket US → Novig → ProphetX order with `+` separators. Each has authoritative `cue` and `raw_difference`. The browser selects the context for its visible columns; it performs no economic comparison or extra request. Alternatives at the selected venue never constitute another comparison venue. One eligible venue has no comparative cue. `raw_difference.exact` supplies signed numerator and positive denominator **in cents**. `value`/`exact.decimal_approx` are explicitly decimal approximations for repeating fractions; `display_value` is signed, rounded presentation only. These fields never become engine inputs. Positive means the selected quote is cheaper than the lowest eligible instrument at another visible venue; zero and negative values are retained. Frozen Details describes the full held comparison set, independently of later board filters.
-
-`calculations` carries separate raw difference, arbitrage, EV, sizing and manual availability. An optional internal `explicit-depth-1` input adapter binds every original comparison leg/revision/depth, quantities, state cashflows, cost/settlement/depth support and evidence, then invokes the existing `explicit_allocation` engine. References cannot supply legs. Unknown or unsupported dependent inputs remain unavailable. EV additionally requires an independent, evidenced model input; manual probabilities cannot be promoted to supported EV. Exact engine inputs are held as `calculation_inputs`; original results are never recalculated from display values. Mathematical output does not establish execution or native source qualification.
-
-`original` may additionally retain `native_value`, `native_units` and `transformation`. `one_minus_native_bid` is checked algebraically against the original USD bid; it does not change source side, predicates, payout meaning or contract quantity. Unknown transformations are unsupported. Currency/payout/unit mismatches remain inspectable without conversion or current cues. Payout strings receive the same 256-character / exponent-256 bounds as prices.
-
-### Implemented selection HTTP shapes
-
-- `POST /api/selections` requires exactly `{schema,runtime_id,state_revision,quote_id,quote_revision,client_id}`. `client_id` is a bounded tab-local opaque ID, not authentication. Success is **201**, with `{schema,selection_id,runtime_id,status,ttl_remaining,review,latest}`. `review` freezes event/group/outcome context, selected quote, primary/alternative comparison revisions, original calculation inputs, mode and selected state/clock. State changes or missing/currently unusable instruments return **409 `selection_changed`**, without replacement; runtime changes return **410 `selection_expired`**. Capacity returns **429 `selection_capacity`**, retaining all existing reviews.
-- `GET /api/selections/{selection_id}` returns the same immutable review and held/newer status. `latest` is null on removal, otherwise contains quote ID/revision, current state revision/state and display. GET changes neither content nor deadline. TTL is at most 300 monotonic seconds, one active review per client, eight total, **2 MiB of actual encoded reviews** total. No permanent version archive or journal cursor is involved.
-- `POST /api/selections/{selection_id}/release` accepts exactly `{}`. Released, replaced, expired, shutdown or previous-runtime selections subsequently return **410**. Replacement validates and admits the new review before releasing the old one. Failed adoption leaves the old review intact.
-- `POST /api/selections/{selection_id}/what-if` requires all six fields: string `probability`, `entry_cost`, `win_cost`, `loss_cost`, `quantity`, and boolean `acknowledge_conditional: true`. The costs are explicit total USD assumptions for the requested quantity. There are no default probabilities/costs. This is conditional normal win/loss analysis, excluding pushes/refunds/exceptions. Existing odds-cashflow and portfolio engines receive original inputs with exact integer scaling to avoid a false negative at break-even. The output carries exact rational authority, formatted value, assumptions and frozen quote revision. Unsupported engine domains are unavailable. Expired reviews cannot calculate.
-
-Updates remain tiny coalesced post-commit notices, with eight streams, one pending notice per stream (well below 1 MiB) and a two-second slow-write deadline. HEAD does not subscribe. Restart resets runtime and leases; streams reconnect to the latest snapshot. No collectors exist in U2. Duplicate/regressing revisions do not replace committed state; conflicting same-revision quote content is rejected. Client snapshot pulls are serialized, notices are deduplicated and review creation is ordered. Late replaced/expired responses are ignored and any newly orphaned lease is released. Browser heartbeats affect connection labels only.
-
-The structural schema supports these refinements and retains U0 preview compatibility. The current populated example is explicitly synthetic and generated through the production serializer; [unavailable example](examples/predict-current-1.unavailable.json) is the ordinary default. Original U0 examples/schema are preserved in [the integration evidence](../../evidence/u1-u2-integration-20261002/u0-contract-originals/). The states example is a collection of illustrative fragments, not a complete `/api/current` snapshot.
-
-Normalized and serialized catalogs both have a 64 MiB byte ceiling, with at most 200 events, 2,000 groups and 16,000 quotes. Each exact outcome accepts at most 64 candidate instruments before deduplication; original depth is at most 4,096 levels with exact string prices/quantities. Oversized or malformed commits leave current state intact. Each comparison context binds the lowest eligible instrument at each other visible venue (exact ties choose the stable quote ID), keeping basis size bounded to three counterpart quotes. Other legitimate instruments remain explicitly inspectable and frozen in the review's alternatives.
-
-Numeric native-line and payout encodings are canonicalized only for instrument identity, so `3.5000`/`3.5` or `1.0000`/`1` do not manufacture distinct quote IDs. Original source and financial strings remain unchanged in the quote. Conflicting duplicate records for that identity are rejected atomically rather than silently choosing or publishing them as native alternatives.
-
-## Bounded direct-win correspondence
-
-Optional `quote.native_predicate` preserves each source instrument's complete two-outcome native domain (including outcome IDs), selected participant/predicate, original result policy and sealed `predict-direct-win-1` binding hash. Only an evidenced direct full-game win can share the normal-result comparison descriptor; Kalshi NO remains not-win. Ordinary discovery and sink revalidate the exact occurrence, IDs, original/scheduled start, roles, milestone and material predicates on each generation. Unknown/stale clocks and economic exclusions remain independent. Details shows the native domain and material exceptional-settlement limits. The first binding covers only Colts–Commanders October 4, 2026 and expires at its scheduled start; wider instruments keep prior exclusions.
-
-## Versioned complete-book confirmation
-
-`book_confirmation` (`predict-book-confirmation-1`) is optional, source-bound and separate from `times.source_at`, price/content revision and held-review expiry. `kalshi-complete-snapshot-send-1` requires a requested current-generation complete snapshot, matching market/SID, contiguous sequence and advancing provider envelope send timestamp. It does not reinterpret send time as a price-change clock. `us-complete-book-transact-1` requires a complete current-subscription image, exact market and advancing `transactTime`; the adapter validates both arrays and atomically replaces the window. US supplies no sequence, so continuity means current subscription/full replacement plus strict clock high-water, not receipt of every intervening change. Neither basis claims a provider freshness SLA or total executable liquidity.
-
-Proof retains generation, request/subscription identity, sequence where supplied, request/confirmation/receipt clocks, original provider timestamp, exact payload hash, reconstructed content hash and seal. Native requests count snapshot commands inside the existing request envelope; one batch per 20 seconds, duration-derived cap and final 35-second request-free interval. Local receipt/projection, heartbeat, acknowledgement and connection health cannot renew confirmation. Missing clocks, repeated evidence, mismatched content/market, stale generation, sequence gaps and regressed/future clocks retain or revoke eligibility conservatively. Failure/resync state independently withholds all dependent cues.
-
-`age_seconds` still describes the retained original source clock, including Unknown. `confirmation_age_seconds` describes the provider-confirmed book observation. `comparison_age_seconds` uses a validated confirmation when present, otherwise the existing source basis. The existing 30-second native age limit remains; identity, state, display, costs, settlement, depth and probability gates remain independent. New confirmations alone do not change the quote revision. Held Details retains its original proof, captured age, clocks, inputs and deadline; later confirmations cannot renew or silently adopt that review. Board cells disclose “Book confirmed”; Details shows its explicit basis and evidence. Captured calculations are point-in-time review results, not a renewed current-book claim.
+The [synthetic development server](../development.md#synthetic-preview) injects
+its test provider through production interfaces. It cannot be selected by the
+ordinary launcher. See [architecture](../architecture.md) for module ownership
+and [Admin contract](predict-admin-1.md) for source controls.

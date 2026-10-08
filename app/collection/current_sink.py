@@ -170,6 +170,7 @@ class LatestStateSink:
         self.exclusions = []
         self.aggregate_records = {}
         self.aggregate_receipts = {}
+        self.aggregate_states = {}
         self.metrics = dict(admitted_observations=0, rejected_observations=0, last_commit_ms=0, max_commit_ms=0, retained_bytes=0, max_transient_encoded_bytes=0)
 
     def commit(self, row, states):
@@ -188,9 +189,11 @@ class LatestStateSink:
         candidate = deepcopy(self.reducer)
         aggregate_records = deepcopy(self.aggregate_records)
         aggregate_receipts = deepcopy(self.aggregate_receipts)
+        aggregate_states = deepcopy(self.aggregate_states)
         if row['type']=='current_aggregate':
             from .current_aggregate_admission import admit_venues
             sport=row['sport']
+            aggregate_states[sport]=deepcopy(row.get('venue_states',states))
             if aggregate_receipts.get(sport) and row['received_at']<=aggregate_receipts[sport]:
                 raise ValueError('Stale aggregate response')
             accepted,rejected=admit_venues(row['body'],sport,row['received_at'])
@@ -231,10 +234,14 @@ class LatestStateSink:
         if retained > 16*1024*1024:
             raise ValueError('Current reducer retained capacity')
         records, excluded = normalized_records(candidate, states, self.revisions)
-        for batch in aggregate_records.values():
+        from .current_overlap import associate
+        native_records=list(records)
+        for sport,batch in aggregate_records.items():
+            batch=associate(native_records,batch)
             for record in batch:
                 r=deepcopy(record);q=r['quote']
-                state=states[q['venue']]['state']
+                global_state=states[q['venue']]['state']
+                state=global_state if global_state in ('stopped','error') else aggregate_states.get(sport,states)[q['venue']]['state']
                 q['state']=state if state in ('stopped','error','unavailable') else 'budget_delayed'
                 r['_fingerprint']=stable([record['_fingerprint'],q['state']])
                 prior=self.revisions.get(r['_instrument'])
@@ -255,7 +262,7 @@ class LatestStateSink:
         if not self.store.commit(raw):
             raise ValueError('Current commit sequence rejected')
         self.reducer, self.revisions, self.exclusions = candidate, revisions, excluded
-        self.aggregate_records,self.aggregate_receipts=aggregate_records,aggregate_receipts
+        self.aggregate_records,self.aggregate_receipts,self.aggregate_states=aggregate_records,aggregate_receipts,aggregate_states
         self.sequence += 1
         elapsed = (perf_counter()-tick)*1000
         self.metrics.update(admitted_records=len(records),identity_excluded_records=len(excluded),last_commit_ms=elapsed, max_commit_ms=max(elapsed, self.metrics['max_commit_ms']),

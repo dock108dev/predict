@@ -530,6 +530,14 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def admin(req):return web.FileResponse(static_root/'opportunity_static/current/admin.html')
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
     app.router.add_get('/admin',admin)
+    async def arbs_page(req):return web.FileResponse(static_root/'opportunity_static/current/arbs.html')
+    async def arbs_data(req):
+        from .current_state import CURRENT_KEY
+        from .current_contract import arbitrage_pairs
+        store=app[CURRENT_KEY];store.refresh_age()
+        return web.json_response(arbitrage_pairs(store._state,market=req.query.get('market','winner'),search=req.query.get('search','')[:200]))
+    app.router.add_get('/arbs',arbs_page)
+    app.router.add_get('/api/arbs',arbs_data)
     app.router.add_get('/admin/retained',retained_page)
     from .current_state import mount as mount_current
     mount_current(app,current_provider)
@@ -542,6 +550,11 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         body=await read_json(req)
         if body==dict(action='stop'):
             await provider.close()
+        elif set(body) in ({'action','sports','request_id'},{'action','sports','request_id','reference'}) and body['action']=='refresh' and hasattr(provider,'refresh_aggregate'):
+            try:
+                if 'reference' in body and type(body['reference']) is not bool:raise ValueError('Explicit reference flag required')
+                await provider.refresh_aggregate(body['sports'],body['request_id'],reference=body.get('reference',False))
+            except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
             await provider.pause(body['source'])
         elif set(body)=={'action','runtime_id','candidate_digest'} and body['action']=='recover' and hasattr(provider,'recover'):
@@ -558,7 +571,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_post('/api/admin/current',current_admin)
     async def current_asset(req):
         name=req.match_info['name']
-        allowed={'admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        allowed={'arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])
     app.router.add_get('/current/assets/{name}',current_asset)

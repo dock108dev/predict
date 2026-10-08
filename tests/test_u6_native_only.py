@@ -24,8 +24,9 @@ class NativeOnly(ServiceLifecycle):
         self.assertFalse(self.service.attempt['config']['aggregate_enabled'])
         self.store.subscribers.discard(stream)
 
-    def test_legacy_configuration_and_strict_boolean(self):
+    def test_exact_configuration_and_strict_boolean(self):
         legacy=deepcopy(DEFAULT);legacy.pop('aggregate_enabled')
-        self.assertTrue(validate(legacy)['aggregate_enabled'])
+        with self.assertRaisesRegex(ValueError,'Exact native operational configuration required'):
+            validate(legacy)
         for invalid in (0,None,'false'):
             with self.assertRaises(ValueError):validate(dict(DEFAULT,aggregate_enabled=invalid))

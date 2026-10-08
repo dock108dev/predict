@@ -1,4 +1,4 @@
-"""Isolated read-only recovery view using the E6 saved-session routes/components."""
+"""Isolated read-only recovery view using shared saved-session components."""
 import argparse
 from copy import deepcopy
 from decimal import Decimal

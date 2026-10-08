@@ -12,6 +12,7 @@ from app.adapters.polymarket_us import Response as PR, parse_market as pm, parse
 from app.matching import Matcher
 from app.matching_example import synthetic
 from app.moneyline import MoneylineMatcher, observe
+from app.normalization.native_registry import native_registry
 from app.moneyline_captures import captured_inputs
 from app.settlement import DIMENSIONS, SCENARIOS, fact, profile
 from app.fee_example import scenario
@@ -43,7 +44,7 @@ def synthetic_inputs(price_a='0.40',price_b='0.40',exception='0.5',environment='
         response=(KR if venue==Venue.KALSHI else PR)(json.dumps(native),'synthetic:slice-10',NOW,EvidenceKind.SYNTHETIC)
         market=km(response,native,'ka','KXNFLGAME') if venue==Venue.KALSHI else pm(response,native,'pm')
         row=observe(market,parent,rules,native=native,
-            context={'series_ticker':'KXNFLGAME','product_metadata':{'competition_scope':'Game'}} if venue==Venue.KALSHI else {'id':'pm'},artifact='synthetic:slice-10')
+            context={'series_ticker':'KXNFLGAME','product_metadata':{'competition_scope':'Game'}} if venue==Venue.KALSHI else {'id':'pm'},artifact='synthetic:slice-10',registry=native_registry())
         rows.append(row)
         # Only these supplied acquisition sides exist; neither bid is used as an ask.
         side='yes' if venue==Venue.KALSHI else 'b'

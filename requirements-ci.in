@@ -1,3 +1,9 @@
 # Build tools for the editable CI install; runtime dependencies come from pyproject.toml.
 setuptools>=77
 wheel
+# Native reports, source checks and dependency scanning (no SaaS upload).
+pytest==9.0.3
+pytest-cov==7.0.0
+ruff==0.14.0
+build==1.3.0
+pip-audit==2.9.0

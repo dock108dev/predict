@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Owner-local secret entry. Never sends a request or prints the credential."""
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from app.collection.credential_handoff import paid_prompt
+from app.collection.local_ownership import LocalOwnership
+owner=LocalOwnership()
+try:owner.acquire("owner-local-paid-key-entry")
+except ValueError:raise SystemExit("Stop the owned Predict app before changing its cached credential. No settings changed.")
+try:paid_prompt()
+finally:owner.release()

@@ -1,45 +1,22 @@
-# Versioned native raw-comparison reviews
+# Native comparison review records
 
-The ordinary product session accepts `native_review_records` in its existing run specification. These complete records are retained in `session_started`, not looked up by event title or acquisition slice. A durable `native_review` row can also introduce a new immutable ID/revision. Conflicting revisions for the same exact source selection are excluded; callers must select one revision explicitly. Empty explicit records mean no reviewed raw connections.
+`dashboard/native_reviews.py` validates immutable `native-review-1` records.
+Retained session specifications may supply `native_review_records`; journals can
+also introduce a new exact ID/revision. Conflicting revisions are excluded and
+must be selected explicitly. Empty explicit records mean no reviewed association.
 
-`app/dashboard/native_reviews.py` validates `native-review-1` records. Each record contains:
+Each record binds canonical participants and event identity, sport/period/line,
+source event/market/outcome IDs, native metadata and receipt hashes, orientation,
+applicability and a canonical JSON hash. Raw correspondence is distinct from
+settlement qualification and fee assessment. Missing or conditional judgments
+remain explicit and cannot supply unrelated markets' economics.
 
-- `review_id`, positive `revision`, `schema`, `evidence_mode`, and `sha256` over canonical JSON excluding the hash field.
-- Event association: exact canonical `event` and canonical-ID-to-display-name `participants`.
-- Normalized `identity`: sport, competition, season/stage, family, period, canonical line, subject and outcome set. Native catalog scope must agree. Schedule comes from the validated selected events, including canonical event keys whose first item is a competition rather than a timestamp.
-- Each source's exact event/market IDs, native event/market metadata hashes, original receipt body hashes in `provenance`, native outcome IDs and `orientation_evidence`. Selected receipt references, evidence class, metadata, participants, directions and book outcome IDs must agree. Conflicting duplicate IDs stay excluded.
-- Independent `applicability` with status, start/end and basis; this bounds raw association at the selected cutoff.
-- Independent `settlement_assessment`, with evidence, qualification, conflicts and unknown conditions. `UNKNOWN`, `CONDITIONAL`, `INCOMPATIBLE` and `SUPPORTED` remain distinct. Raw correspondence never implies qualified settlement.
-- Each source's independent `fee_review`: state, evidence, model and optional narrower applicability. Missing fee review or an explicit unknown state preserves raw notional and withholds fee bounds. Supported/conditional fee judgments require evidence. US coefficient, minimum and fractional applicability come from that selected record; Kalshi series/history/account context comes from that selected record. Conditional formulas do not become supported cash bounds.
+Spread/total and period structures reuse shared descriptor and payout logic.
+Sizing uses shared depth/fee arithmetic. Net returns and EV additionally require
+qualified terms, effective fees, probability and timing.
 
-Spread/total, first-half, baseball segments, hockey periods and championship structures use `score_lines.orient_descriptor`, the same descriptor validation and orientation used by the qualified shared path. Each source supplies its explicit descriptor; canonical domains, thresholds, predicates and state payouts must correspond. The correspondence key is validated from those inputs and its display label is derived from the canonical predicate. Unsupported structures produce review exclusions. No native reviews are generated automatically from the 63-cell fixture catalog.
-
-Entry walks reuse `depth.consume`, `fees.calculate` and the shared `us_taker_bound`; the latter now accepts the selected evidence-backed coefficient. Native raw rows still require qualified payout/fee/probability and timing evidence before net/EV can be promoted. A supported settlement or entry-fee record alone does not provide all those dependencies. Existing qualified sport/market paths and all 63 cells remain available.
-
-## Historical interpretation
-
-The original index in `app/reviews/native/index.json` maps the exact retained session to its sealed review digest. Default v4 uses `index-v4.json`, which pins each exact reviewed session/acquisition, full original product chain and review digest. This compatibility mapping is used only when the session has no explicit records; new reviews are pinned in their ordinary session specification/journal. There is no directory-wide or latest-revision matching. Missing/tampered records fail closed, with explicit review errors. Every raw game/download embeds its selected complete record and digest; sizing and comparison calculations read that embedded record rather than a mutable registry.
-
-The original fixture and interpretation are preserved in `native_book_comparison_sealed_v2.py`, with the original fixture byte hash checked. `session_history.load` and `project_rows` accept `native_interpretation="original"`, `"native-book-comparison-2"`, `"native-book-comparison-3"`, or the default `"native-book-comparison-4"`. Original v1 and sealed v2 reopen to their original exact hashes. v3 is a separately retained derived output; it does not rewrite either historical interpretation, journal or acquisition authority.
-
-## Evidence boundary and remaining gaps
-
-The retained-evidence pass now packages 313 real review records covering 37 events and 74 market pairs; 71 pairs have paired books within at least one original capture. See [exact corpus accounting](native-retained-coverage.md). WKU–NMSU remains the original sealed regression. Its normal-winner correspondence is useful, its postponement assessment remains incompatible, its Kalshi fee formula remains conditional and its selected US fee bound remains limited to the retained applicability interval. No other real market inherits those judgments.
-
-The second event, concurrent markets, differing fee coefficients and all-63-cell review controls are explicitly isolated synthetic fixtures. They verify infrastructure behavior, not source availability, current contracts, real economics or owner/commercial acceptance.
-
-Additional real connections require exact event association, native market/outcome evidence, complete selected receipts, and effective applicability for each listing. Net/EV additionally needs compatible material terms, effective modification coverage, applicable current Kalshi override/precision or other native fee inputs, mandatory settlement charges or evidenced exemption, supported exceptional payouts, fair probability and contemporaneous qualified timing. NBA/CBB availability, CBB membership/game facts, wider source coverage and separate metadata delivery where embedded identity is insufficient remain source-dependent. Existing acquisition attempts remain consumed; this work grants no new acquisition authority.
-
-For v4, disjoint effective intervals allow explicit metadata revisions of the same source pair. Full selected source metadata and receipt anchors are frozen in each retained review. Metadata-only reviews appear in source disclosure and selected-review downloads without generating priced games. Paired books remain confined to their exact capture and cutoff. Per-contract Details and calculations retain alternative market identities, even when cards group the same event/outcome. The sealed v3 modules continue reading the original index.
-
-## Current ordinary native collection
-
-An ordinary session that explicitly selects `native-http-v2` and supplied semantic `native_review_records` uses `native-current-review-binding-1`. Discovery reports complete receipt evidence, normalized identity, material terms, current state and pregame eligibility independently for each selected market. An unknown material field, missing or conflicting ID, changed outcome, incomplete receipt, closed state or passed kickoff margin excludes that market before subscription. Other supported raw markets and sources continue independently. This policy has no event-ID branch; its retained regression uses four NFL events and eight Kalshi markets.
-
-When both reviewed sources pass, the collector retains a new immutable raw-correspondence revision using the actual originating-session receipt hashes and current metadata. That revision explicitly replaces its exact selected template only in this versioned policy. A later metadata generation forms a predecessor chain; changing identity, terms, outcomes, session, template hashes, economics or receipt provenance rejects the successor. The original templates stay in the session specification/journal. Current applicability ends at the earlier session deadline or five-minute prestart boundary; equality at that boundary is excluded. Historical fee applicability keeps its original interval. New raw receipt bindings do not qualify settlement, timing, execution, fees or EV. Sealed acquisition slices, original/v2/v3 reopenings and unmarked v4 history keep their existing interpretation.
-
-`native-current-source-binding-1` retains the exact subset that passes current receipt review when the other source is unavailable. Only those named sources get updated metadata/provenance and admission assessments. The other source's dictionary stays unchanged and cannot supply a paired or mixed comparison. Existing same-session native/aggregate correspondence may reuse the healthy source alone. A later paired renewal must prove both sources current; a frozen per-source template applicability keeps the original fee fallback interval through that transition. Identical complete-body refreshes retain the earliest receipt anchor within this explicitly selected current session, so repeating unchanged metadata does not invalidate its review or extend economics. Historical reviews in a current-binding session remain templates until current revalidation; future-start or unsupported templates do not admit subscriptions.
-
-Retained source facts still leave the NHL season/stage gate unresolved: the NYI–TOR US event declares `seriesSlug=nhl-2025` for a September 30, 2026 start, and the Kalshi event gives a game series but no season or regular-season/playoff designation. A calendar date does not establish those selected listing facts. Similarly, the indexed retained complete receipts contain no supported settled event with an explicit venue payout/correction record: Kalshi selected market results are empty; the US resolved examples are unsupported historical futures without explicit payout or settlement clocks. Existing sporting-result and venue-settlement as-of engines remain separate and require an exactly bound source payload with outcome/payout basis, fee treatment, publication/source/receipt timestamps and any correction predecessor.
-
-See [remaining source facts and the implementation they unlock](source-dependent-external-facts.md) for the exact economics, identity, NHL season and result/payout/correction blockers.
+For older sessions without explicit records, exact versioned indices can bind a
+saved session to its review digest. They do not search for the latest review.
+Missing or tampered inputs fail closed. Saved readers support original and
+versioned derived interpretations without overwriting the source journal.
+See [saved data](native-retained-coverage.md) and [architecture](architecture.md).

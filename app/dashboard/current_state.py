@@ -1,4 +1,4 @@
-"""U2 bounded provider/commit/update and immutable lease interfaces for U3.
+"""Bounded current provider, commit/update and immutable lease interfaces.
 
 No source workers, durable cursor, history load, credential access or archive.
 All state transitions occur synchronously on the server event loop, including
@@ -26,7 +26,7 @@ def unavailable():
 
 
 class CurrentStateProvider:
-    """Explicit current-state absence until U3 injects its normalized service."""
+    """Explicit current-state absence until a normalized provider is injected."""
     allow_synthetic=False
 
     def initial_state(self):

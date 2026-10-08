@@ -8,7 +8,7 @@ from scripts.write_v1_beta_coverage_status import ROOT, write_status
 
 class WorkflowPolicy(unittest.TestCase):
     def test_generation_keeps_acceptance_and_historical_status_unchanged(self):
-        paths = [ROOT / 'docs/beta-coverage-acceptance.md',
+        paths = [ROOT / 'docs/configuration.md',
                  ROOT / 'evidence/v1-counterpart-completion-20261001-v1/beta-coverage-status.json']
         before = [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths]
         with tempfile.TemporaryDirectory() as directory:

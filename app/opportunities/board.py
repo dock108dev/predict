@@ -1,4 +1,4 @@
-"""Historical personal exploration over validated E6 projections; no collector/storage."""
+"""Exploration over validated saved projections without collection or storage writes."""
 from decimal import Decimal, Context, localcontext
 from hashlib import sha256
 import json

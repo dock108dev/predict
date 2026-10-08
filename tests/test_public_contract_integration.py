@@ -93,7 +93,7 @@ class CompleteLifecycle(unittest.IsolatedAsyncioTestCase):
      request=dict(watchlists=history['watchlists'],sid=sid,cutoff=s['durable_cursor'],get=paths,bundles=bundles);request_path=root/'reopen.json';request_path.write_text(json.dumps(request));output=root/'fresh-result.json'
      process=await asyncio.create_subprocess_exec(sys.executable,'-m','tests.public_contract_reopen',str(o.session.output.parent),str(request_path),str(output),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,cwd=ROOT)
      stdout,stderr=await asyncio.wait_for(process.communicate(),25);self.assertEqual(process.returncode,0,stderr.decode());self.assertEqual(json.loads(output.read_text()),json.loads(json.dumps(expected)),first_difference(json.loads(output.read_text()),json.loads(json.dumps(expected))))
-     evidence=EVIDENCE/'synthetic-lifecycle';evidence.mkdir(parents=True,exist_ok=True)
+     evidence=root/'synthetic-lifecycle';evidence.mkdir(parents=True,exist_ok=True)
      shutil.copytree(o.session.output,evidence/sid,dirs_exist_ok=True)
      (evidence/'selected-reopening-request.json').write_text(json.dumps(request,indent=2)+'\n')
      (evidence/'selected-reopening-result.json').write_text(output.read_text())

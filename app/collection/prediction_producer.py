@@ -1,4 +1,4 @@
-"""Native prediction adapters and stream engines owned by E6, never old controller."""
+"""Native prediction adapters and stream engines owned by the observation session."""
 import asyncio
 import sys
 from app.diagnostics import failure

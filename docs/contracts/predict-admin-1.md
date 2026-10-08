@@ -1,29 +1,30 @@
-# predict-admin-1 and predict-site-issue-2
+# Admin API: predict-admin-1
 
-U5 additive contracts. Current board/Details/calculations remain governed by `predict-current-1`. `GET /api/admin/status` and the compatible `/api/admin/current` are local read-only projections: they perform no provider request, quota mutation, authority consumption, history expansion or recovery. POST remains same-origin JSON with the existing Host, Origin, Fetch-Site, body, CSP and loopback restrictions. `/admin` is a responsibility split, not hosted authentication.
+`GET /api/admin/status` and compatible `GET /api/admin/current` project local
+source, quota and issue state. Reading them does not dispatch provider requests,
+consume credits or trigger recovery. `/admin` is a separate operator surface,
+not hosted authentication.
 
-## Metrics
+`POST /api/admin/current` uses the shared same-origin JSON boundary and service
+ownership rules for pause, Stop, guarded recovery and explicit aggregate refresh.
+Refresh chooses its own sport scope without changing automatic scope or scheduled
+due times; it uses the same ledger and affordability checks. Recovery preserves
+spend, reservations, consumed attempts, uncertain charges and due times.
+Native-only configuration stays aggregate-disabled during recovery.
 
-`CurrentService.status()` retains existing fields and adds `admin_schema`, service state/observed-at/deadline/attendance, three source panels, resources, recovery gate and distinct historical issues. Source state is acquisition availability. Quote clocks/age, `binding.verified`, comparison eligibility, calculation eligibility and engineering freshness policies stay independent. Last received book status and retained price clocks appear separately; repeated identical images cannot rejuvenate the price clock. Last source time is the latest retained quote source time, not the age of every quote. No price-clock reset comes from admin polling.
+## Issues and resource bounds
 
-Worker request, connection, book/frame, rediscovery, selected-market and retry counters count their instrumented boundaries only. Aggregate requests count dispatch entries, not successful provider delivery; last `http_response_ms` measures awaited HTTP response delivery through the transport. Native `source_receipt_ms` is a signed source-clock-to-receipt difference, not network latency. `receipt_projection_ms` measures local image processing. Sink `last_commit_ms`/`max_commit_ms` measure the synchronous admission pipeline. No browser paint time is instrumented. Missing values are null/absent and rendered Unknown, never invented zero/latency.
+Issues use provider/category/code plus exact scope/attempt/affected venues for
+deduplication. First occurrence is preserved; last time/count advance. Different
+attempts or affected venues remain distinct. Retention is bounded by configured
+record and byte limits (defaults: 200 records and 1 MiB).
 
-Sink admitted/rejected observation counters count commit attempts; admitted_records and identity_excluded_records describe its latest committed reduction. A rejection preserves admitted reducer/state/revision. Aggregate admitted_records/rejected_venues describe its latest admitted batch. RSS is a one-second sampled value and sampled high-water, not continuous peak; ceiling remains 256 MiB. Serialized state bytes are measured on the actual current encoded state, with existing 64 MiB ceiling. Subscribers and pending notices are measured; one coalesced notice per stream/eight streams are configured bounds. Socket queue occupancy is unknown; one frame is a configured ceiling. Review count, issue count and actual encoded issue bytes are measured, with existing caps retained.
+Persistence uses private temporary files, fsync and atomic replacement. Failure
+blocks safe recovery rather than inventing clean state. Returned advice is
+regenerated from the local safe vocabulary; credentials and raw provider payloads
+are excluded. Historical issues retain their recorded provenance and cannot
+become a current observation.
 
-`QuotaLedger.snapshot()` adds observation age/clock-skew, encoded ledger bytes, ceiling/capacity and retained clock anchor/last-clock without writing. A future receipt has unknown age plus clock-skew, not a fabricated fresh observation. Corrupt/unknown ledger returns unknown economic values with the active 500/50 policy. Reset evidence, observation and next-due/bootstrap/rotation remain separate. Recovery preflight is read-only; reservation/dispatch still revalidate transactionally under exclusive ownership.
-
-## Issue records
-
-Records contain schema, issue ID; provider/site and affected venues; endpoint class with no URL query/secrets; sport/family scope; runtime/candidate/attempt; first/last UTC observation and occurrence count; sanitized code/category/kind; practical impact; healthy independent paths observed at issue time; actual charged credits when confirmed, reserved credits, retry count and configured backoff; smallest next action. Shared transport names The Odds API; venue-specific admission/offering failures identify the actual affected aggregate venue. Native issues have zero metered credits. Unknown charge/reservation facts are null.
-
-Kinds distinguish budget/accounting delay, authentication/entitlement, an exact-query offering gap, identity/predicate exclusions, malformed data, transport uncertainty and local admission/resource/cleanup defects. Codes are a developer-owned allowlist plus bounded numeric HTTP/WebSocket status codes. Arbitrary provider/exception text, including plain alphanumeric secrets, becomes sanitized_failure before persistence or rendering. Site/prose/action come from local templates. On reopen, bounded prior v1/v2 records are reconstructed through the vocabulary; unsafe disk prose/URLs are suppressed, exact valid identities/times and accounting preserved. Identity exclusions also remain inspectable in the bounded admission/discovery metrics rather than being mislabeled provider failures.
-
-Dedup key: provider/category/code + exact scope/attempt/affected venues. First time is preserved, last time/count advance; another attempt/scope/venue remains distinct. Retention is rolling, constrained by both 200 records and 1 MiB encoded bytes (or lower configured bounds). Writes use private exclusive temporary files, file fsync, atomic replace, directory fsync and temporary cleanup; no append-only operational history. Persistence failure blocks safe cleanup/recovery. Recent-runtime records name their original identity; the separate U4 historical example has fixed provenance/candidate/attempt and is never promoted into current observation.
-
-## Controls
-
-POST shapes: `{action: "pause", source: "kalshi" | "polymarket_us" | "the_odds_api"}`, `{action: "stop"}`, or `{action: "recover", runtime_id, candidate_digest}` with exact keys. Recovery returns 409 with sanitized error/reason for stale runtime, changed candidate/configuration, lost attendance, unsafe cleanup/ownership/authority or unsafe quota/reset/clock. All controls serialize. Browser double clicks disable while pending; stale polling cannot overwrite a newer control outcome. Pause/stop remain repeatable. Recovery changes runtime identity and explicitly expires leases, then durably consumes new authority; it never resumes the old allowance. Quota/bootstrap due and all charged/uncertain attempts survive. Failed cleanup retains ownership; no overlapping closure/worker is created to disguise the failure.
-
-### U6 aggregate startup disable
-
-`config.aggregate_enabled` is a strict boolean, defaults true for the legacy exact configuration shape, and binds into consumed authority. False means no aggregate worker or transport exists, `odds_api_requests` is zero, quota is null (no newly verified balance), and both affected venue statuses are `stopped` with `aggregate_disabled`. Guarded recovery retains this configuration. A disabled scheduler does not erase durable accounting or imply a zero account balance.
+Current operation shares the [current state contract](predict-current-1.md).
+See [configuration](../configuration.md), [security](../security.md) and
+[failure recovery](../error-handling.md) for supported controls and limits.

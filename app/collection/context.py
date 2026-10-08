@@ -1,4 +1,4 @@
-"""Session availability is separate from unchanged E3/E4 arithmetic."""
+"""Session availability is separate from shared pricing/opportunity arithmetic."""
 from datetime import datetime
 
 

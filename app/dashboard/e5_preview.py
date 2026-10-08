@@ -1,4 +1,4 @@
-"""File-only E5 preview. No controller, collection or database lifecycle imports."""
+"""File-only comparison preview without collection or database lifecycle imports."""
 import argparse
 import json
 from decimal import Decimal, localcontext, Context

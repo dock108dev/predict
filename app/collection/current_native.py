@@ -47,6 +47,8 @@ class NativeWorker:
         self.metrics = dict(requests=0, connections=0, frames=0, books=0, bytes=0,
                             generations=0, reconciliations=0, resyncs=0, retries=0,
                             source_receipt_ms=None, receipt_projection_ms=None)
+        self.budget_started=time.monotonic()
+        self.budget_totals=dict(requests=0,bytes=0,connections=0)
         self.pages = []
         self.catalog = dict(events=[], markets=[])
         self.markets = {}
@@ -71,7 +73,7 @@ class NativeWorker:
             if self.client.budget.requests>=self.config['requests_per_source']:
                 raise BudgetStop('current_snapshot_request_cap')
             self.client.budget.requests+=1
-            self.metrics['requests']=self.client.budget.requests
+            self.metrics['requests']=self.budget_totals['requests']+self.client.budget.requests
             self.metrics['snapshot_requests']=self.metrics.get('snapshot_requests',0)+1
             request_id=100000+self.metrics['snapshot_requests']
             requested=utc()
@@ -87,6 +89,13 @@ class NativeWorker:
             self.wake_task = asyncio.create_task(self.socket.close())
 
     def guard(self):
+        # Hourly transport bounds with cumulative accounting, independent of tabs.
+        if self.client and time.monotonic()-self.budget_started>=3600:
+            self.budget_totals['requests']+=self.client.budget.requests
+            self.budget_totals['bytes']+=self.client.budget.bytes
+            self.budget_totals['connections']=self.metrics['connections']
+            self.client.budget.requests=0;self.client.budget.bytes=0
+            self.budget_started=time.monotonic()
         if self.closed or not self.service.dispatch or self.failed:
             raise asyncio.CancelledError()
         if time.monotonic() >= self.service.deadline:
@@ -94,8 +103,8 @@ class NativeWorker:
 
     def receipt(self, row):
         # Complete responses are transient discovery inputs, then discarded.
-        self.metrics['requests'] = self.client.budget.requests
-        self.metrics['bytes'] = self.client.budget.bytes
+        self.metrics['requests'] = self.budget_totals['requests']+self.client.budget.requests
+        self.metrics['bytes'] = self.budget_totals['bytes']+self.client.budget.bytes
         self.metrics['last_http'] = dict(path=row['path'],params=row.get('params',{}),status=row['status'],complete=row['complete'],
             reason=row.get('delivery_reason'),body_sha256=row['body_sha256'])
         self.service.observation(self.venue, 'http', dict(status=row['status'], complete=row['complete'],
@@ -281,7 +290,7 @@ class NativeWorker:
             snapshot_task = None
             try:
                 self.guard()
-                if self.metrics['connections'] >= self.config['connections_per_source']:
+                if self.metrics['connections']-self.budget_totals['connections'] >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
                 self.confirmations.begin(self.metrics['connections'])
@@ -324,7 +333,7 @@ class NativeWorker:
                     raw = body.encode() if isinstance(body,str) else body
                     self.credential.check(raw, headers)
                     self.client.budget.charge_bytes(len(raw))
-                    self.metrics['bytes'] = self.client.budget.bytes
+                    self.metrics['bytes'] = self.budget_totals['bytes']+self.client.budget.bytes
                     self.metrics['frames'] += 1
                     data = native_payload.parse(raw)
                     if not isinstance(data,dict): raise ValueError('malformed_native_frame')
@@ -366,6 +375,9 @@ class NativeWorker:
                     self.metrics['source_receipt_ms'] = None if book.raw.exchange_at is None else (received-book.raw.exchange_at).total_seconds()*1000
                     self.metrics['books'] += 1
                     failures = 0
+                    # Buffered WebSocket messages can complete receive without
+                    # yielding. Let reads, Stop and independent sources run.
+                    await asyncio.sleep(0)
             except asyncio.CancelledError: raise
             except Exception as exc:
                 self.metrics['resyncs'] += 1

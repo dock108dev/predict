@@ -21,7 +21,8 @@ def admit(body, sport, received_at, *, venue=None):
     if venue is not None and isinstance(payload,list):
         payload=deepcopy(payload)
         for event in payload:
-            event['bookmakers']=[b for b in event['bookmakers'] if b.get('key')==venue]
+            if not isinstance(event,dict) or not isinstance(event.get('bookmakers'),list):raise ValueError('aggregate_books_shape')
+            event['bookmakers']=[b for b in event['bookmakers'] if isinstance(b,dict) and b.get('key')==venue]
     if not isinstance(payload,list) or len(payload)>200: raise ValueError('aggregate_event_bound')
     seen=set()
     for event in payload:
@@ -31,26 +32,30 @@ def admit(body, sport, received_at, *, venue=None):
         if not isinstance(event.get('bookmakers'),list): raise ValueError('aggregate_books_shape')
         for book in event['bookmakers']:
             if book.get('key') not in VENUES or book['key'] in books: raise ValueError('aggregate_book_identity')
-            books.add(book['key']);markets=set()
+            books.add(book['key']);markets=set();valid_markets=[]
             for market in book['markets']:
                 if market['key'] in markets or market['key'] not in ('h2h','spreads','totals'): raise ValueError('aggregate_market_identity')
-                markets.add(market['key'])
+                markets.add(market['key']);supported_prices=True
                 if len(market['outcomes'])!=2: raise ValueError('aggregate_complete_two_way_required')
                 names=[o['name'] for o in market['outcomes']]
                 expected=['Over','Under'] if market['key']=='totals' else [event['home_team'],event['away_team']]
                 if sorted(names)!=sorted(expected): raise ValueError('aggregate_outcome_identity')
                 for outcome in market['outcomes']:
                     value=bounded_decimal(str(outcome['price']))
-                    if value<=1: raise ValueError('aggregate_decimal_price')
+                    if value<=1:supported_prices=False
                     if market['key']!='h2h': bounded_decimal(str(outcome['point']))
                 if market['key']=='totals' and Decimal(str(market['outcomes'][0]['point']))!=Decimal(str(market['outcomes'][1]['point'])):raise ValueError('aggregate_total_line_conflict')
                 if market['key']=='spreads' and Decimal(str(market['outcomes'][0]['point']))!=-Decimal(str(market['outcomes'][1]['point'])):raise ValueError('aggregate_spread_line_conflict')
+                if supported_prices:valid_markets.append(market)
+            book['markets']=valid_markets
     # Existing normalizer preserves original JSON decimal spellings with parse_float=str.
-    rows=normalize(body if venue is None else json.dumps(payload).encode(),sport,received_at)
+    rows=normalize(json.dumps(payload).encode(),sport,received_at)
     for row in rows:row['receipt_sha256']=sha256(body).hexdigest()
     if len(rows)>1200:raise ValueError('aggregate_quote_bound')
     bound=bind(rows)
-    if any(r['reasons'] or r['price_issue'] for r in bound):raise ValueError('aggregate_binding_rejected')
+    for r in bound:
+        if r['price_issue']:raise ValueError('aggregate_decimal_price')
+        if r['reasons']:raise ValueError('aggregate_binding_rejected')
     records=[]
     by_group={}
     for r in bound:
@@ -116,5 +121,51 @@ def admit_venues(body,sport,received_at):
     records={};errors={}
     for venue in VENUES:
         try:records[venue]=admit(body,sport,received_at,venue=venue)
-        except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):errors[venue]='aggregate_venue_admission_failed'
+        except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration) as exc:
+            code=str(exc)
+            if not code.startswith('aggregate_') or len(code)>80 or not all(c.islower() or c=='_' for c in code):
+                code='aggregate_missing_'+exc.args[0] if isinstance(exc,KeyError) and exc.args[0] in ('markets','outcomes','price','point','home_team','away_team','commence_time','sport_key') else 'aggregate_schema_'+type(exc).__name__.lower()
+            errors[venue]=code
     return records,errors
+
+
+def market_exclusions(body):
+    """Invalid decimal prices exclude their complete market, never one leg."""
+    payload=json.loads(body,parse_float=str);counts={}
+    for event in payload if isinstance(payload,list) else []:
+        for book in event.get('bookmakers',[]):
+            if book.get('key') not in VENUES:continue
+            for market in book.get('markets',[]):
+                try:bad=any(bounded_decimal(str(o['price']))<=1 for o in market['outcomes'])
+                except (ValueError,KeyError,TypeError):continue
+                if bad:counts[book['key']]=counts.get(book['key'],0)+1
+    return counts
+
+
+def diagnostic(body,sport,received_at,rejected):
+    """Latest bounded allowlisted parser replay; no URLs, headers or extra fields."""
+    try:payload=json.loads(body,parse_float=str)
+    except (ValueError,UnicodeError):payload=None
+    def pick(value,keys):
+        if not isinstance(value,dict):return None
+        return {k:v for k,v in value.items() if k in keys and (isinstance(v,(str,int,bool)) or v is None) and len(str(v))<=2048}
+    events=[]
+    if isinstance(payload,list) and len(payload)<=200:
+        for event in payload:
+            e=pick(event,('id','sport_key','commence_time','home_team','away_team'))
+            if e is None:continue
+            e['bookmakers']=[]
+            for book in event.get('bookmakers',[]) if isinstance(event.get('bookmakers'),list) else []:
+                b=pick(book,('key','last_update'))
+                if b is None:continue
+                b['markets']=[]
+                for market in book.get('markets',[]) if isinstance(book.get('markets'),list) else []:
+                    m=pick(market,('key','last_update'))
+                    if m is None:continue
+                    m['outcomes']=[pick(o,('name','price','point')) for o in market.get('outcomes',[])] if isinstance(market.get('outcomes'),list) else None
+                    b['markets'].append(m)
+                e['bookmakers'].append(b)
+            events.append(e)
+    return dict(schema='predict-redacted-aggregate-diagnostic-1',sport=sport,received_at=received_at,
+                body_sha256=sha256(body).hexdigest(),body_bytes=len(body),rejections=rejected,
+                replay=events if isinstance(payload,list) else None,retention='Latest response per sport, max 2 MiB; allowlisted fields only')

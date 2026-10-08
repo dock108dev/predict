@@ -1,0 +1,20 @@
+[extend]
+useDefault = true
+
+# File digests in preserved manifests are not credentials. Only the generic
+# rule's filename/hash assignments qualify. Review by 2027-01-07.
+[[allowlists]]
+description = "SHA256 file-manifest entries; review 2027-01-07"
+targetRules = ["generic-api-key"]
+regexTarget = "match"
+regexes = ['''[A-Za-z0-9_-]+\.(?:py|md|json|txt|ya?ml|js|html|cjs|sh|ts|pyc)["']\s*:\s*["'][a-f0-9]{64}["']''']
+
+# This retained journal's source-family identity is a content digest, not a key.
+# Review by 2027-01-07; other API assignment shapes remain checked.
+[[allowlists]]
+description = "Retained market family content identity; review 2027-01-07"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['evidence/(?:product-sessions|b4-pinnacle-sample-20260921/sessions)/pinnacle-nfl-retained-20260921/pinnacle-nfl-retained-20260921.jsonl$']
+regexTarget = "match"
+regexes = ['the_odds_api","[a-f0-9]{32}"']

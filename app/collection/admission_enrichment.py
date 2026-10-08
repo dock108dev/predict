@@ -132,7 +132,8 @@ def award(event,market,venue):
     r=dict(version=POLICY,source=venue,event_id=market['event_id'],market_id=market['id'],native_metadata_sha256=stable(n),predicate=None,identity=None,blockers=[],net=None,ev=None,collection_authorized=False,settlement=dict(status='UNKNOWN',terms=deepcopy(market.get('terms',{})),reason='Raw award correspondence does not qualify payout, field revisions or exceptional settlement'))
     def block(reason):r['blockers'].append(reason)
     sport=scope.get('sport');category=scope.get('category');conference=scope.get('conference_id')
-    label=n.get('yes_sub_title');text=n.get('rules_primary','');match=None
+    label=n.get('yes_sub_title');text=n.get('rules_primary','')
+    match=None
     if isinstance(label,str):
         prefixes=[f'If {label} wins the ',f'If {label} win the ',f'If the {label} win the ',f'If {label} is the ',f"If the {label} men's college basketball team are the " ]
         suffix=', then the market resolves to Yes.'

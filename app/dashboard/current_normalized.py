@@ -1,6 +1,6 @@
 """Adapt the existing reviewed event/market identities into current-1 input.
 
-U3 supplies normalized records after source admission. This adapter never reads a
+Source workers supply normalized records after admission. This adapter never reads a
 journal, invents a native outcome correspondence, or obtains provider data.
 Native labels are retained in quotes; display selection semantics are explicit.
 """

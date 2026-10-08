@@ -1,4 +1,4 @@
-"""Loopback synthetic Start/Stop/saved-reopen surface, isolated from E5."""
+"""Loopback synthetic Start/Stop and saved-reopen surface with an isolated owner."""
 import argparse
 import asyncio
 from concurrent.futures import ThreadPoolExecutor

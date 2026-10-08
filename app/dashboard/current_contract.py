@@ -1,7 +1,7 @@
 """Strict current-1 admission/serialization. No acquisition or retained fallback.
 
 Provider input is an evidenced normalized catalog, not a display payload. IDs and
-comparisons are derived here. U3 owns binding evidence verification upstream;
+comparisons are derived here. Source admission owns binding evidence verification upstream;
 this boundary checks the complete, exact binding against its catalog context.
 """
 from copy import deepcopy
@@ -154,6 +154,70 @@ def comparisons(outcome):
             contexts[key] = dict(cue=cue, raw_difference=gap)
         q['comparison']['contexts'] = contexts
         q['calculations']['raw_difference'] = deepcopy(contexts['+'.join(VENUES)]['raw_difference'])
+
+
+def percentage_pair(q,other,group):
+    from app.opportunities.percentages import normalized_pair
+    outcomes=group['outcomes']
+    math=normalized_pair(price(q),price(other))
+    basis=dict(version='normalized-gross-percent-1',inputs=[dict(quote_id=x['id'],quote_revision=x['revision'],venue=x['venue'],original=deepcopy(x['original']),source_at=x['times']['source_at'],received_at=x['times']['received_at']) for x in (q,other)],
+        denominator=math['acquisition_cost'],denominator_basis=math['denominator_basis'],normal_payout=math['normal_payout'],formula=math['formula'],
+        outcome_coverage=[dict(label=x['label'],participant=x['participant'],predicate=x['predicate'],line=x['signed_line']) for x in outcomes],
+        settlement_basis=group['period_boundary'],exceptions='Completed decisive outcome only; ties, cancellations, refunds, postponement differences and exceptional settlement excluded. Both quoted acquisitions assumed; fees excluded.')
+    output=result(math['value'],'percent',basis=basis)
+    output.update(display_value=display_decimal(math['value'],2,True)+' %',exact=dict(numerator=math['numerator'],denominator=math['denominator']),
+        engine_version=math['engine_version'],scope='Observed gross conditional Arb %; original inputs, before costs; source ages shown separately')
+    return output
+
+
+def percentage_comparisons(group):
+    """Only the exact admitted group/outcome domain supplies opposing outcomes."""
+    outcomes=group['outcomes']
+    for o in outcomes:
+        for q in quotes_of(o):
+            fallback=result(reason='No other venue with the exact opposing outcome and normal payout basis',unit='percent')
+            valid=group['outcome_cardinality']==2 and len(outcomes)==2
+            if group['market'] in ('spread','total'):
+                valid=valid and group['line'] is not None and abs(Fraction(group['line'])%1)==Fraction(1,2)
+            predicates={x['predicate'] for x in outcomes}
+            if group['market']=='winner':
+                valid=valid and (predicates=={'win'} and len({x['participant'] for x in outcomes})==2 or predicates=={'win','not_win'} and len({x['participant'] for x in outcomes})==1)
+            elif group['market']=='total':valid=valid and predicates=={'over','under'}
+            elif group['market']=='spread':valid=valid and predicates=={'cover'} and len({x['participant'] for x in outcomes})==2
+            def usable(x):
+                return x['binding']['verified'] and x['display']['supported'] and x['state'] not in ('unavailable','error','stopped','connecting','resyncing') and x['original']['payout'] is not None and Fraction(x['original']['payout'])==1 and x['original']['payout_units']=='USD'
+            opponents=[x for other in outcomes if other['id']!=o['id'] for x in quotes_of(other) if x['venue']!=q['venue'] and usable(x)]
+            if valid and usable(q) and opponents:
+                other=min(opponents,key=lambda x:(price(x),x['id']))
+                try:
+                    fallback=percentage_pair(q,other,group)
+                except ValueError: fallback=result(reason='Normalized positive prices and payout basis required',unit='percent')
+            elif not valid:fallback['reason']='Complete opposing normal-outcome coverage is unverified for this market'
+            # Supported net arithmetic, if present, stays separately inspectable.
+            if not q['calculations']['arbitrage'].get('scope','').startswith('Observed gross'):
+                q['calculations']['net_arbitrage']=deepcopy(q['calculations']['arbitrage'])
+            q['calculations']['arbitrage']=fallback
+
+
+def arbitrage_pairs(snapshot,market=None,search=None):
+    """Explicit opposing-leg rows, never same-selection price gaps."""
+    pairs=[]
+    for event in snapshot['events']:
+        if search and search.lower() not in ' '.join([event['title'],*[o['label'] for g in event['groups'] for o in g['outcomes']]]).lower():continue
+        for group in event['groups']:
+            if market and group['market']!=market:continue
+            if len(group['outcomes'])!=2:continue
+            left,right=group['outcomes']
+            for q in quotes_of(left):
+                for other in quotes_of(right):
+                    if q['venue']==other['venue'] or not all(x['calculations']['arbitrage']['eligible'] for x in (q,other)):continue
+                    math=percentage_pair(q,other,group)
+                    pair=dict(id=identity('arb-pair',[q['id'],other['id']]),event_id=event['id'],title=event['title'],league=event['league'],start_at=event['start_at'],market=group['market'],period=group['period'],line=group['line'],
+                              legs=[dict(selection=outcome['label'],quote={k:deepcopy(quote[k]) for k in ('id','revision','venue','original','times','state','stale','age_seconds','rule_note','display','source')}) for outcome,quote in ((left,q),(right,other))],arbitrage=math,
+                              net=result(reason='Applicable venue costs and exceptional settlement facts are missing'),
+                              ev=[deepcopy(x['calculations']['ev']) for x in (q,other)])
+                    pairs.append(pair)
+    return dict(schema='predict-arbs-1',runtime_id=snapshot['runtime_id'],state_revision=snapshot['state_revision'],mode=snapshot['mode'],source_status=deepcopy(snapshot['source_status']),pairs=pairs)
 
 
 def binding_context(e,g,o):
@@ -355,6 +419,7 @@ def _serialize(raw, *, allow_synthetic):
     for e in r['events']:
         for g in e['groups']:
             for o in g['outcomes']:comparisons(o)
+            percentage_comparisons(g)
     if len(packed(r))>MAX_BYTES:raise ValueError('Serialized current state byte capacity exceeded')
     return r
 
@@ -436,9 +501,9 @@ def calculation_outputs(q, evaluate=True):
     out['arbitrage']=result(calc['return_pct'],'percent',None if calc['return_pct'] is not None else '; '.join(calc['reasons']),basis)
     out['sizing']=result(str(len(calc['quantities'])),'legs with supplied quantities',basis=basis)
     out['sizing']['quantities']=calc['quantities']
-    out['ev']=result(calc['expected_net'],'USD',None if calc['expected_net'] is not None else 'Independent probability or applicable state cashflows unavailable',basis)
+    out['ev']=result(calc['ev_pct'],'percent',None if calc['ev_pct'] is not None else 'Independent probability or applicable state cashflows unavailable',basis)
     for k in ('arbitrage','ev'):
-        if out[k]['value'] is not None:out[k]['display_value']=display_decimal(out[k]['value'],2,True)+(' %' if k=='arbitrage' else ' USD')
+        if out[k]['value'] is not None:out[k]['display_value']=display_decimal(out[k]['value'],2,True)+' %'
     for k in ('arbitrage','ev','sizing'):
         out[k]['engine_version']=calc['version'];out[k]['input_hash']=calc['input_hash'];out[k]['scope']='Supplied applicable mathematical inputs; not execution assurance'
     if out['ev']['eligible']:out['ev']['probability_provenance']=bundle['probability']

@@ -1,0 +1,8 @@
+{
+  "deferred": {
+    "test_e6_real_state.cjs": "Historical E6 real-provider replay requires its ignored captured package and checkout .venv. Current client and synthetic saved-state tests cover maintained paths; not a PR prerequisite.",
+    "test_native_comparison_ui.cjs": "Exact September 30 captured comparison oracle requires ignored comparisons-v2.json. Preserve the oracle; portable comparison/browser suites cover shared rendering.",
+    "test_native_reviews_ui.cjs": "Synthetic review file was written into ignored acquisition evidence, absent in checkout. Portable comparison tests cover settlement states; this archival oracle needs a separate portable-fixture conversion.",
+    "test_public_resolution_ui.cjs": "Requires an ignored public-contract integration reopening report. Server-side portable contract tests cover the boundary; browser lineage fixture conversion is deferred."
+  }
+}

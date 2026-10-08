@@ -42,7 +42,7 @@ def build_status():
         counting='Exact event/outcome/period/line between two comparison venues; metadata, references and synthetic controls do not count',
         sports=aggregate(0), periods=aggregate(1), families=aggregate(2),
         source_contribution=coverage['summary']['by_source'],
-        acceptance_document='docs/beta-coverage-acceptance.md',
+        acceptance_document='docs/configuration.md#saved-review-and-live-collection',
         authority='docs/configuration.md#saved-review-and-live-collection',
         authorization_changed=False,
     )

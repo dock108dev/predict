@@ -1,4 +1,4 @@
-"""E3 reuses the E2 invented NFL event and receipt/enrichment path."""
+"""Offline pricing fixtures reuse a synthetic NFL event and receipt enrichment."""
 import base64
 from hashlib import sha256
 from app.edge_contracts import dumps

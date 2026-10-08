@@ -205,5 +205,5 @@ class DurableSink(unittest.TestCase):
             self.assertEqual(ack['acknowledgment'],'durable-journal-acknowledgment');self.assertEqual(ack['cursor'],1)
             self.assertEqual(ack['chain'],r['sha256']);self.assertEqual(r['state'],'complete')
     def test_policy_ceiling_and_scope_fail_closed(self):
-        for key,value in [('duration_seconds',3601),('rediscovery_seconds',1),('rss_bytes',512*1024*1024),('enabled',1)]:
+        for key,value in [('duration_seconds',DEFAULT['duration_seconds']+1),('rediscovery_seconds',1),('rss_bytes',DEFAULT['rss_bytes']+1),('enabled',1)]:
             with self.assertRaises(ValueError):validate(dict(DEFAULT,**{key:value}))

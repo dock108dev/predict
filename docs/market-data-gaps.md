@@ -1,51 +1,25 @@
-# October 2 live-data disposition
+# Data limitations
 
-Necessary new data attempts/retries are authorized for the [usability sprints](usability-sprint-plan.md), with fresh recorded scope/candidate/budgets and a shared 500/month Odds API ceiling. Native Kalshi/Polymarket US speed and availability must be verified rather than assumed; Novig/ProphetX may remain explicitly slower. No fresh provider attempt occurred in the [audit](usability-audit-20261002.md), so no new site failure is asserted. Report actual later failures by provider/venue and continue unaffected paths. Historical prices and source counts do not establish present availability. The limitations below remain relevant; old saved-scan/manual-Start requirements are superseded for the target ordinary workflow.
+Implemented adapters and market handlers do not guarantee that a venue currently
+lists a sport, event or market. The default current scope is NFL; configuration
+also permits NCAAF, NBA, NCAAB, MLB and NHL. Native and aggregate sources have
+independent access, timing and availability constraints.
 
-# Data coverage and limitations
+Matched titles are insufficient: participants, event identity, period, line,
+outcome orientation and material settlement terms must agree. Raw corresponding
+prices can remain useful while net-return or EV calculations are unavailable.
 
-The dashboard supports comparisons only when source observations establish the
-same event, participants, outcome, period and line. A configured adapter or a
-sport handler does not establish current venue coverage, account entitlement,
-liquidity or equivalent settlement terms.
+- Quote receipt age, provider source time, socket health and browser connection
+  are distinct. A healthy connection does not establish a fresh price.
+- Arbitrage percentages describe the displayed gross conditional outcome basis.
+  Unknown fees, refunds, exceptional outcomes or depth can prevent net economics.
+- EV needs an independent supported probability model. Reference odds, manual
+  probability and retained observations do not automatically supply that model.
+- Saved fixtures and synthetic controls establish only their recorded inputs;
+  they do not establish present venue coverage.
+- The shared aggregate ledger reserves credits and preserves uncertain charges.
+  Missing or stale account observations can delay dispatch rather than imply a
+  usable balance.
 
-## Comparison sources and references
-
-| Source | Implemented role | Limitation |
-| --- | --- | --- |
-| Kalshi, Polymarket US | Native listing and book adapters | Live use needs scoped configuration, valid authorization and dedicated credentials; actual market availability varies. |
-| Novig, ProphetX | Aggregate observations through The Odds API; separate native adapter code | Aggregate observations do not establish native quantity, execution costs or production access to the direct APIs. |
-| Pinnacle, DraftKings, BetMGM | Calculation references | Never comparison legs. A bookmaker price is not automatically a calibrated probability. |
-| Public Novig GraphQL | Display-only discovery and dated prices | Does not provide qualified purchase depth or sized opportunities. |
-
-Native discovery, aggregate ingestion, references and sporting results retain
-separate identities and clocks. No default configuration continuously polls these
-sources, and an empty bounded response does not establish permanent non-support.
-See [configuration](configuration.md) for live requirements and
-[sport integration](sports-integration.md) for implemented market handlers.
-
-## What calculations require
-
-- Raw comparisons require compatible event/outcome/period/line identity and
-  usable observed prices. They do not imply contract-equivalent arbitrage.
-- Net and guaranteed-return calculations require applicable settlement and cost
-  facts. Missing fees, account charges or exceptional payouts remain unknown.
-- EV requires an explicit probability and disclosed basis. Retrospective
-  references and manual What-if assumptions do not become live model probabilities.
-- Sizing requires supported native units and depth. Displayed aggregate sizes or
-  informational estimates do not guarantee fills.
-- Sporting outcomes do not substitute for venue payout decisions. Corrections
-  and final settlement remain bound to their own source evidence and cutoffs.
-
-## Operational limits
-
-Saved observations prove their recorded time only. Source/receipt timestamps,
-stale status and disconnected states stay visible. Local replay and synthetic
-recovery tests do not establish real provider uptime, recovery or current prices.
-No trade submission, order management, position synchronization or automatic
-collection restart is implemented. Remote and shared-user deployment are
-unsupported. See [security](security.md) and [failure handling](error-handling.md).
-
-The [dated coverage assessment](coverage-matrix.md) preserves source-specific
-research and historical counts. It is not a promise of current availability or a
-prerequisite for starting the saved-data dashboard.
+See [sport integration](sports-integration.md), [architecture](architecture.md)
+and [configuration](configuration.md) for supported paths.

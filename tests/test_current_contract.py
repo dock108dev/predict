@@ -105,7 +105,7 @@ class CurrentContractTests(unittest.TestCase):
             probability=dict(kind='model EV',independent=True,evidence=['syn:test-model-only'],model_version='syn:partition'),
             spec=dict(states=['win','loss'],complete=True,probabilities={'win':'.5','loss':'.5'},reserve='0',legs=[dict(id=qid,minimum='1',increment='1',partial_final=True,levels=deepcopy(q['depth']),fee_policy=dict(basis='notional',rate='0',grid='.01',rounding='half_up',aggregation='order'),payouts={'win':dict(kind='per_unit',value='1',settlement_fee_per_unit='0'),'loss':dict(kind='per_unit',value='0',settlement_fee_per_unit='0')})]))
         s=serialize(r,allow_synthetic=True);c=self.quote(s)['calculations'];self.assertTrue(c['ev']['eligible']);self.assertEqual(Decimal(c['ev']['value']),0)
-        self.assertEqual(Decimal(c['arbitrage']['value']),-100);self.assertTrue(c['sizing']['eligible']);self.assertIn('calculation_inputs',self.quote(s))
+        self.assertEqual(Decimal(c['net_arbitrage']['value']),-100);self.assertTrue(c['sizing']['eligible']);self.assertIn('calculation_inputs',self.quote(s))
         from app.dashboard.current_contract import validate_snapshot
         from app.dashboard.current_state import CurrentStore
         from tests.test_current_state import request
@@ -119,7 +119,7 @@ class CurrentContractTests(unittest.TestCase):
         self.assertFalse(self.quote(aged)['calculations']['sizing']['eligible'])
         self.assertTrue(store.get(held['selection_id'])['review']['quote']['calculations']['ev']['eligible'])
         q['engine_inputs']['spec']['probabilities']={'win':'.2','loss':'.8'}
-        s=serialize(r,allow_synthetic=True);self.assertEqual(Decimal(self.quote(s)['calculations']['ev']['value']),Decimal('-.3'))
+        s=serialize(r,allow_synthetic=True);self.assertEqual(Decimal(self.quote(s)['calculations']['ev']['value']),Decimal('-60'))
         q['engine_inputs']['probability']['independent']=False
         s=serialize(r,allow_synthetic=True);self.assertFalse(self.quote(s)['calculations']['ev']['eligible']);self.assertTrue(self.quote(s)['calculations']['arbitrage']['eligible'])
         q['engine_inputs']['spec']['legs'][0]['levels'][0]['price']='.01'

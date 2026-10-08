@@ -111,7 +111,7 @@ class DurableQuota(unittest.TestCase):
         def fill(v,at):
             for i in range(510):v['attempts'][str(i)]=dict(id=str(i),cost=0,state='confirmed',consumed=True)
         self.q.transact(fill)
-        with self.assertRaisesRegex(QuotaStop,'capacity'):self.q.reserve(self.owner,'c',{},0,bootstrap=True)
+        with __import__('unittest.mock',fromlist=['patch']).patch('app.collection.current_quota.ATTEMPT_CAP',512), self.assertRaisesRegex(QuotaStop,'capacity'):self.q.reserve(self.owner,'c',{},0,bootstrap=True)
         self.assertEqual(self.q.snapshot()['reserved'],3)
     def test_unexpected_charge_reduces_observed_allowance(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)

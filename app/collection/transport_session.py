@@ -1,4 +1,4 @@
-"""Explicit E6 observation owner; prediction-first activation and exact durable replay."""
+"""Explicit observation ownership, prediction-first activation and durable replay."""
 from app.diagnostics import failure
 import asyncio
 import base64

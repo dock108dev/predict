@@ -1,22 +1,55 @@
-# October 2 architecture work order
-
-The [audit](usability-audit-20261002.md) and [usability sprints](usability-sprint-plan.md) require a shared automatic latest-price runtime, separate user/admin surfaces, coherent in-memory quote revisions and a small durable quota/configuration ledger. New ordinary operation has no quote-history archive requirement. Current projection and error recovery depend on durable journal acknowledgment; factor that boundary deliberately rather than disabling writes underneath it. Existing captures and qualification/replay paths remain preserved. The architecture below describes the current implementation; the replacement is not yet built.
-
 # Architecture and data
 
-The product is a local, file-backed sports prediction dashboard. [Module ownership](ssot.md) documents authoritative components and retained subsystems. Venue and market support varies; inspect source coverage and calculation blockers before interpreting a result.
+The product is a local read-only prediction-market comparison board. Its ordinary runtime owns bounded latest state and source acquisition; retained finite-session collectors and saved readers remain separate. Module ownership below identifies the authoritative components. Venue and market support varies; inspect exact market identity and calculation basis before interpreting a result.
+
+Current production behavior is the Odds board, explicit opposing-pair Arbs page and Admin, with live Details. Native streams run while the app runs; shared aggregate acquisition uses 15-minute Eastern daytime slots and the paid 100,000-credit policy. `current_aggregate_policy.POLICY` owns current aggregate constants; `current_schedule.schedule` computes slots and `QuotaLedger.begin_cycle` consumes them.
 
 ## Current request and collection flow
 
+1. `scripts/opportunity-board` launches `opportunity_board.main`. The ordinary
+   CLI loads `collection.current_policy`, constructs `CurrentService` and injects
+   it into `multi_game_server.create_app`. The listener binds loopback and denies
+   database connections; opening the ordinary app does not load saved quotes.
+2. `current_state.mount` constructs `CurrentStore` and starts its provider during
+   application startup. `CurrentService` acquires exclusive ownership, consumes
+   a fresh operational record and starts independent Kalshi/Polymarket US native
+   workers plus one shared aggregate scheduler when `aggregate_enabled` is true.
+   Native resource ceilings can still stop work; the default service deadline follows process lifetime.
+3. `current_native.NativeWorker` supplies admitted native metadata and books;
+   `current_aggregate.AggregateScheduler` supplies both aggregate venues through
+   one budgeted sport batch. `LatestStateSink` reuses `SessionProjection` as an
+   in-memory reducer, validates original inputs and commits normalized current
+   state atomically. This path does not advance a quote journal or archive.
+4. `CurrentStore` validates the `predict-current-1` contract, advances source
+   eligibility with monotonic aging and publishes bounded latest revision notices.
+   The browser filters existing rows locally; tabs, filters and Details do not
+   create source workers or multiply paid requests.
+5. A price selection opens live Details on the current coherent quote revision.
+   Manual What-if alone creates/releases a temporary immutable calculation lease;
+   expiry, shutdown and recovery invalidate it. `current_contract` derives display
+   and calculation output from originals. `arbitrage_pairs` enumerates opposing
+   legs through shared normalized percentage math; missing model inputs withhold EV.
+6. `/admin` exposes source status, shared quota, pause/Stop and guarded recovery.
+   Shutdown revokes dispatch and closes workers before releasing ownership and
+   expiring reviews. Recovery preserves consumed attempts, spend, reservations
+   and due times; it does not reset the account or replay a missed schedule.
+
+## Retained finite-session request and collection flow
+
+The compatibility router still constructs a `CoverageOwner` for retained routes.
+That owner does not replace the injected ordinary `CurrentService` or make saved
+observations current. The following machinery serves retained inspection, finite
+qualification collectors and explicit test instances.
+
 1. `scripts/opportunity-board` launches `app.dashboard.opportunity_board`, which
-   delegates to `multi_game_server.create_app`. The CLI binds loopback, denies
-   database connections and starts idle with retained data.
+   delegates to `multi_game_server.create_app`. Retained callers may supply an
+   explicit owner and saved sessions through this same router.
 2. The router serves list/details, status, saved sessions, calculations and
    resolution queries, plus Start/Stop and retained reference/result imports.
    `local_security` owns browser protections and request-body bounds;
    `query_policy` owns supported selectors and manual assumptions for HTTP and
    direct product callers. See [security](security.md).
-3. The default factory constructs `CoverageOwner(product_mode=True)`.
+3. The compatibility factory constructs `CoverageOwner(product_mode=True)`.
    `ContinuousSession` extends shared transport and journal infrastructure;
    native venue extensions use the same lifecycle. Real source execution needs
    an explicitly configured spec/approval. Isolated fixture and qualification
@@ -42,11 +75,31 @@ The product is a local, file-backed sports prediction dashboard. [Module ownersh
 
 ## Data contracts and persistence
 
-### HTTP and background work
+### Ordinary current HTTP and background work
 
 | Route | Responsibility |
 | --- | --- |
-| `GET /`, `/game`, `/coverage` | List, game-detail and coverage pages |
+| `GET /`, `/arbs`, `/admin` | Odds board, explicit opposing pairs and separate operator surface |
+| `GET /api/arbs` | Signed conditional opposing-pair results from the current snapshot |
+| `GET /api/current`, `/api/current/updates` | Latest validated state and bounded revision notices |
+| `POST /api/selections`, `GET /api/selections/{token}` | Create and inspect a temporary immutable calculation lease |
+| `POST /api/selections/{token}/release`, `/api/selections/{token}/what-if` | Release a calculation lease or evaluate the existing explicit manual scenario |
+| `GET /api/admin/status`, `GET/POST /api/admin/current` | Source/quota status, source pause, Stop, guarded recovery and owner sport-selectable refresh |
+| `GET /admin/retained` | Preserved finite-session and saved-data inspection |
+
+Source workers and the shared scheduler run inside the owned application process.
+There is no external scheduler or unattended background service. Current aggregate
+dispatch requires a live owned service/store, not browser attendance. Automatic
+cycles consume daytime slots; owner refresh uses the same ledger without changing due times.
+Browser connection state is not provider quote freshness. Current snapshots and
+calculation leases are bounded memory; small configuration, attempt, issue and quota records
+are durable. There is no ordinary ongoing quote-history requirement.
+
+### Retained HTTP and background work
+
+| Route | Responsibility |
+| --- | --- |
+| `GET /admin/retained`, `/game`, `/coverage` | Retained list, game-detail and coverage pages |
 | `GET /api/status`, `/api/sessions` | Owner state and available session catalog |
 | `GET /api/dashboard`, `/api/calculate`, `/api/resolution` | Filtered rows, detailed calculations and saved result views |
 | `POST /api/start`, `/api/stop` | Explicit bounded collection and stop request |
@@ -78,7 +131,7 @@ handlers resolve identity; matching, score/period/futures and settlement policie
 retain explicit unsupported outcomes. Sporting identity does not prove equivalent
 settlement.
 
-Current flat coverage packages retain the run specification, aggregate limits,
+Retained flat coverage packages retain the run specification, aggregate limits,
 session journal, replay/report and completion manifest. Segmented packages use
 `history/` segments plus manifests and the same replay/report boundary.
 `CoverageOwner` selects finalization according to mode; `session_history.verified`
@@ -87,32 +140,48 @@ selection layout. No migration, automatic pruning or evidence replacement occurs
 
 `reference.product` validates original-input references. `resolution.core` binds
 sporting/venue result records to exact prediction cutoffs. Both append through
-the ordinary collector without overwriting the original prediction.
+the retained finite-session collector without overwriting the original prediction.
 
 PostgreSQL remains separate: `storage/store.py` and migrations retain earlier
 capture, reference, fair-price and opportunity-audit contracts. These are not
 interchangeable with current conditional board results. See
 [storage CLI](../app/storage/__main__.py), [schema migrations](../app/storage/migrations/001_capture.sql),
-[settlement-aware comparisons contracts](e3-contracts.md) and [reference comparisons contracts](e4-contracts.md).
+[offline pricing](offline-pricing.md) and [offline opportunities](offline-opportunities.md).
 
 ## Retained surfaces and limits
 
 | Surface | Current role |
 | --- | --- |
-| Ordinary Predict router | Current/saved multi-sport projection, conditional Arb/EV, references, results and bounded Start/Stop |
+| Ordinary Predict board and Admin | Shared `CurrentService` / `CurrentStore`, latest native/aggregate inputs, live Details, opposing-pair percentages and pause/Stop/recovery |
+| Retained finite-session routes | Current/saved session projection, explicit Start/Stop, imports, references and result/history inspection |
 | Native / two-source qualification panels | Same router and shared owner, with explicit spec/approval and separate attempt constraints |
 | Historical capture readers | Active saved-catalog and research dependencies; original identities retained |
 | All-outcome/depth/audit engines | Distinct calculation contracts, reused where appropriate |
 | research and collection previews | Separate retained-evidence entry points; shared book/lifecycle helpers remain imported |
-| Generic `python -m app.dashboard` | Delegates to the ordinary file-backed entry point |
+| Generic `python -m app.dashboard` | Delegates to the ordinary current-service entry point |
 | Historical `scripts/dashboard` | Process controls retired with explicit failure before database actions or signals |
-| Novig/ProphetX / GraphQL | Native collector extensions; real qualification gaps remain. Display-only prices are not sized opportunities |
+| Novig/ProphetX / GraphQL | Ordinary shared Odds API observations; separate retained native extensions and display-only GraphQL retain their own qualification boundaries |
 | Trading | No order execution implemented |
 
-Retirement requires call-site and evidence review before removing shared modules;
-see [SSOT follow-up](ssot.md#conflicts-removed-and-retained-paths).
-Original results remain in their dated reports: [coverage](data-coverage-d1-report.md),
-[bounded collection](data-coverage-d2-report.md), [journal efficiency](data-coverage-d2-journal-efficiency-report.md),
-[segmented history](data-coverage-d3a-report.md), and
-[mock integration](data-coverage-d3-mock-integration-report.md).
-These are historical candidate evidence, not current operating instructions.
+Retained helpers still have runtime and fixture callers. Check those callers before retiring a shared reader or calculation contract.
+
+## Module ownership
+
+| Domain | Authoritative modules | Callers and boundary |
+| --- | --- | --- |
+| Routes | `dashboard/multi_game_server.py` | Ordinary CLI, app factories and explicit retained callers share one router |
+| Configuration and ownership | `collection/current_policy.py`, `current_service.py`, `local_ownership.py` | Validation precedes workers and credentials; the service owns Stop/recovery |
+| Aggregate policy | `collection/current_aggregate_policy.py`, `current_schedule.py` | One immutable policy supplies scheduler, transport, account and cycle limits |
+| Credentials and quota | `collection/credential_handoff.py`, `current_quota.py` | Hidden key entry, guarded selection and durable reservations/reconciliation |
+| Current ingestion | `current_native.py`, `current_aggregate_admission.py`, `current_overlap.py`, `current_sink.py` | Exact source admission and identity precede publication |
+| Current state and math | `dashboard/current_state.py`, `current_contract.py`, `opportunities/percentages.py` | Validated revisions, temporary leases and original-input calculations |
+| Browser boundary | `dashboard/local_security.py`, `query_policy.py` | Shared request/body and retained-selector validation |
+| Browser presentation | Current browser modules and shared `u0/board.js` | Server-supplied values, ordered notices and keyed rendering |
+| Retained data | `coverage_owner.py`, `session_projection.py`, `session_history.py`, finite collectors | Explicit saved cutoffs and durable completion; no current-data fallback |
+| Shared domain math | `fees/`, `settlement.py`, `normalization/`, `depth.py` | Fees, payouts, identity and quantity math retain separate contracts |
+
+Finite stream grouping is separated into `collection/continuous_streams.py` with
+explicit dependencies supplied by the public collector constructor. Discovery and
+finite-session ownership stay in `continuous.py`; the stream module never imports
+its owner. Keep saved schema versions and required fixture identities stable when
+changing these boundaries.

@@ -1,29 +1,28 @@
-"""Versioned attended native operation; separate from sealed finite policies."""
+"""Versioned running-app operation; separate from sealed finite policies."""
 from copy import deepcopy
 from hashlib import sha256
 import json
 from pathlib import Path
+from .current_aggregate_policy import POLICY as AGGREGATE_POLICY
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = 'predict-native-current-1'
 GRANT = 'predict-standing-native-20261002'
 MIB = 1024 * 1024
+APP_RUNNING_DURATION = 31536000  # Existing configuration sentinel for process lifetime.
 SPORTS = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL']
 DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True,
     sports=['NFL'],
-    families=['moneyline', 'spread', 'total'], duration_seconds=3600,
+    families=['moneyline', 'spread', 'total'], duration_seconds=APP_RUNNING_DURATION,
     rediscovery_seconds=120, markets_per_source=20, events_per_source=24,
-    requests_per_source=240, connections_per_source=12,
-    source_bytes=16*MIB, rss_bytes=256*MIB, cleanup_seconds=5,
+    requests_per_source=10000, connections_per_source=240,
+    source_bytes=256*MIB, rss_bytes=768*MIB, cleanup_seconds=5,
     backoff_seconds=[2, 5, 15, 30, 60], reconnect_failures=5,
-    ingress_records=2048, ingress_bytes=8*MIB, issue_records=200,
+    ingress_records=16000, ingress_bytes=8*MIB, issue_records=200,
     issue_bytes=MIB, discovery_pages=36)
 
 
 def validate(value):
-    # Existing exact-key configurations retain their former aggregate behavior.
-    if isinstance(value, dict) and set(value) == set(DEFAULT)-{'aggregate_enabled'}:
-        value = dict(value, aggregate_enabled=True)
     if not isinstance(value, dict) or set(value) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
@@ -52,7 +51,7 @@ def load(path=None):
 
 
 def candidate():
-    # Same canonical application manifest definition as the U1/U2 handoff.
+    # Canonical JSON ordering keeps source identity consistent across callers.
     manifest = {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest()
                 for p in sorted((ROOT/'app').rglob('*')) if p.is_file()
                 and '__pycache__' not in p.parts and p.suffix in {'.py','.json','.js','.html','.css'}}
@@ -66,17 +65,13 @@ def consume(directory, runtime, config, digest):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     attempts = list(directory.glob('attempt-*.json'))
-    if len(attempts) >= 64 or sum(p.stat().st_size for p in attempts) > 256*1024:
+    if len(attempts) >= 1024 or sum(p.stat().st_size for p in attempts) > 4*1024*1024:
         raise ValueError('Operational authority capacity; preserve records before reopening')
     value = dict(schema=VERSION, authority=GRANT, runtime_id=runtime, attempt_id=runtime,
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
         grant='Owner approves necessary live-data attempts and retries; bounded native and shared aggregate read-only scope',
-        aggregate_policy=dict(version='predict-shared-odds-quota-1',requests=3,bootstrap_requests=1,
-            shared_batches=2,worst_case_credits=6,monthly_ceiling=500,engineering_reserve=50,
-            response_bytes=2*MIB,total_bytes=4*MIB,timeout_seconds=20,retries=0,
-            endpoint='https://api.the-odds-api.com/v4/sports',bookmakers=['novig','prophetx'],
-            markets=['h2h','spreads','totals'],minimum_global_interval_seconds=21600))
+        aggregate_policy=AGGREGATE_POLICY.record(config['sports']))
     import os
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:

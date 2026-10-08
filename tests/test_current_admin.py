@@ -89,7 +89,7 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.service.sink.metrics['rejected_observations'],1)
     async def test_attendance_config_candidate_quota_clock_gates(self):
         runtime=self.service.runtime_id;digest=self.service.digest
-        self.store.subscribers.clear();self.assertEqual(self.service.recovery_reason(),'attendance_required')
+        self.store.subscribers.clear();self.assertIsNone(self.service.recovery_reason())
         self.store.subscribers.add(self.queue)
         self.service.config_loader=lambda:dict(DEFAULT,sports=['MLB'])
         self.assertEqual(self.service.recovery_reason(),'configuration_changed');self.service.config_loader=None

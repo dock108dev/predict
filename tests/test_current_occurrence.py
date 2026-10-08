@@ -77,7 +77,9 @@ class Selection(unittest.IsolatedAsyncioTestCase):
    for q in o['quotes'].values():
     self.assertTrue(q['binding']['verified']);self.assertTrue(q['comparison']['eligible']);self.assertEqual(q['times']['source_at'],at)
     self.assertTrue(q['rules_differ']);self.assertEqual(q['depth'][0]['quantity'],'5')
-    self.assertFalse(q['calculations']['arbitrage']['eligible']);self.assertFalse(q['calculations']['ev']['eligible'])
+    self.assertTrue(q['calculations']['arbitrage']['eligible'])
+    self.assertIn('denominator',q['calculations']['arbitrage']['basis'])
+    self.assertFalse(q['calculations']['ev']['eligible'])
     self.assertIn('native_predicate',q)
     native_book=original[(q['venue'],q['source']['native_market_id'])]
     original_side=next(side for side in native_book['outcomes'] if side['outcome_id']==q['source']['native_outcome_id'])

@@ -54,20 +54,23 @@ class Wire:
 class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
-        self.service=CurrentService(directory=self.root/'service',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker)
+        self.service=CurrentService(config=dict(DEFAULT,sports=['MLB']),directory=self.root/'service',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker)
         self.store=CurrentStore(self.service);self.service.store=self.store
         self.service.sink=LatestStateSink(self.store,self.service.initial_state());self.service.ownership.acquire(self.service.runtime_id)
         self.service.dispatch=True;self.service.deadline=__import__('time').monotonic()+300;self.service.digest='CONTROLLED-candidate'
         self.q=QuotaLedger(self.root/'quota');self.wire=Wire()
+        from app.collection.current_schedule import schedule
+        fixed=datetime.now(timezone.utc).replace(hour=14,minute=0,second=0,microsecond=0).isoformat()
+        self.schedule_patch=patch('app.collection.current_schedule.schedule',side_effect=lambda at:schedule(fixed))
+        self.schedule_patch.start()
         now=datetime.now(timezone.utc)
         self.window=dict(WINDOW,starts_at=now.replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat(),
             ends_at=(now.replace(day=28)+timedelta(days=4)).replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat())
         self.scheduler=AggregateScheduler(self.service,ledger=self.q,transport=self.wire,key_loader=lambda:'CONTROLLED-dummy-key',window_loader=lambda:self.window)
-    async def asyncTearDown(self):await self.scheduler.close();await self.store.close();self.service.ownership.release();self.temp.cleanup()
-    async def test_idle_does_not_load_credentials_or_dispatch(self):
-        with patch.object(self.scheduler,'key_loader',side_effect=AssertionError('credential lookup')):
-            with self.assertRaisesRegex(QuotaStop,'idle'):await self.scheduler.step()
-        self.assertEqual(self.wire.calls,[]);self.assertEqual(self.q.snapshot()['attempts'],0)
+    async def asyncTearDown(self):self.schedule_patch.stop();await self.scheduler.close();await self.store.close();self.service.ownership.release();self.temp.cleanup()
+    async def test_running_app_without_tabs_dispatches(self):
+        await self.scheduler.step()
+        self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
     async def test_persisted_bootstrap_delay_keeps_scheduler_waiting(self):
         self.store.subscribers.add(asyncio.Queue(maxsize=1))
         from app.collection.current_quota import QuotaStop
@@ -99,7 +102,7 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(not q['comparison']['contexts']['novig+prophetx']['cue'] for q in aggregate))
         await self.scheduler.step();self.assertEqual(len(self.wire.calls),2)
         newer=AggregateScheduler(self.service,ledger=QuotaLedger(self.root/'quota'),transport=Wire(),key_loader=lambda:'CONTROLLED',window_loader=lambda:self.window)
-        with self.assertRaisesRegex(QuotaStop,'bootstrap_budget_delayed'):await newer.step()
+        await newer.step();self.assertEqual(newer.transport.calls,[])
         await newer.close();self.assertEqual(self.q.snapshot()['used'],23)
     async def test_missing_reset_bootstrap_only_then_native_continues(self):
         self.store.subscribers.add(asyncio.Queue(maxsize=1));self.scheduler.window_loader=lambda:None
@@ -116,7 +119,7 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(.01);task.cancel()
         with self.assertRaises(asyncio.CancelledError):await task
         self.assertEqual(self.q.snapshot()['reserved'],3)
-        with self.assertRaisesRegex(QuotaStop,'envelope_consumed'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
+        with self.assertRaisesRegex(QuotaStop,'ambiguous'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
     async def test_revocation_before_wire_and_persistence_failure(self):
         self.store.subscribers.add(asyncio.Queue(maxsize=1));self.q.bind_window(self.window)
         self.scheduler.key_loader=lambda:setattr(self.service,'dispatch',False) or 'CONTROLLED'
@@ -178,7 +181,8 @@ class AggregateAdmission(SchedulerTests):
 
 
 class BrowserLifecycle(unittest.IsolatedAsyncioTestCase):
-    async def test_two_tabs_one_scheduler_admin_pause_and_safe_shutdown(self):
+    @patch('app.collection.current_aggregate.now',return_value='2026-10-07T14:00:00+00:00')
+    async def test_two_tabs_one_scheduler_admin_pause_and_safe_shutdown(self,_clock):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);wire=Wire();q=QuotaLedger(root/'quota')
             def factory(s):return AggregateScheduler(s,ledger=q,transport=wire,key_loader=lambda:'CONTROLLED',window_loader=lambda:None)

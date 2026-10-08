@@ -7,7 +7,4 @@ Implementation entry points: [resolution dispatch](../app/resolution/core.py), [
 Unknown native rules, quantities, fees, exceptional probabilities and payouts remain unavailable/conditional. Actual listings/models/results, ternary purchase and cross-strike tie bindings, amended hockey winner-period terms, FCS-only contracts, pitcher changes and refund/fair-value economics still need specific source evidence. Current college membership does not establish native venue aliases. Fixtures and public documents never qualify production data.
 
 
-These implemented handlers do not establish live venue coverage or release
-acceptance. See the [coverage matrix](coverage-matrix.md) for source-specific
-gaps. Candidate-specific counts, identities and original results are retained in
-the [engineering record](history/maintenance-20260928/sports-integration.md).
+These handlers are distinct from current venue availability; see [data limitations](market-data-gaps.md).

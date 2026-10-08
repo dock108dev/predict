@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -114,7 +115,7 @@ class IntegratedWorkflow(unittest.IsolatedAsyncioTestCase):
                     saved=load(owner.session.output)
                     self.assertEqual(len(saved['aggregate_coverage']),63)
                     self.assertEqual(saved['source_session_version'],'unified-source-session-1')
-                    child=await asyncio.to_thread(subprocess.run,[str(Path.cwd()/'.venv/bin/python'),'-c',
+                    child=await asyncio.to_thread(subprocess.run,[sys.executable,'-c',
                         'from app.dashboard.session_history import load; from app.dashboard.session_projection import stable; import sys; print(stable(load(sys.argv[1])))',
                         str(owner.session.output)],capture_output=True,text=True,check=True)
                     self.assertEqual(child.stdout.strip(),stable(saved))

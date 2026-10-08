@@ -48,11 +48,12 @@ class Policy(unittest.TestCase):
         ordinary_unified=deepcopy(value);ordinary_unified['source_session']=settings()
         self.assertEqual(native_payload.validate_transport(ordinary_unified),native_payload.TRANSPORT_CONTRACT)
         self.assertTrue(native_payload.enabled(ordinary_unified))
-        from tests.test_native_redesign import configuration as unified
-        directed=unified();directed['native_transport']=deepcopy(native_payload.TRANSPORT_CONTRACT)
+        directed=deepcopy(ordinary_unified)
+        directed['source_session']['native_discovery']=native_payload.POLICY
         self.assertEqual(native_payload.validate_transport(directed),native_payload.TRANSPORT_CONTRACT)
-        from tests.test_native_gap import spec as gaps
-        gap=gaps();gap['native_transport']=deepcopy(native_payload.TRANSPORT_CONTRACT)
+        gap=deepcopy(value)
+        gap['native_discovery']=dict(policy='sport-directed-games-v1',slice='native-gaps-v1')
+        gap['native_transport']=deepcopy(native_payload.TRANSPORT_CONTRACT)
         self.assertEqual(native_payload.validate_transport(gap),native_payload.TRANSPORT_CONTRACT)
 
     def test_timeout_and_exact_contract_types_fail_before_activation(self):

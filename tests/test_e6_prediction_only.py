@@ -51,7 +51,7 @@ class PureTests(unittest.TestCase):
             owner=TransportSession(s,'/unused',{})
             self.assertEqual(owner.state,'idle');self.assertIsNone(owner.reference)
     def test_skeleton_prediction_only(self):
-        s=json.loads(Path('docs/e6-first-real-run.json').read_text())
+        s=json.loads(Path('tests/fixtures/prediction-session.json').read_text())
         errors=preflight(s)['errors']
         self.assertFalse(any('http' in x or 'reference_cadence' in x or 'the_odds_api' in x for x in errors))
     def test_credentials_missing_redacted(self):

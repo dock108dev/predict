@@ -1,7 +1,7 @@
 # Local security
 
 The supported application is a single-user service bound to `127.0.0.1`, with
-local saved journals and explicit Start/Stop. It has no accounts, tenant isolation,
+automatic configured read-only acquisition, Stop controls and separate saved-session readers. It has no accounts, tenant isolation,
 public webhooks or order execution. Remote, reverse-proxy and shared-user deployment
 are unsupported. Browser protections do not authenticate other local processes.
 
@@ -38,9 +38,7 @@ Manual assumptions in localStorage are calculation inputs, not provider secrets.
 ## Providers, files and processes
 
 The launcher uses a minimal environment and does not load `.env` or forward shell
-credentials. Real collection requires an explicitly configured run specification
-and its applicable approval/consumed-attempt checks before dedicated Keychain
-access. Browser input cannot supply provider destinations or credentials.
+credentials. Ordinary startup validates its bounded configuration and acquires exclusive ownership before dedicated Keychain access. Retained real collectors separately require a run specification and applicable consumed-attempt checks. Browser input cannot supply provider destinations or credentials.
 See [configuration](configuration.md) for source-specific access and separate tools.
 
 Saved selectors resolve through discovered packages. Journal hashes and manifests
@@ -79,9 +77,4 @@ expensive saved-reader path or authenticate local clients.
 Hash-locked dependencies, dependency consistency checks and hosted static analysis
 are complementary checks, not proof that no vulnerable dependency exists. Keychain
 ACLs, provider permissions and platform behavior require separate verification.
-See [development](development.md#pull-request-ci) for the actual CI checks.
-Dated findings and their original validation remain in the
-[security engineering record](history/maintenance-20260928/security.md).
-The [October 1 hardening record](history/maintenance-20261001-security.md) records
-implemented findings, the current source identity, validation and prioritized
-remaining decisions.
+See [development](development.md#focused-checks) for the actual CI checks.

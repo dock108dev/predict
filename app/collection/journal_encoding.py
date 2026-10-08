@@ -1,4 +1,4 @@
-"""D2 lossless row encoding. No references, batching, or external payload store."""
+"""Lossless journal-row encoding without references, batching or external payload storage."""
 import base64
 import json
 import zlib

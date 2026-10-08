@@ -1,6 +1,6 @@
 """ProphetX V4 ingestion with corroborated American prices and unsized quotes.
 
-Contract sources and limitations: docs/slice-3.md. No order/account endpoints.
+Contract sources and limitations: docs/configuration.md. No order/account endpoints.
 """
 import asyncio
 import base64
