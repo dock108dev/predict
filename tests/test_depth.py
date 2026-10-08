@@ -256,6 +256,7 @@ class DepthTests(unittest.TestCase):
         ls=book_ladders(b,partial_final=True,environment='synthetic',evidence_class='synthetic',source_time_semantics='snapshot',units_verified=True,minimum='.25',increment='.25',sizing_evidence='test',locks_clear=True)
         self.assertEqual([(D(p),D(q)) for p,q,_ in ls[0].levels],[(D('.2'),D('1.25')),(D('.4'),D('2.75'))])
         self.assertIn('1-no-bid',ls[0].transformation)
+    def test_historical_depth_coverage(self):
         r=historical_depth()
         self.assertEqual(r['summary']['current_production'],0)
         self.assertEqual(len(r['top_of_book']['matching']['pairs']),10)

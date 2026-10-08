@@ -4,5 +4,26 @@
     "test_native_comparison_ui.cjs": "Exact September 30 captured comparison oracle requires ignored comparisons-v2.json. Preserve the oracle; portable comparison/browser suites cover shared rendering.",
     "test_native_reviews_ui.cjs": "Synthetic review file was written into ignored acquisition evidence, absent in checkout. Portable comparison tests cover settlement states; this archival oracle needs a separate portable-fixture conversion.",
     "test_public_resolution_ui.cjs": "Requires an ignored public-contract integration reopening report. Server-side portable contract tests cover the boundary; browser lineage fixture conversion is deferred."
-  }
+  },
+  "required": [
+    "test_aggregate_assessment_ui.cjs",
+    "test_aggregate_ui.cjs",
+    "test_board_security.cjs",
+    "test_commercial_ui.cjs",
+    "test_concise_dashboard.cjs",
+    "test_current_client.cjs",
+    "test_dashboard_failures.cjs",
+    "test_e5_state.cjs",
+    "test_e6_live_state.cjs",
+    "test_freshness_timing.cjs",
+    "test_math_package.cjs",
+    "test_multi_page_ui.cjs",
+    "test_native_books_ui.cjs",
+    "test_price_comparison.cjs",
+    "test_saved_status_ui.cjs",
+    "test_session_controls.cjs",
+    "test_source_details.cjs",
+    "test_source_settings.cjs",
+    "test_u0_comparison.cjs"
+  ]
 }

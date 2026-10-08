@@ -10,19 +10,19 @@ CI checks source, portable offline behavior, dependencies and package assets. It
 | CI support formatting | Same / `python -m ruff format --check scripts/ci tests/test_ci_reporting.py` | Same | Required policy | New automation code has a bounded formatting contract |
 | Actions syntax, expressions, inputs, dependencies | Same / `.local/ci-tools/actionlint -shellcheck=''` | Same | Required policy | Pinned actionlint 1.7.12; shell syntax separately checked. ShellCheck lint is not claimed |
 | Python compilation, all dashboard JS syntax | CI / Offline checks / `sh scripts/check-ci` | Same; Node 22 | Required policy | Recurses into current, preview and retained shipped browser assets |
-| Quote identity, conditional math, clocks, quotas, failure/Stop/recovery, persistence, routes | Same / `scripts/ci/suites.json` exact pytest groups | Same | Required policy | Existing portable suites plus adapter/model/math/transport/current-revision boundaries. Fresh process per group preserves peak-RSS gates |
-| Browser behavior, escaping, saved state and keyboard focus | Same / `node tests/test_*.cjs` excluding explicit entries in `scripts/ci/browser-suites.json` | Same | Required policy | Dependency-free simulated DOM checks; real browser/device accessibility and usability testing remain separate |
+| Quote identity, conditional math, clocks, quotas, failure/Stop/recovery, persistence, routes | Same / `scripts/ci/suites.json` exact pytest groups plus `python-policy.json` | Same | Required policy | Existing portable suites plus adapter/model/math/transport/current-revision boundaries. Fresh process per group preserves peak-RSS gates |
+| Browser behavior, escaping, saved state and keyboard focus | Same / `node tests/test_*.cjs` with required/deferred classification in `scripts/ci/browser-suites.json` | Same | Required policy | Dependency-free simulated DOM checks; real browser/device accessibility and usability testing remain separate |
 | JUnit/report failure and missing-data semantics | Quality job / `python -m pytest -q tests/test_ci_reporting.py` | Same | Required policy | Missing/malformed/zero/all-skipped reports, scan outages, command exits and escaping |
 | Known dependency vulnerabilities | Quality job / `python -m pip_audit -r requirements-ci.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json` | Same | Required policy | Includes runtime/stream/build/test tools; no vulnerability suppression. Outage, missing report or skipped dependency cannot become zero findings |
 | Production package/assets/import/entry point | Quality job / `python scripts/ci/package_smoke.py` | Same | Required policy | Build sdist/wheel, install hashes in fresh env, install wheel without resolving, import outside checkout, assets and `--help`. Does not launch ordinary providers |
 | Coverage and wheel size | Offline JSON/XML; package `metrics.json` | Same | Advisory metrics | Line/branch evidence and bytes; no arbitrary coverage/size budget or unequal baseline comparison |
 | Maintained owner platform and minimum runtime | Scheduled assurance / macOS Python 3.11 and 3.14 / full offline contract + package | Monday 07:23 UTC, manual / macOS 15 | Scheduled | Declared minimum 3.11, current 3.14. Full intermediate-minor and Windows/Linux-arm matrix omitted: no support evidence justifies the runner cost; Linux 3.14 remains PR platform |
-| Historical SQL transactions, migrations, replay | Scheduled assurance / Historical PostgreSQL storage / `python scripts/ci/postgres.py` | Weekly/manual / Ubuntu, runner PostgreSQL 16 | Scheduled | Current ordinary app needs no DB. Existing 43 integration cases create/drop disposable DBs in a separate temporary cluster, local-only sockets and bounded cleanup. Local PostgreSQL 14 evidence is a separate environment |
+| Optional SQL transactions, migrations, synthetic replay | Scheduled assurance / Historical PostgreSQL storage / `python scripts/ci/postgres.py` | Weekly/manual / Ubuntu, runner PostgreSQL 16 | Scheduled | Current ordinary app needs no DB. Existing 43 integration cases create/drop disposable DBs in a separate temporary cluster, local-only sockets and bounded cleanup. Local PostgreSQL 14 evidence is a separate environment |
 | CI reliability and speed | Scheduled assurance / CI health sample / `python scripts/ci/health.py` | Weekly/manual / Ubuntu | Advisory | Read-only Actions API: latest 30 repository runs, 30-day cutoff, no pagination, event-separated rates, reruns, elapsed durations and observed job minutes |
 | Language static analysis | Existing GitHub-managed CodeQL Python/JS/Actions | Existing configured events | Existing separate checks | Managed outside these workflow files; check repository settings for its configured events |
-| Generated registry/schema drift | Existing normalization, matching, contract, frozen-oracle suites | PR | Required behavior coverage | No separate code generator build step declared; immutable inputs must not be regenerated to pass |
+| Generated registry/schema drift | Synthetic normalization, matching, contract suites | PR | Required behavior coverage | No separate code generator build step declared; immutable inputs must not be regenerated to pass |
 | Broad type checking / universal style formatting | Not configured | — | Omitted | No existing typing/style contract for mixed historical Python; compilation, critical Ruff rules and behavioral checks apply. Adopting whole-codebase typing is separate scoped work |
-| Historical acquisitions, sealed packages and archive oracles | Existing opt-in `tests/test_*` outside suite manifest; four explicit browser exclusions | Explicit/local | Deferred | Not silently discovered: these can require ignored captures, approvals or prepared packages. Preserve exact archival expectations. CI does not invoke evidence writers or acquisition rehearsals |
+| Historical acquisitions, sealed packages and archive oracles | Existing opt-in `tests/test_*` outside suite manifest; four explicit browser exclusions | Explicit/local | Deferred | Every module and archival class/method has an explicit disposition and reason in `python-policy.json`; new/unclassified or stale selectors fail. Historical expectations stay intact and opt-in. |
 | Browser lab performance / end-to-end accessibility | N/A for deterministic merge gate | — | Omitted | No npm web build or existing browser-test harness; current provider loop cannot be used as CI input. Simulated DOM checks do not prove browser paint, WCAG or production performance. Controlled synthetic browser harness is a bounded follow-up |
 | Container/IaC/release/signing/deployment | N/A | — | Omitted | No product container/IaC or authorized release workflow in this repository; PRs never publish |
 
@@ -57,13 +57,21 @@ PATH="/tmp/predict-ci-env/bin:$PATH" sh scripts/check-ci
 
 The test output directory must be empty before a run. Use `--output` to select a
 fresh directory; stale results never qualify a run. The Python manifest lists exact
-suite scope. New tests belong in that reviewed manifest; broad discovery could
-execute archive/acquisition workflows. Browser discovery runs all `test_*.cjs`
-except explicitly documented archive oracles. Tests only write synthetic temporary
-state; saved fixtures remain inputs. Use `scripts/ci/export.py EMPTY_DESTINATION`
+suite scope; `python-policy.json` records excluded historical classes/methods and
+modules. Browser suites likewise declare required and deferred files. The contract
+validator rejects missing, duplicate, unclassified or stale selections. Tests write
+synthetic temporary state and use authored fixtures in `tests/` or `app/fixtures/`.
+Historical `evidence/` and `examples/` are never required CI inputs. An inherited
+Python audit hook and Node filesystem/network guard reject archive reads, private
+`.local`/`.env` inputs and non-loopback sockets during offline checks. These are
+regression guards, not an OS security sandbox. Dependency installation/auditing
+remains explicitly online. Use `scripts/ci/export.py EMPTY_DESTINATION`
 for a clean candidate copy: tracked and nonignored files, no ignored local catalog,
-credentials or saved acquisitions. Repository-internal evidence symlinks are
-relocated inside the export; escaping links fail. Never upload that source copy.
+credentials or saved acquisitions. Internal symlinks are
+relocated inside the export; escaping links fail. Candidate-manifest tests require
+Git metadata, as GitHub checkout supplies. Initialize only a disposable export
+as a temporary Git snapshot for those tests; never commit the working repository
+merely to validate CI. Never upload that source copy.
 
 Regenerate the lock after a requirements change and review versions/hashes:
 
@@ -85,7 +93,10 @@ JUnit and coverage JSON/XML, dependency audit JSON, package bytes and relevant l
 are in unique run/attempt artifacts with **14-day retention**. No source archives,
 private credentials or owner captures are uploaded. Tools never execute report
 contents. Summary values are escaped; test logs remain diagnostics. No PR comments
-or notifications are posted.
+or notifications are posted. Failed groups and their log paths are printed again
+at the end, so a passing coverage export cannot hide preceding failures.
+Compatibility package summaries run even when offline checks fail and retain
+the original package metrics separately.
 
 Offline groups continue after independent failures, with 15-minute process limits
 and a 35-minute job cap. Reports are updated after each completed group and include
@@ -118,6 +129,9 @@ results never qualify a newer PR. Manual `scope` is a typed choice: `all`,
 account, release or production authority.
 
 ## Reports and external services
+
+Candidate-specific readiness reviews remain local, alongside ignored qualification
+output. Completed run artifacts qualify their exact source and environment.
 
 Jobs use read-only repository permissions, do not persist checkout credentials,
 and do not expose provider secrets to PRs. Reports remain in GitHub Actions or

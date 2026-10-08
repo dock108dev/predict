@@ -35,9 +35,25 @@ def execute(name, command, output, timeout=900, junit=False):
     record = {"name": name, "command": command, "status": "NOT RUN", "tests": None}
     print(f"::group::{name}", flush=True)
     try:
+        environment = os.environ.copy()
+        environment["PREDICT_CI_ISOLATED_ROOT"] = str(ROOT)
+        environment["PREDICT_CI_REPORT_ROOT"] = str(output)
+        environment["PYTHONPATH"] = (
+            str(ROOT / "scripts/ci") + os.pathsep + environment.get("PYTHONPATH", "")
+        )
+        environment["NODE_OPTIONS"] = (
+            environment.get("NODE_OPTIONS", "")
+            + " --require "
+            + str(ROOT / "scripts/ci/node-isolation.cjs")
+        ).strip()
         with (output / f"{name}.log").open("w") as log:
             result = subprocess.run(
-                command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=timeout
+                command,
+                cwd=ROOT,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
             )
         record["exit_code"] = result.returncode
         record["status"] = "PASS" if result.returncode == 0 else "FAIL"
@@ -147,12 +163,18 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     groups = json.loads((ROOT / "scripts/ci/suites.json").read_text())
+    policy = json.loads((ROOT / "scripts/ci/python-policy.json").read_text())
     commands = [
+        (
+            "suite-contract",
+            [sys.executable, "scripts/ci/validate_contract.py"],
+            False,
+        ),
         (
             "compile",
             [sys.executable, "-m", "compileall", "-q", "app", "tests", "scripts/ci"],
             False,
-        )
+        ),
     ]
     for source in sorted((ROOT / "app/dashboard").rglob("*.js")):
         commands.append(
@@ -179,6 +201,11 @@ def main():
                     "--cov-append",
                     "--cov-report=",
                     f"--junitxml={output / (name + '.xml')}",
+                    *[
+                        "--deselect=" + node
+                        for node in policy["archival_nodes"]
+                        if node.split("::")[0] in group["tests"]
+                    ],
                     *group["tests"],
                 ],
                 True,
@@ -230,6 +257,10 @@ def main():
         {"name": name, "status": "SKIPPED", "tests": None, "reason": reason}
         for name, reason in deferred.items()
     )
+    records.extend(
+        {"name": name, "status": "SKIPPED", "tests": None, "reason": reason}
+        for name, reason in {**policy["deferred"], **policy["archival_nodes"]}.items()
+    )
     write_report(output, records, started)
     failed = False
     for index, (name, command, junit) in enumerate(commands):
@@ -238,6 +269,16 @@ def main():
         records[index] = record
         failed |= record["status"] != "PASS"
         write_report(output, records, started)
+    failures = [r for r in records if r["status"] == "FAIL"]
+    print(
+        f"Offline contract: {'FAIL' if failed else 'PASS'}; {len(failures)} failed checks",
+        flush=True,
+    )
+    for record in failures:
+        print(
+            f"FAIL: {record['name']} — inspect {output / (record['name'] + '.log')}",
+            flush=True,
+        )
     return int(failed)
 
 

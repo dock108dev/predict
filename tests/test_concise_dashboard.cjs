@@ -2,7 +2,12 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const view=require('../app/dashboard/opportunity_static/presentation.js');
-const data=JSON.parse(fs.readFileSync('evidence/concise-dashboard/api-before.json'));
+// Authored presentation inputs; no captured dashboard response is required.
+const data={rows:Array.from({length:18},(_,i)=>({
+  legs:(i<12?['kalshi','polymarket_us']:['kalshi']).map(venue=>({venue})),
+  profit:i<6?null:'-2',
+  reasons:i===0?['Books more than 5 seconds apart at cutoff']:[]
+}))};
 assert.equal(data.rows.length,18);
 const visible=data.rows.filter(view.crossVenue);
 assert.equal(visible.length,12);

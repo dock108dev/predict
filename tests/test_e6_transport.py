@@ -163,8 +163,9 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.s['discovery_cadence']=10
         self.calls=0;self.ref_calls=0;self.k_connections=0;self.p_connections=0;self.ref_mode='ok'
         self.tmp=tempfile.TemporaryDirectory();self.owner=None
-        # Retained PMUS market metadata is adapted into a fabricated future schedule.
-        self.pmarket=json.loads(Path('evidence/phase-0/pmus-tb-market.json').read_text())['market']
+        # Authored market metadata uses only the fresh loopback fixture schedule.
+        from tests.synthetic_market_fixture import us_market_data
+        self.pmarket=us_market_data()
         self.pmarket['gameStartTime']=self.s['scheduled_start']
         async def http(request):
             self.calls+=1;path=request.path

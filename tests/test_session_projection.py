@@ -1,4 +1,4 @@
-"""fixture acceptance. Retained input is read-only; all writes are disposable."""
+"""Synthetic projection behavior; all inputs authored and writes disposable."""
 import asyncio
 from copy import deepcopy
 from datetime import datetime,timezone,timedelta
@@ -13,46 +13,11 @@ from app.dashboard import session_history,product_view
 from app.collection.transport_session import ObservationJournal,TransportSession
 from app.dashboard.e6_live import save_json,digest
 
-ROOT=Path('evidence/multi-game/sessions/5c9b7dca-a813-4d77-80f5-0691d06068eb')
+from tests.synthetic_market_fixture import session_rows
 
 
 def fixture():
-    saved=json.loads((ROOT/'saved-observations.json').read_text())['rows']
-    games=next(r['games'] for r in saved if r['type']=='multi_game_selection')[:2]
-    cats={v:dict(events=[],markets=[],selection=dict(ids=[])) for v in ('kalshi','polymarket_us','novig')}
-    rows=[]; at='2026-09-16T12:00:00+00:00'
-    def row(typ,source='session',**kw):
-        r=dict(type=typ,source=source,session_id='b2-fixture',observed_at=at,ingress_id='fixture-'+str(len(rows)),**kw);rows.append(r);return r
-    row('session_started',spec=dict(saved[0]['spec'],mode='mock'))
-    for i,g in enumerate(games):
-        for v in cats:
-            original='polymarket_us' if v=='novig' else v;src=g['sources'][original]
-            eid=v+'-e'+str(i);mid=v+'-m'+str(i)
-            e=dict(id=eid,title=g['title'],scheduled_start=g['scheduled_start'],canonical_key=['fixture-event-'+str(i)],sport='american_football',competition='NFL',season='2026',participants=src['participant_mapping'],identity='resolved',exclusion=None)
-            sides=[deepcopy(s) for k,s in g['sides'].items() if k.startswith(original+':')]
-            m=dict(id=mid,event_id=eid,market_type='moneyline',period='full_game',status='active',exclusion=None,product_outcomes=sides)
-            cats[v]['events'].append(e);cats[v]['markets'].append(m);cats[v]['selection']['ids'].append(mid)
-    row('coverage_inventory',generation=1,previous_generation=None,inventory=cats)
-    for i,g in enumerate(games):
-        for v in cats:
-            original='polymarket_us' if v=='novig' else v;src=g['sources'][original]
-            key=dict(event_id=v+'-e'+str(i),market_id=v+'-m'+str(i))
-            meta=next(r for r in saved if r['type']=='market_selected' and r['source']==original and r['market']['raw']['ref']['market_id']==src['market_id'])
-            book=next(r for r in saved if r['type']=='prediction_book' and r['source']==original and r['book']['raw']['ref']['market_id']==src['market_id'])
-            meta=deepcopy(meta['market']);meta['raw']['ref'].update(key)
-            native=json.loads(meta['raw']['json_text'])
-            for event in native.get('events',[]):
-                if str(event.get('id'))==src['event_id']:event['id']=key['event_id']
-            for market in native.get('markets',[])+[m for event in native.get('events',[]) for m in event.get('markets',[])]:
-                if market.get('ticker')==src['market_id']:market['ticker']=key['market_id']
-                if str(market.get('id'))==src['market_id']:market['id']=key['market_id']
-            meta['raw']['json_text']=json.dumps(native);meta['raw']['kind']='synthetic'
-            # Fixture identities wrap copied native terms; original files remain untouched.
-            row('market_selected',v,market=meta)
-            row('source_health',v,state='connected',market_ids=[key['market_id']],stream_group=v+str(i))
-            b=deepcopy(book['book']);b['raw']['ref'].update(key);b['raw']['received_at']=at;b['raw']['kind']='synthetic'
-            row('prediction_book',v,book=b,packets=deepcopy(book['packets']),stream_group=v+str(i))
-    return rows
+    return session_rows()
 
 
 class Projection(unittest.TestCase):

@@ -18,12 +18,27 @@ ROOT=historical.ROOT
 OUTPUT=ROOT/'evidence/e6/live-watch/sessions'
 
 def configuration():
-    s=json.loads((ROOT/(historical.RUN+'run-spec.json')).read_text())
     now=datetime.now(timezone.utc)
-    s.update(start_after=(now-timedelta(seconds=1)).isoformat(),start_before=(now+timedelta(minutes=10)).isoformat(),duration=180,
-             capture_authorization='owner live-loop prompt: one supervised run <=300 seconds, zero additional spending',
-             mapping_revision='prior Detroit-Buffalo identity; current bounded discovery required before subscription')
-    return s
+    # Finite-session bootstrap, independent of any owner's past capture. Discovery
+    # must replace these pending identities before selecting/subscribing markets.
+    return dict(mode='real', reference_enabled=False, duration=180,
+        event='discovery-pending', participants=['pending-home','pending-away'],
+        scheduled_start=(now+timedelta(days=1)).isoformat(),
+        start_after=(now-timedelta(seconds=1)).isoformat(),
+        start_before=(now+timedelta(minutes=10)).isoformat(), stale_seconds=30,
+        discovery_cadence=45, mapping_revision='discovery-required',
+        capture_authorization='Explicit owner Start required; finite zero-additional-cost session',
+        cleanup='close only owned session transports; retain isolated journals',
+        assessment_revisions=dict(pairing=None,lineage=None,fees=None,settlement=None),
+        sources={v:dict(event_id='discovery-pending',market_id='discovery-pending',
+            participant_mapping={'home':'pending-home','away':'pending-away'},
+            credential_reference=ref,entitlement_reference='owner-configured market-data access')
+            for v,ref in [('kalshi','keychain:prediction-arb.kalshi.production/market-data'),
+                ('polymarket_us','keychain:prediction-arb.polymarket-us/retail-api')]},
+        prediction=dict(messages=600,connections=2,frame_bytes=1048576,
+            session_bytes=16777216,discovery_requests=64,dollar_cap_per_source='0',
+            dollars_per_connection='0',dollars_per_discovery_request='0',
+            plan_evidence='Explicit zero-additional-cost finite session policy'))
 
 def digest(path):return sha256(path.read_bytes()).hexdigest()
 

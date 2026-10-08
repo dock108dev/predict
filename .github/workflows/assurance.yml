@@ -34,7 +34,15 @@ jobs:
         with:
           python: ${{ matrix.python }}
       - run: sh scripts/check-ci
-      - run: python scripts/ci/package_smoke.py
+      - name: Build and install compatibility package
+        id: package
+        if: ${{ !cancelled() }}
+        run: python scripts/ci/package_smoke.py
+      - name: Compatibility package summary
+        if: always()
+        env:
+          CHECK_OUTCOMES: ${{ toJSON(steps) }}
+        run: python scripts/ci/quality_report.py --package
       - name: Retain compatibility reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

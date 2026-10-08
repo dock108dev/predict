@@ -10,6 +10,7 @@ import httpx
 from app.adapters.polymarket_us import (PolymarketUSAdapter, Response, decode,
     parse_market, parse_book, parse_bbo, side_ids, state, timestamp)
 from app.models.core import BookSync, Depth, EvidenceKind, MarketState
+from tests.synthetic_market_fixture import us_market_data
 
 PHASE0 = Path(__file__).resolve().parents[1] / 'evidence/phase-0'
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
@@ -21,8 +22,8 @@ def captured(name):
                     datetime.fromisoformat(meta['retrieved_at_utc']))
 
 def market():
-    response = captured('pmus-tb-market.json')
-    return parse_market(response, decode(response.body)['market'], '74905')
+    data = us_market_data()
+    return parse_market(synthetic({'market': data}), data, '74905')
 
 def synthetic(data):
     return Response(json.dumps(data), 'synthetic://pmus-tests', NOW, EvidenceKind.SYNTHETIC)
@@ -57,7 +58,7 @@ class Parsing(unittest.TestCase):
         self.assertEqual(book.outcomes[0].bids.levels[0].quantity.value, Decimal('0.12345678901234567890123456789'))
 
     def test_authoritative_mapping_not_array_order(self):
-        data = json.loads(captured('pmus-tb-market.json').body)['market']
+        data = us_market_data()
         data['marketSides'].reverse()
         self.assertEqual(side_ids(data)[True], '763430')
         data['marketSides'][0].pop('long')
@@ -123,7 +124,7 @@ class REST(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(RuntimeError,'cap'):await a.discover_events()
 
     async def test_market_filter_pagination_and_identity(self):
-        data=json.loads(captured('pmus-tb-market.json').body)['market']
+        data=us_market_data()
         requests=[]
         def handler(req):
             requests.append(req)
@@ -167,7 +168,7 @@ class REST(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(a.client.is_closed)
 
     async def test_missing_rules_and_settlement_metadata(self):
-        data=json.loads(captured('pmus-tb-market.json').body)['market'];data.pop('description')
+        data=us_market_data();data.pop('description')
         async with self.adapter(lambda r:httpx.Response(200,json={'market':data})) as a:
             a.markets[MID]=market()
             self.assertIsNone((await a.get_market_rules(MID)).rules_text)

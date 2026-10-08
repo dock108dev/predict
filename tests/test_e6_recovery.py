@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def crash(directory,phase):
     directory.mkdir(parents=True)
     log=(directory/'worker.log').open('wb')
-    p=subprocess.Popen([str(ROOT/'.venv/bin/python'),'-m','tests.e6_recovery_crash_worker',str(directory),phase],cwd=ROOT,stdout=log,stderr=log,env={'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'})
+    p=subprocess.Popen([sys.executable,'-m','tests.e6_recovery_crash_worker',str(directory),phase],cwd=ROOT,stdout=log,stderr=log,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'})
     try:
         for _ in range(2000):
             if (directory/'ready.json').exists():break

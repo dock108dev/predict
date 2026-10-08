@@ -2,7 +2,6 @@
 from copy import deepcopy
 from decimal import Decimal
 import json
-from pathlib import Path
 from app.fees import calculate, replay, load_registry, Registry
 
 
@@ -60,12 +59,14 @@ def examples():
     c=scenario('novig','live',quantity='1'); c['fills'][0]['unit']='payout_cents'; add('Native Novig cent payout unit',c,{'entry_fees':'0.00008'})
     for p in ('0.01','0.99'):
         add('Synthetic boundary fractional PMUS '+p,scenario(price=p,quantity='0.01'),{'entry_fees':None,'qualification':'unsupported'})
-    # Historical series selection uses preserved official metadata, no live access.
+    # Authored metadata exercises exact effective-time selection, independently
+    # of archived provider history or a claim about current official fees.
     c=scenario('kalshi',quantity='100'); c['series_id']='KXMLBGAME'; meta=c['kalshi_metadata']; meta['series_id']='KXMLBGAME'
-    history=json.loads(Path('evidence/slice-9/research/kalshi-mlb-history.json').read_text(),parse_float=str)['series_fee_change_arr']
-    meta['series_changes']=history; meta['source']='evidence/slice-9/research/kalshi-mlb-history.json'
-    c['trade_time']='2026-08-07T04:59:45.130Z'; add('Historical MLB before official change',c,{'entry_fees':'1.750000'})
-    c['trade_time']='2026-08-07T04:59:45.131Z'; add('Historical MLB at official change',c,{'entry_fees':'0.880000'})
+    meta['series_changes']=[dict(scheduled_ts='2026-01-01T00:00:00Z',fee_type='quadratic',fee_multiplier='1'),
+        dict(scheduled_ts='2026-08-07T04:59:45.131Z',fee_type='quadratic',fee_multiplier='0.5')]
+    meta['source']='synthetic:exact-effective-time-fixture'
+    c['trade_time']='2026-08-07T04:59:45.130Z'; add('Synthetic MLB before metadata change',c,{'entry_fees':'1.750000'})
+    c['trade_time']='2026-08-07T04:59:45.131Z'; add('Synthetic MLB at metadata change',c,{'entry_fees':'0.880000'})
     c=scenario('novig','parlay','0.10','100'); c.update(channel='app',price_basis='pre_fee')
     add('Official Novig parlay with explicit pre-fee input, not quoted all-in price',c,{'entry_cash_requirement':'10.90000'})
     return rows

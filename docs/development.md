@@ -63,7 +63,7 @@ Stop it with Ctrl-C. The ordinary app never falls back to this provider.
 | `app/adapters/`, `models/`, `normalization/` | Venue conversion and exact identity |
 | `app/opportunities/`, `fees/`, `settlement.py`, `reference/` | Shared math, fees, settlement and reference research |
 | `app/storage/`, `integration_tests/` | Separate PostgreSQL workflow and disposable integration checks |
-| `tests/`, `app/fixtures/`, required `evidence/` inputs | Offline tests and retained replay fixtures |
+| `tests/`, `app/fixtures/` | Authored offline tests; archived replay tests are explicitly opt-in |
 
 See [architecture](architecture.md#module-ownership) before adding parallel policy
 or calculation implementations. Keep versioned saved formats readable. Reference
@@ -79,6 +79,7 @@ styles 300/600, markup 250/500 and shell launchers 100/200. Generated fixtures,
 lockfiles and required frozen source inputs are not mechanically split.
 
 Local credentials, state, generated reports and working notes are ignored.
-Already tracked fixtures remain tracked despite ignore rules; check their readers
-before removal. Public docs should explain behavior and commands, not task history,
+The [CI contract](CI.md) declares required suites and archival omissions. Merge
+checks cannot read historical evidence or owner state; author independent fixtures
+for maintained behavior instead of adding captures to the gate. Public docs should explain behavior and commands, not task history,
 private workspaces or review status. Run `git diff --check` after edits.

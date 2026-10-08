@@ -18,9 +18,11 @@ def read(path, expected):
     return value
 
 
-def render(outcomes, root, postgres=False):
+def render(outcomes, root, postgres=False, package=False):
     required = (
-        {"postgres": root / "postgres/junit.xml"}
+        {"package": root / "package/metrics.json"}
+        if package
+        else {"postgres": root / "postgres/junit.xml"}
         if postgres
         else {
             "source": root / "quality/junit.xml",
@@ -61,6 +63,14 @@ def render(outcomes, root, postgres=False):
                 deps = data["dependencies"]
                 if not isinstance(deps, list) or not deps:
                     raise ValueError("empty dependency report")
+                if any(
+                    not isinstance(d, dict)
+                    or not isinstance(d.get("name"), str)
+                    or not d.get("name")
+                    or ("skip_reason" not in d and not isinstance(d.get("vulns"), list))
+                    for d in deps
+                ):
+                    raise ValueError("missing or malformed dependency findings")
                 findings = sum(len(d["vulns"]) for d in deps if "vulns" in d)
                 unavailable = sum("skip_reason" in d for d in deps)
                 record["measurements"] = {
@@ -88,12 +98,14 @@ def render(outcomes, root, postgres=False):
     def safe(v):
         return html.escape(str(v)).replace("|", "&#124;").replace("\n", " ")
 
-    text = f"## {'Storage' if postgres else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
+    text = f"## {'Package' if package else 'Storage' if postgres else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
     text += "\n".join(
         f"| {r['name']} | {r['status']} | {safe(r.get('measurements'))}; {safe(r.get('reason', ''))} |"
         for r in records
     )
-    text += "\n\nMissing data remains unavailable. Findings use the current live database queried by pip-audit, with no comparable baseline. Inspect the corresponding artifact/log for the first FAIL; a SKIPPED/NOT RUN check needs its earlier setup blocker resolved.\n"
+    text += "\n\nMissing data remains unavailable. Inspect the corresponding artifact/log for the first FAIL; a SKIPPED/NOT RUN check needs its earlier setup blocker resolved.\n"
+    if "audit" in required:
+        text += "Dependency findings use the current live database queried by pip-audit, with no comparable baseline.\n"
     identity = f"\nPR head: `{safe(os.environ.get('PR_HEAD_SHA'))}`; ref: `{safe(os.environ.get('GITHUB_REF'))}`; run: {safe(os.environ.get('CI_RUN_URL'))}.\n"
     text += identity
     return text, records, bool(errors)
@@ -106,8 +118,22 @@ def main():
         json.loads(os.environ.get("CHECK_OUTCOMES", "{}")),
         root,
         "--postgres" in sys.argv,
+        "--package" in sys.argv,
     )
-    name = "postgres" if "--postgres" in sys.argv else "quality"
+    name = (
+        "package-summary"
+        if "--package" in sys.argv
+        else "postgres"
+        if "--postgres" in sys.argv
+        else "quality"
+    )
+
+    def version(tool):
+        try:
+            return importlib.metadata.version(tool)
+        except importlib.metadata.PackageNotFoundError:
+            return None
+
     (root / name).mkdir(exist_ok=True)
     (root / name / "summary.md").write_text(text)
     (root / name / "metrics.json").write_text(
@@ -122,8 +148,7 @@ def main():
                 "baseline": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "tools": {
-                    name: importlib.metadata.version(name)
-                    for name in ("ruff", "pip-audit", "build")
+                    name: version(name) for name in ("ruff", "pip-audit", "build")
                 },
             },
             indent=2,

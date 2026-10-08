@@ -60,33 +60,15 @@
   {
     "name": "python-09",
     "tests": [
-      "tests/test_multi_game.py",
-      "tests/test_opportunity_board.py",
-      "tests/test_personal_beta.py",
       "tests/test_failure_handling.py",
       "tests/test_dashboard_security.py",
-      "tests/test_ssot_policy.py",
-      "tests/test_page_estimate.py",
-      "tests/test_multi_page.py",
-      "tests/test_math_reconciliation.py"
+      "tests/test_ssot_policy.py"
     ]
   },
   {
     "name": "python-10",
     "tests": [
-      "tests/test_two_source_qualification.py",
-      "tests/test_native_retained_review.py",
-      "tests/test_native_public_review.py",
-      "tests/test_native_rule_review.py",
-      "tests/test_native_filing_review.py",
-      "tests/test_native_precedence_review.py",
-      "tests/test_native_us_rulebook_review.py",
-      "tests/test_precedence_deadlines.py",
-      "tests/test_public_request_deadline.py",
-      "tests/test_public_research_package.py",
-      "tests/test_public_research_repair.py",
       "tests/test_future_qualification.py",
-      "tests/test_public_doc_package.py",
       "tests/test_session_projection.py",
       "tests/test_product_integration.py",
       "tests/test_native_integration.py",
@@ -94,9 +76,7 @@
       "tests/test_reference_integration.py",
       "tests/test_pinnacle_sample.py",
       "tests/test_odds_sample.py",
-      "tests/test_odds_acquire.py",
       "tests/test_odds_bindings.py",
-      "tests/test_actual_references.py",
       "tests/test_nhl.py",
       "tests/test_mlb.py",
       "tests/test_nba.py",
@@ -143,13 +123,6 @@
       "tests/test_multi_comparison.py",
       "tests/test_opportunity_feed.py",
       "tests/test_polymarket_us_stream.py"
-    ]
-  },
-  {
-    "name": "python-14",
-    "tests": [
-      "tests/test_freshness_repair.py",
-      "tests/test_calculation_reuse.py"
     ]
   },
   {
@@ -332,6 +305,48 @@
     "name": "current_revision",
     "tests": [
       "tests/test_current_revision.py"
+    ]
+  },
+  {
+    "name": "test_current_ssot",
+    "tests": [
+      "tests/test_current_ssot.py"
+    ]
+  },
+  {
+    "name": "test_delivery_capture",
+    "tests": [
+      "tests/test_delivery_capture.py"
+    ]
+  },
+  {
+    "name": "test_delivery_launcher",
+    "tests": [
+      "tests/test_delivery_launcher.py"
+    ]
+  },
+  {
+    "name": "test_native_fee_metadata",
+    "tests": [
+      "tests/test_native_fee_metadata.py"
+    ]
+  },
+  {
+    "name": "test_segmented",
+    "tests": [
+      "tests/test_segmented.py"
+    ]
+  },
+  {
+    "name": "reference-unit",
+    "tests": [
+      "tests/test_reference.py"
+    ]
+  },
+  {
+    "name": "dashboard-unit",
+    "tests": [
+      "tests/test_dashboard.py"
     ]
   }
 ]

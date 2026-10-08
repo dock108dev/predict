@@ -5,21 +5,25 @@ Prices/rules remain invented; these are NOT relabeled historical observations.
 from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime
-from pathlib import Path
 from app.depth_example import fixture
 from app.depth import size_depth
 from app.edge_contracts import loads
 from app.fees.engine import load_registry, digest
-from app.pricing.baseline import restore
 from app.storage.replay import observation_dump
 from app.settlement import payout, SCENARIOS
 from .service import POLICY
 
-ROOT=Path(__file__).resolve().parents[2]
 
 
 def inputs(price='0.2', quantity='3', model=None, estimate=None, levels=None):
-    estimate=estimate or restore((ROOT/'evidence/e3/durable/estimate-4.json').read_text())
+    if estimate is None:
+        from app.pricing.fixtures import records, receipt, target
+        from app.pricing.baseline import calculate
+        from app.reference.fixtures import before, payload
+        from app.reference.records import as_of
+        cutoff=before(20)
+        history=records(r=receipt(body=payload().replace(before(65).encode(),before(30).encode()),at=before(25)))
+        estimate=calculate(as_of(history,cutoff),target=target(),cutoff=cutoff,estimated_at=cutoff)
     at=estimate.data['as_of']; terms=loads(estimate.data['target']['terms_json'])
     data,ladders=fixture(a=levels or ((price,'3'),('0.95','5')), b=(('0.2','3'),('0.8','5')))
     p,m,obs,ctx,rows=data

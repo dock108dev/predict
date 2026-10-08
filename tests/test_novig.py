@@ -155,11 +155,12 @@ class HTTPTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(a.requests,2)
 
 class FakeSocket:
-    def __init__(self,frames): self.frames=list(frames); self.sent=[]; self.closed=False
+    def __init__(self,frames): self.frames=list(frames); self.sent=[]; self.closed=False; self.receiving=asyncio.Event()
     async def send(self,s): self.sent.append(json.loads(s))
     async def recv(self):
         if self.frames: return json.dumps(self.frames.pop(0))
-        await asyncio.sleep(10)
+        self.receiving.set()
+        await asyncio.Event().wait()
     async def close(self): self.closed=True
 
 class TransportTests(unittest.IsolatedAsyncioTestCase):
@@ -170,12 +171,13 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             elif 'getMarketsByEvent' in r.url.path: d=[MARKET]
             else: d={'id':'synthetic-event','status':'OPEN_PREGAME'}
             return httpx.Response(200,json=d)
-        sockets=[]
+        sockets=[]; connected=asyncio.Event()
         async def factory(_):
-            ws=FakeSocket(frames[len(sockets)]); sockets.append(ws); return ws
+            ws=FakeSocket(frames[len(sockets)]); sockets.append(ws); connected.set(); return ws
         a=NovigAdapter(environment='qa',client_id='fake',client_secret='fake',sleep=no_sleep,
             client=httpx.AsyncClient(transport=httpx.MockTransport(h)),stream_factory=factory,stream_options=options)
         a.markets={'synthetic-market':parse_market(response(MARKET),MARKET,'synthetic-event')}
+        a.test_connected=connected
         return a,sockets
     async def test_disconnect_fresh_bootstrap_and_cleanup(self):
         a,sockets=await self.setup_adapter([
@@ -191,13 +193,12 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(w.closed for w in sockets))
         self.assertTrue(all({'event':'unsubscribe','data':'synthetic-market'} in w.sent for w in sockets))
     async def test_cancel_closes_pending_receive(self):
-        a,sockets=await self.setup_adapter([[{'event':'book','data':snapshot()}]],duration=2,reconnect_after=1)
+        a,sockets=await self.setup_adapter([[{'event':'book','data':snapshot()}]],duration=10,reconnect_after=8)
         async def consume():
             async for _ in a.stream_markets(('synthetic-market',)): pass
         task=asyncio.create_task(consume())
-        for _ in range(100):
-            await asyncio.sleep(.001)
-            if sockets: break
+        await asyncio.wait_for(a.test_connected.wait(),5)
+        await asyncio.wait_for(sockets[0].receiving.wait(),5)
         task.cancel()
         with self.assertRaises(asyncio.CancelledError): await task
         self.assertTrue(sockets[0].closed); self.assertFalse(a.streams)

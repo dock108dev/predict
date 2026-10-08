@@ -54,6 +54,7 @@ class Confirmation(unittest.TestCase):
 
 class Held(unittest.IsolatedAsyncioTestCase):
  async def test_unknown_price_clock_fresh_confirmation_no_reprice_held_inputs_and_expiry(self):
+  receipt_clock=patch(__name__+'.NOW',datetime.now(timezone.utc));receipt_clock.start();self.addCleanup(receipt_clock.stop)
   clock=patch('app.collection.current_occurrence.datetime');fake=clock.start();fake.now.return_value=datetime(2026,10,3,14,tzinfo=timezone.utc);self.addCleanup(clock.stop)
   svc=CurrentService(config=dict(DEFAULT,enabled=False,aggregate_enabled=False));store=CurrentStore(svc);svc.store=store;svc.sink=LatestStateSink(store,svc.initial_state());svc.dispatch=True
   cats=catalogs();trackers={};books={}

@@ -75,8 +75,19 @@ def main():
             # The application connects only to its checkout-specific socket. Redirect
             # that root inside this test process, never alter application configuration.
             code = 'from pathlib import Path; import app.storage.store as s; s.ROOT=Path(__import__("sys").argv[1]); import pytest; raise SystemExit(pytest.main(["-q", "integration_tests", "--junitxml="+__import__("sys").argv[2]]))'
+            environment = os.environ.copy()
+            environment["PREDICT_CI_ISOLATED_ROOT"] = str(
+                Path(__file__).resolve().parents[2]
+            )
+            environment["PREDICT_CI_REPORT_ROOT"] = str(output)
+            environment["PYTHONPATH"] = (
+                str(Path(__file__).resolve().parent)
+                + os.pathsep
+                + environment.get("PYTHONPATH", "")
+            )
             subprocess.run(
                 [sys.executable, "-c", code, str(root), str(output / "junit.xml")],
+                env=environment,
                 check=True,
                 timeout=300,
             )
