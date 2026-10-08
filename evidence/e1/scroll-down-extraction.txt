@@ -1,1 +1,0 @@
-PASS: dismiss preserves row status; recovery resets banner; modes stay explicit

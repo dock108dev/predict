@@ -1,5 +1,0 @@
-{
-  "files_scanned": 53,
-  "secret_values_present": false,
-  "method": "in-memory comparison to only dedicated project credential values, JSON escaping and base64; values not retained"
-}
