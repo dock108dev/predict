@@ -535,7 +535,21 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from .current_state import CURRENT_KEY
         from .current_contract import arbitrage_pairs
         store=app[CURRENT_KEY];store.refresh_age()
-        return web.json_response(arbitrage_pairs(store._state,market=req.query.get('market','winner'),search=req.query.get('search','')[:200]))
+        changed=None;revision=None
+        if 'runtime_id' in req.query or 'state_revision' in req.query:
+            try:
+                revision=int(req.query['state_revision']);runtime=req.query['runtime_id']
+                if not 1<=revision<=9007199254740991 or not 0<len(runtime)<=128:raise ValueError()
+            except (ValueError,KeyError):return web.json_response({'error':'invalid_change_cursor'},status=422)
+            changed=store.changed_event_ids(runtime,revision)
+        state=store._state
+        subset=state if changed is None else dict(state,events=[e for e in state['events'] if e['id'] in changed])
+        value=arbitrage_pairs(subset,market=req.query.get('market','winner'),search=req.query.get('search','')[:200])
+        value['clock_at']=state['clock_at']
+        if changed is not None:
+            return web.json_response(dict(schema='predict-arbs-changes-1',base_revision=revision,
+                snapshot={k:v for k,v in value.items() if k!='pairs'},changed_event_ids=sorted(changed),pairs=value['pairs']))
+        return web.json_response(value)
     app.router.add_get('/arbs',arbs_page)
     app.router.add_get('/api/arbs',arbs_data)
     app.router.add_get('/admin/retained',retained_page)

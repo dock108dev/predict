@@ -47,31 +47,74 @@ class CurrentStore:
         self.monotonic=monotonic
         if not 0<lease_ttl<=300:raise ValueError('Lease TTL must be at most 300 seconds')
         self.ttl=lease_ttl;self.leases={};self.clients={};self.subscribers=set();self.closed=False
-        self._state=serialize(self.provider.initial_state(),allow_synthetic=self.provider.allow_synthetic)
+        initial=self.provider.initial_state()
+        self._state=serialize(initial,allow_synthetic=self.provider.allow_synthetic)
+        from .current_incremental import signatures
+        self._fingerprints=signatures(initial)
+        self._group_bytes={(e['id'],g['id']):len(packed(g))+256*sum(len(quotes_of(o)) for o in g['outcomes']) for e in self._state['events'] for g in e['groups']}
+        self.projection_metrics=dict(projected_groups=0,reused_groups=0)
+        self._event_versions={e['id']:self._state['state_revision'] for e in self._state['events']}
+        self._removed_events={};self._changes_floor=self._state['state_revision']
         self._age_origin=self.monotonic();self._clock_origin=stamp(self._state['clock_at'])
 
     def snapshot(self):
         self.refresh_age()
         return deepcopy(self._state)
 
+    def encoded_snapshot(self):
+        # Encoding is synchronous on the service loop; no caller receives a
+        # mutable state reference, and no full defensive snapshot is needed.
+        self.refresh_age()
+        return packed(self._state)
+
+    def changed_event_ids(self,runtime_id,revision):
+        state=self._state
+        if runtime_id!=state['runtime_id'] or revision<self._changes_floor or revision>state['state_revision']:return None
+        return {eid for eid,at in self._event_versions.items() if at>revision}|{eid for eid,at in self._removed_events.items() if at>revision}
+
+    def encoded_changes(self,runtime_id,revision):
+        self.refresh_age()
+        state=self._state
+        if runtime_id!=state['runtime_id'] or revision<self._changes_floor or revision>state['state_revision']:
+            return packed(state)
+        return packed(dict(schema='predict-current-changes-1',base_revision=revision,
+            snapshot={k:v for k,v in state.items() if k!='events'},
+            events=[e for e in state['events'] if self._event_versions.get(e['id'],0)>revision],
+            removed_events=[eid for eid,at in self._removed_events.items() if at>revision]))
+
     def refresh_age(self):
         elapsed=max(0,int(self.monotonic()-self._age_origin))
         clock=self._clock_origin+timedelta(seconds=elapsed)
         if clock<=stamp(self._state['clock_at']):return
-        state=deepcopy(self._state);state['clock_at']=clock.isoformat();changed=False
+        # Age updates change only quote scalars and EV, not the large immutable
+        # comparison/evidence graphs. Copy the tree and quote shells once.
+        state=dict(self._state);state['clock_at']=clock.isoformat();changed=False
+        def aged_quote(q):return dict(q,calculations=dict(q['calculations']))
+        state['events']=[dict(e,groups=[dict(g,outcomes=[dict(o,
+            quotes={v:aged_quote(q) for v,q in o['quotes'].items()},
+            alternatives={v:[aged_quote(q) for q in qs] for v,qs in o.get('alternatives',{}).items()})
+            for o in g['outcomes']]) for g in e['groups']]) for e in self._state['events']]
         for e in state['events']:
             for g in e['groups']:
                 for o in g['outcomes']:
                     for q in quotes_of(o):
                         from .current_contract import age_basis
                         old_stale=q['stale'];age_basis(q,clock)
+                        if q.get('sharp_reference') is not None:
+                            from app.collection.current_benchmark import calculate
+                            ev=calculate(q,clock)
+                            if ev['eligible']!=q['calculations']['ev']['eligible']:changed=True
+                            q['calculations']['ev']=ev
                         if old_stale!=q['stale']:
                             changed=True
         if changed:
             state['state_revision']+=1
             # Every dependent result is rebuilt from its original bound inputs,
             # including engine legs whose other quote became stale. Leases stay frozen.
-            state=serialize(snapshot_inputs(state),allow_synthetic=self.provider.allow_synthetic)
+            from .current_incremental import project
+            state,fingerprints,bounds,dirty,metrics=project(snapshot_inputs(state),self._state,self._fingerprints,self._group_bytes,allow_synthetic=self.provider.allow_synthetic)
+            self._fingerprints,self._group_bytes,self.projection_metrics=fingerprints,bounds,metrics
+            for eid in dirty:self._event_versions[eid]=state['state_revision']
         self._state=state
         if changed:self.publish()
 
@@ -85,10 +128,12 @@ class CurrentStore:
 
     def commit(self,raw):
         if self.closed:raise ValueError('Current store is closed')
-        raw=deepcopy(raw)
+        # serialize owns the defensive deep copy; only the clock changes here.
+        raw=dict(raw)
         evaluated=self._clock_origin+timedelta(seconds=max(0,int(self.monotonic()-self._age_origin)))
         if raw.get('runtime_id')==self._state['runtime_id'] and stamp(raw['clock_at'])<evaluated:raw['clock_at']=evaluated.isoformat()
-        candidate=serialize(raw,allow_synthetic=self.provider.allow_synthetic)
+        from .current_incremental import project
+        candidate,fingerprints,bounds,dirty,metrics=project(raw,self._state,self._fingerprints,self._group_bytes,allow_synthetic=self.provider.allow_synthetic)
         old=self._state
         if candidate['runtime_id']==old['runtime_id']:
             if candidate['state_revision']<=old['state_revision']:
@@ -99,7 +144,7 @@ class CurrentStore:
                 if prev:
                     if q['revision']<prev['revision']:raise ValueError('Quote revision regressed')
                     # Receipt/projection clocks alone do not reprice a quote.
-                    content=lambda v:dict({k:v.get(k) for k in ('original','source','state','rule_note','binding','calculation_inputs','depth','freshness_policy','rules_differ','cost_note')},source_time_kind=v['times']['source_time_kind'])
+                    content=lambda v:dict({k:v.get(k) for k in ('original','source','state','rule_note','binding','calculation_inputs','depth','freshness_policy','rules_differ','cost_note','sharp_reference')},source_time_kind=v['times']['source_time_kind'])
                     if q['revision']==prev['revision'] and content(q)!=content(prev):raise ValueError('Quote changed without a coherent revision')
                     if q['revision']>prev['revision'] and content(q)==content(prev):raise ValueError('Heartbeat cannot reprice a quote')
                     new=q.get('book_confirmation');prior=prev.get('book_confirmation')
@@ -110,6 +155,18 @@ class CurrentStore:
                         raise ValueError('Identical repeat cannot reset source age without explicit observation-time evidence')
         else:
             self.leases.clear();self.clients.clear()
+        if candidate['runtime_id']!=old['runtime_id']:
+            self._event_versions={};self._removed_events={};self._changes_floor=candidate['state_revision']
+        present={e['id'] for e in candidate['events']}
+        for eid in set(self._event_versions)-present:
+            self._removed_events[eid]=candidate['state_revision'];self._event_versions.pop(eid,None)
+        for eid in dirty| (present-set(self._event_versions)):
+            self._event_versions[eid]=candidate['state_revision'];self._removed_events.pop(eid,None)
+        if len(self._removed_events)>2000:
+            oldest=sorted(self._removed_events,key=self._removed_events.get)[:-2000]
+            self._changes_floor=max(self._changes_floor,max(self._removed_events[eid] for eid in oldest))
+            for eid in oldest:self._removed_events.pop(eid)
+        self._fingerprints,self._group_bytes,self.projection_metrics=fingerprints,bounds,metrics
         self._state=candidate
         self._age_origin=self.monotonic();self._clock_origin=stamp(candidate['clock_at'])
         self.publish()
@@ -202,7 +259,15 @@ def mount(app,provider=None):
 
     async def current(req):
         strict_query(req)
-        return web.json_response(store.snapshot())
+        return web.Response(body=store.encoded_snapshot(),content_type='application/json')
+
+    async def changes(req):
+        try:
+            if set(req.query)!={'runtime_id','state_revision'}:raise ValueError()
+            runtime=req.query['runtime_id'];revision=int(req.query['state_revision'])
+            if not 0<len(runtime)<=128 or not 1<=revision<=9007199254740991:raise ValueError()
+        except (ValueError,TypeError):return web.json_response({'error':'invalid_change_cursor'},status=422)
+        return web.Response(body=store.encoded_changes(runtime,revision),content_type='application/json')
 
     async def updates(req):
         strict_query(req)
@@ -240,6 +305,7 @@ def mount(app,provider=None):
         except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
 
     app.router.add_get('/api/current',current)
+    app.router.add_get('/api/current/changes',changes)
     app.router.add_get('/api/current/updates',updates)
     app.router.add_post('/api/selections',selection)
     app.router.add_get('/api/selections/{token}',selection)

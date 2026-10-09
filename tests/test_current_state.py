@@ -23,6 +23,16 @@ class Leases(unittest.TestCase):
     def error(self,status,code,call):
         with self.assertRaises(SelectionError) as ctx:call()
         self.assertEqual(ctx.exception.status,status);self.assertEqual(ctx.exception.body['error'],code)
+    def test_encoded_snapshot_does_not_clone_or_expose_mutable_state(self):
+        from app.dashboard.current_contract import packed
+        import json
+        expected=packed(self.store.snapshot())
+        with patch.object(self.store,'snapshot',side_effect=AssertionError('No full-board response copy')):
+            encoded=self.store.encoded_snapshot()
+        self.assertEqual(encoded,expected)
+        decoded=json.loads(encoded);decoded['events'].clear()
+        self.assertTrue(self.store.snapshot()['events'])
+
     def test_atomic_revision_validation_no_substitution(self):
         advertised=request(self.store);r=fixture(2);self.store.commit(r)
         self.error(409,'selection_changed',lambda:self.store.create(advertised));self.assertEqual(len(self.store.leases),0)

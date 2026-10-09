@@ -10,6 +10,7 @@ from decimal import Decimal, localcontext
 from fractions import Fraction
 import hashlib
 import json
+from io import BytesIO
 import re
 from .u0_display import VERSION, quote_display, bounded_decimal
 
@@ -19,7 +20,12 @@ MAX_BYTES = 64 * 1024 * 1024
 
 
 def packed(value):
-    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode()
+    # Stream chunks into one byte buffer. Building a giant temporary JSON string
+    # repeatedly retains substantial allocator memory on the local Python runtime.
+    encoder=json.JSONEncoder(sort_keys=True,separators=(',', ':'),ensure_ascii=False,allow_nan=False)
+    with BytesIO() as output:
+        for chunk in encoder.iterencode(value):output.write(chunk.encode())
+        return output.getvalue()
 
 
 def identity(kind, value):
@@ -118,7 +124,7 @@ def comparisons(outcome):
     """All 15 visible-venue subsets; no client economic arithmetic/extra fetch."""
     quotes = quotes_of(outcome)
     for q in quotes:
-        contexts = {}
+        contexts = {};equivalent_contexts={}
         for mask in range(1,16):
             vs = [v for n,v in enumerate(VENUES) if mask & (1<<n)]
             key = '+'.join(vs)
@@ -151,7 +157,10 @@ def comparisons(outcome):
                     gap=result(diff['decimal_approx'],'cents',basis=basis)
                     gap.update(exact=diff,display_value=display_decimal(gap['value'],1,True)+'c',
                         interpretation='Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim.')
-            contexts[key] = dict(cue=cue, raw_difference=gap)
+            context=dict(cue=cue,raw_difference=gap)
+            # Absent venues produce identical filter results; share immutable
+            # result graphs while preserving every wire-level filter key.
+            contexts[key]=equivalent_contexts.setdefault(packed(context),context)
         q['comparison']['contexts'] = contexts
         q['calculations']['raw_difference'] = deepcopy(contexts['+'.join(VENUES)]['raw_difference'])
 
@@ -298,7 +307,7 @@ def _serialize(raw, *, allow_synthetic):
                 candidates=[*o['quotes'].values(),*(q for qs in o.get('alternatives',{}).values() for q in qs)]; unique={}
                 if len(candidates)>64:raise ValueError('Exact-selection instrument capacity exceeded')
                 for q in candidates:
-                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation'})
+                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation','sharp_reference'})
                     native=q.get('native_predicate')
                     if native is not None:
                         fields(native,{'version','participant','predicate','native_outcome_id','domain','binding_sha256','original_result_policy'})
@@ -384,6 +393,9 @@ def _serialize(raw, *, allow_synthetic):
                     if 'rules_differ' in q and type(q['rules_differ']) is not bool:raise ValueError('Explicit rule difference flag required')
                     if q.get('cost_note') is not None:text(q['cost_note'])
                     text(q['rule_note'])
+                    if q.get('sharp_reference') is not None:
+                        from app.collection.current_benchmark import validate_reference
+                        validate_reference(q['sharp_reference'],context)
                     q['calculations']=calculation_outputs(q, evaluate=False)
                     if q.get('engine_inputs') is not None:q['calculation_inputs']=deepcopy(q['engine_inputs'])
                     if q['id'] in unique and packed(unique[q['id']])!=packed(q):raise ValueError('Conflicting duplicate instrument')
@@ -414,7 +426,10 @@ def _serialize(raw, *, allow_synthetic):
     for q in all_quotes:
         if q.get('engine_inputs'):
             validate_engine_inputs(q['engine_inputs'],all_quotes)
-            q['calculations'].update(calculation_outputs(q))
+            q['calculations'].update(calculation_outputs(q,clock=clock))
+        if q.get('sharp_reference') is not None:
+            from app.collection.current_benchmark import calculate
+            q['calculations']['ev']=calculate(q,clock)
         q.pop('engine_inputs',None)
     for e in r['events']:
         for g in e['groups']:
@@ -470,9 +485,9 @@ def validate_engine_inputs(bundle,quotes):
     bundle['current_inputs_eligible']=inputs_eligible
 
 
-def calculation_outputs(q, evaluate=True):
+def calculation_outputs(q, evaluate=True, clock=None):
     basis=dict(version=VERSION,inputs=[dict(quote_id=q['id'],quote_revision=q['revision'])])
-    out={k:result(reason=why,basis=basis) for k,why in [('arbitrage','Settlement, costs and depth are not established'),('ev','No independent supported probability model'),('sizing','Executable depth and quantity rules unknown'),('manual','Enter explicit probability, costs and settlement assumptions')]}
+    out={k:result(reason=why,basis=basis) for k,why in [('arbitrage','Settlement, costs and depth are not established'),('ev','No matched current Pinnacle baseline'),('sizing','Executable depth and quantity rules unknown'),('manual','Enter explicit probability, costs and settlement assumptions')]}
     bundle=q.get('engine_inputs')
     if not bundle or not evaluate:return out
     if not q['comparison']['eligible'] or bundle.get('current_inputs_eligible') is False:
@@ -559,15 +574,23 @@ def manual_scenario(review, assumptions):
 
 def snapshot_inputs(payload):
     """Recover exact normalized inputs without retaining derived calculation results."""
-    raw=deepcopy(payload)
-    for e in raw['events']:
-        for g in e['groups']:
-            for o in g['outcomes']:
-                for q in quotes_of(o):
-                    for key in ('display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations'):
-                        q.pop(key,None)
-                    bundle=q.pop('calculation_inputs',None)
-                    if bundle is not None:q['engine_inputs']=bundle
+    # Strip derived graphs before copying; they can be much larger than inputs.
+    derived={'display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations','calculation_inputs'}
+    def original(q):
+        value=deepcopy({k:v for k,v in q.items() if k not in derived})
+        if q.get('calculation_inputs') is not None:value['engine_inputs']=deepcopy(q['calculation_inputs'])
+        return value
+    raw=deepcopy({k:v for k,v in payload.items() if k!='events'})
+    raw['events']=[]
+    for event in payload['events']:
+        e=deepcopy({k:v for k,v in event.items() if k!='groups'});e['groups']=[];raw['events'].append(e)
+        for group in event['groups']:
+            g=deepcopy({k:v for k,v in group.items() if k!='outcomes'});g['outcomes']=[];e['groups'].append(g)
+            for outcome in group['outcomes']:
+                o=deepcopy({k:v for k,v in outcome.items() if k not in ('quotes','alternatives')})
+                o['quotes']={v:original(q) for v,q in outcome['quotes'].items()}
+                if 'alternatives' in outcome:o['alternatives']={v:[original(q) for q in qs] for v,qs in outcome['alternatives'].items()}
+                g['outcomes'].append(o)
     return raw
 
 

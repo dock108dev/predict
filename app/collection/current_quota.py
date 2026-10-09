@@ -487,6 +487,33 @@ class QuotaLedger:
             a['state']='uncertain';a['dispatch_at']=at
         self.transact(mark)
 
+    def reconcile_uncharged(self, owner, aid, evidence_path):
+        """Resolve one expired uncertain dispatch only on unchanged usage counters.
+
+        A later free usage observation is distinct from the lost response. Any
+        spend, extra pending dispatch, expired window or uncertain identity keeps
+        the original reservation. Due times and consumed authority stay intact.
+        """
+        if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
+        path=Path(evidence_path)
+        if not path.is_absolute() or path.is_symlink() or path.stat().st_size>8192:raise QuotaStop('usage_recovery_evidence_invalid')
+        raw=path.read_bytes();e=json.loads(raw)
+        if e.get('schema')!='predict-usage-observation-1' or e.get('status')!=200 or e.get('endpoint_class')!='sports_bootstrap' or e.get('purpose')!='read_only_usage_recovery':raise QuotaStop('usage_recovery_evidence_invalid')
+        def recover(v,at):
+            pending=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
+            if len(pending)!=1 or pending[0]['id']!=aid:raise QuotaStop('ambiguous_dispatch_unresolved')
+            a=pending[0];baseline=a.get('baseline');q=headers(e['headers'],v['ceiling'])
+            if (a['state']!='uncertain' or not baseline or v['pause'] or not v['window'] or a['window_id']!=v['window']['id']
+                or not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at'])
+                or not 0<=(stamp(at)-stamp(e['received_at'])).total_seconds()<=300
+                or (stamp(e['received_at'])-stamp(a['dispatch_at'])).total_seconds()<120
+                or q['last']!=0 or any(q[k]!=baseline[k] or q[k]!=v['observation'][k] for k in ('used','remaining'))):
+                raise QuotaStop('usage_recovery_not_uncharged')
+            a.update(state='confirmed',charged=0,reconciled_at=at,
+                recovery=dict(kind='unchanged_provider_usage_after_expired_dispatch',evidence=str(path),sha256=sha256(raw).hexdigest(),received_at=e['received_at'],headers=e['headers']))
+            v['observation']=dict(q,at=e['received_at'],attempt_id=aid)
+        self.transact(recover)
+
     def reconcile(self, aid, items):
         def reconcile(v,at):
             a=v['attempts'][aid]

@@ -40,12 +40,28 @@ class CurrentOccurrence(unittest.TestCase):
     annotate(c,v);self.assertFalse(m.get('direct_win_binding'));self.assertEqual(len(c['markets']),2 if v=='kalshi' else 1)
 class CurrentSelections(unittest.IsolatedAsyncioTestCase):
  setUp=CurrentOccurrence.setUp
+ async def test_polymarket_identity_rebinds_after_occurrence_without_kalshi(self):
+  s=CurrentService(config=dict(DEFAULT,enabled=False,aggregate_enabled=False));store=CurrentStore(s);s.store=store;s.sink=LatestStateSink(store,s.initial_state());s.dispatch=True
+  try:
+   c=catalogs()['polymarket_us'];c['events'][0]['season']=None;c['events'][0]['stage']=None
+   for m in c['markets']:
+    m['v1_raw_binding']['status']='IDENTITY_BLOCKED'
+    m['v1_raw_binding']['blockers']=['Exact game identity facts unavailable: season, stage']
+   s.catalog('polymarket_us',c)
+   admitted=s.sink.reducer.inventory['polymarket_us']
+   self.assertEqual(admitted['events'][0]['season'],'2026')
+   self.assertEqual(admitted['events'][0]['stage'],'regular_season')
+   for m in admitted['markets']:
+    self.assertEqual(m['v1_raw_binding']['status'],'BOUND_RAW_PREDICATE')
+    s.book('polymarket_us',fixtures.book('polymarket_us',m,utc()))
+   self.assertEqual(len(store.index(store.snapshot())),2)
+  finally:await store.close()
  async def test_direct_wins_join_no_stays_local_and_economics_remain_withheld(self):
   s=CurrentService(config=dict(DEFAULT,enabled=False,aggregate_enabled=False));store=CurrentStore(s);s.store=store;s.sink=LatestStateSink(store,s.initial_state());s.dispatch=True
   try:
    for v,c in catalogs().items():
     s.catalog(v,c)
-    for m in c['markets']:s.book(v,fixtures.book(v,m,utc()))
+    s.books(v,[fixtures.book(v,m,utc()) for m in c['markets']])
    snap=store.snapshot();common=[o for e in snap['events'] for g in e['groups'] for o in g['outcomes'] if len(o['quotes'])==2]
    self.assertEqual({o['participant'] for o in common},{'NFL:TB','NFL:DAL'})
    for o in common:

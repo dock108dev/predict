@@ -35,7 +35,7 @@ def event_key(event):
         raise ValueError('NFL postseason start conflicts with season')
     if event['stage']=='regular_season' and any(t.year==2027 and t.month>1 for t in (start,original)):
         raise ValueError('NFL regular season start conflicts with season')
-    mapping=event.get('participants',{});registry=Registry.load()
+    mapping=event.get('participants',{});registry=Registry.current()
     if len(mapping)!=2 or len(set(mapping.values()))!=2:
         raise ValueError('Two distinct NFL participants required')
     for name,cid in mapping.items():

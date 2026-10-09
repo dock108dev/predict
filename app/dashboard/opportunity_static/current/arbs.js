@@ -1,5 +1,5 @@
 import {el,venues,markets,periods,quoteText,age} from './board.js';
-const $=id=>document.getElementById(id);let data,busy=false,again=false;
+const $=id=>document.getElementById(id);let data,busy=false,again=false,loadedScope=null;
 function pairCard(p,card){
   card ||= el('section',undefined,'arb-card');card.dataset.id=p.id;
   const header=el('div',undefined,'arb-header');header.append(el('h2',p.title),el('p',p.league+' · '+(periods[p.period]||p.period)+' · '+(markets[p.market]||p.market)+(p.line?' · '+p.line:'')+' · '+new Date(p.start_at).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
@@ -16,13 +16,13 @@ function pairCard(p,card){
   for(const [i,node] of [header,legs,result].entries()){if(card.children[i]&&card.children[i]!==basis)card.children[i].replaceWith(node);else card.insertBefore(node,basis.parentNode===card?basis:null);}
   if(basis.parentNode!==card)card.append(basis);return card;
 }
-function draw(){if(!data)return;const search=$('search').value.toLowerCase(),market=$('market').value;
+function draw(changed=null){if(!data)return;const search=$('search').value.toLowerCase(),market=$('market').value;
   const pairs=data.pairs.filter(p=>(!market||p.market===market)&&[p.title,...p.legs.map(l=>l.selection)].join(' ').toLowerCase().includes(search));$('flow').textContent=pairs.length+' opposing pairs';$('test-notice').hidden=data.mode!=='synthetic';
   const cards=new Map([...$('pairs').querySelectorAll('.arb-card')].map(n=>[n.dataset.id,n]));const retained=new Set(pairs.map(p=>p.id));
   for(const [id,card] of cards)if(!retained.has(id)){if(card.contains(document.activeElement))$('search').focus({preventScroll:true});card.remove();}
   $('pairs').querySelector('.empty')?.remove();
-  pairs.forEach((p,i)=>{const card=pairCard(p,cards.get(p.id));if($('pairs').children[i]!==card)$('pairs').insertBefore(card,$('pairs').children[i]||null);});
+  pairs.forEach((p,i)=>{const prior=cards.get(p.id),card=changed&&prior&&!changed.has(p.event_id)?prior:pairCard(p,prior);if($('pairs').children[i]!==card)$('pairs').insertBefore(card,$('pairs').children[i]||null);});
   if(!pairs.length){const empty=el('div',undefined,'empty');empty.append(el('h2','No matching opposing pairs'),el('p','Try another game or market. Both legs need verified matching event and market coverage.'));$('pairs').append(empty);}
 }
-async function pull(){if(busy){again=true;return;}busy=true;try{const r=await fetch('/api/arbs?'+new URLSearchParams({market:$('market').value,search:$('search').value}));if(!r.ok)throw Error('Arbs unavailable');data=await r.json();draw();}catch(e){$('flow').textContent=e.message;}finally{busy=false;if(again){again=false;pull();}}}
+async function pull(){if(busy){again=true;return;}busy=true;try{const scope=JSON.stringify([$('market').value,$('search').value]),params={market:$('market').value,search:$('search').value};if(data&&loadedScope===scope){params.runtime_id=data.runtime_id;params.state_revision=data.state_revision;}const r=await fetch('/api/arbs?'+new URLSearchParams(params));if(!r.ok)throw Error('Arbs unavailable');const reply=await r.json();if(reply.schema==='predict-arbs-changes-1'){if(!data||reply.base_revision!==data.state_revision||reply.snapshot.runtime_id!==data.runtime_id)throw Error('Arbs update cursor changed');const changed=new Set(reply.changed_event_ids);data={...reply.snapshot,pairs:[...data.pairs.filter(p=>!changed.has(p.event_id)),...reply.pairs]};}else data=reply;loadedScope=scope;const clock=Date.parse(data.clock_at);for(const pair of data.pairs)for(const leg of pair.legs){const at=leg.quote.times.source_at;leg.quote.age_seconds=at===null?null:Math.max(0,(clock-Date.parse(at))/1000);}draw(reply.schema==='predict-arbs-changes-1'?new Set(reply.changed_event_ids):null);}catch(e){$('flow').textContent=e.message;}finally{busy=false;if(again){again=false;pull();}}}
 $('filters').addEventListener('submit',e=>e.preventDefault());$('search').addEventListener('input',pull);$('market').addEventListener('change',pull);const stream=new EventSource('/api/current/updates');stream.onmessage=pull;stream.onopen=pull;stream.onerror=()=>{$('flow').textContent='Reconnecting';};window.addEventListener('pagehide',()=>stream.close());pull();

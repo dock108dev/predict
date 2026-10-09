@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from functools import lru_cache
 from types import MappingProxyType
 from .names import name_key
 
@@ -99,6 +100,17 @@ class Registry:
             return result
         return cls(json.loads(Path(path).read_text(), object_pairs_hook=unique_pairs))
 
+    @classmethod
+    def current(cls):
+        """Share the read-only default lookup tables until their file changes.
+
+        Explicit load() stays detached for authoring and review workflows.
+        No learned aliases or price/history data enters this bounded cache.
+        """
+        stat=DEFAULT_PATH.stat()
+        return _current_registry(cls,str(DEFAULT_PATH),
+            (stat.st_dev,stat.st_ino,stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns))
+
     def to_json(self):
         return json.dumps(self._data, indent=2, sort_keys=True) + '\n'
 
@@ -161,3 +173,8 @@ class Registry:
             return self.result('resolved', [mapped], provenance, name, native_id)
         return self.result('resolved' if len(named) == 1 else 'ambiguous' if named else 'unknown', named,
                            provenance + ([] if named else ['no-explicit-alias']), name, native_id)
+
+
+@lru_cache(maxsize=2)
+def _current_registry(cls,path,signature):
+    return cls.load(path)

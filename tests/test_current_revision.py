@@ -37,7 +37,7 @@ class MathTests(unittest.TestCase):
         s=serialize(fixture(),allow_synthetic=True)
         q=s['events'][0]['groups'][0]['outcomes'][0]['quotes']['kalshi'];r=q['calculations']['arbitrage']
         self.assertTrue(r['eligible']);self.assertIn('denominator',r['basis']);self.assertEqual(len(r['basis']['inputs']),2)
-        self.assertFalse(q['calculations']['ev']['eligible']);self.assertIn('independent',q['calculations']['ev']['reason'])
+        self.assertFalse(q['calculations']['ev']['eligible']);self.assertIn('Pinnacle',q['calculations']['ev']['reason'])
     def test_arbs_names_opposing_legs_and_original_inputs(self):
         pairs=arbitrage_pairs(serialize(fixture(),allow_synthetic=True))['pairs']
         self.assertTrue(pairs)

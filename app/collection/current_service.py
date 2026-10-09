@@ -7,7 +7,7 @@ import json
 import os
 import time
 from uuid import uuid4
-from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION
+from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION, aggregate_scope
 from .local_ownership import LocalOwnership
 from .current_sink import LatestStateSink, utc
 from app.dashboard.current_state import unavailable
@@ -43,6 +43,7 @@ class CurrentService:
         self.deadline = None
         self.peak_rss = 0
         self.sampled_rss = None
+        self.stop_reason = None
         from .current_clock import continuous
         self.clock_wall, self.clock_mono = time.time(), continuous()
         self._control_lock = asyncio.Lock()
@@ -55,7 +56,7 @@ class CurrentService:
         for venue in ('kalshi','polymarket_us'):
             raw['source_status'][venue] = dict(state='connecting', reason_code='native_connecting', reason='Connecting to the native feed.', next_due_at=None)
         for venue in ('novig','prophetx'):
-            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(self.config['sports']) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
+            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(aggregate_scope(self.config)) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
         return raw
 
     async def start(self, store):
@@ -175,6 +176,17 @@ class CurrentService:
         if not self.dispatch: raise asyncio.CancelledError()
         cats = deepcopy(self.sink.reducer.inventory)
         cats[venue]=deepcopy(cat)
+        # Occurrence evidence supplies season/stage before predicate binding.
+        # Each native source must remain usable without the other catalog.
+        from .current_occurrence import annotate as occurrence
+        from .v1_comparison import annotate
+        occurrence(cats[venue],venue)
+        proven={e['id'] for e in cats[venue]['events'] if e.get('current_occurrence_binding')}
+        blocked=[m for m in cats[venue]['markets'] if m['event_id'] in proven
+                 and m.get('v1_raw_binding',{}).get('status')=='IDENTITY_BLOCKED']
+        if blocked:
+            annotate(dict(cats[venue],markets=blocked),venue,policy='manual-comparison-2')
+        occurrence(cats[venue],venue)
         if 'kalshi' in cats and 'polymarket_us' in cats:
             from .admission_enrichment import share_games
             from .v1_comparison import annotate
@@ -194,12 +206,17 @@ class CurrentService:
             selected=len(cat.get('selection',{}).get('ids',[])),exclusions=self.sink.exclusions))
 
     def book(self, venue, book):
+        self.books(venue,[book])
+
+    def books(self, venue, books):
         if not self.dispatch: raise asyncio.CancelledError()
         states=deepcopy(self.states)
+        book=max(books,key=lambda b:b['raw']['received_at'])
         states[venue]=dict(state='available',reason_code='native_image',reason='Native book images received.',
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
         try:
-            self.sink.commit(self.row('prediction_book',venue,book=book,packets=[]),states)
+            observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
+            self.sink.commit(self.row('prediction_books',venue,observations=observations),states)
             self.states=states
         except Exception as exc:
             from app.diagnostics import failure
@@ -217,6 +234,7 @@ class CurrentService:
             self.sampled_rss=rss()
             self.peak_rss=max(self.peak_rss,self.sampled_rss)
             if self.peak_rss>self.config['rss_bytes']:
+                self.stop_reason='Updates stopped after reaching the app memory limit. Inspect recovery in Admin.'
                 self.issue('service','resource','rss_cap'); await self.close(); return
             if time.monotonic()>=self.deadline:
                 await self.close(); return
@@ -282,7 +300,7 @@ class CurrentService:
             self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
             for venue in ('kalshi','polymarket_us','novig','prophetx'):
                 self.source_state(venue,'stopped' if not self.cleanup_errors else 'error',
-                    'Native service stopped. Reopen for a fresh runtime.' if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
+                    (self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.') if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
             if self.store:
                 self.store.leases.clear();self.store.clients.clear()
             self.cleanup_complete=not self.cleanup_errors
@@ -357,7 +375,7 @@ class CurrentService:
             if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Application changed during cleanup; reopen with the current candidate.')
             self.runtime_id=str(uuid4());self.started=False;self.closed=False
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
-            self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None
+            self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None;self.stop_reason=None
             self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
             self.store.commit(self.initial_state())
             await self.start(self.store)

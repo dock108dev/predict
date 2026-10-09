@@ -12,7 +12,7 @@ MIB = 1024 * 1024
 APP_RUNNING_DURATION = 31536000  # Existing configuration sentinel for process lifetime.
 SPORTS = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL']
 DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True,
-    sports=['NFL'],
+    sports=['NFL'], aggregate_sports=[],
     families=['moneyline', 'spread', 'total'], duration_seconds=APP_RUNNING_DURATION,
     rediscovery_seconds=120, markets_per_source=20, events_per_source=24,
     requests_per_source=10000, connections_per_source=240,
@@ -23,6 +23,8 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
 
 
 def validate(value):
+    if isinstance(value,dict) and 'aggregate_sports' not in value:
+        value=dict(value,aggregate_sports=[])
     if not isinstance(value, dict) or set(value) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
@@ -31,6 +33,9 @@ def validate(value):
         allowed=SPORTS if k=='sports' else DEFAULT[k]
         if not isinstance(value[k], list) or not value[k] or len(set(value[k])) != len(value[k]) or set(value[k])-set(allowed):
             raise ValueError('Unsupported native acquisition scope')
+    scope=value['aggregate_sports']
+    if not isinstance(scope,list) or len(set(scope))!=len(scope) or set(scope)-set(SPORTS):
+        raise ValueError('Unsupported aggregate acquisition scope')
     if value['backoff_seconds'] != DEFAULT['backoff_seconds']:
         raise ValueError('Exact native backoff policy required')
     for k, ceiling in DEFAULT.items():
@@ -39,6 +44,10 @@ def validate(value):
     if value['rediscovery_seconds'] < 60:
         raise ValueError('Native rediscovery must be at least 60 seconds')
     return deepcopy(value)
+
+
+def aggregate_scope(config):
+    return list(config.get('aggregate_sports') or config['sports'])
 
 
 def load(path=None):
@@ -71,7 +80,7 @@ def consume(directory, runtime, config, digest):
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
         grant='Owner approves necessary live-data attempts and retries; bounded native and shared aggregate read-only scope',
-        aggregate_policy=AGGREGATE_POLICY.record(config['sports']))
+        aggregate_policy=AGGREGATE_POLICY.record(aggregate_scope(config)))
     import os
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:

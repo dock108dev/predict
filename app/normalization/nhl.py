@@ -25,7 +25,7 @@ def event_key(event):
         raise ValueError('NHL start outside declared season')
     if event.get('stage') not in ('regular_season','playoffs'):
         raise ValueError('Explicit NHL regular season / playoffs required')
-    mapping=event.get('participants',{});registry=Registry.load()
+    mapping=event.get('participants',{});registry=Registry.current()
     if len(mapping)!=2 or len(set(mapping.values()))!=2:
         raise ValueError('Two distinct NHL participants required')
     for name,cid in mapping.items():

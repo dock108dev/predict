@@ -65,6 +65,7 @@ def catalog_from_normalized(envelope, records):
         if o['id'] not in outcomes:outcomes[o['id']]=o;g['outcomes'].append(o)
         o=outcomes[o['id']]
         q['binding']=dict(verified=record['verified'],evidence=deepcopy(record['orientation_evidence']),selection=binding_context(e,g,o))
+        if q.get('sharp_reference') is not None:q['sharp_reference']['selection_digest']=identity('binding',q['binding']['selection'])
         v=q['venue']
         if v in o['quotes']:o['alternatives'].setdefault(v,[]).append(q)
         else:o['quotes'][v]=q

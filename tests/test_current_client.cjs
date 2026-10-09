@@ -1,9 +1,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{const source=fs.readFileSync('app/dashboard/opportunity_static/current/current-client.js','utf8');const client=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
-assert.deepEqual(Object.keys(client),['NoticeGate']);
+assert.deepEqual(Object.keys(client),['NoticeGate','applyChanges']);
 const {NoticeGate}=client,schema='predict-current-1',gate=new NoticeGate(schema),notice=(runtime,revision)=>({schema,runtime_id:runtime,state_revision:revision});
 assert(gate.accept(notice('a',2)));assert(!gate.accept(notice('a',2)));assert(!gate.accept(notice('a',1)));assert(gate.accept(notice('a',3)));assert(gate.accept(notice('b',1)));
 for(const invalid of [{...notice('b',2),schema:'bad'},notice(null,2),notice('b',0),notice('b',1.5),notice('b',Number.MAX_SAFE_INTEGER+1)])assert.throws(()=>gate.accept(invalid),/Unsupported update schema/);
+const minimal=(id,at)=>({id,start_at:at,groups:[{outcomes:[{quotes:{novig:{times:{source_at:at},age_seconds:0}},alternatives:{}}]}]});
+const prior={schema,runtime_id:'a',state_revision:1,clock_at:'2026-10-08T00:00:00Z',events:[minimal('one','2026-10-08T00:00:00Z'),minimal('two','2026-10-08T00:00:00Z')]};
+const delta={schema:'predict-current-changes-1',base_revision:1,snapshot:{schema,runtime_id:'a',state_revision:3,clock_at:'2026-10-08T00:02:00Z'},events:[minimal('two','2026-10-08T00:01:00Z')],removed_events:[]};
+const merged=client.applyChanges(prior,delta);assert.equal(merged.events.length,2);assert.equal(merged.events[0].groups[0].outcomes[0].quotes.novig.age_seconds,120);assert.equal(prior.events[0].groups[0].outcomes[0].quotes.novig.age_seconds,0);
+assert.equal(client.applyChanges(prior,{...delta,removed_events:['one']}).events.length,1);assert.throws(()=>client.applyChanges(prior,{...delta,base_revision:2}),/cursor/);assert.throws(()=>client.applyChanges(prior,{...delta,snapshot:{...delta.snapshot,runtime_id:'b'}}),/cursor/);assert.equal(client.applyChanges(prior,prior),prior);
 const current=fs.readFileSync('app/dashboard/opportunity_static/current/current.js','utf8');
 assert(!/\b(ReviewRequests|leaseStatus|quoteById)\b/.test(current));
 console.log('Current client: duplicate/out-of-order notices, runtime changes, invalid notices and removed held-review guard pass');})().catch(e=>{console.error(e);process.exitCode=1;});

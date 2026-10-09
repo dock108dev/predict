@@ -7,7 +7,7 @@ from datetime import timedelta
 import json
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from app.collection.current_native import NativeWorker
 from app.collection.current_policy import DEFAULT
 from app.collection.prediction_producer import PredictionBudget
@@ -40,12 +40,52 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_transient_http_timeout_retries_without_terminal_source_failure(self):
+        states=[]
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+            source_state=lambda *a:states.append(a),issue=lambda *a:None,observation=lambda *a:None)
+        worker=NativeWorker(service,'kalshi')
+        client=SimpleNamespace(budget=SimpleNamespace(requests=1,bytes=0),aclose=AsyncMock())
+        calls=0
+        from app.collection.prediction_producer import BudgetStop
+        async def discover():
+            nonlocal calls
+            calls+=1
+            if calls<3:
+                worker.receipt(dict(path='/test',status=200,complete=False,usable_metadata=False,
+                    body_sha256='0'*64,delivery_reason='native_http_timeout'))
+                raise BudgetStop('native_http_timeout')
+            worker.closed=True
+        with patch('app.collection.current_native.load_credentials',return_value={'kalshi':Credential()}),patch('app.collection.current_native.REST',return_value=client),patch('app.collection.current_native.native_payload.configure_transport'),patch.object(worker,'discover',side_effect=discover),patch('app.collection.current_native.asyncio.sleep',new=AsyncMock()) as sleep:
+            await worker.run()
+        self.assertEqual(calls,3)
+        self.assertFalse(worker.failed)
+        self.assertEqual([c.args[0] for c in sleep.await_args_list[:2]],[2,5])
+        client.aclose.assert_awaited_once()
+
+    async def test_latest_validated_images_publish_as_one_bounded_batch(self):
+        from tests.test_current_service import native_fixture
+        _,book=native_fixture();published=[]
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,books=lambda *a:published.append(deepcopy(a)))
+        worker=NativeWorker(service,'kalshi')
+        worker.queue_book(book)
+        changed=deepcopy(book);changed['outcomes'][0]['asks']['levels'][0]['price']['value']='0.49'
+        worker.queue_book(changed)
+        other=deepcopy(book);other['raw']['ref']['market_id']='CONTROLLED-other'
+        worker.queue_book(other)
+        self.assertEqual(published,[])
+        worker.flush_books()
+        self.assertEqual(len(published),1)
+        self.assertEqual(published[0][1],[changed,other])
+        worker.queue_book(book);worker.closed=True;worker.flush_books()
+        self.assertEqual(len(published),1)
+
     async def test_each_source_gap_resync_new_socket_cancel_no_duplicate(self):
         for venue in ('kalshi','polymarket_us'):
             with self.subTest(venue=venue):
                 sockets=[];states=[];issues=[];books=[]
                 service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
-                    source_state=lambda *a:states.append(a),issue=lambda *a:issues.append(a),book=lambda *a:books.append(a))
+                    source_state=lambda *a:states.append(a),issue=lambda *a:issues.append(a),book=lambda *a:books.append(a),books=lambda v,values:books.extend((v,b) for b in values))
                 # Controlled accelerated backoff only in this disposable fixture.
                 service.config['backoff_seconds']=[.001]*5
                 worker=NativeWorker(service,venue);worker.credential=Credential()
@@ -62,10 +102,10 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                 m=replace(m,state=MarketState.ACTIVE)
                 with patch('app.collection.current_native.connect',Connector):
                     task=asyncio.create_task(worker.stream([m]))
-                    for _ in range(200):
-                        if len(books)>=2 and len(sockets)>=2:break
+                    for _ in range(450):
+                        if len(books)>=1 and len(sockets)>=2:break
                         await asyncio.sleep(.005)
-                    self.assertGreaterEqual(len(books),2);self.assertEqual(len(sockets),2)
+                    self.assertGreaterEqual(len(books),1);self.assertEqual(len(sockets),2)
                     from app.dashboard.current_contract import stamp
                     for _,b in books:
                         stamp(b['raw']['received_at']);stamp(b['raw'].get('exchange_at'),True)

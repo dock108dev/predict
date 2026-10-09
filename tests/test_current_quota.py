@@ -23,6 +23,20 @@ class DurableQuota(unittest.TestCase):
         aid=self.q.reserve(self.owner,'candidate',dict(path='/v4/sports',params={}),0,bootstrap=True)
         self.q.dispatched(aid,self.owner);self.q.reconcile(aid,quota(used));return aid
     def paid(self,cost=3):return self.q.reserve(self.owner,'candidate',dict(path='/v4/sports/baseball_mlb/odds',params={}),cost)
+    def test_expired_uncertain_zero_charge_requires_exact_usage_evidence(self):
+        self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)
+        before=self.q.snapshot();self.at='2026-10-03T12:03:00+00:00'
+        path=self.root/'usage.json'
+        def evidence(used):
+            path.write_text(json.dumps(dict(schema='predict-usage-observation-1',status=200,endpoint_class='sports_bootstrap',purpose='read_only_usage_recovery',received_at=self.at,headers=quota(used))))
+        evidence(23)
+        with self.assertRaisesRegex(QuotaStop,'not_uncharged'):self.q.reconcile_uncharged(self.owner,aid,path)
+        self.assertEqual(self.q.snapshot()['reserved'],3)
+        evidence(20);self.q.reconcile_uncharged(self.owner,aid,path)
+        after=self.q.snapshot();self.assertEqual(after['used'],20);self.assertEqual(after['reserved'],0)
+        for k in ('next_due_at','rotation','bootstrap_due_at','attempts'):self.assertEqual(after[k],before[k])
+        attempt=self.q._read()['attempts'][aid];self.assertTrue(attempt['consumed']);self.assertEqual(attempt['charged'],0);self.assertIn('recovery',attempt)
+
     def test_bootstrap_without_paid_or_window(self):
         self.bootstrap();self.assertEqual(self.q.snapshot()['remaining'],480)
         with self.assertRaisesRegex(QuotaStop,'reset_window_unknown'):self.paid()

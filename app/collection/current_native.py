@@ -58,8 +58,32 @@ class NativeWorker:
         self.reconcile_needed = False
         self.wake_task = None
         self.source_highwater = {}
+        self.pending_books = {}
+        self.publication_handle = None
         from .current_confirmation import Confirmations
         self.confirmations = Confirmations(venue)
+
+    def queue_book(self, book):
+        """Keep one fully reconstructed latest image per subscribed market."""
+        mid=book['raw']['ref']['market_id']
+        if mid not in self.pending_books and len(self.pending_books)>=self.config['markets_per_source']:
+            raise BudgetStop('current_native_batch_capacity')
+        self.pending_books[mid]=book
+        if self.publication_handle is None:
+            self.publication_handle=asyncio.get_running_loop().call_later(1,self.flush_books)
+
+    def flush_books(self):
+        if self.publication_handle:self.publication_handle.cancel()
+        self.publication_handle=None
+        books=list(self.pending_books.values());self.pending_books.clear()
+        if not books or self.closed or self.failed or not self.service.dispatch:return
+        try:
+            tick=time.perf_counter()
+            self.service.books(self.venue,books)
+            self.metrics['receipt_projection_ms']=(time.perf_counter()-tick)*1000
+        except Exception:
+            self.failed=True
+            self.service.source_state(self.venue,'error','Native batch admission failed; fresh complete images are required.')
 
     async def snapshots(self, engine, markets, pending):
         """At most one batched request per 20 seconds; same native request budget."""
@@ -127,7 +151,7 @@ class NativeWorker:
             self.backoff_until = time.monotonic()+delay
         if not row['complete'] or not row.get('usable_metadata'):
             query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
-            if row.get('delivery_reason') not in query_caps | {'http_status', None} and row['status']==200:
+            if row.get('delivery_reason') not in query_caps | {'http_status', None, 'native_http_timeout', 'native_http_transport_error'} and row['status']==200:
                 self.failed = True
             return
         page = dict(row, source=self.venue, native_binding_revision='live-native-binding-2',
@@ -294,6 +318,8 @@ class NativeWorker:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
                 self.confirmations.begin(self.metrics['connections'])
+                if self.publication_handle:self.publication_handle.cancel()
+                self.publication_handle=None;self.pending_books.clear()
                 self.service.source_state(self.venue, 'resyncing', 'Waiting for a complete native book image.')
                 headers = self.credential.headers()
                 class NoRedirect(connect):
@@ -370,8 +396,8 @@ class NativeWorker:
                         validate(confirmation,value['raw']['ref'],value)
                         value['book_confirmation']=confirmation
                     tick = time.perf_counter()
-                    self.service.book(self.venue, value)
-                    self.metrics['receipt_projection_ms'] = (time.perf_counter()-tick)*1000
+                    self.queue_book(value)
+                    self.metrics['receipt_queue_ms'] = (time.perf_counter()-tick)*1000
                     self.metrics['source_receipt_ms'] = None if book.raw.exchange_at is None else (received-book.raw.exchange_at).total_seconds()*1000
                     self.metrics['books'] += 1
                     failures = 0
@@ -418,6 +444,8 @@ class NativeWorker:
                     self.service.source_state(self.venue, 'error', 'Repeated native feed failures; source paused.')
                     return
             finally:
+                if self.publication_handle:self.publication_handle.cancel()
+                self.publication_handle=None;self.pending_books.clear()
                 if snapshot_task:
                     snapshot_task.cancel();await asyncio.gather(snapshot_task,return_exceptions=True)
                 if self.socket:
@@ -429,6 +457,8 @@ class NativeWorker:
             await asyncio.sleep(delay)
 
     async def stop_stream(self):
+        if self.publication_handle:self.publication_handle.cancel()
+        self.publication_handle=None;self.pending_books.clear()
         task, self.stream_task = self.stream_task, None
         if task:
             task.cancel()
@@ -469,9 +499,12 @@ class NativeWorker:
                     self.service.issue(self.venue, 'resource' if isinstance(exc,BudgetStop) else 'discovery', code)
                     await self.stop_stream()
                     self.service.source_state(self.venue, 'unavailable' if self.failed else 'resyncing', 'Native discovery is unavailable; healthy sources continue.')
-                    if self.failed or errors >= 3 or isinstance(exc,BudgetStop) and code!='provider_backoff_pending':
+                    retryable=code in ('provider_backoff_pending','native_http_timeout','native_http_transport_error')
+                    if self.failed or errors >= 3 or isinstance(exc,BudgetStop) and not retryable:
                         self.failed = True
                         break
+                    await asyncio.sleep(max(self.config['backoff_seconds'][errors-1],self.backoff_until-time.monotonic()))
+                    continue
                 await asyncio.sleep(max(self.config['rediscovery_seconds'], self.backoff_until-time.monotonic()))
         finally:
             await self.stop_stream()

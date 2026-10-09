@@ -10,7 +10,7 @@ from urllib.parse import quote
 import aiohttp
 from app.dashboard.current_contract import stamp
 from app.reference.product import SPORT_KEYS
-from .current_policy import ROOT
+from .current_policy import ROOT, aggregate_scope
 from .current_aggregate_policy import POLICY
 from .current_quota import QuotaLedger, QuotaStop, load_window, now
 
@@ -179,7 +179,7 @@ class AggregateScheduler:
             if quota['pause']:raise QuotaStop(quota['pause'])
             self.ledger.bind_window(self.window_loader())
             params=deepcopy(PARAMS)
-            if reference:params['bookmakers']+=',pinnacle'
+            if reference and 'pinnacle' not in params['bookmakers'].split(','):params['bookmakers']+=',pinnacle'
             requests=[dict(path='/v4/sports/'+SPORT_KEYS[s]+'/odds',params=deepcopy(params)) for s in sports]
             self.cycle_requests=0;self.cycle_credits=0;self.transport.bytes=0
             self.cycle_id=self.ledger.begin_manual_cycle(self.service.ownership,requests,identity)
@@ -217,7 +217,7 @@ class AggregateScheduler:
         from .current_schedule import schedule
         plan=schedule(now())
         if not plan['open']:
-            self.state('budget_delayed','aggregate_outside_window','Aggregate paused outside 09:00–23:00 Eastern; next cycle '+plan['next_due_at']+'. Scope: '+', '.join(self.service.config['sports'])+'.')
+            self.state('budget_delayed','aggregate_outside_window','Aggregate paused outside 09:00–23:00 Eastern; next cycle '+plan['next_due_at']+'. Scope: '+', '.join(aggregate_scope(self.service.config))+'.')
             return
         self.cycle_requests=0;self.cycle_credits=0;self.transport.bytes=0
         if not self.prepared:
@@ -230,7 +230,7 @@ class AggregateScheduler:
             if (inventory and inventory['account_id']==quota.get('account_id') and quota['observation'] is not None
                 and 0<=(stamp(now())-stamp(inventory['at'])).total_seconds()<POLICY.inventory_seconds
                 and (quota['accounting_epoch'] is None or quota['accounting_epoch']['state']=='current')):
-                self.active_sports=[s for s in self.service.config['sports'] if SPORT_KEYS[s] in inventory['active']]
+                self.active_sports=[s for s in aggregate_scope(self.service.config) if SPORT_KEYS[s] in inventory['active']]
                 self.bootstrapped=True
         inventory=self.ledger.snapshot().get('sports_inventory')
         if self.bootstrapped and inventory and (stamp(now())-stamp(inventory['at'])).total_seconds()>=POLICY.inventory_seconds:self.bootstrapped=False
@@ -242,22 +242,24 @@ class AggregateScheduler:
                 raise QuotaStop('aggregate_bootstrap_schema')
             available={x['key'] for x in sports if x['active'] and x.get('has_outrights') is False}
             self.ledger.record_sports([k for k in available if k in SPORT_KEYS.values()])
-            self.active_sports=[s for s in self.service.config['sports'] if SPORT_KEYS[s] in available]
+            self.active_sports=[s for s in aggregate_scope(self.service.config) if SPORT_KEYS[s] in available]
             self.bootstrapped=True
         quota=self.ledger.snapshot()
         if quota['pause']:raise QuotaStop(quota['pause'])
         if quota['reset'] is None:raise QuotaStop('reset_window_unknown')
         if quota['next_due_at'] and stamp(now())<stamp(quota['next_due_at']) and (self.qualification is None or self.metrics['batches']>0):
-            self.state('budget_delayed','aggregate_budget_delayed','Shared aggregate cycle every 15 minutes, 09:00–23:00 Eastern. Selected scope: '+', '.join(self.service.config['sports'])+'. Inspect original source ages.')
+            self.state('budget_delayed','aggregate_budget_delayed','Shared aggregate cycle every 15 minutes, 09:00–23:00 Eastern. Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. Inspect original source ages.')
             return
-        if not self.active_sports:raise QuotaStop('aggregate_common_sport_unobserved')
-        requests=[dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(PARAMS)) for sport in self.active_sports]
+        # Inventory activity is advisory: an empty odds response costs no credits
+        # and explicitly retires old quotes for a sport between seasons/rounds.
+        sports=list(aggregate_scope(self.service.config))
+        requests=[dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(PARAMS)) for sport in sports]
         self.cycle_id=self.ledger.begin_cycle(self.service.ownership,requests)
         if self.cycle_id is None:return
-        self.metrics['selected_scope']=list(self.service.config['sports'])
+        self.metrics['selected_scope']=list(aggregate_scope(self.service.config))
         self.metrics['active_scope']=list(self.active_sports)
         self.metrics['cycle_id']=self.cycle_id
-        for sport,request in zip(self.active_sports,requests):
+        for sport,request in zip(sports,requests):
             self.permitted()
             response=await self.dispatch(request,POLICY.credits_per_batch)
             self.admit_response(response,sport)
@@ -307,7 +309,7 @@ class AggregateScheduler:
             healthy=any(value['reason_code']=='aggregate_observed' for _,value in observations)
             states[venue]=dict(state='budget_delayed' if healthy else states[venue]['state'],
                 reason_code='aggregate_scope_observed' if healthy else states[venue]['reason_code'],
-                reason='Selected scope: '+', '.join(self.service.config['sports'])+'. '+ '; '.join(scope+': '+value['reason'] for scope,value in observations),
+                reason='Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. '+ '; '.join(scope+': '+value['reason'] for scope,value in observations),
                 received_at=response['received_at'],next_due_at=due)
         self.service.sink.commit(dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states),states)
         self.service.states=states

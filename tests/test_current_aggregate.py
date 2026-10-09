@@ -71,6 +71,27 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_running_app_without_tabs_dispatches(self):
         await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
+    async def test_inactive_supported_sport_is_checked_and_empty_response_retires_quotes(self):
+        self.service.config['aggregate_sports']=['MLB','NFL']
+        self.service.sink.commit(dict(type='current_aggregate',sport='MLB',body=body(),received_at=utc()),self.service.states)
+        original=self.wire.request
+        async def request_all(req,key):
+            response=await original(req,key)
+            if req['path']=='/v4/sports':
+                response['body']=json.dumps([dict(key='americanfootball_nfl',active=True,has_outrights=False)]).encode()
+            elif req['path']=='/v4/sports/baseball_mlb/odds':
+                self.wire.used-=3
+                response.update(body=b'[]',headers=quota(self.wire.used,0))
+            else:response['body']=body('NFL')
+            return response
+        self.wire.request=request_all
+        await self.scheduler.step()
+        self.assertEqual([r['path'] for r in self.wire.calls],['/v4/sports','/v4/sports/baseball_mlb/odds','/v4/sports/americanfootball_nfl/odds'])
+        self.assertEqual(self.q.snapshot()['used'],23)
+        self.assertEqual(self.service.sink.aggregate_records['MLB'],[])
+        self.assertEqual(self.scheduler.metrics['active_scope'],['NFL'])
+        self.assertEqual(self.scheduler.metrics['selected_scope'],['MLB','NFL'])
+        self.assertEqual(self.service.config['sports'],['MLB'])
     async def test_persisted_bootstrap_delay_keeps_scheduler_waiting(self):
         self.store.subscribers.add(asyncio.Queue(maxsize=1))
         from app.collection.current_quota import QuotaStop
@@ -142,6 +163,24 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
 class AggregateAdmission(SchedulerTests):
     async def admit(self,raw,at=None):
         self.service.sink.commit(dict(type='current_aggregate',sport='MLB',body=raw,received_at=at or utc()),self.service.states)
+    async def test_new_receipt_evidence_updates_revision_without_refreshing_same_price(self):
+        await self.admit(body())
+        before={q['id']:q for q in (x['quote'] for x in self.store.index(self.store.snapshot()).values())}
+        payload=json.loads(body())
+        payload[0]['bookmakers'][0]['last_update']='2026-10-03T00:01:00Z'
+        updated=json.dumps(payload).encode()
+        await self.admit(updated)
+        after={q['id']:q for q in (x['quote'] for x in self.store.index(self.store.snapshot()).values())}
+        for identity,q in after.items():
+            self.assertEqual(q['revision'],before[identity]['revision']+1)
+            self.assertNotEqual(q['binding']['evidence'],before[identity]['binding']['evidence'])
+            self.assertEqual(q['times'],before[identity]['times'])
+        await self.admit(updated)
+        for x in self.store.index(self.store.snapshot()).values():
+            self.assertEqual(x['quote']['revision'],after[x['quote']['id']]['revision'])
+        await self.admit(body(at='2026-10-03T00:02:00Z'))
+        for x in self.store.index(self.store.snapshot()).values():
+            self.assertEqual(x['quote']['times']['source_at'],'2026-10-03T00:02:00Z')
     async def test_original_book_and_market_clock_meaning_survives_admission(self):
         raw=json.loads(body())
         for book in raw[0]['bookmakers']:book['last_update']='2026-10-02T23:59:00Z'
@@ -226,3 +265,31 @@ class RestartScheduler(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.scheduler,'key_loader',side_effect=AssertionError('credentials')):
             with self.assertRaisesRegex(QuotaStop,'cleanup'):await self.scheduler.step()
         self.assertEqual(self.wire.calls,[]);self.assertEqual(self.q.snapshot()['attempts'],0)
+
+class PinnacleDelivery(unittest.IsolatedAsyncioTestCase):
+    asyncSetUp=SchedulerTests.asyncSetUp
+    asyncTearDown=SchedulerTests.asyncTearDown
+    async def test_reference_refresh_is_atomic_and_preserves_comparison_prices(self):
+        self.wire.paid_body=body(books=('novig','prophetx','pinnacle'),at=utc())
+        scheduler=self.scheduler
+        await scheduler.step()
+        await scheduler.refresh(['MLB'],'CONTROLLED-pinnacle-one')
+        quotes=[q for x in self.store.index(self.store.snapshot()).values() for q in [x['quote']]]
+        self.assertTrue(any(q['calculations']['ev']['eligible'] for q in quotes))
+        self.assertTrue(all(q['venue']!='pinnacle' for q in quotes))
+        prior={q['id']:q['revision'] for q in quotes}
+        self.wire.paid_body=body(books=('novig','prophetx','pinnacle'),at=utc(),price='2.7')
+        await scheduler.refresh(['MLB'],'CONTROLLED-pinnacle-two')
+        quotes=[x['quote'] for x in self.store.index(self.store.snapshot()).values()]
+        self.assertTrue(all(q['revision']>prior[q['id']] for q in quotes))
+        self.assertTrue(any(q['calculations']['ev']['eligible'] for q in quotes))
+
+        prior={q['id']:(q['revision'],q['original']) for q in quotes}
+        response=json.loads(self.wire.paid_body)
+        for book in response[0]['bookmakers']:
+            if book['key']=='pinnacle':
+                for market in book['markets']:market['outcomes'][0]['price']='3.0'
+        self.wire.paid_body=json.dumps(response).encode()
+        await scheduler.refresh(['MLB'],'CONTROLLED-pinnacle-three')
+        quotes=[x['quote'] for x in self.store.index(self.store.snapshot()).values()]
+        self.assertTrue(all(q['original']==prior[q['id']][1] and q['revision']>prior[q['id']][0] for q in quotes))

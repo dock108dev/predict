@@ -8,9 +8,9 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class AggregatePolicy:
-    version: str = 'predict-daytime-odds-2'
+    version: str = 'predict-daytime-odds-3'
     endpoint: str = 'https://api.the-odds-api.com'
-    bookmakers: tuple[str, ...] = ('novig', 'prophetx')
+    bookmakers: tuple[str, ...] = ('novig', 'prophetx', 'pinnacle')
     markets: tuple[str, ...] = ('h2h', 'spreads', 'totals')
     interval_seconds: int = 900
     timezone: str = 'America/New_York'

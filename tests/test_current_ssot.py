@@ -19,16 +19,17 @@ class PolicyOwnership(unittest.TestCase):
             self.assertIs(consumer, POLICY)
         with self.assertRaises(FrozenInstanceError):
             POLICY.interval_seconds = 1
-        config = dict(current_policy.DEFAULT)
+        config = dict(current_policy.DEFAULT,aggregate_sports=['NFL','MLB'])
         with tempfile.TemporaryDirectory() as temp:
             attempt = current_policy.consume(temp, 'controlled', config, 'synthetic-candidate')
             retained = json.loads((Path(temp)/'attempt-controlled.json').read_text())
-        self.assertEqual(attempt['aggregate_policy'], POLICY.record(config['sports']))
+        from app.collection.current_policy import aggregate_scope
+        self.assertEqual(attempt['aggregate_policy'], POLICY.record(aggregate_scope(config)))
         self.assertEqual(retained, attempt)
         attempt['aggregate_policy']['scope'].append('MLB')
         attempt['aggregate_policy']['bookmakers'].clear()
         self.assertEqual(config['sports'], ['NFL'])
-        self.assertEqual(POLICY.bookmakers, ('novig', 'prophetx'))
+        self.assertEqual(POLICY.bookmakers, ('novig', 'prophetx', 'pinnacle'))
 
     def test_incomplete_config_never_enables_acquisition_implicitly(self):
         for field in ('enabled', 'aggregate_enabled'):

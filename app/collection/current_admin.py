@@ -37,6 +37,7 @@ def advice(category, failure):
 
 
 def issue(service, venue, category, failure):
+    from .current_policy import aggregate_scope
     venue=venue if venue in (*VENUES,'the_odds_api','service') else 'service'
     category=category if category in CATEGORIES else 'local_defect'
     failure=code(failure)
@@ -51,7 +52,7 @@ def issue(service, venue, category, failure):
         endpoint_class=context.get('endpoint_class', 'discovery_or_book' if venue in ('kalshi','polymarket_us') else 'service_or_quota'),
         runtime_id=service.runtime_id,attempt_id=context.get('attempt_id',service.runtime_id),candidate_digest=service.digest,
         first_at=at,last_at=at,occurrences=1,category=category,kind=kind,code=failure,
-        scope=dict(sports=[context['sport']] if context.get('sport') else service.config['sports'],families=service.config['families']),
+        scope=dict(sports=[context['sport']] if context.get('sport') else aggregate_scope(service.config) if provider=='the_odds_api' else service.config['sports'],families=service.config['families']),
         impact=impact,healthy_independent_paths=[v for v in VENUES if v not in affected and service.states[v]['state']=='available'],
         credits=0 if provider in ('kalshi','polymarket_us') else context.get('charged_credits'),
         reserved_credits=0 if provider in ('kalshi','polymarket_us') else None if q is None else q.get('reserved'),retry_count=getattr(worker,'metrics',{}).get('retries',0),
@@ -68,7 +69,10 @@ def age(at):
 
 def project(service, raw):
     store=service.store
-    state=store.snapshot() if store else None
+    # This projection is synchronous and read-only. Keep the defensive-copy
+    # snapshot API for callers that retain or edit state, not status summaries.
+    if store:store.refresh_age()
+    state=store._state if store else None
     index=store.index(state) if state else {}
     panels=[]
     for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),('the_odds_api',['novig','prophetx'])):
@@ -92,14 +96,14 @@ def project(service, raw):
             quotes=len(quotes),identity_verified=sum(bool(q['binding']['verified']) for q in quotes),
             comparison_eligible=sum(bool(q['comparison']['eligible']) for q in quotes),
             calculation_eligible={k:sum(bool(q.get('calculations',{}).get(k,{}).get('eligible')) for q in quotes) for k in ('raw_difference','arbitrage','ev','sizing')},
-            stale=sum(bool(q['stale']) for q in quotes),freshness_policies=list({packed(q['freshness_policy']):q['freshness_policy'] for q in quotes if q.get('freshness_policy')}.values()),
+            stale=sum(bool(q['stale']) for q in quotes),freshness_policies=[deepcopy(p) for p in {packed(q['freshness_policy']):q['freshness_policy'] for q in quotes if q.get('freshness_policy')}.values()],
             backoff_remaining_seconds=backoff,worker_done=service.tasks[provider].done() if provider in service.tasks else None,
             active_sports=getattr(worker,'active_sports',None),metrics=metrics))
     raw.update(admin_schema='predict-admin-1',observed_at=utc(),sources=panels,
         service_state='running' if service.dispatch else 'stopped' if service.cleanup_complete else 'blocked',
         deadline_remaining_seconds=None if service.deadline is None or service.deadline==float('inf') else max(0,service.deadline-time.monotonic()),
         attendance=bool(store and store.subscribers),
-        resources=dict(state_encoded_bytes=None if state is None else len(packed(state)),state_ceiling_bytes=64*1024*1024,
+        resources=dict(projection=None if store is None else deepcopy(store.projection_metrics),state_encoded_bytes=None if state is None else len(packed(state)),state_ceiling_bytes=64*1024*1024,
             sampled_rss_bytes=service.sampled_rss,sampled_highwater_rss_bytes=service.peak_rss,rss_ceiling_bytes=service.config['rss_bytes'],
             subscribers=0 if store is None else len(store.subscribers),pending_notices=0 if store is None else sum(q.qsize() for q in store.subscribers),notice_ceiling_per_stream=1,stream_ceiling=8,
             transport_queue_ceiling=1,transport_queue_sample=None,

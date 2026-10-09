@@ -31,7 +31,7 @@ def admit(body, sport, received_at, *, venue=None):
         books=set()
         if not isinstance(event.get('bookmakers'),list): raise ValueError('aggregate_books_shape')
         for book in event['bookmakers']:
-            if book.get('key') not in VENUES or book['key'] in books: raise ValueError('aggregate_book_identity')
+            if book.get('key') not in (*VENUES,'pinnacle') or book['key'] in books: raise ValueError('aggregate_book_identity')
             books.add(book['key']);markets=set();valid_markets=[]
             for market in book['markets']:
                 if market['key'] in markets or market['key'] not in ('h2h','spreads','totals'): raise ValueError('aggregate_market_identity')

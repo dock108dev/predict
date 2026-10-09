@@ -31,7 +31,7 @@ def event_key(event):
         validate_enriched_event(event)
     if not public_preseason and event.get('stage') not in ('regular_season','play_in','playoffs','nba_cup'):
         raise ValueError('Explicit NBA regular season / play-in / playoffs / NBA Cup stage required')
-    mapping=event.get('participants',{});registry=Registry.load()
+    mapping=event.get('participants',{});registry=Registry.current()
     if len(mapping)!=2 or len(set(mapping.values()))!=2:
         raise ValueError('Two distinct NBA participants required')
     for name,cid in mapping.items():

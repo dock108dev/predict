@@ -1,0 +1,23 @@
+{
+  "version": "predict-linked-event-semantics-1",
+  "links": [
+    {
+      "provider": "the_odds_api",
+      "provider_event_id": "259b5df9aa0d10257f56de78523495e0",
+      "game_id": "aa6b58bf-4feb-11f1-abca-2c54536568a9",
+      "competition": "NFL",
+      "home": "NFL:DAL",
+      "away": "NFL:TB",
+      "native_occurrence_sha256": "2924f6508a38af4271939723195133e70ef8cd51b79e093fff71c4db8ba8575a"
+    }
+  ],
+  "evidence": {
+    "baseline_path": ".local/predict-odds/baselines/7903803b781cc9c3b923cb05/NFL.json",
+    "baseline_body_sha256": "cee206dd5b01c8bdcc8e6f36db1607ab8a2a678905d896a4e4aa77900f71b3f5",
+    "baseline_received_at": "2026-10-08T03:09:14.329921+00:00",
+    "current_body_sha256": "286f6352d125b39499f1499222d5606ec6f7c22677d4dea9aec8c4bee80efb25",
+    "current_received_at": "2026-10-09T00:00:02.522608+00:00",
+    "basis": "Explicit reviewed provider ID link to the native occurrence, canonical league and home/away participants. The same provider ID is present in both retained responses; differing start times are metadata, never association criteria. Native occurrence proof remains independently revalidated."
+  },
+  "sha256": "6d55449c68f057152a70338a516a73d8ab5f84cb3236c89cc7fcddb76c6ed9dc"
+}

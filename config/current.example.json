@@ -32,5 +32,6 @@
   "ingress_bytes": 8388608,
   "issue_records": 200,
   "issue_bytes": 1048576,
-  "discovery_pages": 36
+  "discovery_pages": 36,
+  "aggregate_sports": []
 }

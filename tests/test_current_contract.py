@@ -11,6 +11,13 @@ class CurrentContractTests(unittest.TestCase):
     def raw(self):return fixture()
     def snapshot(self):return serialize(self.raw(),allow_synthetic=True)
     def quote(self,r):return r['events'][0]['groups'][0]['outcomes'][0]['quotes']['kalshi']
+    def test_streaming_encoding_keeps_canonical_utf8_and_numeric_rejections(self):
+        import json
+        from app.dashboard.current_contract import packed
+        value=dict(quote='−500 · Montréal 🏈',source=None,values=[True,False,0,1.25],nested={'z':2,'a':'é'})
+        self.assertEqual(packed(value),json.dumps(value,sort_keys=True,separators=(',', ':'),ensure_ascii=False,allow_nan=False).encode())
+        with self.assertRaises(ValueError):packed({'invalid':float('nan')})
+
     def test_mode_no_fallback_and_financial_types(self):
         for mode in ('synthetic','historical'):
             r=self.raw();r['mode']=mode
