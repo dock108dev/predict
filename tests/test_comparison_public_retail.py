@@ -161,8 +161,8 @@ class FreshRetailBinding(unittest.TestCase):
     """Read-only genuine retained pair; clocks never become current acquisition."""
     def setUp(self):
         from pathlib import Path
-        self.path=Path(__file__).resolve().parents[1]/'docs/comparison-fresh-native-pair-evidence'
-        self.raw=json.loads((self.path/'genuine-final-projection.json').read_text())
+        self.path=Path(__file__).resolve().parents[1]/'tests/fixtures/retained-retail'
+        self.raw=json.loads((self.path/'projection.json').read_text())
         from app.comparison.public_retail import fresh_retained
         self.value=fresh_retained()
 
@@ -177,27 +177,27 @@ class FreshRetailBinding(unittest.TestCase):
 
     def test_exact_receipts_and_documented_endpoint_field_pointers(self):
         from hashlib import sha256
-        v=self.value;meta=v['metadata'];receipt=json.loads((self.path/'native-event/receipt.json').read_text())
-        for name in ('response.bin','decoded.json'):
-            self.assertEqual(sha256((self.path/'native-event'/name).read_bytes()).hexdigest(),receipt['wire_sha256'])
-        graph=json.loads((self.path/'native-event/decoded.json').read_text(),parse_float=str)
+        v=self.value;meta=v['metadata'];receipt=json.loads((self.path/'event-receipt.json').read_text())
+        body=(self.path/'event-response.json').read_bytes()
+        self.assertEqual(sha256(body).hexdigest(),receipt['wire_sha256'])
+        self.assertEqual(receipt['wire_sha256'],receipt['decoded_sha256'])
+        graph=json.loads(body,parse_float=str)
         market=graph['events'][0]['markets'][469]
         self.assertEqual(meta['market_pointer'],'/events/0/markets/469')
         self.assertEqual(meta['response_sha256'],receipt['wire_sha256'])
         for field in ('minimumTradeQty','orderPriceMinTickSize','feeCoefficient','description'):
             self.assertEqual(meta[field],market[field])
-        frame=json.loads((self.path/'native-frame-1.json.receipt.json').read_text())
+        frame=json.loads((self.path/'frame-receipt.json').read_text())
         self.assertEqual(v['binding']['observation']['received_at'],frame['received_at'])
         self.assertLess(instant(receipt['finished_at']),instant(frame['received_at']))
 
     def test_charge_notice_is_scoped_and_never_promotes_total_costs(self):
         from app.comparison.public_retail import charge_audit
-        from pathlib import Path
         from hashlib import sha256
         from tests.test_comparison_reference_gap import raw as historical, selected
         raw=self.projected();q=self.long(serialize(raw));fees=q['comparison_input_status']['fee']
         audit=fees['charge_completeness']
-        body=Path('docs/comparison-net-sources/us-clearing-fees.pdf').read_bytes()
+        body=(self.path/'clearing-fees.pdf').read_bytes()
         self.assertEqual(audit['published_clearing']['sha256'],sha256(body).hexdigest())
         self.assertLess(instant(audit['published_clearing']['original_receipt_at']),instant(raw['clock_at']))
         self.assertFalse(audit['mandatory_charges_known']);self.assertEqual(audit['settlement_status'],'unknown')
@@ -319,7 +319,7 @@ class FreshRetailBinding(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import patch
         from app.collection.current_sink import normalized_records
-        cat=json.loads((self.path/'native-selected-catalog.json').read_text());book=json.loads((self.path/'native-parsed-book-1.json').read_text())
+        cat=json.loads((self.path/'catalog.json').read_text());book=json.loads((self.path/'book.json').read_text())
         projection=SimpleNamespace(invalid=set(),inventory={'polymarket_us':cat},books={('polymarket_us','129629','1083081'):{'book':book}})
         with patch('app.collection.current_occurrence.datetime') as clock:
             clock.now.return_value=instant(self.raw['clock_at'])

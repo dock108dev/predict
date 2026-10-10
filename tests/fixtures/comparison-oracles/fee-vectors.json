@@ -1,0 +1,203 @@
+{
+  "schema": 1,
+  "version": "comparison-r05-fee-vectors-1",
+  "evidence_class": "independent_authored_decimal_arithmetic_not_provider_fills",
+  "vectors": [
+    {
+      "id": "kalshi-1-.0001",
+      "venue": "kalshi",
+      "scenario": "single_complete_buy_fill_standard_multiplier_1",
+      "quantity_dollar_face": "1",
+      "price": ".5",
+      "account_grid_usd": ".0001",
+      "raw_fee_usd": "0.0175",
+      "fee_usd": "0.0175",
+      "required_cash_usd": "0.5175",
+      "win_profit_usd": "0.4825",
+      "loss_profit_usd": "-0.5175"
+    },
+    {
+      "id": "kalshi-1-.01",
+      "venue": "kalshi",
+      "scenario": "single_complete_buy_fill_standard_multiplier_1",
+      "quantity_dollar_face": "1",
+      "price": ".5",
+      "account_grid_usd": ".01",
+      "raw_fee_usd": "0.0175",
+      "fee_usd": "0.02",
+      "required_cash_usd": "0.52",
+      "win_profit_usd": "0.48",
+      "loss_profit_usd": "-0.52"
+    },
+    {
+      "id": "kalshi-100-.0001",
+      "venue": "kalshi",
+      "scenario": "single_complete_buy_fill_standard_multiplier_1",
+      "quantity_dollar_face": "100",
+      "price": ".5",
+      "account_grid_usd": ".0001",
+      "raw_fee_usd": "1.7500",
+      "fee_usd": "1.7500",
+      "required_cash_usd": "51.7500",
+      "win_profit_usd": "48.2500",
+      "loss_profit_usd": "-51.7500"
+    },
+    {
+      "id": "kalshi-100-.01",
+      "venue": "kalshi",
+      "scenario": "single_complete_buy_fill_standard_multiplier_1",
+      "quantity_dollar_face": "100",
+      "price": ".5",
+      "account_grid_usd": ".01",
+      "raw_fee_usd": "1.7500",
+      "fee_usd": "1.75",
+      "required_cash_usd": "51.75",
+      "win_profit_usd": "48.25",
+      "loss_profit_usd": "-51.75"
+    },
+    {
+      "id": "pmus-1",
+      "venue": "polymarket_us",
+      "scenario": "single_taker_fill_standard_straight_no_settlement_fee_hypothesis",
+      "quantity_dollar_face": "1",
+      "price": ".5",
+      "raw_fee_usd": "0.017375",
+      "entry_fee_usd": "0.02",
+      "win_profit_usd": "0.48",
+      "loss_profit_usd": "-0.52",
+      "not_qualified": "independent_settlement_charge_unknown"
+    },
+    {
+      "id": "pmus-100",
+      "venue": "polymarket_us",
+      "scenario": "single_taker_fill_standard_straight_no_settlement_fee_hypothesis",
+      "quantity_dollar_face": "100",
+      "price": ".5",
+      "raw_fee_usd": "1.737500",
+      "entry_fee_usd": "1.74",
+      "win_profit_usd": "48.26",
+      "loss_profit_usd": "-51.74",
+      "not_qualified": "independent_settlement_charge_unknown"
+    },
+    {
+      "id": "novig-.03-100",
+      "venue": "novig",
+      "scenario": "v3_single_live_taker_fill",
+      "native_qty": "100",
+      "dollar_face": "1.00",
+      "price": ".5",
+      "coefficient": ".03",
+      "fee_usd": "0.00750",
+      "required_cash_usd": "0.50750",
+      "win_profit_usd": "0.49250",
+      "loss_profit_usd": "-0.50750"
+    },
+    {
+      "id": "novig-.03-10000",
+      "venue": "novig",
+      "scenario": "v3_single_live_taker_fill",
+      "native_qty": "10000",
+      "dollar_face": "100.00",
+      "price": ".5",
+      "coefficient": ".03",
+      "fee_usd": "0.75000",
+      "required_cash_usd": "50.75000",
+      "win_profit_usd": "49.25000",
+      "loss_profit_usd": "-50.75000"
+    },
+    {
+      "id": "novig-.06-100",
+      "venue": "novig",
+      "scenario": "v3_single_live_taker_fill",
+      "native_qty": "100",
+      "dollar_face": "1.00",
+      "price": ".5",
+      "coefficient": ".06",
+      "fee_usd": "0.01500",
+      "required_cash_usd": "0.51500",
+      "win_profit_usd": "0.48500",
+      "loss_profit_usd": "-0.51500"
+    },
+    {
+      "id": "novig-.06-10000",
+      "venue": "novig",
+      "scenario": "v3_single_live_taker_fill",
+      "native_qty": "10000",
+      "dollar_face": "100.00",
+      "price": ".5",
+      "coefficient": ".06",
+      "fee_usd": "1.50000",
+      "required_cash_usd": "51.50000",
+      "win_profit_usd": "48.50000",
+      "loss_profit_usd": "-51.50000"
+    },
+    {
+      "id": "prophetx-10",
+      "venue": "prophetx",
+      "scenario": "standalone_public_site_straight_even_money_exact_unrounded_fee",
+      "stake_usd": "10",
+      "win_gross_payout_usd": "20",
+      "win_fee_unrounded_usd": "0.20",
+      "win_profit_unrounded_usd": "9.80",
+      "loss_fee_usd": "0",
+      "loss_profit_usd": "-10",
+      "not_qualified": "settlement rounding and account channel applicability unknown"
+    },
+    {
+      "id": "prophetx-100",
+      "venue": "prophetx",
+      "scenario": "standalone_public_site_straight_even_money_exact_unrounded_fee",
+      "stake_usd": "100",
+      "win_gross_payout_usd": "200",
+      "win_fee_unrounded_usd": "2.00",
+      "win_profit_unrounded_usd": "98.00",
+      "loss_fee_usd": "0",
+      "loss_profit_usd": "-100",
+      "not_qualified": "settlement rounding and account channel applicability unknown"
+    },
+    {
+      "id": "prophetx-incremental--80-100",
+      "venue": "prophetx",
+      "scenario": "authored_existing_portfolio_exact_unrounded_commission_delta",
+      "existing_market_profit_usd": "-80",
+      "candidate_profit_usd": "100",
+      "incremental_fee_usd": "0.40",
+      "candidate_net_contribution_usd": "99.60"
+    },
+    {
+      "id": "prophetx-incremental-80-100",
+      "venue": "prophetx",
+      "scenario": "authored_existing_portfolio_exact_unrounded_commission_delta",
+      "existing_market_profit_usd": "80",
+      "candidate_profit_usd": "100",
+      "incremental_fee_usd": "2.00",
+      "candidate_net_contribution_usd": "98.00"
+    },
+    {
+      "id": "prophetx-incremental-80--100",
+      "venue": "prophetx",
+      "scenario": "authored_existing_portfolio_exact_unrounded_commission_delta",
+      "existing_market_profit_usd": "80",
+      "candidate_profit_usd": "-100",
+      "incremental_fee_usd": "-1.60",
+      "candidate_net_contribution_usd": "-98.40"
+    },
+    {
+      "id": "pmus-fragments",
+      "venue": "polymarket_us",
+      "scenario": "one_order_two_taker_fills_p0.5_q1_each",
+      "raw_total_fee_usd": "0.034750",
+      "unadjusted_rounded_sum_usd": "0.04",
+      "order_cap_usd": "0.03",
+      "independent_result_usd": "0.03"
+    },
+    {
+      "id": "novig-fragments",
+      "venue": "novig",
+      "scenario": "two_single_native_unit_fills_p0.5_c0.03",
+      "split_fee_usd": "0.00016",
+      "combined_fee_usd": "0.00015",
+      "difference_usd": "0.00001"
+    }
+  ]
+}

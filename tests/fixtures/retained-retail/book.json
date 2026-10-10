@@ -1,0 +1,742 @@
+{
+  "raw": {
+    "ref": {
+      "venue": "polymarket_us",
+      "event_id": "129629",
+      "market_id": "1083081"
+    },
+    "source": "wss://api.polymarket.us/v1/ws/markets",
+    "received_at": "2026-10-09T22:43:08.067432+00:00",
+    "json_text": "{\"requestId\":\"a1099a8e-9fea-4432-b1b0-bddfb3b9b305\",\"subscriptionType\":\"SUBSCRIPTION_TYPE_MARKET_DATA\",\"marketData\":{\"marketSlug\":\"aec-nfl-phi-jax-2026-10-11\",\"bids\":[{\"px\":{\"value\":\"0.2325\",\"currency\":\"USD\"},\"qty\":\"716032.7300\"},{\"px\":{\"value\":\"0.2300\",\"currency\":\"USD\"},\"qty\":\"572789.1700\"},{\"px\":{\"value\":\"0.2275\",\"currency\":\"USD\"},\"qty\":\"159620.9300\"},{\"px\":{\"value\":\"0.2250\",\"currency\":\"USD\"},\"qty\":\"18560.0000\"},{\"px\":{\"value\":\"0.2225\",\"currency\":\"USD\"},\"qty\":\"52888.4600\"},{\"px\":{\"value\":\"0.2200\",\"currency\":\"USD\"},\"qty\":\"39735.3600\"},{\"px\":{\"value\":\"0.2175\",\"currency\":\"USD\"},\"qty\":\"18394.0000\"},{\"px\":{\"value\":\"0.2150\",\"currency\":\"USD\"},\"qty\":\"18048.0000\"},{\"px\":{\"value\":\"0.2125\",\"currency\":\"USD\"},\"qty\":\"18227.0000\"},{\"px\":{\"value\":\"0.2100\",\"currency\":\"USD\"},\"qty\":\"18442.0000\"},{\"px\":{\"value\":\"0.2075\",\"currency\":\"USD\"},\"qty\":\"28915.6600\"},{\"px\":{\"value\":\"0.2000\",\"currency\":\"USD\"},\"qty\":\"77.0000\"},{\"px\":{\"value\":\"0.1950\",\"currency\":\"USD\"},\"qty\":\"500.0000\"},{\"px\":{\"value\":\"0.1700\",\"currency\":\"USD\"},\"qty\":\"23374.0000\"},{\"px\":{\"value\":\"0.1600\",\"currency\":\"USD\"},\"qty\":\"1.5600\"},{\"px\":{\"value\":\"0.1500\",\"currency\":\"USD\"},\"qty\":\"1.6600\"},{\"px\":{\"value\":\"0.1450\",\"currency\":\"USD\"},\"qty\":\"21.0000\"},{\"px\":{\"value\":\"0.1400\",\"currency\":\"USD\"},\"qty\":\"3.0500\"},{\"px\":{\"value\":\"0.1350\",\"currency\":\"USD\"},\"qty\":\"6.4100\"},{\"px\":{\"value\":\"0.1300\",\"currency\":\"USD\"},\"qty\":\"4376.9200\"},{\"px\":{\"value\":\"0.1200\",\"currency\":\"USD\"},\"qty\":\"2.0800\"},{\"px\":{\"value\":\"0.1100\",\"currency\":\"USD\"},\"qty\":\"2.2700\"},{\"px\":{\"value\":\"0.1050\",\"currency\":\"USD\"},\"qty\":\"20.0000\"},{\"px\":{\"value\":\"0.1000\",\"currency\":\"USD\"},\"qty\":\"2.5000\"},{\"px\":{\"value\":\"0.0950\",\"currency\":\"USD\"},\"qty\":\"11.0000\"},{\"px\":{\"value\":\"0.0900\",\"currency\":\"USD\"},\"qty\":\"2.7700\"},{\"px\":{\"value\":\"0.0800\",\"currency\":\"USD\"},\"qty\":\"3.1200\"},{\"px\":{\"value\":\"0.0700\",\"currency\":\"USD\"},\"qty\":\"3.5700\"},{\"px\":{\"value\":\"0.0650\",\"currency\":\"USD\"},\"qty\":\"250.0000\"},{\"px\":{\"value\":\"0.0600\",\"currency\":\"USD\"},\"qty\":\"54.1600\"},{\"px\":{\"value\":\"0.0500\",\"currency\":\"USD\"},\"qty\":\"70.0000\"},{\"px\":{\"value\":\"0.0400\",\"currency\":\"USD\"},\"qty\":\"106.2500\"},{\"px\":{\"value\":\"0.0300\",\"currency\":\"USD\"},\"qty\":\"150.3300\"},{\"px\":{\"value\":\"0.0200\",\"currency\":\"USD\"},\"qty\":\"5363.5000\"},{\"px\":{\"value\":\"0.0100\",\"currency\":\"USD\"},\"qty\":\"26967.0000\"},{\"px\":{\"value\":\"0.0050\",\"currency\":\"USD\"},\"qty\":\"250.0000\"},{\"px\":{\"value\":\"0.0025\",\"currency\":\"USD\"},\"qty\":\"2140000.0000\"}],\"offers\":[{\"px\":{\"value\":\"0.2350\",\"currency\":\"USD\"},\"qty\":\"1282732.9000\"},{\"px\":{\"value\":\"0.2375\",\"currency\":\"USD\"},\"qty\":\"201065.0000\"},{\"px\":{\"value\":\"0.2400\",\"currency\":\"USD\"},\"qty\":\"377108.9200\"},{\"px\":{\"value\":\"0.2425\",\"currency\":\"USD\"},\"qty\":\"30457.0000\"},{\"px\":{\"value\":\"0.2450\",\"currency\":\"USD\"},\"qty\":\"32602.0000\"},{\"px\":{\"value\":\"0.2475\",\"currency\":\"USD\"},\"qty\":\"24755.1800\"},{\"px\":{\"value\":\"0.2500\",\"currency\":\"USD\"},\"qty\":\"16319.5300\"},{\"px\":{\"value\":\"0.2525\",\"currency\":\"USD\"},\"qty\":\"41908.0000\"},{\"px\":{\"value\":\"0.2550\",\"currency\":\"USD\"},\"qty\":\"75281.1200\"},{\"px\":{\"value\":\"0.2575\",\"currency\":\"USD\"},\"qty\":\"41184.0000\"},{\"px\":{\"value\":\"0.2600\",\"currency\":\"USD\"},\"qty\":\"53205.0000\"},{\"px\":{\"value\":\"0.2700\",\"currency\":\"USD\"},\"qty\":\"6515.7500\"},{\"px\":{\"value\":\"0.3000\",\"currency\":\"USD\"},\"qty\":\"23401.0000\"},{\"px\":{\"value\":\"0.3400\",\"currency\":\"USD\"},\"qty\":\"4380.0000\"},{\"px\":{\"value\":\"0.3425\",\"currency\":\"USD\"},\"qty\":\"11.8700\"},{\"px\":{\"value\":\"0.3625\",\"currency\":\"USD\"},\"qty\":\"1.0000\"},{\"px\":{\"value\":\"0.3900\",\"currency\":\"USD\"},\"qty\":\"17.0500\"},{\"px\":{\"value\":\"0.4600\",\"currency\":\"USD\"},\"qty\":\"11.0000\"},{\"px\":{\"value\":\"0.4700\",\"currency\":\"USD\"},\"qty\":\"5.0000\"},{\"px\":{\"value\":\"0.5700\",\"currency\":\"USD\"},\"qty\":\"5.0000\"},{\"px\":{\"value\":\"0.6000\",\"currency\":\"USD\"},\"qty\":\"37.7100\"},{\"px\":{\"value\":\"0.7025\",\"currency\":\"USD\"},\"qty\":\"10.0000\"},{\"px\":{\"value\":\"0.8400\",\"currency\":\"USD\"},\"qty\":\"1.5600\"},{\"px\":{\"value\":\"0.8500\",\"currency\":\"USD\"},\"qty\":\"1.6600\"},{\"px\":{\"value\":\"0.8600\",\"currency\":\"USD\"},\"qty\":\"1.7800\"},{\"px\":{\"value\":\"0.8700\",\"currency\":\"USD\"},\"qty\":\"1.9200\"},{\"px\":{\"value\":\"0.8800\",\"currency\":\"USD\"},\"qty\":\"2.0800\"},{\"px\":{\"value\":\"0.8900\",\"currency\":\"USD\"},\"qty\":\"2.2700\"},{\"px\":{\"value\":\"0.9000\",\"currency\":\"USD\"},\"qty\":\"2.5000\"},{\"px\":{\"value\":\"0.9100\",\"currency\":\"USD\"},\"qty\":\"2.7700\"},{\"px\":{\"value\":\"0.9200\",\"currency\":\"USD\"},\"qty\":\"3.1200\"},{\"px\":{\"value\":\"0.9300\",\"currency\":\"USD\"},\"qty\":\"3.5700\"},{\"px\":{\"value\":\"0.9350\",\"currency\":\"USD\"},\"qty\":\"250.0000\"},{\"px\":{\"value\":\"0.9400\",\"currency\":\"USD\"},\"qty\":\"54.1600\"},{\"px\":{\"value\":\"0.9500\",\"currency\":\"USD\"},\"qty\":\"37.0000\"},{\"px\":{\"value\":\"0.9600\",\"currency\":\"USD\"},\"qty\":\"106.2500\"},{\"px\":{\"value\":\"0.9700\",\"currency\":\"USD\"},\"qty\":\"99.3300\"},{\"px\":{\"value\":\"0.9800\",\"currency\":\"USD\"},\"qty\":\"5362.5000\"},{\"px\":{\"value\":\"0.9900\",\"currency\":\"USD\"},\"qty\":\"11195.8400\"},{\"px\":{\"value\":\"0.9950\",\"currency\":\"USD\"},\"qty\":\"250.0000\"},{\"px\":{\"value\":\"0.9975\",\"currency\":\"USD\"},\"qty\":\"2139377.5800\"}],\"state\":\"MARKET_STATE_OPEN\",\"stats\":{\"openPx\":{\"value\":\"0.6475\",\"currency\":\"USD\"},\"lowPx\":{\"value\":\"0.2300\",\"currency\":\"USD\"},\"highPx\":{\"value\":\"0.6500\",\"currency\":\"USD\"},\"lastTradePx\":{\"value\":\"0.2325\",\"currency\":\"USD\"},\"sharesTraded\":\"1667118.2100\",\"notionalTraded\":{\"value\":\"486671.2966\",\"currency\":\"USD\"},\"lastTradeQty\":\"6.4100\",\"openInterest\":\"258338.2200\",\"openSetTime\":\"2026-09-27T18:36:38.849552926Z\",\"highSetTime\":\"2026-09-28T00:03:17.501606139Z\",\"lowSetTime\":\"2026-10-08T11:55:22.163415096Z\",\"lastTradeSetTime\":\"2026-10-09T22:42:46.563711468Z\",\"openInterestSetTime\":\"2026-10-09T22:42:46.669169105Z\",\"notionalSetTime\":\"2026-10-09T22:42:46.563711468Z\",\"currentPx\":{\"value\":\"0.2338\",\"currency\":\"USD\"},\"lastPriceSample\":{\"longPx\":{\"value\":\"0.2325\",\"currency\":\"USD\"},\"shortPx\":{\"value\":\"0.7675\",\"currency\":\"USD\"},\"ts\":\"2026-10-09T22:42:46.669169105Z\"}},\"transactTime\":\"2026-10-09T22:42:46.669169105Z\"}}",
+    "exchange_at": "2026-10-09T22:42:46.669169+00:00",
+    "kind": "observation"
+  },
+  "quantity_unit": "contracts",
+  "outcomes": [
+    {
+      "outcome_id": "2165646",
+      "bids": {
+        "levels": [
+          {
+            "price": {
+              "value": "0.2325"
+            },
+            "quantity": {
+              "value": "716032.7300",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2300"
+            },
+            "quantity": {
+              "value": "572789.1700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2275"
+            },
+            "quantity": {
+              "value": "159620.9300",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2250"
+            },
+            "quantity": {
+              "value": "18560.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2225"
+            },
+            "quantity": {
+              "value": "52888.4600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2200"
+            },
+            "quantity": {
+              "value": "39735.3600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2175"
+            },
+            "quantity": {
+              "value": "18394.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2150"
+            },
+            "quantity": {
+              "value": "18048.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2125"
+            },
+            "quantity": {
+              "value": "18227.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2100"
+            },
+            "quantity": {
+              "value": "18442.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2075"
+            },
+            "quantity": {
+              "value": "28915.6600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2000"
+            },
+            "quantity": {
+              "value": "77.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1950"
+            },
+            "quantity": {
+              "value": "500.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1700"
+            },
+            "quantity": {
+              "value": "23374.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1600"
+            },
+            "quantity": {
+              "value": "1.5600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1500"
+            },
+            "quantity": {
+              "value": "1.6600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1450"
+            },
+            "quantity": {
+              "value": "21.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1400"
+            },
+            "quantity": {
+              "value": "3.0500",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1350"
+            },
+            "quantity": {
+              "value": "6.4100",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1300"
+            },
+            "quantity": {
+              "value": "4376.9200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1200"
+            },
+            "quantity": {
+              "value": "2.0800",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1100"
+            },
+            "quantity": {
+              "value": "2.2700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1050"
+            },
+            "quantity": {
+              "value": "20.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.1000"
+            },
+            "quantity": {
+              "value": "2.5000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0950"
+            },
+            "quantity": {
+              "value": "11.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0900"
+            },
+            "quantity": {
+              "value": "2.7700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0800"
+            },
+            "quantity": {
+              "value": "3.1200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0700"
+            },
+            "quantity": {
+              "value": "3.5700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0650"
+            },
+            "quantity": {
+              "value": "250.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0600"
+            },
+            "quantity": {
+              "value": "54.1600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0500"
+            },
+            "quantity": {
+              "value": "70.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0400"
+            },
+            "quantity": {
+              "value": "106.2500",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0300"
+            },
+            "quantity": {
+              "value": "150.3300",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0200"
+            },
+            "quantity": {
+              "value": "5363.5000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0100"
+            },
+            "quantity": {
+              "value": "26967.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0050"
+            },
+            "quantity": {
+              "value": "250.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.0025"
+            },
+            "quantity": {
+              "value": "2140000.0000",
+              "unit": "contracts"
+            }
+          }
+        ],
+        "depth": "partial"
+      },
+      "asks": {
+        "levels": [
+          {
+            "price": {
+              "value": "0.2350"
+            },
+            "quantity": {
+              "value": "1282732.9000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2375"
+            },
+            "quantity": {
+              "value": "201065.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2400"
+            },
+            "quantity": {
+              "value": "377108.9200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2425"
+            },
+            "quantity": {
+              "value": "30457.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2450"
+            },
+            "quantity": {
+              "value": "32602.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2475"
+            },
+            "quantity": {
+              "value": "24755.1800",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2500"
+            },
+            "quantity": {
+              "value": "16319.5300",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2525"
+            },
+            "quantity": {
+              "value": "41908.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2550"
+            },
+            "quantity": {
+              "value": "75281.1200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2575"
+            },
+            "quantity": {
+              "value": "41184.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2600"
+            },
+            "quantity": {
+              "value": "53205.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.2700"
+            },
+            "quantity": {
+              "value": "6515.7500",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.3000"
+            },
+            "quantity": {
+              "value": "23401.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.3400"
+            },
+            "quantity": {
+              "value": "4380.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.3425"
+            },
+            "quantity": {
+              "value": "11.8700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.3625"
+            },
+            "quantity": {
+              "value": "1.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.3900"
+            },
+            "quantity": {
+              "value": "17.0500",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.4600"
+            },
+            "quantity": {
+              "value": "11.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.4700"
+            },
+            "quantity": {
+              "value": "5.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.5700"
+            },
+            "quantity": {
+              "value": "5.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.6000"
+            },
+            "quantity": {
+              "value": "37.7100",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.7025"
+            },
+            "quantity": {
+              "value": "10.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8400"
+            },
+            "quantity": {
+              "value": "1.5600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8500"
+            },
+            "quantity": {
+              "value": "1.6600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8600"
+            },
+            "quantity": {
+              "value": "1.7800",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8700"
+            },
+            "quantity": {
+              "value": "1.9200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8800"
+            },
+            "quantity": {
+              "value": "2.0800",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.8900"
+            },
+            "quantity": {
+              "value": "2.2700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9000"
+            },
+            "quantity": {
+              "value": "2.5000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9100"
+            },
+            "quantity": {
+              "value": "2.7700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9200"
+            },
+            "quantity": {
+              "value": "3.1200",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9300"
+            },
+            "quantity": {
+              "value": "3.5700",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9350"
+            },
+            "quantity": {
+              "value": "250.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9400"
+            },
+            "quantity": {
+              "value": "54.1600",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9500"
+            },
+            "quantity": {
+              "value": "37.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9600"
+            },
+            "quantity": {
+              "value": "106.2500",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9700"
+            },
+            "quantity": {
+              "value": "99.3300",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9800"
+            },
+            "quantity": {
+              "value": "5362.5000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9900"
+            },
+            "quantity": {
+              "value": "11195.8400",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9950"
+            },
+            "quantity": {
+              "value": "250.0000",
+              "unit": "contracts"
+            }
+          },
+          {
+            "price": {
+              "value": "0.9975"
+            },
+            "quantity": {
+              "value": "2139377.5800",
+              "unit": "contracts"
+            }
+          }
+        ],
+        "depth": "partial"
+      }
+    },
+    {
+      "outcome_id": "2165647",
+      "bids": null,
+      "asks": null
+    }
+  ],
+  "state": "active",
+  "sync": "synchronized",
+  "receipt_freshness": "recent",
+  "source_time_progress": "first",
+  "sequence": null
+}

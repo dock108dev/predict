@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import unittest
+from tests.comparison_oracles import artifact_path
 
 from app.comparison.adapters import adapt
 from app.comparison.cashflows import cashflow_inputs
@@ -289,7 +290,7 @@ class NetEVTests(unittest.TestCase):
 
     def test_accepted_oracle_hashes_preserved_and_exact_result_schema_fields(self):
         for item in self.vectors["upstream_inputs"]:
-            self.assertEqual(hashlib.sha256((ROOT / item["path"]).read_bytes()).hexdigest(), item["sha256"])
+            self.assertEqual(hashlib.sha256(artifact_path(item["path"]).read_bytes()).hexdigest(), item["sha256"])
         schema = json.loads((FIXTURES / "comparison-net-ev-schema-v1.json").read_text())
         result = self.calculate(self.scenario())
         self.assertTrue(set(schema["required"]) <= set(result))

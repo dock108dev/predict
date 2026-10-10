@@ -1,0 +1,1969 @@
+{
+  "schema": "predict-current-1",
+  "mode": "current",
+  "runtime_id": "f407e12b-b6a0-4cd1-85b8-9c9efb1bdbf6",
+  "state_revision": 5,
+  "projected_at": "2026-10-09T22:43:09.353071+00:00",
+  "clock_at": "2026-10-09T22:43:09.353065+00:00",
+  "state": "available",
+  "source_status": {
+    "kalshi": {
+      "state": "stopped",
+      "reason_code": "attended_selected",
+      "reason": "Bounded selected acquisition",
+      "next_due_at": null
+    },
+    "polymarket_us": {
+      "state": "available",
+      "reason_code": "native_image",
+      "reason": "Native book images received.",
+      "source_at": "2026-10-09T22:42:46.669169+00:00",
+      "received_at": "2026-10-09T22:43:08.067432+00:00",
+      "next_due_at": null
+    },
+    "novig": {
+      "state": "stopped",
+      "reason_code": "attended_selected",
+      "reason": "Bounded selected acquisition",
+      "next_due_at": null
+    },
+    "prophetx": {
+      "state": "stopped",
+      "reason_code": "attended_selected",
+      "reason": "Bounded selected acquisition",
+      "next_due_at": null
+    }
+  },
+  "comparison_profiles": {
+    "6c25df37bc126bf33e87e44e7e2a28a38aaddfed8dc61f10ba6508a5603ea5ab": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "identity",
+      "payload": {
+        "selection": {
+          "schema_version": "comparison-domain-1",
+          "event": {
+            "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+            "league": "NFL",
+            "home_id": "NFL:JAX",
+            "away_id": "NFL:PHI",
+            "identity_evidence": [
+              {
+                "ref": "admitted:polymarket_us:129629:1083081",
+                "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "family": "moneyline",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "conditional_completed_result"
+          },
+          "participant_id": "NFL:PHI",
+          "signed_line": null,
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "lt",
+            "threshold": "0",
+            "subject_id": null
+          },
+          "equality": {
+            "treatment": "unknown",
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "unknown_reason": "Exact tie settlement not established"
+          },
+          "native": {
+            "venue": "polymarket_us",
+            "event_id": "129629",
+            "market_id": "1083081",
+            "instrument_id": "2165646",
+            "side_id": "Long",
+            "original_wording": "Philadelphia Eagles",
+            "evidence": [
+              {
+                "ref": "admitted:polymarket_us:129629:1083081",
+                "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "payout": null,
+          "price": {
+            "amount": "0.2350",
+            "unit": "usd_per_contract",
+            "payout_unit": "usd_per_contract",
+            "currency": "USD"
+          },
+          "payout_unknown": {
+            "value": null,
+            "reason": "Applicable settlement profile not attached",
+            "missing_evidence": [
+              "Reviewed source payout applicability"
+            ]
+          }
+        },
+        "completion_context": {
+          "started_at": null,
+          "rescheduled_date": null,
+          "date_timezone": "UTC",
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/us-fees.md",
+              "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-settlement.md",
+              "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+              "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-fractional.md",
+              "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-order-model.md",
+              "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-structure.md",
+              "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "rule_revision": "comparison-source-inputs-1:fb1aa993db25eced3d08fd6118ccc5539f2866d5346961ca90adab67d450e221",
+        "current_selection_binding": {
+          "event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+          "group_id": "group:7c28fcd7edd397acaa67326903a11635",
+          "outcome_id": "outcome:5108b497f26cc0c853411bc3fa1c1e9f",
+          "participant": "NFL:PHI",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "current_scope_binding": {
+          "current_event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+          "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "result_policy": "predict-direct-win-1:normal-full-game-win",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "conditional_completed_result"
+          },
+          "evidence": [
+            {
+              "ref": "admitted:polymarket_us:129629:1083081",
+              "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "conditioning": "completed_decisive_results_only",
+        "source_scope": "provider_local_without_new_cross_source_merge",
+        "public_event": {
+          "version": "comparison-public-event-binding-1",
+          "binding_version": "6814c7a6239e8829f556b9abc080567cc91858388a8fc8244b011476f4a24c5a",
+          "status": "expired",
+          "reason": "public_event_metadata_expired_or_not_effective",
+          "event_id": "129629",
+          "market_id": "1083081",
+          "selected": {
+            "native_key": [
+              "polymarket_us",
+              "129629",
+              "1083081",
+              "2165646",
+              "Long"
+            ],
+            "team_id": "73",
+            "participant_id": "NFL:PHI",
+            "name": "Philadelphia Eagles",
+            "role": "away",
+            "provider_ids": [
+              {
+                "provider": "PROVIDER_SPORTSDATAIO",
+                "providerId": "26"
+              },
+              {
+                "provider": "PROVIDER_SPORTRADAR",
+                "providerId": "386bdbf9-9eea-4869-bb9a-274b0bc66e80"
+              }
+            ],
+            "pointer": "/events/0/markets/459/marketSides/0"
+          },
+          "occurrence": {
+            "game_id": "19518",
+            "provider": "sportradar",
+            "provider_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "rescheduled_from_game_id": null,
+            "replacement_field_present": false,
+            "original_start_time": null,
+            "period": "NS",
+            "active": true,
+            "closed": false,
+            "source_local_qualified": true,
+            "cross_source_qualified": false,
+            "reason": "public_event_source_local_occurrence_observed"
+          },
+          "scope": {
+            "family": "moneyline",
+            "period": "full_game",
+            "line": null,
+            "sports_market_type": "football_team_full_game_winner",
+            "overtime": "included",
+            "selection_meaning": "selected_team_win",
+            "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "provenance": {
+            "response_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+            "decoded_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+            "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+            "request_started_at": "2026-10-09T20:53:02.818579+00:00",
+            "headers_at": "2026-10-09T20:53:03.098399+00:00",
+            "response_finished_at": "2026-10-09T20:53:03.417821+00:00",
+            "wire_bytes": 3662490,
+            "decoded_bytes": 3662490,
+            "event_pointer": "/events/0",
+            "game_pointer": "/events/0/gameId",
+            "provider_game_pointer": "/events/0/sportradarGameId",
+            "schedule_pointer": "/events/0/startTime"
+          },
+          "effective_from": "2026-10-09T20:53:03.417821+00:00",
+          "effective_until": "2026-10-09T21:08:03.417821+00:00",
+          "historical_quote_applicability": false,
+          "cross_source_qualified": false,
+          "original_quote_source_at": "2026-10-09T22:42:46.669169+00:00",
+          "original_quote_received_at": "2026-10-09T22:43:08.067432+00:00"
+        }
+      },
+      "expires_at": "2026-10-16T04:00:00Z"
+    },
+    "7a7ac340fbc8456563424eaeb18011e113bbf815a4405649776cc0c3d1f9db4a": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "payout",
+      "payload": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "ordinary-payout:4692c5cff963c4e93573f2dd2dbf0dfbfb3399da4ac262667bc4c567f25d5969",
+        "version": "comparison-source-inputs-1:comparison-source-us-standard-oneorder-1",
+        "rule_revision": "comparison-source-inputs-1:fb1aa993db25eced3d08fd6118ccc5539f2866d5346961ca90adab67d450e221",
+        "native_key": [
+          "polymarket_us",
+          "129629",
+          "1083081",
+          "2165646",
+          "Long"
+        ],
+        "selection_sha256": "545bb6252212fbc2117e219ce9e8f903ff45e53ebe083ad7e209da0dedf6049a",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-01T14:00:00Z",
+        "effective_until": "2026-10-16T04:00:00Z",
+        "source_evidence": [
+          {
+            "ref": "docs/comparison-net-sources/us-fees.md",
+            "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-settlement.md",
+            "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+            "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-fractional.md",
+            "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-order-model.md",
+            "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-structure.md",
+            "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+            "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+            "evidence_class": "authored"
+          }
+        ],
+        "below": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Explicit completed-result payout hypothesis"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact tie or push payout not established"
+        },
+        "above": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Explicit completed-result payout hypothesis"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exceptional noncompleted settlement remains source-local unknown"
+        },
+        "refund_fees": "not_applicable",
+        "normal_condition": {
+          "kind": "conditional_completed_result",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      },
+      "expires_at": "2026-10-16T04:00:00Z"
+    },
+    "97e244894b688bc895d1dd8d74ceccab10b66b8d38a692317f1ddd165186cddd": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "reference",
+      "payload": {
+        "version": "comparison-ordinary-source-bindings-1",
+        "bookmaker": "pinnacle",
+        "conditioning": "decisive_win_loss",
+        "receipt_sha256": "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+        "source_at": [
+          "2026-10-09T22:42:50Z",
+          "2026-10-09T22:42:50Z"
+        ],
+        "selected": 1,
+        "original_odds": [
+          "1.28",
+          "3.96"
+        ],
+        "selected_odds": "3.96",
+        "current_selection_binding": {
+          "event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+          "group_id": "group:7c28fcd7edd397acaa67326903a11635",
+          "outcome_id": "outcome:5108b497f26cc0c853411bc3fa1c1e9f",
+          "participant": "NFL:PHI",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "provider_clocks": [
+          {
+            "book": "2026-10-09T22:42:50Z",
+            "market": "2026-10-09T22:42:50Z",
+            "selected_basis": "market"
+          },
+          {
+            "book": "2026-10-09T22:42:50Z",
+            "market": "2026-10-09T22:42:50Z",
+            "selected_basis": "market"
+          }
+        ],
+        "outcomes": [
+          {
+            "source": {
+              "provider": "the_odds_api",
+              "native_event_id": "21b26266f3d78af02eb672e606275d95",
+              "native_market_id": "cdfd26251b2896761cbb47ab7663a62ff185fc4c80b92336f9e7f5bb7cc38c24",
+              "native_outcome_id": "Jacksonville Jaguars",
+              "native_side": "bookmaker_outcome",
+              "binding_id": "27a40016eb80d426d41a74c9f1a8e20128a892c7d0bbc257b06d669a83e4e4c5",
+              "binding_version": "odds-aggregate-1",
+              "native_line": null,
+              "quote_side": "buy"
+            },
+            "selection": {
+              "participant": "NFL:JAX",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Jacksonville Jaguars"
+            },
+            "decimal_odds": "1.28",
+            "source_at": "2026-10-09T22:42:50Z",
+            "received_at": "2026-10-09T22:43:08.771229+00:00",
+            "provider_clocks": {
+              "book": "2026-10-09T22:42:50Z",
+              "market": "2026-10-09T22:42:50Z",
+              "selected_basis": "market"
+            },
+            "receipt_sha256": "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+            "market_identity": {
+              "event": [
+                "comparison-reviewed-occurrence-1",
+                "NFL",
+                "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+                "NFL:JAX",
+                "NFL:PHI",
+                null
+              ],
+              "sport": "american_football",
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "scheduled_start": "2026-10-11T13:30:00Z",
+              "family": "moneyline",
+              "period": "full_game",
+              "line": null,
+              "outcome_set": "83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+              "rules": "predict-direct-win-1:prospective-reviewed-direct-win"
+            },
+            "orientation_evidence": [
+              "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+              "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+              "comparison-evidenced-overlap-2:7a5b9fff22a10ad15230745d6a5aa08a1365b22d9b1ac2402cb1567e69205014"
+            ]
+          },
+          {
+            "source": {
+              "provider": "the_odds_api",
+              "native_event_id": "21b26266f3d78af02eb672e606275d95",
+              "native_market_id": "9fc7450f4950c9e85017119f428496699208cd43756b346513dd5f29952e5210",
+              "native_outcome_id": "Philadelphia Eagles",
+              "native_side": "bookmaker_outcome",
+              "binding_id": "b7fd67f3a54c4f32d997d1c52af8adb52751ae8dd0132a355c04f4d855d70872",
+              "binding_version": "odds-aggregate-1",
+              "native_line": null,
+              "quote_side": "buy"
+            },
+            "selection": {
+              "participant": "NFL:PHI",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Philadelphia Eagles"
+            },
+            "decimal_odds": "3.96",
+            "source_at": "2026-10-09T22:42:50Z",
+            "received_at": "2026-10-09T22:43:08.771229+00:00",
+            "provider_clocks": {
+              "book": "2026-10-09T22:42:50Z",
+              "market": "2026-10-09T22:42:50Z",
+              "selected_basis": "market"
+            },
+            "receipt_sha256": "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+            "market_identity": {
+              "event": [
+                "comparison-reviewed-occurrence-1",
+                "NFL",
+                "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+                "NFL:JAX",
+                "NFL:PHI",
+                null
+              ],
+              "sport": "american_football",
+              "competition": "NFL",
+              "season": "2026",
+              "stage": "regular_season",
+              "scheduled_start": "2026-10-11T13:30:00Z",
+              "family": "moneyline",
+              "period": "full_game",
+              "line": null,
+              "outcome_set": "83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+              "rules": "predict-direct-win-1:prospective-reviewed-direct-win"
+            },
+            "orientation_evidence": [
+              "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+              "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+              "comparison-evidenced-overlap-2:7a5b9fff22a10ad15230745d6a5aa08a1365b22d9b1ac2402cb1567e69205014"
+            ]
+          }
+        ],
+        "original_received_at": "2026-10-09T22:43:08.771229+00:00"
+      },
+      "expires_at": null
+    },
+    "48c5721428a60b4cad8f9a2fb0973034f7875dcc82bcb50ff7f5b65912f7b00e": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "fee",
+      "payload": {
+        "rule": {
+          "version": "comparison-source-us-standard-oneorder-1",
+          "venue": "polymarket_us",
+          "product": "single",
+          "channel": "direct_exchange_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-01T14:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1"
+          },
+          "terms": {
+            "basis": "quadratic",
+            "rate": "0.0695",
+            "grid_usd": "0.01",
+            "rounding": "half_even",
+            "aggregation": "cumulative_order_cap",
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "declared_zero",
+          "mandatory_charges_known": true,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/us-fees.md",
+              "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-settlement.md",
+              "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+              "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-fractional.md",
+              "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-order-model.md",
+              "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-structure.md",
+              "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": null
+        },
+        "engine_registry": {
+          "schema": 1,
+          "schedules": [
+            {
+              "venue": "polymarket_us",
+              "product": "single",
+              "version": "comparison-source-us-standard-oneorder-1",
+              "coefficient": "0.0695",
+              "maker_coefficient": "0.0125",
+              "effective_from": "2026-10-01T14:00:00Z",
+              "effective_to": null,
+              "sources": [
+                {
+                  "ref": "docs/comparison-net-sources/us-fees.md",
+                  "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-settlement.md",
+                  "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+                  "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-fractional.md",
+                  "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-order-model.md",
+                  "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-structure.md",
+                  "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+                  "evidence_class": "primary_source"
+                }
+              ]
+            }
+          ]
+        },
+        "engine_context": {
+          "environment": "production",
+          "schedule_version": "comparison-source-us-standard-oneorder-1",
+          "assume_no_settlement_fee": true,
+          "venue": "polymarket_us",
+          "product": "single",
+          "channel": "direct_exchange_hypothetical",
+          "market_id": "1083081",
+          "event_id": "129629",
+          "trade_time": "2026-10-09T22:43:09.353065+00:00",
+          "calculation_time": "2026-10-09T22:43:09.353065+00:00"
+        }
+      },
+      "expires_at": "2026-10-16T04:00:00Z"
+    },
+    "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "buffer",
+      "payload": {
+        "version": "comparison-cost-policy-1",
+        "ceiling_usd": "100",
+        "role": "taker",
+        "portfolio_basis": "standalone",
+        "funding_basis": "already_prefunded",
+        "denominator": "actual_deployed_capital",
+        "optional_override_surface": "Details",
+        "pregame_age_seconds": 900,
+        "live_age_seconds": 15,
+        "gross_pinnacle_baseline_age_seconds": 1800,
+        "adverse_price_per_dollar_face": "0.01",
+        "extra_arbitrary_reserve_usd": "0",
+        "contingent_funding_credit_usd": "0"
+      },
+      "expires_at": null
+    },
+    "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "probability",
+      "payload": {
+        "version": "comparison-benchmark-basis-1",
+        "method": "pinnacle_proportional_no_vig"
+      },
+      "expires_at": null
+    },
+    "d6bef70f68edb66c028d966e6a9d95f4061fa004f84b308e1940bff787b19510": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "identity",
+      "payload": {
+        "selection": {
+          "schema_version": "comparison-domain-1",
+          "event": {
+            "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+            "league": "NFL",
+            "home_id": "NFL:JAX",
+            "away_id": "NFL:PHI",
+            "identity_evidence": [
+              {
+                "ref": "admitted:polymarket_us:129629:1083081",
+                "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "family": "moneyline",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "conditional_completed_result"
+          },
+          "participant_id": "NFL:JAX",
+          "signed_line": null,
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "gt",
+            "threshold": "0",
+            "subject_id": null
+          },
+          "equality": {
+            "treatment": "unknown",
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "unknown_reason": "Exact tie settlement not established"
+          },
+          "native": {
+            "venue": "polymarket_us",
+            "event_id": "129629",
+            "market_id": "1083081",
+            "instrument_id": "2165647",
+            "side_id": "Short",
+            "original_wording": "Jacksonville Jaguars",
+            "evidence": [
+              {
+                "ref": "admitted:polymarket_us:129629:1083081",
+                "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "payout": null,
+          "price": {
+            "amount": "0.7675",
+            "unit": "usd_per_contract",
+            "payout_unit": "usd_per_contract",
+            "currency": "USD"
+          },
+          "payout_unknown": {
+            "value": null,
+            "reason": "Applicable settlement profile not attached",
+            "missing_evidence": [
+              "Reviewed source payout applicability"
+            ]
+          }
+        },
+        "completion_context": {
+          "started_at": null,
+          "rescheduled_date": null,
+          "date_timezone": "UTC",
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/us-fees.md",
+              "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-settlement.md",
+              "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+              "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-fractional.md",
+              "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-order-model.md",
+              "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-structure.md",
+              "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "rule_revision": "comparison-source-inputs-1:fb1aa993db25eced3d08fd6118ccc5539f2866d5346961ca90adab67d450e221",
+        "current_selection_binding": {
+          "event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+          "group_id": "group:a43c9edf1cda1147fa45061b62f54268",
+          "outcome_id": "outcome:f6b40f841f9bb2f863e89d995b18aa2d",
+          "participant": "NFL:JAX",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "current_scope_binding": {
+          "current_event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+          "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+          "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+          "result_policy": "native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "conditional_completed_result"
+          },
+          "evidence": [
+            {
+              "ref": "admitted:polymarket_us:129629:1083081",
+              "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "conditioning": "completed_decisive_results_only",
+        "source_scope": "provider_local_without_new_cross_source_merge",
+        "public_event": {
+          "version": "comparison-public-event-binding-1",
+          "binding_version": "6814c7a6239e8829f556b9abc080567cc91858388a8fc8244b011476f4a24c5a",
+          "status": "expired",
+          "reason": "public_event_metadata_expired_or_not_effective",
+          "event_id": "129629",
+          "market_id": "1083081",
+          "selected": {
+            "native_key": [
+              "polymarket_us",
+              "129629",
+              "1083081",
+              "2165647",
+              "Short"
+            ],
+            "team_id": "62",
+            "participant_id": "NFL:JAX",
+            "name": "Jacksonville Jaguars",
+            "role": "home",
+            "provider_ids": [
+              {
+                "provider": "PROVIDER_SPORTSDATAIO",
+                "providerId": "15"
+              },
+              {
+                "provider": "PROVIDER_SPORTRADAR",
+                "providerId": "f7ddd7fa-0bae-4f90-bc8e-669e4d6cf2de"
+              }
+            ],
+            "pointer": "/events/0/markets/459/marketSides/1"
+          },
+          "occurrence": {
+            "game_id": "19518",
+            "provider": "sportradar",
+            "provider_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "rescheduled_from_game_id": null,
+            "replacement_field_present": false,
+            "original_start_time": null,
+            "period": "NS",
+            "active": true,
+            "closed": false,
+            "source_local_qualified": true,
+            "cross_source_qualified": false,
+            "reason": "public_event_source_local_occurrence_observed"
+          },
+          "scope": {
+            "family": "moneyline",
+            "period": "full_game",
+            "line": null,
+            "sports_market_type": "football_team_full_game_winner",
+            "overtime": "included",
+            "selection_meaning": "selected_team_win",
+            "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "provenance": {
+            "response_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+            "decoded_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+            "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+            "request_started_at": "2026-10-09T20:53:02.818579+00:00",
+            "headers_at": "2026-10-09T20:53:03.098399+00:00",
+            "response_finished_at": "2026-10-09T20:53:03.417821+00:00",
+            "wire_bytes": 3662490,
+            "decoded_bytes": 3662490,
+            "event_pointer": "/events/0",
+            "game_pointer": "/events/0/gameId",
+            "provider_game_pointer": "/events/0/sportradarGameId",
+            "schedule_pointer": "/events/0/startTime"
+          },
+          "effective_from": "2026-10-09T20:53:03.417821+00:00",
+          "effective_until": "2026-10-09T21:08:03.417821+00:00",
+          "historical_quote_applicability": false,
+          "cross_source_qualified": false,
+          "original_quote_source_at": "2026-10-09T22:42:46.669169+00:00",
+          "original_quote_received_at": "2026-10-09T22:43:08.067432+00:00"
+        }
+      },
+      "expires_at": "2026-10-16T04:00:00Z"
+    },
+    "e7879afab751c895dcd122f008f60a106f20bd3f72921d16580ea268366b8d4e": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "payout",
+      "payload": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "ordinary-payout:630b66671506fd63888c07c73d861da05f7878d1d8da7f6cf4d668b4facad636",
+        "version": "comparison-source-inputs-1:comparison-source-us-standard-oneorder-1",
+        "rule_revision": "comparison-source-inputs-1:fb1aa993db25eced3d08fd6118ccc5539f2866d5346961ca90adab67d450e221",
+        "native_key": [
+          "polymarket_us",
+          "129629",
+          "1083081",
+          "2165647",
+          "Short"
+        ],
+        "selection_sha256": "a8001f063e72d695a4416ae922c68fa33f5548c9ddd02f3acf210e7ea95884c3",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-01T14:00:00Z",
+        "effective_until": "2026-10-16T04:00:00Z",
+        "source_evidence": [
+          {
+            "ref": "docs/comparison-net-sources/us-fees.md",
+            "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-settlement.md",
+            "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+            "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-fractional.md",
+            "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-order-model.md",
+            "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/us-structure.md",
+            "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+            "evidence_class": "primary_source"
+          },
+          {
+            "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+            "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+            "evidence_class": "authored"
+          }
+        ],
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Explicit completed-result payout hypothesis"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact tie or push payout not established"
+        },
+        "above": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Explicit completed-result payout hypothesis"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exceptional noncompleted settlement remains source-local unknown"
+        },
+        "refund_fees": "not_applicable",
+        "normal_condition": {
+          "kind": "conditional_completed_result",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      },
+      "expires_at": "2026-10-16T04:00:00Z"
+    }
+  },
+  "selection_policy": {
+    "ttl_seconds": 300,
+    "maximum_per_client": 1,
+    "restart_expires": true
+  },
+  "admin_href": "/admin",
+  "events": [
+    {
+      "id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+      "sport": "american_football",
+      "league": "NFL",
+      "season": "2026",
+      "stage": "regular_season",
+      "event_discriminator": "comparison-occurrence-1:reviewed-event:ecb10388d927f9548282e6aeeafde294",
+      "participants": [
+        {
+          "id": "NFL:PHI",
+          "name": "Philadelphia Eagles",
+          "role": "away"
+        },
+        {
+          "id": "NFL:JAX",
+          "name": "Jacksonville Jaguars",
+          "role": "home"
+        }
+      ],
+      "title": "PHI Eagles vs. JAC Jaguars",
+      "start_at": "2026-10-11T13:30:00+00:00",
+      "groups": [
+        {
+          "id": "group:7c28fcd7edd397acaa67326903a11635",
+          "market": "winner",
+          "period": "full_game",
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "outcome_cardinality": 2,
+          "line": null,
+          "anchor_participant": null,
+          "result_policy": "predict-direct-win-1:normal-full-game-win",
+          "outcomes": [
+            {
+              "id": "outcome:5108b497f26cc0c853411bc3fa1c1e9f",
+              "participant": "NFL:PHI",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Philadelphia Eagles",
+              "quotes": {
+                "polymarket_us": {
+                  "id": "quote:e7ed7841b1809bb77ac7859b32ef3c26",
+                  "revision": 2,
+                  "venue": "polymarket_us",
+                  "source": {
+                    "provider": "polymarket_us",
+                    "native_event_id": "129629",
+                    "native_market_id": "1083081",
+                    "native_outcome_id": "2165646",
+                    "native_side": "Long",
+                    "binding_id": "f845373e1d4166cf9b9c6ae00df3f4eefe984355b19ddb873cd393b231d6a01e",
+                    "binding_version": "manual-comparison-2",
+                    "native_line": null,
+                    "quote_side": "buy"
+                  },
+                  "original": {
+                    "value": "0.2350",
+                    "units": "usd_per_contract",
+                    "payout": "1",
+                    "payout_units": "USD",
+                    "quantity_units": "contracts",
+                    "role": "comparison"
+                  },
+                  "times": {
+                    "source_at": "2026-10-09T22:42:46.669169+00:00",
+                    "received_at": "2026-10-09T22:43:08.067432+00:00",
+                    "projected_at": "2026-10-09T22:43:08.371597+00:00",
+                    "source_time_kind": "provider_book"
+                  },
+                  "state": "available",
+                  "rule_note": "Reviewed prospective full-game win only, including overtime. Pinnacle two-way tie is void; native tie pays 0.50. Postponement/suspension/fair-price rules differ; tie and exceptional probability mass remain unknown. Original Short remains its separately recorded contract; no opponent YES correspondence is inferred.",
+                  "cost_note": "Current applicable costs unavailable",
+                  "depth": [
+                    {
+                      "price": "0.2350",
+                      "quantity": "1282732.9000"
+                    },
+                    {
+                      "price": "0.2375",
+                      "quantity": "201065.0000"
+                    },
+                    {
+                      "price": "0.2400",
+                      "quantity": "377108.9200"
+                    },
+                    {
+                      "price": "0.2425",
+                      "quantity": "30457.0000"
+                    },
+                    {
+                      "price": "0.2450",
+                      "quantity": "32602.0000"
+                    },
+                    {
+                      "price": "0.2475",
+                      "quantity": "24755.1800"
+                    },
+                    {
+                      "price": "0.2500",
+                      "quantity": "16319.5300"
+                    },
+                    {
+                      "price": "0.2525",
+                      "quantity": "41908.0000"
+                    },
+                    {
+                      "price": "0.2550",
+                      "quantity": "75281.1200"
+                    },
+                    {
+                      "price": "0.2575",
+                      "quantity": "41184.0000"
+                    },
+                    {
+                      "price": "0.2600",
+                      "quantity": "53205.0000"
+                    },
+                    {
+                      "price": "0.2700",
+                      "quantity": "6515.7500"
+                    },
+                    {
+                      "price": "0.3000",
+                      "quantity": "23401.0000"
+                    },
+                    {
+                      "price": "0.3400",
+                      "quantity": "4380.0000"
+                    },
+                    {
+                      "price": "0.3425",
+                      "quantity": "11.8700"
+                    },
+                    {
+                      "price": "0.3625",
+                      "quantity": "1.0000"
+                    },
+                    {
+                      "price": "0.3900",
+                      "quantity": "17.0500"
+                    },
+                    {
+                      "price": "0.4600",
+                      "quantity": "11.0000"
+                    },
+                    {
+                      "price": "0.4700",
+                      "quantity": "5.0000"
+                    },
+                    {
+                      "price": "0.5700",
+                      "quantity": "5.0000"
+                    },
+                    {
+                      "price": "0.6000",
+                      "quantity": "37.7100"
+                    },
+                    {
+                      "price": "0.7025",
+                      "quantity": "10.0000"
+                    },
+                    {
+                      "price": "0.8400",
+                      "quantity": "1.5600"
+                    },
+                    {
+                      "price": "0.8500",
+                      "quantity": "1.6600"
+                    },
+                    {
+                      "price": "0.8600",
+                      "quantity": "1.7800"
+                    },
+                    {
+                      "price": "0.8700",
+                      "quantity": "1.9200"
+                    },
+                    {
+                      "price": "0.8800",
+                      "quantity": "2.0800"
+                    },
+                    {
+                      "price": "0.8900",
+                      "quantity": "2.2700"
+                    },
+                    {
+                      "price": "0.9000",
+                      "quantity": "2.5000"
+                    },
+                    {
+                      "price": "0.9100",
+                      "quantity": "2.7700"
+                    },
+                    {
+                      "price": "0.9200",
+                      "quantity": "3.1200"
+                    },
+                    {
+                      "price": "0.9300",
+                      "quantity": "3.5700"
+                    },
+                    {
+                      "price": "0.9350",
+                      "quantity": "250.0000"
+                    },
+                    {
+                      "price": "0.9400",
+                      "quantity": "54.1600"
+                    },
+                    {
+                      "price": "0.9500",
+                      "quantity": "37.0000"
+                    },
+                    {
+                      "price": "0.9600",
+                      "quantity": "106.2500"
+                    },
+                    {
+                      "price": "0.9700",
+                      "quantity": "99.3300"
+                    },
+                    {
+                      "price": "0.9800",
+                      "quantity": "5362.5000"
+                    },
+                    {
+                      "price": "0.9900",
+                      "quantity": "11195.8400"
+                    },
+                    {
+                      "price": "0.9950",
+                      "quantity": "250.0000"
+                    },
+                    {
+                      "price": "0.9975",
+                      "quantity": "2139377.5800"
+                    }
+                  ],
+                  "freshness_policy": {
+                    "version": "polymarket_us-book-age-engineering-1",
+                    "maximum_age_seconds": 30
+                  },
+                  "provenance": {
+                    "mode": "current",
+                    "real_source": true,
+                    "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2"
+                  },
+                  "book_confirmation": {
+                    "version": "predict-book-confirmation-1",
+                    "basis": "us-complete-book-transact-1",
+                    "venue": "polymarket_us",
+                    "event_id": "129629",
+                    "market_id": "1083081",
+                    "generation": 1,
+                    "request_id": "a1099a8e-9fea-4432-b1b0-bddfb3b9b305",
+                    "requested_at": null,
+                    "subscription_id": null,
+                    "sequence": null,
+                    "confirmed_at": "2026-10-09T22:42:46.669169+00:00",
+                    "received_at": "2026-10-09T22:43:08.067432+00:00",
+                    "provider_source_at": "2026-10-09T22:42:46.669169+00:00",
+                    "payload_sha256": "baa4ae4d2735af4a641cbbea17fb0db0e1391eb7f4733cf404872f46d6bb63a0",
+                    "content_sha256": "5abf0b24c98bd9bcdc0a05195a6e4c28f0fb2e1a98d70c6c18c4ae40f828d134",
+                    "sha256": "3906f6bb2a437ff8452decd1f5afa1edfa217bfd847648ab28e0307bcec67121"
+                  },
+                  "native_predicate": {
+                    "version": "predict-direct-win-1",
+                    "participant": "NFL:PHI",
+                    "predicate": "win",
+                    "native_outcome_id": "2165646",
+                    "domain": [
+                      {
+                        "participant": "NFL:PHI",
+                        "predicate": "win",
+                        "signed_line": null,
+                        "label": "Philadelphia Eagles",
+                        "native_outcome_id": "2165646"
+                      },
+                      {
+                        "participant": "NFL:JAX",
+                        "predicate": "win",
+                        "signed_line": null,
+                        "label": "Jacksonville Jaguars",
+                        "native_outcome_id": "2165647"
+                      }
+                    ],
+                    "binding_sha256": "40042574dad76e3474a67186c8bc90793fe2a547adaedf470df4812f14c5ec06",
+                    "original_result_policy": "native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50"
+                  },
+                  "rules_differ": true,
+                  "sharp_reference": {
+                    "bookmaker": "pinnacle",
+                    "version": "pinnacle-proportional-no-vig-1",
+                    "selection_digest": "binding:8314dadcc49c0ea98f7e32cc4c9b097b",
+                    "odds": [
+                      "1.28",
+                      "3.96"
+                    ],
+                    "selected": 1,
+                    "source_at": [
+                      "2026-10-09T22:42:50Z",
+                      "2026-10-09T22:42:50Z"
+                    ],
+                    "received_at": "2026-10-09T22:43:08.771229+00:00",
+                    "sha256": "5bc6cb90de29f4d137f6daf216131dd0a6aa162051964e35afd3c4efcc0c07fe",
+                    "maximum_age_seconds": 1800,
+                    "selected_odds": "3.96",
+                    "provider_clocks": [
+                      {
+                        "book": "2026-10-09T22:42:50Z",
+                        "market": "2026-10-09T22:42:50Z",
+                        "selected_basis": "market"
+                      },
+                      {
+                        "book": "2026-10-09T22:42:50Z",
+                        "market": "2026-10-09T22:42:50Z",
+                        "selected_basis": "market"
+                      }
+                    ]
+                  },
+                  "comparison_input_refs": {
+                    "version": "comparison-current-dependencies-1",
+                    "refs": {
+                      "identity": "6c25df37bc126bf33e87e44e7e2a28a38aaddfed8dc61f10ba6508a5603ea5ab",
+                      "payout": "7a7ac340fbc8456563424eaeb18011e113bbf815a4405649776cc0c3d1f9db4a",
+                      "reference": "97e244894b688bc895d1dd8d74ceccab10b66b8d38a692317f1ddd165186cddd",
+                      "fee": "48c5721428a60b4cad8f9a2fb0973034f7875dcc82bcb50ff7f5b65912f7b00e",
+                      "quantity": null,
+                      "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                      "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                    },
+                    "phase": "pregame"
+                  },
+                  "comparison_input_status": {
+                    "identity": {
+                      "status": "available_and_bound",
+                      "reason": "identity_source_inputs_bound",
+                      "evidence": [
+                        {
+                          "ref": "admitted:polymarket_us:129629:1083081",
+                          "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                          "evidence_class": "retained"
+                        }
+                      ],
+                      "public_event": {
+                        "version": "comparison-public-event-binding-1",
+                        "binding_version": "6814c7a6239e8829f556b9abc080567cc91858388a8fc8244b011476f4a24c5a",
+                        "status": "expired",
+                        "reason": "public_event_metadata_expired_or_not_effective",
+                        "event_id": "129629",
+                        "market_id": "1083081",
+                        "selected": {
+                          "native_key": [
+                            "polymarket_us",
+                            "129629",
+                            "1083081",
+                            "2165646",
+                            "Long"
+                          ],
+                          "team_id": "73",
+                          "participant_id": "NFL:PHI",
+                          "name": "Philadelphia Eagles",
+                          "role": "away",
+                          "provider_ids": [
+                            {
+                              "provider": "PROVIDER_SPORTSDATAIO",
+                              "providerId": "26"
+                            },
+                            {
+                              "provider": "PROVIDER_SPORTRADAR",
+                              "providerId": "386bdbf9-9eea-4869-bb9a-274b0bc66e80"
+                            }
+                          ],
+                          "pointer": "/events/0/markets/459/marketSides/0"
+                        },
+                        "occurrence": {
+                          "game_id": "19518",
+                          "provider": "sportradar",
+                          "provider_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+                          "scheduled_start": "2026-10-11T13:30:00Z",
+                          "rescheduled_from_game_id": null,
+                          "replacement_field_present": false,
+                          "original_start_time": null,
+                          "period": "NS",
+                          "active": true,
+                          "closed": false,
+                          "source_local_qualified": true,
+                          "cross_source_qualified": false,
+                          "reason": "public_event_source_local_occurrence_observed"
+                        },
+                        "scope": {
+                          "family": "moneyline",
+                          "period": "full_game",
+                          "line": null,
+                          "sports_market_type": "football_team_full_game_winner",
+                          "overtime": "included",
+                          "selection_meaning": "selected_team_win",
+                          "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+                        },
+                        "provenance": {
+                          "response_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+                          "decoded_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+                          "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+                          "request_started_at": "2026-10-09T20:53:02.818579+00:00",
+                          "headers_at": "2026-10-09T20:53:03.098399+00:00",
+                          "response_finished_at": "2026-10-09T20:53:03.417821+00:00",
+                          "wire_bytes": 3662490,
+                          "decoded_bytes": 3662490,
+                          "event_pointer": "/events/0",
+                          "game_pointer": "/events/0/gameId",
+                          "provider_game_pointer": "/events/0/sportradarGameId",
+                          "schedule_pointer": "/events/0/startTime"
+                        },
+                        "effective_from": "2026-10-09T20:53:03.417821+00:00",
+                        "effective_until": "2026-10-09T21:08:03.417821+00:00",
+                        "historical_quote_applicability": false,
+                        "cross_source_qualified": false,
+                        "original_quote_source_at": "2026-10-09T22:42:46.669169+00:00",
+                        "original_quote_received_at": "2026-10-09T22:43:08.067432+00:00"
+                      }
+                    },
+                    "payout": {
+                      "status": "applicability_unresolved",
+                      "reason": "source_selected_observation_revision_unqualified",
+                      "evidence": []
+                    },
+                    "fee": {
+                      "status": "applicability_unresolved",
+                      "reason": "source_selected_observation_revision_unqualified",
+                      "evidence": [],
+                      "public_entry_example": {
+                        "quantity": "100",
+                        "price": "0.2350",
+                        "entry_fee_usd": "1.25",
+                        "raw_entry_fee_usd": "1.249436250000",
+                        "basis": "hypothetical_one_order_one_fill",
+                        "settlement_fee_usd": null,
+                        "other_mandatory_costs_usd": null,
+                        "effective_schedule_from": "2026-10-07T14:00:00Z",
+                        "rounding": "half_even_cents_cumulative_order_cap",
+                        "authority": "public_single_taker_entry_only",
+                        "net_qualified": false
+                      }
+                    },
+                    "quantity": {
+                      "status": "applicability_unresolved",
+                      "reason": "public_retail_historical_applicability_unqualified",
+                      "evidence": [],
+                      "public_retail": {
+                        "version": "comparison-public-retail-1",
+                        "metadata": {
+                          "version": "comparison-public-retail-1",
+                          "market_id": "1083081",
+                          "instrument_id": "2165646",
+                          "side": "Long",
+                          "team_id": "73",
+                          "participant_id": "NFL:PHI",
+                          "minimumTradeQty": "0.01",
+                          "orderPriceMinTickSize": "0.0025",
+                          "quantity_alignment_authority": "public_orders_minimumTradeQty_alignment",
+                          "feeCoefficient": "0.0695",
+                          "price": "0.2350",
+                          "price_unit": "USD_per_contract",
+                          "quantity_unit": "contracts",
+                          "coefficient_unit": "USD_per_contract_times_p_times_one_minus_p",
+                          "response_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+                          "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+                          "status": "MARKET_STATUS_OPEN",
+                          "updatedAt": "2026-10-09T19:52:46Z",
+                          "expiration": "2026-10-25T17:30:00Z",
+                          "sibling": {
+                            "id": "2165647",
+                            "side": "Short",
+                            "team_id": "62",
+                            "price": "0.7675"
+                          },
+                          "entry_fee_effective_from": "2026-10-07T14:00:00Z",
+                          "settlement_charge_status": "unknown",
+                          "mandatory_charges_known": false
+                        },
+                        "observed_at": "2026-10-09T19:53:54.957379+00:00",
+                        "effective_from": "2026-10-09T19:53:54.957379+00:00",
+                        "effective_until": "2026-10-09T20:08:54.957379+00:00",
+                        "historical_applicability": false,
+                        "event_linkage": "current_event_response_incomplete",
+                        "binding_version": "313b7be560eb58f874d52f553c7ee2c08059a21866819824e39e89cf8bfb59e7"
+                      }
+                    },
+                    "reference": {
+                      "status": "available_and_bound",
+                      "reason": "original_pinnacle_opposition_bound",
+                      "prospective_review": {
+                        "status": "bound_prospective_manual_review",
+                        "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+                        "evidence_sha256": "6b60f26bd5707c8b8fc02bb5e5923f7ad80b69b88145ab34d51c269af0310a9e",
+                        "effective_from": "2026-10-09T21:55:06.130895+00:00",
+                        "effective_until": "2026-10-10T21:55:06.130895+00:00",
+                        "historical_applicability": false,
+                        "venue": "Tottenham Hotspur Stadium; NFL2026 regular-season Week5",
+                        "rules": "NFL full-game includes overtime; Pinnacle two-way tie void differs from native0.50; exceptional rules differ",
+                        "rule_version": "Unversioned official page reviewed October9; no historical effective date established"
+                      }
+                    },
+                    "probability": {
+                      "status": "available_and_bound",
+                      "reason": "probability_source_inputs_bound",
+                      "evidence": []
+                    },
+                    "buffer": {
+                      "status": "available_and_bound",
+                      "reason": "buffer_source_inputs_bound",
+                      "evidence": []
+                    },
+                    "phase": {
+                      "status": "available_and_bound",
+                      "reason": "scheduled_pregame_or_observed_phase",
+                      "evidence": []
+                    },
+                    "depth": {
+                      "status": "available_and_bound",
+                      "reason": "observed_native_book_only",
+                      "levels": 41,
+                      "fill_assumption": "hypothetical_one_order",
+                      "observed_fills": false
+                    }
+                  },
+                  "binding": {
+                    "verified": true,
+                    "evidence": [
+                      "manual-comparison-2:7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                      "predict-direct-win-1:40042574dad76e3474a67186c8bc90793fe2a547adaedf470df4812f14c5ec06"
+                    ],
+                    "selection": {
+                      "event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+                      "group_id": "group:7c28fcd7edd397acaa67326903a11635",
+                      "outcome_id": "outcome:5108b497f26cc0c853411bc3fa1c1e9f",
+                      "participant": "NFL:PHI",
+                      "predicate": "win",
+                      "signed_line": null,
+                      "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+                      "outcome_cardinality": 2,
+                      "result_interpretation": "normal_win"
+                    }
+                  }
+                }
+              },
+              "alternatives": {}
+            },
+            {
+              "id": "outcome:79196790238198e2dc3d543e7880c3bc",
+              "participant": "NFL:JAX",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Jacksonville Jaguars",
+              "quotes": {},
+              "alternatives": {}
+            }
+          ]
+        },
+        {
+          "id": "group:a43c9edf1cda1147fa45061b62f54268",
+          "market": "winner",
+          "period": "full_game",
+          "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+          "outcome_cardinality": 2,
+          "line": null,
+          "anchor_participant": null,
+          "result_policy": "native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+          "outcomes": [
+            {
+              "id": "outcome:864a1e12d7fab83f2521f71b65ea119f",
+              "participant": "NFL:PHI",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Philadelphia Eagles",
+              "quotes": {},
+              "alternatives": {}
+            },
+            {
+              "id": "outcome:f6b40f841f9bb2f863e89d995b18aa2d",
+              "participant": "NFL:JAX",
+              "predicate": "win",
+              "signed_line": null,
+              "label": "Jacksonville Jaguars",
+              "quotes": {
+                "polymarket_us": {
+                  "id": "quote:b975f28d0b250998b431f7c50bf38af6",
+                  "revision": 1,
+                  "venue": "polymarket_us",
+                  "source": {
+                    "provider": "polymarket_us",
+                    "native_event_id": "129629",
+                    "native_market_id": "1083081",
+                    "native_outcome_id": "2165647",
+                    "native_side": "Short",
+                    "binding_id": "906691329aee9dc028a8786a58cef8a99105d8e06a620c099741b1f9cf52fb9c",
+                    "binding_version": "manual-comparison-2",
+                    "native_line": null,
+                    "quote_side": "buy"
+                  },
+                  "original": {
+                    "value": "0.7675",
+                    "units": "usd_per_contract",
+                    "payout": "1",
+                    "payout_units": "USD",
+                    "quantity_units": "contracts",
+                    "role": "comparison",
+                    "native_value": "0.2325",
+                    "native_units": "usd_per_contract",
+                    "transformation": "one_minus_native_bid"
+                  },
+                  "times": {
+                    "source_at": "2026-10-09T22:42:46.669169+00:00",
+                    "received_at": "2026-10-09T22:43:08.067432+00:00",
+                    "projected_at": "2026-10-09T22:43:08.399146+00:00",
+                    "source_time_kind": "provider_book"
+                  },
+                  "state": "available",
+                  "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+                  "cost_note": "Current applicable costs unavailable",
+                  "depth": [
+                    {
+                      "price": "0.7675",
+                      "quantity": "716032.7300"
+                    },
+                    {
+                      "price": "0.7700",
+                      "quantity": "572789.1700"
+                    },
+                    {
+                      "price": "0.7725",
+                      "quantity": "159620.9300"
+                    },
+                    {
+                      "price": "0.7750",
+                      "quantity": "18560.0000"
+                    },
+                    {
+                      "price": "0.7775",
+                      "quantity": "52888.4600"
+                    },
+                    {
+                      "price": "0.7800",
+                      "quantity": "39735.3600"
+                    },
+                    {
+                      "price": "0.7825",
+                      "quantity": "18394.0000"
+                    },
+                    {
+                      "price": "0.7850",
+                      "quantity": "18048.0000"
+                    },
+                    {
+                      "price": "0.7875",
+                      "quantity": "18227.0000"
+                    },
+                    {
+                      "price": "0.7900",
+                      "quantity": "18442.0000"
+                    },
+                    {
+                      "price": "0.7925",
+                      "quantity": "28915.6600"
+                    },
+                    {
+                      "price": "0.8000",
+                      "quantity": "77.0000"
+                    },
+                    {
+                      "price": "0.8050",
+                      "quantity": "500.0000"
+                    },
+                    {
+                      "price": "0.8300",
+                      "quantity": "23374.0000"
+                    },
+                    {
+                      "price": "0.8400",
+                      "quantity": "1.5600"
+                    },
+                    {
+                      "price": "0.8500",
+                      "quantity": "1.6600"
+                    },
+                    {
+                      "price": "0.8550",
+                      "quantity": "21.0000"
+                    },
+                    {
+                      "price": "0.8600",
+                      "quantity": "3.0500"
+                    },
+                    {
+                      "price": "0.8650",
+                      "quantity": "6.4100"
+                    },
+                    {
+                      "price": "0.8700",
+                      "quantity": "4376.9200"
+                    },
+                    {
+                      "price": "0.8800",
+                      "quantity": "2.0800"
+                    },
+                    {
+                      "price": "0.8900",
+                      "quantity": "2.2700"
+                    },
+                    {
+                      "price": "0.8950",
+                      "quantity": "20.0000"
+                    },
+                    {
+                      "price": "0.9000",
+                      "quantity": "2.5000"
+                    },
+                    {
+                      "price": "0.9050",
+                      "quantity": "11.0000"
+                    },
+                    {
+                      "price": "0.9100",
+                      "quantity": "2.7700"
+                    },
+                    {
+                      "price": "0.9200",
+                      "quantity": "3.1200"
+                    },
+                    {
+                      "price": "0.9300",
+                      "quantity": "3.5700"
+                    },
+                    {
+                      "price": "0.9350",
+                      "quantity": "250.0000"
+                    },
+                    {
+                      "price": "0.9400",
+                      "quantity": "54.1600"
+                    },
+                    {
+                      "price": "0.9500",
+                      "quantity": "70.0000"
+                    },
+                    {
+                      "price": "0.9600",
+                      "quantity": "106.2500"
+                    },
+                    {
+                      "price": "0.9700",
+                      "quantity": "150.3300"
+                    },
+                    {
+                      "price": "0.9800",
+                      "quantity": "5363.5000"
+                    },
+                    {
+                      "price": "0.9900",
+                      "quantity": "26967.0000"
+                    },
+                    {
+                      "price": "0.9950",
+                      "quantity": "250.0000"
+                    },
+                    {
+                      "price": "0.9975",
+                      "quantity": "2140000.0000"
+                    }
+                  ],
+                  "freshness_policy": {
+                    "version": "polymarket_us-book-age-engineering-1",
+                    "maximum_age_seconds": 30
+                  },
+                  "provenance": {
+                    "mode": "current",
+                    "real_source": true,
+                    "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2"
+                  },
+                  "book_confirmation": {
+                    "version": "predict-book-confirmation-1",
+                    "basis": "us-complete-book-transact-1",
+                    "venue": "polymarket_us",
+                    "event_id": "129629",
+                    "market_id": "1083081",
+                    "generation": 1,
+                    "request_id": "a1099a8e-9fea-4432-b1b0-bddfb3b9b305",
+                    "requested_at": null,
+                    "subscription_id": null,
+                    "sequence": null,
+                    "confirmed_at": "2026-10-09T22:42:46.669169+00:00",
+                    "received_at": "2026-10-09T22:43:08.067432+00:00",
+                    "provider_source_at": "2026-10-09T22:42:46.669169+00:00",
+                    "payload_sha256": "baa4ae4d2735af4a641cbbea17fb0db0e1391eb7f4733cf404872f46d6bb63a0",
+                    "content_sha256": "5abf0b24c98bd9bcdc0a05195a6e4c28f0fb2e1a98d70c6c18c4ae40f828d134",
+                    "sha256": "3906f6bb2a437ff8452decd1f5afa1edfa217bfd847648ab28e0307bcec67121"
+                  },
+                  "comparison_input_refs": {
+                    "version": "comparison-current-dependencies-1",
+                    "refs": {
+                      "identity": "d6bef70f68edb66c028d966e6a9d95f4061fa004f84b308e1940bff787b19510",
+                      "payout": "e7879afab751c895dcd122f008f60a106f20bd3f72921d16580ea268366b8d4e",
+                      "reference": null,
+                      "fee": "48c5721428a60b4cad8f9a2fb0973034f7875dcc82bcb50ff7f5b65912f7b00e",
+                      "quantity": null,
+                      "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                      "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                    },
+                    "phase": "pregame"
+                  },
+                  "comparison_input_status": {
+                    "identity": {
+                      "status": "available_and_bound",
+                      "reason": "identity_source_inputs_bound",
+                      "evidence": [
+                        {
+                          "ref": "admitted:polymarket_us:129629:1083081",
+                          "sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2",
+                          "evidence_class": "retained"
+                        }
+                      ],
+                      "public_event": {
+                        "version": "comparison-public-event-binding-1",
+                        "binding_version": "6814c7a6239e8829f556b9abc080567cc91858388a8fc8244b011476f4a24c5a",
+                        "status": "expired",
+                        "reason": "public_event_metadata_expired_or_not_effective",
+                        "event_id": "129629",
+                        "market_id": "1083081",
+                        "selected": {
+                          "native_key": [
+                            "polymarket_us",
+                            "129629",
+                            "1083081",
+                            "2165647",
+                            "Short"
+                          ],
+                          "team_id": "62",
+                          "participant_id": "NFL:JAX",
+                          "name": "Jacksonville Jaguars",
+                          "role": "home",
+                          "provider_ids": [
+                            {
+                              "provider": "PROVIDER_SPORTSDATAIO",
+                              "providerId": "15"
+                            },
+                            {
+                              "provider": "PROVIDER_SPORTRADAR",
+                              "providerId": "f7ddd7fa-0bae-4f90-bc8e-669e4d6cf2de"
+                            }
+                          ],
+                          "pointer": "/events/0/markets/459/marketSides/1"
+                        },
+                        "occurrence": {
+                          "game_id": "19518",
+                          "provider": "sportradar",
+                          "provider_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+                          "scheduled_start": "2026-10-11T13:30:00Z",
+                          "rescheduled_from_game_id": null,
+                          "replacement_field_present": false,
+                          "original_start_time": null,
+                          "period": "NS",
+                          "active": true,
+                          "closed": false,
+                          "source_local_qualified": true,
+                          "cross_source_qualified": false,
+                          "reason": "public_event_source_local_occurrence_observed"
+                        },
+                        "scope": {
+                          "family": "moneyline",
+                          "period": "full_game",
+                          "line": null,
+                          "sports_market_type": "football_team_full_game_winner",
+                          "overtime": "included",
+                          "selection_meaning": "selected_team_win",
+                          "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+                        },
+                        "provenance": {
+                          "response_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+                          "decoded_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+                          "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+                          "request_started_at": "2026-10-09T20:53:02.818579+00:00",
+                          "headers_at": "2026-10-09T20:53:03.098399+00:00",
+                          "response_finished_at": "2026-10-09T20:53:03.417821+00:00",
+                          "wire_bytes": 3662490,
+                          "decoded_bytes": 3662490,
+                          "event_pointer": "/events/0",
+                          "game_pointer": "/events/0/gameId",
+                          "provider_game_pointer": "/events/0/sportradarGameId",
+                          "schedule_pointer": "/events/0/startTime"
+                        },
+                        "effective_from": "2026-10-09T20:53:03.417821+00:00",
+                        "effective_until": "2026-10-09T21:08:03.417821+00:00",
+                        "historical_quote_applicability": false,
+                        "cross_source_qualified": false,
+                        "original_quote_source_at": "2026-10-09T22:42:46.669169+00:00",
+                        "original_quote_received_at": "2026-10-09T22:43:08.067432+00:00"
+                      }
+                    },
+                    "payout": {
+                      "status": "applicability_unresolved",
+                      "reason": "selected_instrument_payout_terms_unqualified",
+                      "evidence": [
+                        "selected_instrument_fee_coefficient_must_not_conflict",
+                        "exact_native_scale_or_tick_required_for_native_grid_claim",
+                        "FCM_or_other_non_direct_execution_channel_not_covered"
+                      ]
+                    },
+                    "fee": {
+                      "status": "applicability_unresolved",
+                      "reason": "execution_channel_and_mandatory_charges_unqualified",
+                      "evidence": [
+                        "selected_instrument_fee_coefficient_must_not_conflict",
+                        "exact_native_scale_or_tick_required_for_native_grid_claim",
+                        "FCM_or_other_non_direct_execution_channel_not_covered"
+                      ]
+                    },
+                    "quantity": {
+                      "status": "applicability_unresolved",
+                      "reason": "source_price_off_legal_grid",
+                      "evidence": [],
+                      "selected_reference_data": {
+                        "instrument_id": "2165647",
+                        "market_id": "1083081",
+                        "present": false,
+                        "values": {},
+                        "material_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                      },
+                      "missing_fields": [
+                        "priceScale",
+                        "fractionalQtyScale",
+                        "minimumTradeQty",
+                        "tickSize"
+                      ]
+                    },
+                    "reference": {
+                      "status": "absent",
+                      "reason": "exact_pinnacle_opposition_absent",
+                      "evidence": []
+                    },
+                    "probability": {
+                      "status": "available_and_bound",
+                      "reason": "probability_source_inputs_bound",
+                      "evidence": []
+                    },
+                    "buffer": {
+                      "status": "available_and_bound",
+                      "reason": "buffer_source_inputs_bound",
+                      "evidence": []
+                    },
+                    "phase": {
+                      "status": "available_and_bound",
+                      "reason": "scheduled_pregame_or_observed_phase",
+                      "evidence": []
+                    },
+                    "depth": {
+                      "status": "available_and_bound",
+                      "reason": "observed_native_book_only",
+                      "levels": 37,
+                      "fill_assumption": "hypothetical_one_order",
+                      "observed_fills": false
+                    }
+                  },
+                  "binding": {
+                    "verified": true,
+                    "evidence": [
+                      "manual-comparison-2:7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2"
+                    ],
+                    "selection": {
+                      "event_id": "event:636d8e43780f2dfd4c9bd2f2232359a0",
+                      "group_id": "group:a43c9edf1cda1147fa45061b62f54268",
+                      "outcome_id": "outcome:f6b40f841f9bb2f863e89d995b18aa2d",
+                      "participant": "NFL:JAX",
+                      "predicate": "win",
+                      "signed_line": null,
+                      "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+                      "outcome_cardinality": 2,
+                      "result_interpretation": "normal_win"
+                    }
+                  }
+                }
+              },
+              "alternatives": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

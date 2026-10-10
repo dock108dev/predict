@@ -111,7 +111,11 @@ source archives to meet line counts.
 
 Keep local notes, collected observations and generated reports out of Git. Authored
 schemas and examples live under `docs/contracts`; independent test inputs live in
-`tests/fixtures` and `app/fixtures`. Sealed executors require the exact source and
+`tests/fixtures` and `app/fixtures`. `tests/comparison_oracles.py` resolves original
+research provenance names to required fixture files without reading local notes.
+The `tests/fixtures/retained-retail` inputs preserve public market observations,
+original receipts and evaluation clocks; they do not establish present availability.
+Keep these required inputs visible to Git. Sealed executors require the exact source and
 control files in `scripts/v1_coverage_package` and `scripts/v1_counterpart_package`;
 do not regenerate those inputs as part of documentation cleanup.
 

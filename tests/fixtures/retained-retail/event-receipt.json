@@ -1,0 +1,33 @@
+{
+  "version": "comparison-public-event-reader-1",
+  "method": "GET",
+  "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+  "purpose": "Complete exact event membership after diagnosed one-MiB cutoff",
+  "started_at": "2026-10-09T22:43:05.649629+00:00",
+  "requests": 1,
+  "cost_usd": "0",
+  "credits": 0,
+  "retries": 0,
+  "redirects": 0,
+  "limit_wire_bytes": 16777216,
+  "limit_decoded_bytes": 16777216,
+  "deadline_seconds": 20,
+  "headers_at": "2026-10-09T22:43:05.925074+00:00",
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "date": "Fri, 09 Oct 2026 22:43:05 GMT",
+    "transfer-encoding": "chunked"
+  },
+  "wire_bytes": 3660830,
+  "decoded_bytes": 3660830,
+  "eof": true,
+  "transport_complete": true,
+  "json_complete": true,
+  "reason": "complete",
+  "wire_sha256": "d686c35de5fef011326148f352c90bb1cb9e237e7fe15f38b24b181a46add5db",
+  "decoded_sha256": "d686c35de5fef011326148f352c90bb1cb9e237e7fe15f38b24b181a46add5db",
+  "peak_rss_bytes": 96796672,
+  "finished_at": "2026-10-09T22:43:06.160459+00:00",
+  "elapsed_seconds": 0.5109265419887379
+}

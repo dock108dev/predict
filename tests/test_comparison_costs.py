@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 import unittest
+from tests.comparison_oracles import artifact_path
 
 from app.comparison.costs import (
     CapitalInputs, ComparisonCostPolicy, CostRegistry, CostRequest, CostRule,
@@ -31,7 +32,7 @@ class ComparisonCostTests(unittest.TestCase):
     def test_upstream_and_legacy_artifacts_remain_bound(self):
         for ref in self.fixture["upstream_inputs"] + self.fixture["history_refs"]:
             with self.subTest(ref=ref["ref"]):
-                self.assertEqual(hashlib.sha256((ROOT / ref["ref"]).read_bytes()).hexdigest(), ref["sha256"])
+                self.assertEqual(hashlib.sha256(artifact_path(ref["ref"]).read_bytes()).hexdigest(), ref["sha256"])
 
     def test_portable_resolution_vectors(self):
         for vector in self.vectors["resolution_vectors"]:

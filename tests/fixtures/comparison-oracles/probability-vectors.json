@@ -1,0 +1,119 @@
+{
+  "version": "benchmark-probability-vectors-1",
+  "evidence_class": "authored_independent_rational_oracles",
+  "two_way": {
+    "decimal_odds": [
+      "2",
+      "3"
+    ],
+    "raw_implied": [
+      "1/2",
+      "1/3"
+    ],
+    "sum": "5/6",
+    "proportional": [
+      "3/5",
+      "2/5"
+    ],
+    "condition": "applicable completed decisive win/loss; tie/push/exception excluded"
+  },
+  "gross_ev": [
+    {
+      "probability": "3/5",
+      "unit_face": "1",
+      "quote_cost": "1/2",
+      "gross_profit": "1/10",
+      "gross_return": "1/5"
+    },
+    {
+      "probability": "3/5",
+      "unit_face": "1",
+      "quote_cost": "3/5",
+      "gross_profit": "0",
+      "gross_return": "0"
+    },
+    {
+      "probability": "3/5",
+      "unit_face": "1",
+      "quote_cost": "2/3",
+      "gross_profit": "-1/15",
+      "gross_return": "-1/10"
+    }
+  ],
+  "fees_sign_change": {
+    "quote_cost": "1/2",
+    "hypothetical_nonrefundable_cost": "1/8",
+    "capital": "5/8",
+    "probability": "3/5",
+    "expected_profit": "-1/40",
+    "return": "-1/25",
+    "fee_authority": "authored scenario, not venue rate"
+  },
+  "three_way": {
+    "decimal_odds": [
+      "2",
+      "4",
+      "4"
+    ],
+    "states": [
+      "home_win",
+      "draw",
+      "away_win"
+    ],
+    "probabilities": [
+      "1/2",
+      "1/4",
+      "1/4"
+    ],
+    "precondition": "explicit mutually-exclusive/exhaustive same-period same-rule three-way reference; no such current fixture claimed"
+  },
+  "tie_sensitivity": {
+    "conditional_win_probability": "3/5",
+    "assumed_tie_probability": "1/10",
+    "unconditional_probabilities": {
+      "win": "27/50",
+      "loss": "9/25",
+      "tie": "1/10"
+    },
+    "source": "authored sensitivity, no ranking authority",
+    "binary_half_tie_face_expected_payout": "59/100",
+    "quote_cost": "1/2",
+    "return": "9/50"
+  },
+  "push_sensitivity": {
+    "assumed_push": "1/10",
+    "conditional_cover": "3/5",
+    "unconditional_cover": "27/50",
+    "unconditional_fail": "9/25",
+    "decimal_odds": "2",
+    "stake": "1",
+    "expected_gross_payout": "59/50",
+    "return": "9/50",
+    "source": "authored sensitivity only"
+  },
+  "unknown_tie_push_policy": "retain conditional benchmark; no missing probability filled with0",
+  "reference_age_policy": {
+    "maximum_seconds": 1800,
+    "version": "existing pilot policy; engineering limit not provider guarantee",
+    "both_source_clocks_required": true,
+    "receipt_clock_is_not_source_freshness": true
+  },
+  "invalid_partition": {
+    "probabilities": {
+      "cancelled": "1/2",
+      "abandoned": "1/2"
+    },
+    "sums_to_one": true,
+    "valid": false,
+    "reason": "labels may describe same terminal event; need disjoint cashflow states"
+  },
+  "ranking_invalidation": [
+    "quote_revision",
+    "both_reference_quote_revisions",
+    "period_or_rule_revision",
+    "probability_assumption_version",
+    "cost_version",
+    "size_basis",
+    "evaluation_clock_expiry"
+  ]
+}

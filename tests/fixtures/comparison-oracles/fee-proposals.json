@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "version": "comparison-r05-fee-proposal-20261008-1",
+  "status": "reviewable_research_proposal_not_runtime_binding",
+  "candidate_head": "43c95c020f7260808270c89ae9eaeb61963d34be",
+  "observed_date_et": "2026-10-08",
+  "evidence_class": "fresh_official_public_document_review_and_authored_arithmetic",
+  "input_sha256": {
+    "app/fees/public_bindings.py": "fb3f5d71cbea8edfd55726de9871a429fdd5cda9b5088cb3d7c64b609cf8289e",
+    "app/fees/engine.py": "abcee8dfce583efc09bbf2d0ee3a43c83b1dd17570c29ee759d0f30ee98a24dc",
+    "app/fees/precision_envelope.py": "af86289643033fd587e08a7a61bd97ec0a699d913501113f07f8911eaacc4e6c",
+    "app/fees/entry_bounds.py": "6e5a06cdbcb9f86951af5a3b975bfd8e16c3ab2e8cccc3562058295b48a2b62e",
+    "app/fixtures/fee-schedules-v1.json": "f50e9bd0de615cdd1aafcb85eeb85f890cd52756076102961b0f42341c0d7eca",
+    "app/fixtures/public-contracts-v1.json": "4ba73451499ef17463c4a19523f6dd02ec932b1367ddf7a8a0180bd6a89590e1",
+    "app/collection/native_fee_metadata.py": "03746bbf5c196e008b7966a66c0d4e813de21481a46cc444a502810402927638",
+    "app/depth.py": "16d4cfd2f61c2f5037d709d84c92e3727655a9f054363851e1016690448ee409",
+    "docs/comparison-p00-manifest.json": "426ef3cca5b0cb1d76e1433519ea6ec815acc3f02b5bbf301c0e1dbbd5061ea0"
+  },
+  "sources": {
+    "kalshi_schedule": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+    "kalshi_rounding": "https://docs.kalshi.com/getting_started/fee_rounding",
+    "kalshi_series": "https://docs.kalshi.com/api-reference/market/get-series",
+    "kalshi_events": "https://docs.kalshi.com/api-reference/events/get-event-fee-changes",
+    "pmus": "https://docs.polymarket.us/fees",
+    "novig_v3": "https://docs.novig.com/api/concepts/fees",
+    "novig_rfq": "https://docs.novig.com/fees",
+    "novig_credit": "https://docs.novig.com/maker-credit-program",
+    "prophetx": "https://www.prophetx.co/lobby/t-c/trading-fees"
+  },
+  "proposals": [
+    {
+      "venue": "kalshi",
+      "version": "kalshi-public-july7-reviewed-oct8",
+      "effective_date": "2026-07-07",
+      "effective_instant": null,
+      "role": "taker",
+      "formula": "0.07 * multiplier * dollar_face_contracts * price * (1-price)",
+      "requires": [
+        "exact_series_and_event_fee_terms_asof",
+        "balance_precision_or_declared_envelope",
+        "bounded_fill_fragmentation",
+        "account_or_declared_direct_exchange_scenario"
+      ],
+      "maker_formula": "0.0175 * multiplier * C * p * (1-p); default maker multiplier zero, selected sport series can be one",
+      "settlement": "binary_schedule_zero; scalar_or_other_contract_requires_separate_applicability",
+      "rounding": "ceil raw fee to 6dp USD; align debit to account grid; order accumulator refunds deterministic overpayment",
+      "account_grid_scenarios_usd": [
+        "0.0001",
+        "0.01"
+      ],
+      "source_keys": [
+        "kalshi_schedule",
+        "kalshi_rounding",
+        "kalshi_series",
+        "kalshi_events"
+      ]
+    },
+    {
+      "venue": "polymarket_us",
+      "version": "pmus-standard-current-reviewed-oct8",
+      "effective_exchange_notice_et": "2026-10-01T10:00:00-04:00",
+      "standard_theta": "0.0695",
+      "maker_theta": "-0.0125",
+      "rounding": "half_even_cent_per_fill_with_taker_cumulative_order_cap",
+      "combo_change_effective_et": "2026-10-07T00:00:00-04:00",
+      "combo_maker_rebate_default": "0",
+      "exception": "table_tennis_taker_theta_0.10_outside_six_sport_pilot",
+      "conflict": "Page body still claims combo maker rebate continues; dated Oct7 notice supersedes for conservative proposal, no eligibility assumed",
+      "requires": [
+        "selected_single_or_whole_combo_identity",
+        "selected_fee_coefficient",
+        "fixed_point_quantity_scale",
+        "independent_settlement_fee_rule_or_named_scenario"
+      ],
+      "source_keys": [
+        "pmus"
+      ]
+    },
+    {
+      "venue": "novig",
+      "version": "novig-v3-current-reviewed-oct8",
+      "regime": "v3",
+      "effective_date": "2026-10-08",
+      "effective_instant": null,
+      "live_theta_by_league": {
+        "NFL": "0.03",
+        "NCAAF": "0.06",
+        "NBA": "0.03",
+        "NCAAB": "0.03",
+        "MLB": "0.06",
+        "NHL": "0.06"
+      },
+      "authority": "selected market.fee object; date-only transition does not retrospectively supply exact fee instant",
+      "formula": "coefficient * price * (1-price) * native_qty * 0.01 USD",
+      "rounding": "half_up_to_0.00001_USD_each_fill",
+      "maker_fee": "0",
+      "source_keys": [
+        "novig_v3",
+        "novig_credit",
+        "novig_rfq"
+      ],
+      "requires": [
+        "exact_market_fee",
+        "api_regime",
+        "fill_or_hypothetical_match_phase",
+        "quantity_units"
+      ],
+      "credits_default": "exclude_contingent_and_later_credits",
+      "other_products": "futures/RFQ are versioned separately and outside this pilot"
+    },
+    {
+      "venue": "prophetx",
+      "version": "prophetx-public-v1.2-oct1-reviewed-oct8",
+      "published_update_date": "2026-10-01",
+      "effective_instant": null,
+      "channel": "public_site_straight_only",
+      "rate": "0.02",
+      "base": "positive_net_gains_per_market",
+      "standalone_formula": "0.02*max(0,gross_payout-stake)",
+      "incremental_formula": "fee(existing_market_profit+candidate_profit)-fee(existing_market_profit)",
+      "rounding": null,
+      "requires": [
+        "exact_market_scope",
+        "public_site_or_explicit_account_terms",
+        "rounded_fee_rule_or_named_bounded_scenario"
+      ],
+      "api_default": null,
+      "source_keys": [
+        "prophetx"
+      ]
+    }
+  ],
+  "no_public_upper_bound": [
+    "negotiated ProphetX API fees",
+    "unknown FCM extra charges",
+    "independent PM US settlement fee not established by trading page"
+  ],
+  "receiving_slices": [
+    "D09",
+    "S02"
+  ]
+}
