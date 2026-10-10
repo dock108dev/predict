@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparison-metrics-1",
+  "title": "Bounded shared-current metric facade",
+  "type": "object",
+  "required": [
+    "schema",
+    "runtime_id",
+    "state_revision",
+    "clock_at",
+    "mode",
+    "groups",
+    "rows",
+    "selections",
+    "pairs",
+    "pair_groups",
+    "limits",
+    "searches",
+    "acquisition_requests"
+  ],
+  "properties": {
+    "schema": {
+      "const": "comparison-metrics-1"
+    },
+    "acquisition_requests": {
+      "const": 0
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "groups": {
+      "type": "array"
+    },
+    "rows": {
+      "type": "array"
+    },
+    "pair_groups": {
+      "type": "array"
+    },
+    "pairs": {
+      "type": "array"
+    },
+    "limits": {
+      "type": "object"
+    },
+    "searches": {
+      "type": "array"
+    }
+  },
+  "$defs": {
+    "exact": {
+      "type": "object",
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        },
+        "denominator": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "decimal_approx": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "eligible",
+        "exact",
+        "value",
+        "reason",
+        "estimate_class",
+        "basis"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "exact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/exact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "basis": {
+          "type": "object"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

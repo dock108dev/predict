@@ -1,0 +1,1135 @@
+{
+  "schema": 1,
+  "version": "comparison-source-rules-1",
+  "reviewed_date_et": "2026-10-09",
+  "baseline_head": "43c95c020f7260808270c89ae9eaeb61963d34be",
+  "baseline_delivered_public_digest": "44fcf947be5a775dcdacdda9a303cf719f8cd75cd380134ff22f49d8ec836009",
+  "snapshot_manifest": "docs/comparison-net-sources/manifest.json",
+  "rules": [
+    {
+      "id": "comparison-source-kalshi-direct-oneorder-1",
+      "venue": "kalshi",
+      "channel": "native",
+      "source_channels": [
+        "native"
+      ],
+      "market_families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "period": "full_game",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-16T04:00:00Z",
+      "authority": "mixed_public_rules_and_named_hypothetical_model",
+      "status": "named_hypothetical_available",
+      "source_refs": [
+        {
+          "ref": "docs/comparison-net-sources/kalshi-rounding.md",
+          "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/kalshi-fixedpoint.md",
+          "sha256": "249bb44d972bfef98061ecffcd7869eba0aef356c610fcab8946ca33072cecb4",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/kalshi-settlement.md",
+          "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/reviewed-extracts.json",
+          "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+          "evidence_class": "manual_review"
+        },
+        {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      ],
+      "fee_payload": {
+        "rule": {
+          "version": "comparison-source-kalshi-direct-oneorder-1",
+          "venue": "kalshi",
+          "product": "single",
+          "channel": "direct_member_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1"
+          },
+          "terms": {
+            "basis": "quadratic",
+            "rate": "0.07",
+            "grid_usd": "0.000001",
+            "rounding": "ceiling",
+            "aggregation": "order_accumulator",
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "declared_zero",
+          "mandatory_charges_known": true,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/kalshi-rounding.md",
+              "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/kalshi-fixedpoint.md",
+              "sha256": "249bb44d972bfef98061ecffcd7869eba0aef356c610fcab8946ca33072cecb4",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/kalshi-settlement.md",
+              "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/reviewed-extracts.json",
+              "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+              "evidence_class": "manual_review"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": null
+        },
+        "engine_registry": {
+          "schema": 1,
+          "schedules": [
+            {
+              "venue": "kalshi",
+              "product": "single",
+              "version": "comparison-source-kalshi-direct-oneorder-1",
+              "coefficient": "0.07",
+              "effective_from": "2026-10-01T00:00:00Z",
+              "effective_to": null,
+              "sources": [
+                {
+                  "ref": "docs/comparison-net-sources/kalshi-rounding.md",
+                  "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/kalshi-fixedpoint.md",
+                  "sha256": "249bb44d972bfef98061ecffcd7869eba0aef356c610fcab8946ca33072cecb4",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/kalshi-settlement.md",
+                  "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/reviewed-extracts.json",
+                  "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+                  "evidence_class": "manual_review"
+                }
+              ]
+            }
+          ]
+        },
+        "engine_context": {
+          "environment": "production",
+          "schedule_version": "comparison-source-kalshi-direct-oneorder-1",
+          "balance_precision": "0.0001",
+          "settlement_contract_kind": "binary",
+          "model_fee_type": "quadratic_with_maker_fees",
+          "model_fee_multiplier": "1"
+        }
+      },
+      "quantity_grid": {
+        "minimum_native": "1",
+        "increment_native": "1",
+        "legal_price_tick": "0.01",
+        "evidence": {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      },
+      "payout": {
+        "overtime": "included",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": "1",
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true,
+        "overtime_authority": "named_full_game_completed_result_hypothesis_requires_no_conflicting_source_scope",
+        "authority": "explicit_hypothesis"
+      },
+      "modeling": {
+        "fill_basis": "hypothetical_one_order",
+        "complete_order_history": true,
+        "fill_count": 1,
+        "fragment_upper_bound": 1,
+        "portfolio_basis": "standalone",
+        "depth_observed": false,
+        "allow_controlled_scenario": true,
+        "pinned_version": "comparison-source-kalshi-direct-oneorder-1",
+        "disclosure": "Hypothetical one-order taker estimate; conditional on normal completed result; not account fees, execution or depth proof; modeled direct membership and multiplier1"
+      },
+      "local_blockers": [
+        "actual_account_membership_or_FCM_extras_unverified",
+        "actual_market_fee_override_requires_scoped_terms"
+      ],
+      "actual_account_net_qualified": false,
+      "identity_requirements": [
+        "exact_venue_event_market_instrument_side",
+        "evidenced_canonical_predicate",
+        "source_full_game_scope_and_result_policy",
+        "source_phase",
+        "source_quote_clock"
+      ],
+      "modeled_execution_channel": "direct_member_hypothetical",
+      "requires_half_line_for": [
+        "spread",
+        "total"
+      ],
+      "quantity_grid_authority": "modeled_legal_integer_subset",
+      "quantity_grid_metadata": {
+        "authority": "modeled_integer_comparison_subset;whole_cent_prices_documented_legal",
+        "native_minimum": null,
+        "native_increment": "0.01",
+        "native_tick": "selected_price_ranges_required"
+      }
+    },
+    {
+      "id": "comparison-source-us-standard-oneorder-1",
+      "venue": "polymarket_us",
+      "channel": "native",
+      "source_channels": [
+        "native"
+      ],
+      "market_families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "period": "full_game",
+      "effective_from": "2026-10-01T14:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-16T04:00:00Z",
+      "authority": "mixed_public_rules_and_named_hypothetical_model",
+      "status": "named_hypothetical_available",
+      "source_refs": [
+        {
+          "ref": "docs/comparison-net-sources/us-fees.md",
+          "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/us-settlement.md",
+          "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+          "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/us-fractional.md",
+          "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/us-order-model.md",
+          "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/us-structure.md",
+          "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      ],
+      "fee_payload": {
+        "rule": {
+          "version": "comparison-source-us-standard-oneorder-1",
+          "venue": "polymarket_us",
+          "product": "single",
+          "channel": "direct_exchange_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-01T14:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1"
+          },
+          "terms": {
+            "basis": "quadratic",
+            "rate": "0.0695",
+            "grid_usd": "0.01",
+            "rounding": "half_even",
+            "aggregation": "cumulative_order_cap",
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "declared_zero",
+          "mandatory_charges_known": true,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/us-fees.md",
+              "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-settlement.md",
+              "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+              "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-fractional.md",
+              "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-order-model.md",
+              "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/us-structure.md",
+              "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": null
+        },
+        "engine_registry": {
+          "schema": 1,
+          "schedules": [
+            {
+              "venue": "polymarket_us",
+              "product": "single",
+              "version": "comparison-source-us-standard-oneorder-1",
+              "coefficient": "0.0695",
+              "maker_coefficient": "0.0125",
+              "effective_from": "2026-10-01T14:00:00Z",
+              "effective_to": null,
+              "sources": [
+                {
+                  "ref": "docs/comparison-net-sources/us-fees.md",
+                  "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-settlement.md",
+                  "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-clearing-fees.pdf",
+                  "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-fractional.md",
+                  "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-order-model.md",
+                  "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/us-structure.md",
+                  "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+                  "evidence_class": "primary_source"
+                }
+              ]
+            }
+          ]
+        },
+        "engine_context": {
+          "environment": "production",
+          "schedule_version": "comparison-source-us-standard-oneorder-1",
+          "assume_no_settlement_fee": true
+        }
+      },
+      "quantity_grid": {
+        "minimum_native": "1",
+        "increment_native": "1",
+        "legal_price_tick": "0.01",
+        "evidence": {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      },
+      "payout": {
+        "overtime": "included",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": "1",
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true,
+        "overtime_authority": "named_full_game_completed_result_hypothesis_requires_no_conflicting_source_scope",
+        "authority": "explicit_hypothesis"
+      },
+      "modeling": {
+        "fill_basis": "hypothetical_one_order",
+        "complete_order_history": true,
+        "fill_count": 1,
+        "fragment_upper_bound": 1,
+        "portfolio_basis": "standalone",
+        "depth_observed": false,
+        "allow_controlled_scenario": true,
+        "pinned_version": "comparison-source-us-standard-oneorder-1",
+        "disclosure": "Hypothetical one-order taker estimate; conditional on normal completed result; not account fees, execution or depth proof; modeled whole-contract/cent-price subset, standard direct exchange and clearing schedule"
+      },
+      "local_blockers": [
+        "selected_instrument_fee_coefficient_must_not_conflict",
+        "exact_native_scale_or_tick_required_for_native_grid_claim",
+        "FCM_or_other_non_direct_execution_channel_not_covered"
+      ],
+      "actual_account_net_qualified": false,
+      "identity_requirements": [
+        "exact_venue_event_market_instrument_side",
+        "evidenced_canonical_predicate",
+        "source_full_game_scope_and_result_policy",
+        "source_phase",
+        "source_quote_clock"
+      ],
+      "modeled_execution_channel": "direct_exchange_hypothetical",
+      "requires_half_line_for": [
+        "spread",
+        "total"
+      ],
+      "quantity_grid_authority": "modeled_legal_integer_subset",
+      "quantity_grid_metadata": {
+        "authority": "modeled_whole_contract_subset_and_cent_price_scenario_not_instrument_tick_attestation",
+        "native_minimum": null,
+        "native_increment": "instrument_step_required_0.01_or_1",
+        "native_tick": null
+      }
+    },
+    {
+      "id": "comparison-source-novig-v3-oneorder-03-1",
+      "venue": "novig",
+      "channel": "native_v3",
+      "source_channels": [
+        "native_v3"
+      ],
+      "market_families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "period": "full_game",
+      "effective_from": "2026-10-09T04:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-16T04:00:00Z",
+      "authority": "mixed_public_rules_and_named_hypothetical_model",
+      "status": "entry_fee_scenario_only_net_locally_blocked",
+      "source_refs": [
+        {
+          "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+          "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/novig-v3-money.md",
+          "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/novig-fees.md",
+          "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      ],
+      "fee_payload": {
+        "rule": {
+          "version": "comparison-source-novig-v3-oneorder-03-1",
+          "venue": "novig",
+          "product": "single",
+          "channel": "v3_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-09T04:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "novig_v3_cent_contracts",
+            "face_usd_per_native": "0.01"
+          },
+          "terms": {
+            "basis": "quadratic",
+            "rate": "0.03",
+            "grid_usd": "0.00001",
+            "rounding": "half_up",
+            "aggregation": "per_fill",
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "unknown",
+          "mandatory_charges_known": false,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+              "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/novig-v3-money.md",
+              "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/novig-fees.md",
+              "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": null
+        },
+        "engine_registry": {
+          "schema": 1,
+          "schedules": [
+            {
+              "venue": "novig",
+              "product": "single",
+              "version": "comparison-source-novig-v3-oneorder-03-1",
+              "api_regime": "v3",
+              "coefficient": "0.03",
+              "effective_from": "2026-10-09T04:00:00Z",
+              "effective_to": null,
+              "sources": [
+                {
+                  "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+                  "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/novig-v3-money.md",
+                  "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/novig-fees.md",
+                  "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+                  "evidence_class": "primary_source"
+                }
+              ]
+            }
+          ]
+        },
+        "engine_context": {
+          "environment": "production",
+          "schedule_version": "comparison-source-novig-v3-oneorder-03-1",
+          "api_regime": "v3",
+          "market_fee": {
+            "coefficient": "0.03",
+            "makerCredit": "0.5",
+            "charged": "WHEN_LIVE"
+          }
+        }
+      },
+      "quantity_grid": {
+        "minimum_native": "1",
+        "increment_native": "1",
+        "legal_price_tick": "0.005",
+        "evidence": {
+          "ref": "docs/comparison-net-sources/novig-v3-money.md",
+          "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+          "evidence_class": "primary_source"
+        }
+      },
+      "payout": {
+        "overtime": "included",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": "0.01",
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true,
+        "overtime_authority": "named_full_game_completed_result_hypothesis_requires_no_conflicting_source_scope",
+        "authority": "explicit_hypothesis"
+      },
+      "modeling": {
+        "fill_basis": "hypothetical_one_order",
+        "complete_order_history": true,
+        "fill_count": 1,
+        "fragment_upper_bound": 1,
+        "portfolio_basis": "standalone",
+        "depth_observed": false,
+        "allow_controlled_scenario": true,
+        "pinned_version": "comparison-source-novig-v3-oneorder-03-1",
+        "disclosure": "Hypothetical one-order taker estimate; conditional on normal completed result; not account fees, execution or depth proof"
+      },
+      "local_blockers": [
+        "execution_channel_regime_not_established_by_aggregate_label",
+        "selected_market_fee_and_match_phase_required",
+        "additional_mandatory_channel_charges_and_settlement_fee_unverified"
+      ],
+      "actual_account_net_qualified": false,
+      "identity_requirements": [
+        "exact_venue_event_market_instrument_side",
+        "evidenced_canonical_predicate",
+        "source_full_game_scope_and_result_policy",
+        "source_phase",
+        "source_quote_clock"
+      ],
+      "leagues": [
+        "NFL",
+        "NBA",
+        "NCAAB"
+      ],
+      "fee_applicability": "Selected market.fee is authority; scenario coefficient not account observation; match phase must be explicit.",
+      "modeled_execution_channel": "v3_hypothetical",
+      "requires_half_line_for": [
+        "spread",
+        "total"
+      ],
+      "quantity_grid_authority": "native_v3_qualified_only_with_band_and_channel",
+      "quantity_grid_metadata": {
+        "authority": "public_v3_integer_units;selected_tick_band_required",
+        "native_minimum": null,
+        "native_increment": "1",
+        "native_tick_bands": [
+          {
+            "start": "0.001",
+            "end": "0.050",
+            "step": "0.001"
+          },
+          {
+            "start": "0.055",
+            "end": "0.945",
+            "step": "0.005"
+          },
+          {
+            "start": "0.950",
+            "end": "0.999",
+            "step": "0.001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "comparison-source-novig-v3-oneorder-06-1",
+      "venue": "novig",
+      "channel": "native_v3",
+      "source_channels": [
+        "native_v3"
+      ],
+      "market_families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "period": "full_game",
+      "effective_from": "2026-10-09T04:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-16T04:00:00Z",
+      "authority": "mixed_public_rules_and_named_hypothetical_model",
+      "status": "entry_fee_scenario_only_net_locally_blocked",
+      "source_refs": [
+        {
+          "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+          "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/novig-v3-money.md",
+          "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/novig-fees.md",
+          "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      ],
+      "fee_payload": {
+        "rule": {
+          "version": "comparison-source-novig-v3-oneorder-06-1",
+          "venue": "novig",
+          "product": "single",
+          "channel": "v3_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-09T04:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "novig_v3_cent_contracts",
+            "face_usd_per_native": "0.01"
+          },
+          "terms": {
+            "basis": "quadratic",
+            "rate": "0.06",
+            "grid_usd": "0.00001",
+            "rounding": "half_up",
+            "aggregation": "per_fill",
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "unknown",
+          "mandatory_charges_known": false,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+              "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/novig-v3-money.md",
+              "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/novig-fees.md",
+              "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": null
+        },
+        "engine_registry": {
+          "schema": 1,
+          "schedules": [
+            {
+              "venue": "novig",
+              "product": "single",
+              "version": "comparison-source-novig-v3-oneorder-06-1",
+              "api_regime": "v3",
+              "coefficient": "0.06",
+              "effective_from": "2026-10-09T04:00:00Z",
+              "effective_to": null,
+              "sources": [
+                {
+                  "ref": "docs/comparison-net-sources/novig-v3-fees.md",
+                  "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/novig-v3-money.md",
+                  "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+                  "evidence_class": "primary_source"
+                },
+                {
+                  "ref": "docs/comparison-net-sources/novig-fees.md",
+                  "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+                  "evidence_class": "primary_source"
+                }
+              ]
+            }
+          ]
+        },
+        "engine_context": {
+          "environment": "production",
+          "schedule_version": "comparison-source-novig-v3-oneorder-06-1",
+          "api_regime": "v3",
+          "market_fee": {
+            "coefficient": "0.06",
+            "makerCredit": "0.5",
+            "charged": "WHEN_LIVE"
+          }
+        }
+      },
+      "quantity_grid": {
+        "minimum_native": "1",
+        "increment_native": "1",
+        "legal_price_tick": "0.005",
+        "evidence": {
+          "ref": "docs/comparison-net-sources/novig-v3-money.md",
+          "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+          "evidence_class": "primary_source"
+        }
+      },
+      "payout": {
+        "overtime": "included",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": "0.01",
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true,
+        "overtime_authority": "named_full_game_completed_result_hypothesis_requires_no_conflicting_source_scope",
+        "authority": "explicit_hypothesis"
+      },
+      "modeling": {
+        "fill_basis": "hypothetical_one_order",
+        "complete_order_history": true,
+        "fill_count": 1,
+        "fragment_upper_bound": 1,
+        "portfolio_basis": "standalone",
+        "depth_observed": false,
+        "allow_controlled_scenario": true,
+        "pinned_version": "comparison-source-novig-v3-oneorder-06-1",
+        "disclosure": "Hypothetical one-order taker estimate; conditional on normal completed result; not account fees, execution or depth proof"
+      },
+      "local_blockers": [
+        "execution_channel_regime_not_established_by_aggregate_label",
+        "selected_market_fee_and_match_phase_required",
+        "additional_mandatory_channel_charges_and_settlement_fee_unverified"
+      ],
+      "actual_account_net_qualified": false,
+      "identity_requirements": [
+        "exact_venue_event_market_instrument_side",
+        "evidenced_canonical_predicate",
+        "source_full_game_scope_and_result_policy",
+        "source_phase",
+        "source_quote_clock"
+      ],
+      "leagues": [
+        "NCAAF",
+        "MLB",
+        "NHL"
+      ],
+      "fee_applicability": "Selected market.fee is authority; scenario coefficient not account observation; match phase must be explicit.",
+      "modeled_execution_channel": "v3_hypothetical",
+      "requires_half_line_for": [
+        "spread",
+        "total"
+      ],
+      "quantity_grid_authority": "native_v3_qualified_only_with_band_and_channel",
+      "quantity_grid_metadata": {
+        "authority": "public_v3_integer_units;selected_tick_band_required",
+        "native_minimum": null,
+        "native_increment": "1",
+        "native_tick_bands": [
+          {
+            "start": "0.001",
+            "end": "0.050",
+            "step": "0.001"
+          },
+          {
+            "start": "0.055",
+            "end": "0.945",
+            "step": "0.005"
+          },
+          {
+            "start": "0.950",
+            "end": "0.999",
+            "step": "0.001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "comparison-source-prophetx-site-rounding-hypothesis-1",
+      "venue": "prophetx",
+      "channel": "aggregate",
+      "source_channels": [
+        "aggregate"
+      ],
+      "market_families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "period": "full_game",
+      "effective_from": "2026-10-09T04:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-16T04:00:00Z",
+      "authority": "mixed_public_rules_and_named_hypothetical_model",
+      "status": "named_hypothetical_available",
+      "source_refs": [
+        {
+          "ref": "docs/comparison-net-sources/prophetx-fees.html",
+          "sha256": "9f9a260b31f7c4ea9a15245a4bbfed2b35f7c813563627cbc11e12b0e05c9f06",
+          "evidence_class": "primary_source"
+        },
+        {
+          "ref": "docs/comparison-net-sources/reviewed-extracts.json",
+          "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+          "evidence_class": "manual_review"
+        },
+        {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      ],
+      "fee_payload": {
+        "rule": {
+          "version": "comparison-source-prophetx-site-rounding-hypothesis-1",
+          "venue": "prophetx",
+          "product": "single",
+          "channel": "public_site_hypothetical",
+          "source_kind": "controlled_scenario",
+          "effective_from": "2026-10-09T04:00:00Z",
+          "effective_to": null,
+          "expires_at": "2026-10-16T04:00:00Z",
+          "unit": {
+            "unit": "stake_usd"
+          },
+          "terms": {
+            "basis": "net_gain",
+            "rate": "0.02",
+            "grid_usd": "0.01",
+            "rounding": "half_even",
+            "aggregation": null,
+            "role": "taker",
+            "allow_fee_adjustment": false
+          },
+          "settlement_status": "known_terms",
+          "mandatory_charges_known": true,
+          "evidence": [
+            {
+              "ref": "docs/comparison-net-sources/prophetx-fees.html",
+              "sha256": "9f9a260b31f7c4ea9a15245a4bbfed2b35f7c813563627cbc11e12b0e05c9f06",
+              "evidence_class": "primary_source"
+            },
+            {
+              "ref": "docs/comparison-net-sources/reviewed-extracts.json",
+              "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+              "evidence_class": "manual_review"
+            },
+            {
+              "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+              "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+              "evidence_class": "authored"
+            }
+          ],
+          "market_id": null,
+          "event_id": null,
+          "series_id": null,
+          "account_ref": null,
+          "source_url": null,
+          "predecessor_version": null,
+          "proposal_ref": null,
+          "settlement_treatment": "separate_charge",
+          "settlement_terms": {
+            "basis": "net_gain",
+            "rate": "0.02",
+            "grid_usd": "0.01",
+            "rounding": "half_even",
+            "aggregation": null,
+            "role": "taker",
+            "allow_fee_adjustment": false
+          }
+        }
+      },
+      "quantity_grid": {
+        "minimum_native": "1",
+        "increment_native": "1",
+        "legal_price_tick": "0.01",
+        "evidence": {
+          "ref": "docs/comparison-net-sources/modeled-assumptions.json",
+          "sha256": "019fe7f2cccacdac67b248dffdb1bcb155b62ac966510c0f03ed773a68b303dc",
+          "evidence_class": "authored"
+        }
+      },
+      "payout": {
+        "overtime": "included",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": null,
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true,
+        "unit": "usd_per_usd_stake",
+        "win_return": "exact_original_decimal_odds",
+        "loss_return": "0",
+        "overtime_authority": "named_full_game_completed_result_hypothesis_requires_no_conflicting_source_scope",
+        "authority": "explicit_hypothesis"
+      },
+      "modeling": {
+        "fill_basis": "hypothetical_one_order",
+        "complete_order_history": true,
+        "fill_count": 1,
+        "fragment_upper_bound": 1,
+        "portfolio_basis": "standalone",
+        "depth_observed": false,
+        "allow_controlled_scenario": true,
+        "pinned_version": "comparison-source-prophetx-site-rounding-hypothesis-1",
+        "disclosure": "Hypothetical one-order taker estimate; conditional on normal completed result; not account fees, execution or depth proof; public-site 2% commission and hypothetical half-even rounding, actual execution channel unknown"
+      },
+      "local_blockers": [
+        "aggregate_quote_execution_channel_unverified",
+        "public_site_rate_not_negotiated_API_account_fee",
+        "half_even_cent_rounding_is_named_hypothesis",
+        "native_odds_ladder_and_quantity_increment_not_bound"
+      ],
+      "actual_account_net_qualified": false,
+      "identity_requirements": [
+        "exact_venue_event_market_instrument_side",
+        "evidenced_canonical_predicate",
+        "source_full_game_scope_and_result_policy",
+        "source_phase",
+        "source_quote_clock"
+      ],
+      "modeled_execution_channel": "public_site_hypothetical",
+      "requires_half_line_for": [
+        "spread",
+        "total"
+      ],
+      "quantity_grid_authority": "modeled_stake_grid_not_native_ladder",
+      "quantity_grid_metadata": {
+        "authority": "modeled_usd_stake_grid_and_probability_tick_not_native_ladder_attestation",
+        "native_minimum": "1_directlink_only",
+        "native_increment": null,
+        "native_tick": null
+      }
+    }
+  ],
+  "channel_unknown_records": [
+    {
+      "venue": "novig",
+      "source_channels": [
+        "aggregate"
+      ],
+      "fee_payload": null,
+      "quantity_grid": null,
+      "payout": {
+        "overtime": "unknown",
+        "completed_condition": "conditional_completed_result",
+        "decisive_face": "1",
+        "equal": null,
+        "noncompleted": null,
+        "refund_fees": "unknown",
+        "predicate_required": true,
+        "normal_result_only": true
+      },
+      "status": "gross_conditional_only_until_execution_regime_bound",
+      "local_blockers": [
+        "aggregate_Novig_label_does_not_establish_retail_NBX_or_v3_channel",
+        "native_v3_units_fee_and_grid_cannot_be_inherited"
+      ]
+    },
+    {
+      "venue": "prophetx",
+      "source_channels": [
+        "aggregate"
+      ],
+      "actual_account_fee_payload": null,
+      "status": "named_site_hypothesis_available_actual_net_unknown",
+      "local_blockers": [
+        "public_site_not_negotiated_API_account_schedule"
+      ]
+    }
+  ],
+  "publication_notes": [
+    "Scenario effective_from timestamps define selected modeled applicability, not backdated source effective instants. Only US fee formula has an exact source-published timestamp.",
+    "Fresh public facts do not retroactively certify October8 source/channel applicability.",
+    "Expiration is a routine seven-day research review horizon, not a provider expiry fact.",
+    "No source/account/order APIs were queried; official documentation pages and clearing document file index were read."
+  ],
+  "independent_examples": [
+    {
+      "venue": "kalshi",
+      "model": "direct_precision0.0001_M1_onefill_p0.5_q100",
+      "entry_fee_usd": "1.75",
+      "capital_usd": "51.75",
+      "normal_win_profit_usd": "48.25"
+    },
+    {
+      "venue": "polymarket_us",
+      "model": "standard_onefill_p0.5_q100",
+      "entry_fee_usd": "1.74",
+      "capital_usd": "51.74",
+      "normal_win_profit_usd": "48.26"
+    },
+    {
+      "venue": "novig",
+      "model": "v3_live_p0.5_nativeqty10000_theta0.03",
+      "entry_fee_usd": "0.75",
+      "capital_usd": "50.75",
+      "true_net_profit_usd": null
+    },
+    {
+      "venue": "novig",
+      "model": "v3_live_p0.5_nativeqty10000_theta0.06",
+      "entry_fee_usd": "1.50",
+      "capital_usd": "51.50",
+      "true_net_profit_usd": null
+    },
+    {
+      "venue": "prophetx",
+      "model": "public_site_standalone_stake100_decimal2_half_even_hypothesis",
+      "win_commission_usd": "2.00",
+      "capital_usd": "100",
+      "normal_win_profit_usd": "98",
+      "actual_account_net_profit_usd": null
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema": "comparison-discovery-authored-1",
+  "evidence_class": "authored catalogs; no native offering authority",
+  "at": "2026-10-08T20:00:00Z",
+  "start": "2026-10-09T20:00:00Z",
+  "sports": [
+    "NFL",
+    "NCAAF",
+    "NBA",
+    "NCAAB",
+    "MLB",
+    "NHL"
+  ],
+  "kalshi_listing_counts": {
+    "NFL": [
+      5,
+      5
+    ],
+    "NCAAF": [
+      1
+    ],
+    "NBA": [
+      1
+    ],
+    "NCAAB": [
+      0
+    ],
+    "MLB": [
+      1
+    ],
+    "NHL": [
+      1
+    ]
+  },
+  "us_listing_counts": {
+    "NFL": [
+      5,
+      0
+    ],
+    "NCAAF": [
+      1
+    ],
+    "NBA": [
+      1
+    ],
+    "NCAAB": [
+      0
+    ],
+    "MLB": [
+      1
+    ],
+    "NHL": [
+      1
+    ]
+  },
+  "expected": {
+    "kalshi_requests": 12,
+    "us_requests": 12,
+    "selected_sports": [
+      "NFL",
+      "NCAAF",
+      "NBA",
+      "MLB",
+      "NHL"
+    ],
+    "nfl_completeness": "partial",
+    "ncaab_state": "no_offerings_returned",
+    "request_cap_per_source": 18,
+    "subscription_cap_per_source": 20
+  },
+  "family_rotations": [
+    "moneyline",
+    "spread",
+    "total"
+  ],
+  "collection_authorized": false
+}

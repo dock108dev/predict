@@ -13,13 +13,14 @@ prices can remain useful while net-return or EV calculations are unavailable.
   are distinct. A healthy connection does not establish a fresh price.
 - Arbitrage percentages describe the displayed gross conditional outcome basis.
   Unknown fees, refunds, exceptional outcomes or depth can prevent net economics.
-- EV needs an independent supported probability model. Reference odds, manual
-  probability and retained observations do not automatically supply that model.
+- Gross benchmark EV uses an exact matched Pinnacle reference; modeled and actual
+  net EV have additional probability, cost and payout requirements. Manual inputs
+  and retained observations do not automatically establish those dependencies.
 - Saved fixtures and synthetic controls establish only their recorded inputs;
   they do not establish present venue coverage.
 - The shared aggregate ledger reserves credits and preserves uncertain charges.
   Missing or stale account observations can delay dispatch rather than imply a
   usable balance.
 
-See [sport integration](sports-integration.md), [architecture](architecture.md)
+See [calculation basis](benchmark-ev.md), [sport integration](sports-integration.md), [architecture](architecture.md)
 and [configuration](configuration.md) for supported paths.

@@ -1,0 +1,21 @@
+{
+  "version": "comparison-buffer-vectors-1",
+  "evidence_class": "independent_authored_offline_stress_and_depth_vectors",
+  "movement_vectors": [
+    {"id": "cent-default", "unit": "dollar_face_contracts", "price": "0.4", "tick": "0.01", "adverse": "0.41"},
+    {"id": "larger-legal-tick", "unit": "dollar_face_contracts", "price": "0.4", "tick": "0.05", "adverse": "0.45"},
+    {"id": "reprice-up-to-grid", "unit": "dollar_face_contracts", "price": "0.4", "tick": "0.004", "adverse": "0.412"},
+    {"id": "cent-native-quantity", "unit": "novig_v3_cent_contracts", "price": "0.4", "tick": "0.001", "adverse": "0.41"},
+    {"id": "fixed-point-wire-grid", "unit": "fixed_point_contracts", "price": "400", "tick": "1", "quantity_scale": "100", "price_scale": "1000", "adverse": "410"}
+  ],
+  "fixed_profit_vectors": [
+    {"id": "zero-extra-cost", "profit": "5", "percent": "10"},
+    {"id": "half-dollar-cost", "profit": "4.5", "percent": "9"},
+    {"id": "one-dollar-cost", "profit": "4", "percent": "8"},
+    {"id": "sign-erased", "profit": "-1", "percent": "-2"}
+  ],
+  "negative_expanded_capital": {"base_profit": "-10", "stress_profit": "-11", "base_capital": "100", "stress_capital": "120", "common_base_percent": "-25/3", "common_stress_percent": "-55/6"},
+  "shared_liquidity": {"capacity": "100", "valid_quantities": ["60", "40"], "invalid_quantities": ["60", "60"]},
+  "supported_size": {"target": "100", "available": "80", "supported": "80", "size_basis": "details_supported_size_sensitivity"},
+  "coarse_capital": {"deployed": "44", "profit": "4.4", "percent": "10", "unused_ceiling": "56"}
+}

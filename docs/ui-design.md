@@ -1,6 +1,6 @@
 # Interface design
 
-The working flow is **Odds board → Arbs → Admin**. Keep comparisons prominent and
+The working flow is **Odds board → EV → Arbs → Coverage → Admin**. Keep comparisons prominent and
 source operation in the separate Admin page.
 
 ## Comparisons and Details
@@ -25,7 +25,7 @@ with saved or synthetic observations.
 
 Use restrained cool surfaces, system typography, blue actions/selection, visible
 focus and controls of at least 44px. The shared stylesheet scopes ordinary app
-styles with `.current-app`; retained preview selectors keep their separate roles.
+styles with `.current-app`; retained inspection selectors keep their separate roles.
 There is no dependency on an external template gallery.
 
 Use content-sized fields, readable prices and wrapping long names. Details should
@@ -41,3 +41,7 @@ times, source clocks and original-input calculation policy.
 Use the [synthetic preview](development.md#synthetic-preview) and existing browser
 regressions for UI development. Screen appearance alone does not prove price
 freshness, live coverage or calculation eligibility.
+
+Keep default filters light, show Clear filters when needed, and put source status
+beside the board count. Details leads with the result and size control; validation
+belongs beside its field. Collapsed content must not enter the modal keyboard loop.

@@ -1,0 +1,86 @@
+{
+  "version": "comparison-retail-charge-audit-1",
+  "evidence_class": "diagnostic_public_documents_no_selected_cost_authority",
+  "selected_binding_version": "08106128f385be33131e8be2825bcbfe8f765e3a8fd1012c390536e03b3ec59b",
+  "observation": {
+    "native_key": [
+      "polymarket_us",
+      "129629",
+      "1083081",
+      "2165646",
+      "Long"
+    ],
+    "original": {
+      "value": "0.2350",
+      "units": "usd_per_contract",
+      "payout": "1",
+      "payout_units": "USD",
+      "quantity_units": "contracts",
+      "role": "comparison"
+    },
+    "source_at": "2026-10-09T22:42:46.669169+00:00",
+    "received_at": "2026-10-09T22:43:08.067432+00:00",
+    "provenance_sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2"
+  },
+  "quote_revision": 2,
+  "retained_evaluation_at": "2026-10-09T22:43:09.353065+00:00",
+  "predecessor_fee_binding_version": "e1f2f3f8e547750f89598a48b656f9affc435cb445512700938dfaf86c5b8960",
+  "settlement_status": "unknown",
+  "mandatory_charges_known": false,
+  "net_qualified": false,
+  "reason": "public_retail_mandatory_settlement_and_other_charges_unqualified",
+  "published_clearing": {
+    "status": "published_no_clearing_fees_for_clearing_members",
+    "description": "The official notice states no current clearing fees for clearing members. It does not attest all participant, channel or independent settlement charges.",
+    "source_url": "https://polymarketexchange.com/files/clearing-notices/Clearinghouse%20Notice%20-%20Fees%20(2026.05.18).pdf",
+    "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+    "original_receipt_at": "2026-10-09T15:57:00.400791+00:00",
+    "revalidated_at": "2026-10-09T23:21:44.150058+00:00",
+    "index_label_date": "2026-05-18",
+    "explicit_effective_instant": null,
+    "scope": "clearing_members",
+    "selected_total_cost_exemption": false
+  },
+  "selected_scope": {
+    "product": "single_market_event_contract",
+    "data_channel": "public_retail_decimal_events",
+    "transaction_role": "hypothetical_single_taker",
+    "participant_terms": "unknown",
+    "execution_channel": "unknown",
+    "account_details_included": false
+  },
+  "missing_facts": {
+    "settlement": "Selected non-clearing settlement charges or explicit exemption remain unestablished.",
+    "additional_mandatory_charges": "Complete posted and separately communicated transaction charges are unestablished.",
+    "participant_channel": "The intended participant and execution channel are not linked to applicable cost terms.",
+    "effective_date": "No complete selected cost schedule is evidenced for 2026-10-09T22:43:09.353065Z.",
+    "basis_rounding": "Basis, currency, units and rounding of any non-entry charges remain unknown."
+  },
+  "transaction_scope": {
+    "included": "Charges necessarily incurred by the selected hypothetical acquisition and settlement.",
+    "conditional_or_optional": "Withdrawal, deposit, inactivity, insufficient-funds, penalties and optional services are separate activities unless applicable terms make them mandatory for this transaction.",
+    "rebates": "Volume rebates need participant history and cannot be assumed or fund entry."
+  },
+  "required_evidence": "Applicable owner-provided participant/channel cost terms and effective notice, with complete transaction charge list or explicit exemptions; preserve private originals locally.",
+  "evidence": [
+    {
+      "ref": "https://polymarketexchange.com/files/clearing-notices/Clearinghouse%20Notice%20-%20Fees%20(2026.05.18).pdf",
+      "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+      "evidence_class": "primary_source",
+      "received_at": "2026-10-09T15:57:00.400791+00:00"
+    },
+    {
+      "ref": "https://polymarketexchange.com/files/legal/latest/participant-agreement",
+      "sha256": "06944488d6334af3539f0b99718984feebac6835363dac1c8e8989b4c9cc4993",
+      "evidence_class": "primary_source",
+      "locator": "IV"
+    },
+    {
+      "ref": "https://polymarketexchange.com/files/legal/latest/Polymarket%20Clearing%20Rulebook",
+      "sha256": "b68b44ec8ee6463f32c18d80d6a952b7a374ebc0ed322d7f93d26ebfb36e9b5e",
+      "evidence_class": "primary_source",
+      "locator": "3.5"
+    }
+  ],
+  "audit_version": "9425db483b2bf9fd3493e7f7ecb16e2f7d11cf1e4cb3852f908782befab6e407"
+}

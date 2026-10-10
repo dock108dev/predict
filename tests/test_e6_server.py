@@ -24,7 +24,7 @@ class ServerTests(unittest.IsolatedAsyncioTestCase):
     async def test_wrong_origin_and_invalid_bounds(self):
         response=await self.client.post('/api/start',json={'seconds':30},headers={'Origin':'https://example.invalid'})
         self.assertEqual(response.status,403)
-        response=await self.client.post('/api/start',json={'seconds':901})
+        response=await self.client.post('/api/start',json={'seconds':901},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})
         self.assertEqual(response.status,422)
     async def test_single_owner_lock(self):
         with self.assertRaises(BlockingIOError):create_app(self.env,self.output)
@@ -32,7 +32,7 @@ class ServerTests(unittest.IsolatedAsyncioTestCase):
         with self.env.connect() as db:
             store=Store(db)
             for _ in range(8):store.start('synthetic','synthetic',PROVENANCE)
-        response=await self.client.post('/api/start',json={'seconds':30})
+        response=await self.client.post('/api/start',json={'seconds':30},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})
         self.assertEqual(response.status,409)
     async def test_saved_path_validation(self):
         response=await self.client.get('/api/saved/not-a-session')

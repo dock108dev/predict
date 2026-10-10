@@ -5,12 +5,11 @@ comparisons are derived here. Source admission owns binding evidence verificatio
 this boundary checks the complete, exact binding against its catalog context.
 """
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal, localcontext
 from fractions import Fraction
 import hashlib
 import json
-from io import BytesIO
 import re
 from .u0_display import VERSION, quote_display, bounded_decimal
 
@@ -20,12 +19,18 @@ MAX_BYTES = 64 * 1024 * 1024
 
 
 def packed(value):
-    # Stream chunks into one byte buffer. Building a giant temporary JSON string
-    # repeatedly retains substantial allocator memory on the local Python runtime.
+    # Count first, then fill one exact staging buffer. Retaining many 64 KiB
+    # blocks caused allocator high-water growth over repeated large snapshots.
+    # Input is synchronous; no await or mutable external callback separates passes.
     encoder=json.JSONEncoder(sort_keys=True,separators=(',', ':'),ensure_ascii=False,allow_nan=False)
-    with BytesIO() as output:
-        for chunk in encoder.iterencode(value):output.write(chunk.encode())
-        return output.getvalue()
+    size=sum(len(chunk.encode()) for chunk in encoder.iterencode(value))
+    output=bytearray(size);offset=0
+    for chunk in encoder.iterencode(value):
+        encoded=chunk.encode();end=offset+len(encoded)
+        if end>size:raise ValueError('Encoding input changed between passes')
+        output[offset:end]=encoded;offset=end
+    if offset!=size:raise ValueError('Encoding input changed between passes')
+    return bytes(output)
 
 
 def identity(kind, value):
@@ -235,6 +240,15 @@ def binding_context(e,g,o):
                 outcome_cardinality=g['outcome_cardinality'],result_interpretation=o.get('result_interpretation','normal_win'))
 
 
+def event_identity(e):
+    """Versioned current occurrence IDs omit scheduled-time metadata."""
+    values=[e[k] for k in ('sport','league','season','stage','event_discriminator')]
+    if not e['event_discriminator'].startswith('comparison-occurrence-1:'):
+        values.append(stamp(e['start_at']).isoformat())
+    values.append(sorted((p['role'],p['id']) for p in e['participants']))
+    return identity('event',values)
+
+
 def serialize(raw, *, allow_synthetic=False):
     """Reject malformed/conflicting catalogs atomically. Financial floats forbidden."""
     try:
@@ -247,6 +261,8 @@ def _serialize(raw, *, allow_synthetic):
     if len(packed(raw))>MAX_BYTES:
         raise ValueError('Current state byte capacity exceeded')
     r=deepcopy(raw)
+    from app.comparison.current_dependencies import validate_profiles, references, eligibility
+    profiles=validate_profiles(r.get('comparison_profiles', {}))
     if r.get('schema')!=VERSION or r.get('mode') not in (('current','synthetic') if allow_synthetic else ('current',)):
         raise ValueError('Current mode/schema required; no historical or synthetic fallback')
     text(r['runtime_id'])
@@ -276,7 +292,7 @@ def _serialize(raw, *, allow_synthetic):
             fields(p,{'id','name','role'})
             for k in ('id','name','role'):text(p[k])
         if len({p['role'] for p in ps})!=len(ps):raise ValueError('Distinct participant roles required')
-        eid=identity('event',[*[e[k] for k in ('sport','league','season','stage','event_discriminator')],stamp(e['start_at']).isoformat(),sorted((p['role'],p['id']) for p in ps)])
+        eid=event_identity(e)
         e['id']=eid; groups={}
         for g in e['groups']:
             fields(g,{'id','market','period','period_boundary','outcome_cardinality','line','anchor_participant','outcomes'},{'result_policy'})
@@ -307,7 +323,16 @@ def _serialize(raw, *, allow_synthetic):
                 candidates=[*o['quotes'].values(),*(q for qs in o.get('alternatives',{}).values() for q in qs)]; unique={}
                 if len(candidates)>64:raise ValueError('Exact-selection instrument capacity exceeded')
                 for q in candidates:
-                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation','sharp_reference'})
+                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation','sharp_reference','provider_clocks','comparison_input_refs','comparison_input_status','occurrence_link'})
+                    references(q, profiles)
+                    from app.comparison.current_dependencies import input_status
+                    input_status(q)
+                    if 'provider_clocks' in q:
+                        clocks=q['provider_clocks'];fields(clocks,{'book','market','selected_basis'})
+                        if clocks['selected_basis'] not in ('book','market','unknown'):raise ValueError('Explicit original provider clock basis required')
+                        for kind in ('book','market'):stamp(clocks[kind],True)
+                        expected=None if clocks['selected_basis']=='unknown' else clocks[clocks['selected_basis']]
+                        if q['times']['source_at']!=expected:raise ValueError('Original provider clock selection conflict')
                     native=q.get('native_predicate')
                     if native is not None:
                         fields(native,{'version','participant','predicate','native_outcome_id','domain','binding_sha256','original_result_policy'})
@@ -381,6 +406,8 @@ def _serialize(raw, *, allow_synthetic):
                         text(policy['version']);integer(policy['maximum_age_seconds'])
                     age=age_basis(q,clock)
                     reasons=[]
+                    from app.comparison.current_dependencies import link_reasons
+                    reasons.extend(link_reasons(q, clock))
                     if not b['verified']:reasons.append('Selection binding unverified')
                     if age is None:reasons.append('Source time unknown')
                     if age is not None and age<0 or at is not None and at>clock:reasons.append('Source clock is ahead of evaluation clock')
@@ -421,9 +448,14 @@ def _serialize(raw, *, allow_synthetic):
     r['selection_policy']=dict(ttl_seconds=300,maximum_per_client=1,restart_expires=True)
     r['admin_href']='/admin'
     # Reject arbitrary top-level transport/provider material.
-    if set(r)-{'schema','mode','runtime_id','state_revision','projected_at','clock_at','state','source_status','events','selection_policy','admin_href'}:raise ValueError('Unexpected current fields')
+    if set(r)-{'schema','mode','runtime_id','state_revision','projected_at','clock_at','state','source_status','events','selection_policy','admin_href','comparison_profiles'}:raise ValueError('Unexpected current fields')
     all_quotes=[q for e in r['events'] for g in e['groups'] for o in g['outcomes'] for q in quotes_of(o)]
     for q in all_quotes:
+        from app.comparison.current_dependencies import refresh_metadata_status
+        refresh_metadata_status(q,clock)
+        q['comparison_dependency_reasons']=list(eligibility(q, profiles, clock))
+        from app.comparison.current_dependencies import temporal_revision
+        q['comparison_temporal_revision']=temporal_revision(q,profiles,clock)
         if q.get('engine_inputs'):
             validate_engine_inputs(q['engine_inputs'],all_quotes)
             q['calculations'].update(calculation_outputs(q,clock=clock))
@@ -435,6 +467,8 @@ def _serialize(raw, *, allow_synthetic):
         for g in e['groups']:
             for o in g['outcomes']:comparisons(o)
             percentage_comparisons(g)
+            from app.comparison.current_metrics import apply_group_metrics
+            apply_group_metrics(g,profiles,clock,event=e)
     if len(packed(r))>MAX_BYTES:raise ValueError('Serialized current state byte capacity exceeded')
     return r
 
@@ -575,7 +609,7 @@ def manual_scenario(review, assumptions):
 def snapshot_inputs(payload):
     """Recover exact normalized inputs without retaining derived calculation results."""
     # Strip derived graphs before copying; they can be much larger than inputs.
-    derived={'display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations','calculation_inputs'}
+    derived={'display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations','calculation_inputs','comparison_dependency_reasons','comparison_temporal_revision'}
     def original(q):
         value=deepcopy({k:v for k,v in q.items() if k not in derived})
         if q.get('calculation_inputs') is not None:value['engine_inputs']=deepcopy(q['calculation_inputs'])
@@ -585,7 +619,7 @@ def snapshot_inputs(payload):
     for event in payload['events']:
         e=deepcopy({k:v for k,v in event.items() if k!='groups'});e['groups']=[];raw['events'].append(e)
         for group in event['groups']:
-            g=deepcopy({k:v for k,v in group.items() if k!='outcomes'});g['outcomes']=[];e['groups'].append(g)
+            g=deepcopy({k:v for k,v in group.items() if k not in ('outcomes','comparison_pairs','comparison_search')});g['outcomes']=[];e['groups'].append(g)
             for outcome in group['outcomes']:
                 o=deepcopy({k:v for k,v in outcome.items() if k not in ('quotes','alternatives')})
                 o['quotes']={v:original(q) for v,q in outcome['quotes'].items()}

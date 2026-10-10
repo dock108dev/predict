@@ -1,0 +1,68 @@
+{
+  "version": "comparison-direct-site-retail-case-1",
+  "scope": "standard_direct_site_retail",
+  "venue": "polymarket_us",
+  "product": "single_market_event_contract",
+  "role": "taker",
+  "observation": {
+    "native_key": [
+      "polymarket_us",
+      "129629",
+      "1083081",
+      "2165646",
+      "Long"
+    ],
+    "original": {
+      "value": "0.2350",
+      "units": "usd_per_contract",
+      "payout": "1",
+      "payout_units": "USD",
+      "quantity_units": "contracts",
+      "role": "comparison"
+    },
+    "source_at": "2026-10-09T22:42:46.669169+00:00",
+    "received_at": "2026-10-09T22:43:08.067432+00:00",
+    "provenance_sha256": "7a56f2851b27eb9c1c0e4b1c697b848467156daa59f5893c2177ec73e16c79b2"
+  },
+  "quote_revision": 2,
+  "selected_binding_version": "08106128f385be33131e8be2825bcbfe8f765e3a8fd1012c390536e03b3ec59b",
+  "predecessor_audit_version": "9425db483b2bf9fd3493e7f7ecb16e2f7d11cf1e4cb3852f908782befab6e407",
+  "effective_from": "2026-10-09T22:43:06.160459+00:00",
+  "effective_until": "2026-10-09T22:58:06.160459+00:00",
+  "entry_schedule_from": "2026-10-07T14:00:00Z",
+  "retained_evaluation_at": "2026-10-09T22:43:09.353065+00:00",
+  "mandatory_charges_known": false,
+  "settlement_status": "unknown",
+  "modeled_settlement_fee_usd": "0",
+  "modeled_other_mandatory_costs_usd": "0",
+  "assumption": "Standard direct-site retail case: published entry fee, no additional transaction charges assumed. Total retail settlement exemption is not independently established.",
+  "remaining_published_fact": "Published retail-wide exemption or charge schedule for settlement and any additional mandatory transaction charges at the retained evaluation.",
+  "conditional_or_optional": "Deposit/withdrawal services, inactivity, penalties, negotiated terms and volume rebates excluded unless evidenced applicable to this transaction.",
+  "sources": [
+    {
+      "url": "https://docs.polymarket.us/fees.md",
+      "path": "docs/comparison-public-retail-evidence/research-fees/fees.md",
+      "sha256": "d2a8ae16181ebe8c08e9a4d3dc3f19cf0f99dce5a005c035c1ba159027fcff35",
+      "received_at": "2026-10-09T19:53:58.693899+00:00"
+    },
+    {
+      "url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+      "path": "docs/comparison-public-retail-evidence/research-fees/settlement.md",
+      "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+      "received_at": "2026-10-09T19:53:58.958302+00:00"
+    }
+  ],
+  "published_clearing": {
+    "status": "published_no_clearing_fees_for_clearing_members",
+    "description": "The official notice states no current clearing fees for clearing members. It does not attest all participant, channel or independent settlement charges.",
+    "source_url": "https://polymarketexchange.com/files/clearing-notices/Clearinghouse%20Notice%20-%20Fees%20(2026.05.18).pdf",
+    "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+    "original_receipt_at": "2026-10-09T15:57:00.400791+00:00",
+    "revalidated_at": "2026-10-09T23:21:44.150058+00:00",
+    "index_label_date": "2026-05-18",
+    "explicit_effective_instant": null,
+    "scope": "clearing_members",
+    "selected_total_cost_exemption": false
+  },
+  "case_version": "f8719a9bfbeccaea9a22888f395b1bc5820a14fe25c973900382efb8be9f7d63"
+}

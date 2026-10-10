@@ -4,6 +4,7 @@ import argparse
 import importlib.metadata
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -13,6 +14,27 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def coverage_totals(path):
+    value = json.loads(path.read_text())["totals"]
+    for name in ("covered_lines", "num_statements", "covered_branches", "num_branches"):
+        if type(value[name]) is not int or value[name] < 0:
+            raise ValueError("Invalid coverage count")
+    if (
+        not value["num_statements"]
+        or value["covered_lines"] > value["num_statements"]
+        or value["covered_branches"] > value["num_branches"]
+    ):
+        raise ValueError("Empty or conflicting coverage counts")
+    percent = value["percent_covered"]
+    if (
+        type(percent) not in (int, float)
+        or not math.isfinite(percent)
+        or not 0 <= percent <= 100
+    ):
+        raise ValueError("Invalid coverage percentage")
+    return value
 
 
 def junit_counts(path):
@@ -64,9 +86,22 @@ def execute(name, command, output, timeout=900, junit=False):
                 or record["tests"]["skipped"] == record["tests"]["tests"]
             ):
                 record["status"] = "FAIL"
+        if record["status"] == "PASS" and name == "coverage-json":
+            coverage_totals(output / "coverage.json")
+        if record["status"] == "PASS" and name == "coverage-xml":
+            tree = ET.parse(output / "coverage.xml").getroot()
+            if tree.tag != "coverage" or int(tree.attrib["lines-valid"]) <= 0:
+                raise ValueError("Required coverage XML is empty or malformed")
         if record["status"] == "FAIL":
             print((output / f"{name}.log").read_text()[-6000:], flush=True)
-    except (OSError, ValueError, ET.ParseError, subprocess.TimeoutExpired) as error:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        TypeError,
+        ET.ParseError,
+        subprocess.TimeoutExpired,
+    ) as error:
         record.update(status="FAIL", reason=type(error).__name__ + ": " + str(error))
         print(record["reason"], flush=True)
     record["seconds"] = round(time.monotonic() - started, 3)
@@ -79,10 +114,18 @@ def execute(name, command, output, timeout=900, junit=False):
 def safe(value):
     import html
 
-    return html.escape(str(value)).replace("|", "&#124;").replace("\n", " ")
+    return (
+        html.escape(str(value))
+        .replace("|", "&#124;")
+        .replace("`", "&#96;")
+        .replace("\n", " ")
+    )
 
 
 def write_report(output, records, started):
+    for record in records:
+        if record["status"] == "SKIPPED" and record.get("required", True):
+            record.update(status="FAIL", reason="Required check unexpectedly skipped")
     totals = {
         k: sum(r["tests"][k] for r in records if r.get("tests"))
         for k in ("tests", "failed", "skipped")
@@ -117,11 +160,16 @@ def write_report(output, records, started):
         "baseline": None,
     }
     try:
-        report["coverage"] = json.loads((output / "coverage.json").read_text())[
-            "totals"
-        ]
-    except (OSError, ValueError, KeyError):
-        pass
+        report["coverage"] = coverage_totals(output / "coverage.json")
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        for record in records:
+            if record["name"] == "coverage-json" and record["status"] == "PASS":
+                record.update(
+                    status="FAIL",
+                    reason="Required coverage unavailable: " + type(error).__name__,
+                )
+                report["overall"] = "FAIL"
+                overall = "FAIL"
     (output / "metrics.json").write_text(json.dumps(report, indent=2) + "\n")
     summary = [
         f"## Offline contract — {overall}",
@@ -147,8 +195,9 @@ def write_report(output, records, started):
     text = "\n\n".join(summary[:5]) + "\n\n" + "\n".join(summary[5:]) + "\n"
     (output / "summary.md").write_text(text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
-        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:
-            stream.write(text)
+        # The command file belongs to this step. Replace progress snapshots so
+        # repeated updates cannot overflow GitHub's 1 MiB summary limit.
+        Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(text)
 
 
 def main():
@@ -184,7 +233,9 @@ def main():
                 False,
             )
         )
-    subprocess.run([sys.executable, "-m", "coverage", "erase"], cwd=ROOT, check=True)
+    # Each invocation owns its coverage DB; parallel/local checks cannot erase
+    # or inherit a prior measurement from the checkout.
+    os.environ["COVERAGE_FILE"] = str(output / ".coverage")
     for group in groups:
         name = group["name"]
         commands.append(
@@ -254,11 +305,23 @@ def main():
         for name, _, _ in commands
     ]
     records.extend(
-        {"name": name, "status": "SKIPPED", "tests": None, "reason": reason}
+        {
+            "name": name,
+            "status": "SKIPPED",
+            "required": False,
+            "tests": None,
+            "reason": reason,
+        }
         for name, reason in deferred.items()
     )
     records.extend(
-        {"name": name, "status": "SKIPPED", "tests": None, "reason": reason}
+        {
+            "name": name,
+            "status": "SKIPPED",
+            "required": False,
+            "tests": None,
+            "reason": reason,
+        }
         for name, reason in {**policy["deferred"], **policy["archival_nodes"]}.items()
     )
     write_report(output, records, started)

@@ -4,11 +4,8 @@ Reuse complete HTTP admission, reviewed catalog bindings and native stream
 reconstruction. Current operation retains no wire/frame/quote journal.
 """
 import asyncio
-import base64
-from copy import deepcopy
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
-from hashlib import sha256
 import json
 import time
 from uuid import uuid4
@@ -62,10 +59,16 @@ class NativeWorker:
         self.publication_handle = None
         from .current_confirmation import Confirmations
         self.confirmations = Confirmations(venue)
+        from app.comparison.event_links import reviewed_links
+        from app.comparison.lifecycle import LifecycleOwner
+        self.lifecycle=LifecycleOwner(venue,getattr(service,'runtime_id','controlled-current-worker'),links=reviewed_links(),cap=self.config['markets_per_source'])
+        self.lifecycle_initialized=False
 
     def queue_book(self, book):
         """Keep one fully reconstructed latest image per subscribed market."""
         mid=book['raw']['ref']['market_id']
+        if self.lifecycle_initialized:
+            book=self.lifecycle.admit_book(book,generation=self.metrics['connections'])
         if mid not in self.pending_books and len(self.pending_books)>=self.config['markets_per_source']:
             raise BudgetStop('current_native_batch_capacity')
         self.pending_books[mid]=book
@@ -170,28 +173,47 @@ class NativeWorker:
         try:
             # No invisible per-operation retry: the source runtime owns backoff.
             response = await MockREST.get(self.client, self.client.endpoint+path, params)
+        except Exception as exc:
+            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                    status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code=str(exc))
+            raise
         finally: self._scope = None
         if response.status_code != 200:
+            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                    status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code='http_'+str(response.status_code))
             raise ValueError('http_'+str(response.status_code))
-        data = response.json()
-        rows = data.get(field) if field else data
-        if field:
-            if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
-                raise ValueError('malformed_catalog')
-            id_field = 'event_ticker' if self.venue=='kalshi' and field=='events' else 'ticker' if self.venue=='kalshi' else 'id'
-            ids = [str(r.get(id_field) or '') for r in rows]
-            if not all(ids) or len(set(ids)) != len(ids): raise ValueError('duplicate_catalog_identity')
+        try:
+            data = response.json()
+            rows = data.get(field) if field else data
+            if field:
+                if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
+                    raise ValueError('malformed_catalog')
+                id_field = 'event_ticker' if self.venue=='kalshi' and field=='events' else 'ticker' if self.venue=='kalshi' else 'id'
+                ids = [str(r.get(id_field) or '') for r in rows]
+                if not all(ids) or len(set(ids)) != len(ids): raise ValueError('duplicate_catalog_identity')
+        except (ValueError,TypeError,AttributeError) as exc:
+            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                    status='rejected_payload',reason='payload_rejected',query=dict(path=path,params=params),detail_code=str(exc))
+            raise
+        if hasattr(self,'_coverage_checked') and getattr(self,'_coverage_sport',None):
+            self._coverage_checked.add(self._coverage_sport)
         return rows
 
     async def discover(self):
         self.pages = []
         self.findings = []
+        self._coverage_checked=set()
+        coverage_started=utc()
         now = datetime.now(timezone.utc)
         selected = []
         # Scope is deliberately bounded: one first page per sport/family and
         # selected-event metadata. Empty pages prove only this query's result.
         if self.venue == 'kalshi':
             for sport in self.config['sports']:
+                self._coverage_sport=sport
                 for family in self.config['families']:
                     selectors = selectors_for(sport+'/full_game/'+family)
                     if not selectors: continue
@@ -211,9 +233,11 @@ class NativeWorker:
                             selected.append((event['id'], selector['binding']))
                     if len(selected) >= self.config['events_per_source']: break
             for eid, scope in selected:
+                self._coverage_sport=scope['sport']
                 await self.get('/trade-api/v2/markets', dict(event_ticker=eid, limit=50), 'markets', scope)
         else:
             for sport in self.config['sports']:
+                self._coverage_sport=sport
                 path, params = query(self.venue, sport, now)
                 try:rows = await self.get(path, dict(params, limit=1, offset=0), 'events')
                 except BudgetStop as exc:
@@ -228,6 +252,7 @@ class NativeWorker:
                 for event in found[:1]:
                     if event['id'] not in {x['id'] for x in selected}: selected.append(event)
             for event in selected[:self.config['events_per_source']]:
+                self._coverage_sport=event.get('competition',event.get('sport'))
                 # Listing-bound game ID is the only permitted market locator.
                 if event.get('market_bindings'):
                     for binding in event['market_bindings'][:3]:
@@ -287,13 +312,28 @@ class NativeWorker:
         self.metrics['identity_exclusions'] += [dict(kind='market',id=m['id'],reason=m.get('subscription_exclusion') or m.get('exclusion') or m.get('parse_exclusion'))
             for m in cat['markets'] if m.get('subscription_exclusion') or m.get('exclusion') or m.get('parse_exclusion')][:100]
         self.service.catalog(self.venue, cat)
+        from app.comparison.lifecycle import worker_selections
+        delta=self.lifecycle.reconcile(worker_selections(self.venue,parsed,cat),now)
+        self.lifecycle_initialized=True
+        self.metrics['subscription_changes']=delta
+        self.metrics['owned_subscriptions']=len(self.lifecycle.leases)
+        for mid in set(self.pending_books)-set(self.lifecycle.leases):self.pending_books.pop(mid,None)
+        if hasattr(self.service,'coverage'):
+            for sport in self.config['sports']:
+                if sport not in self._coverage_checked:continue
+                latest=self.service.coverage.observations.get((sport,self.venue),{}).get('latest')
+                if latest and latest['checked_at']>=coverage_started and latest['status'] in ('failed_source','rejected_payload'):continue
+                events=[e for e in cat['events'] if e.get('competition')==sport]
+                event_ids={e['id'] for e in events}
+                markets=[m for m in cat['markets'] if m['event_id'] in event_ids]
+                self.service.coverage.observe(sport,self.venue,checked_at=utc(),
+                    status='offerings_returned' if events else 'no_offerings_returned',
+                    offered=dict(games=len(events),markets=len(markets),quotes=None),
+                    reason=None if events else 'query_empty',completeness='partial')
         self.pages = []
-        signature = sha256(json.dumps([asdict(m) for m in parsed.values()], sort_keys=True, default=str).encode()).hexdigest()
         # Metadata raw receipts change every rediscovery. Reconciliation depends
         # only on exact identity and material native terms/state.
-        signature = sha256(json.dumps([(mid, m.raw.ref.event_id, m.state.value,
-            catm.get('v1_raw_binding',{}).get('sha256'), catm.get('native_slug'))
-            for mid,m in sorted(parsed.items()) for catm in cat['markets'] if catm['id']==mid], default=str).encode()).hexdigest()
+        signature=self.lifecycle.signature()
         if signature != self.signature or self.stream_task is None or self.stream_task.done():
             await self.stop_stream()
             self.signature = signature
@@ -317,6 +357,7 @@ class NativeWorker:
                 if self.metrics['connections']-self.budget_totals['connections'] >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
+                self.lifecycle.begin_connection(self.metrics['connections'])
                 self.confirmations.begin(self.metrics['connections'])
                 if self.publication_handle:self.publication_handle.cancel()
                 self.publication_handle=None;self.pending_books.clear()
@@ -507,10 +548,21 @@ class NativeWorker:
                     continue
                 await asyncio.sleep(max(self.config['rediscovery_seconds'], self.backoff_until-time.monotonic()))
         finally:
+            self.lifecycle.revoke()
             await self.stop_stream()
             if self.client: await self.client.aclose()
+            await self.finish_lifecycle()
+
+    async def finish_lifecycle(self):
+        # The single source socket has already closed all physical subscriptions.
+        # Release each local lease exactly once without changing outer ownership.
+        async def closed(mid,token):return None
+        await self.lifecycle.stop(closed)
+        self.metrics['owned_subscriptions']=0
 
     async def close(self):
         self.closed = True
+        self.lifecycle.revoke()
         await self.stop_stream()
         if self.client: await self.client.aclose()
+        await self.finish_lifecycle()

@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:predict:comparison-domain:1",
+  "title": "Predict canonical comparison selection version 1",
+  "description": "Wire shape only. domain.py additionally validates role, signed handicap, equality, payout attachment and unit invariants. No provider data is acquired.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "comparison-domain-1"
+    },
+    "event": {
+      "$ref": "#/$defs/event"
+    },
+    "family": {
+      "enum": [
+        "moneyline",
+        "spread",
+        "team_binary",
+        "team_total",
+        "total"
+      ]
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "participant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "signed_line": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\d+/[1-9]\\d*)$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "predicate": {
+      "$ref": "#/$defs/predicate"
+    },
+    "equality": {
+      "$ref": "#/$defs/equality"
+    },
+    "native": {
+      "$ref": "#/$defs/native"
+    },
+    "payout": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/payout"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price": {
+      "$ref": "#/$defs/price"
+    },
+    "payout_unknown": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/unknown"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "event",
+    "family",
+    "scope",
+    "participant_id",
+    "signed_line",
+    "predicate",
+    "equality",
+    "native",
+    "payout",
+    "price",
+    "payout_unknown"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "evidence_class": {
+          "enum": [
+            "authored",
+            "manual_review",
+            "primary_source",
+            "retained"
+          ]
+        }
+      },
+      "required": [
+        "ref",
+        "sha256",
+        "evidence_class"
+      ],
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "occurrence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "league": {
+          "enum": [
+            "MLB",
+            "NBA",
+            "NCAAB",
+            "NCAAF",
+            "NFL",
+            "NHL"
+          ]
+        },
+        "home_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "away_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "occurrence_id",
+        "league",
+        "home_id",
+        "away_id",
+        "identity_evidence"
+      ],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "enum": [
+            "first_1",
+            "first_3",
+            "first_5",
+            "first_7",
+            "first_half",
+            "first_period",
+            "first_quarter",
+            "fourth_quarter",
+            "full_game",
+            "second_period",
+            "second_quarter",
+            "third_period",
+            "third_quarter"
+          ]
+        },
+        "overtime": {
+          "enum": [
+            "excluded",
+            "included",
+            "unknown"
+          ]
+        },
+        "completion": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "period",
+        "overtime",
+        "completion"
+      ],
+      "additionalProperties": false
+    },
+    "predicate": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "enum": [
+            "combined_score",
+            "home_margin",
+            "team_score"
+          ]
+        },
+        "operator": {
+          "enum": [
+            "eq",
+            "ge",
+            "gt",
+            "le",
+            "lt",
+            "ne"
+          ]
+        },
+        "threshold": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\d+/[1-9]\\d*)$"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "domain",
+        "operator",
+        "threshold",
+        "subject_id"
+      ],
+      "additionalProperties": false
+    },
+    "equality": {
+      "type": "object",
+      "properties": {
+        "treatment": {
+          "enum": [
+            "fraction",
+            "not_feasible",
+            "predicate",
+            "stake_refund",
+            "unknown"
+          ]
+        },
+        "payout": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\d+/[1-9]\\d*)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refund_fees": {
+          "enum": [
+            "not_applicable",
+            "retained",
+            "returned",
+            "unknown"
+          ]
+        },
+        "unknown_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "treatment",
+        "payout",
+        "refund_fees",
+        "unknown_reason"
+      ],
+      "additionalProperties": false
+    },
+    "native": {
+      "type": "object",
+      "properties": {
+        "venue": {
+          "enum": [
+            "kalshi",
+            "novig",
+            "pinnacle",
+            "polymarket_us",
+            "prophetx"
+          ]
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "market_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "original_wording": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "venue",
+        "event_id",
+        "market_id",
+        "instrument_id",
+        "side_id",
+        "original_wording",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "payout": {
+      "type": "object",
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "profile_id",
+        "version",
+        "rule_revision",
+        "instrument_id",
+        "side_id"
+      ],
+      "additionalProperties": false
+    },
+    "price": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\d+/[1-9]\\d*)$"
+        },
+        "unit": {
+          "enum": [
+            "american_odds",
+            "cents_per_contract",
+            "decimal_odds",
+            "usd_per_contract"
+          ]
+        },
+        "payout_unit": {
+          "enum": [
+            "usd_per_contract",
+            "usd_per_usd_stake"
+          ]
+        },
+        "currency": {
+          "const": "USD"
+        }
+      },
+      "required": [
+        "amount",
+        "unit",
+        "payout_unit",
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "unknown": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "null"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "value",
+        "reason",
+        "missing_evidence"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

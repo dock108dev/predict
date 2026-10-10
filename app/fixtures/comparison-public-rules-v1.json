@@ -1,0 +1,540 @@
+{
+  "schema": 1,
+  "version": "comparison-public-rules-1",
+  "reviewed_date_et": "2026-10-09",
+  "evidence_class": "public_primary_rules_review_not_account_terms_not_fills",
+  "review_policy": {
+    "raw_sources_immutable": true,
+    "retrieval_time_is_not_effective_time": true,
+    "rules_do_not_extend_expired_identity_bindings": true,
+    "profile_requires_all_applicability_predicates": true,
+    "conditional_decisive_estimate_allowed_with_unknown_other_state_mass": true,
+    "complete_state_estimate_requires_complete_payout_and_probability": true,
+    "hypothetical_order_is_not_observed_depth": true,
+    "unknown_mandatory_costs_block_all_costs_net": true
+  },
+  "sources": [
+    {
+      "id": "kalshi-rounding",
+      "url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+      "final_url": "https://docs.kalshi.com/getting_started/fee_rounding.md",
+      "path": "docs/comparison-net-sources/kalshi-rounding.md",
+      "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+      "bytes": 3786,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.140572+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "kalshi-fixedpoint",
+      "url": "https://docs.kalshi.com/getting_started/fixed_point_migration.md",
+      "final_url": "https://docs.kalshi.com/getting_started/fixed_point_migration.md",
+      "path": "docs/comparison-net-sources/kalshi-fixedpoint.md",
+      "sha256": "249bb44d972bfef98061ecffcd7869eba0aef356c610fcab8946ca33072cecb4",
+      "bytes": 5220,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.148422+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "kalshi-settlement",
+      "url": "https://docs.kalshi.com/getting_started/market_settlement.md",
+      "final_url": "https://docs.kalshi.com/getting_started/market_settlement.md",
+      "path": "docs/comparison-net-sources/kalshi-settlement.md",
+      "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+      "bytes": 1371,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.155088+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-fees",
+      "url": "https://docs.polymarket.us/fees.md",
+      "final_url": "https://docs.polymarket.us/fees.md",
+      "path": "docs/comparison-net-sources/us-fees.md",
+      "sha256": "455c657ddcb69e2b0f8901beac63773f3aa2e850416cde05fbd43dd65c7605df",
+      "bytes": 13811,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.154106+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-fractional",
+      "url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+      "final_url": "https://docs.polymarket.us/learn/trading/basics/fractional-shares.md",
+      "path": "docs/comparison-net-sources/us-fractional.md",
+      "sha256": "a884f08f93aaf9ddc33155edb0a2c201c90b8d1f5ace98c55bcdc39563cf792f",
+      "bytes": 1890,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.301317+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-settlement",
+      "url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+      "final_url": "https://docs.polymarket.us/learn/markets/contract-settlement.md",
+      "path": "docs/comparison-net-sources/us-settlement.md",
+      "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+      "bytes": 1281,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.287118+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-structure",
+      "url": "https://docs.polymarket.us/learn/trading/basics/buying-yes-vs-selling-no.md",
+      "final_url": "https://docs.polymarket.us/learn/trading/basics/buying-yes-vs-selling-no.md",
+      "path": "docs/comparison-net-sources/us-structure.md",
+      "sha256": "eee5c90b97a19c6b165fe3d0264bf38d9991ed1996eb41122a0fae215436f058",
+      "bytes": 2316,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.504634+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-order-model",
+      "url": "https://docs.polymarket.us/partners/orders/data-model.md",
+      "final_url": "https://docs.polymarket.us/partners/orders/data-model.md",
+      "path": "docs/comparison-net-sources/us-order-model.md",
+      "sha256": "e3bfb2f37037b27251cf5c6b07c1962a0ab2aace1486e66fa31bfaf4c73ca1ff",
+      "bytes": 13925,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.595957+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "novig-v3-fees",
+      "url": "https://docs.novig.com/api/concepts/fees.md",
+      "final_url": "https://docs.novig.com/api/concepts/fees.md",
+      "path": "docs/comparison-net-sources/novig-v3-fees.md",
+      "sha256": "3182d41c27c39821d7148b7e1fb740db29d820bb5727659a31e4237b9010c688",
+      "bytes": 4318,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.392631+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "novig-v3-money",
+      "url": "https://docs.novig.com/api/concepts/money.md",
+      "final_url": "https://docs.novig.com/api/concepts/money.md",
+      "path": "docs/comparison-net-sources/novig-v3-money.md",
+      "sha256": "ca3ae1127cdd54f458e402ef131cf4afd3e38d531c96de11cad48f9f40431322",
+      "bytes": 2140,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.365153+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "novig-fees",
+      "url": "https://docs.novig.com/fees.md",
+      "final_url": "https://docs.novig.com/fees.md",
+      "path": "docs/comparison-net-sources/novig-fees.md",
+      "sha256": "de7e8a7220d91863da035663105de9120a85444da06312975ee7cfb62ba15a11",
+      "bytes": 8570,
+      "content_type": "text/markdown; charset=utf-8",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.342114+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "prophetx-fees",
+      "url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+      "final_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+      "path": "docs/comparison-net-sources/prophetx-fees.html",
+      "sha256": "9f9a260b31f7c4ea9a15245a4bbfed2b35f7c813563627cbc11e12b0e05c9f06",
+      "bytes": 416674,
+      "content_type": "text/html",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:55:47.468737+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-clearing-fees",
+      "url": "https://polymarketexchange.com/files/clearing-notices/Clearinghouse%20Notice%20-%20Fees%20(2026.05.18).pdf",
+      "final_url": "https://polymarketexchange.com/files/clearing-notices/Clearinghouse%20Notice%20-%20Fees%20(2026.05.18).pdf",
+      "path": "docs/comparison-net-sources/us-clearing-fees.pdf",
+      "sha256": "b9ec50389b3c10bb2920ad409da63f043f07ccaf5b201b01b6fc88cf8e1e7ac6",
+      "bytes": 106830,
+      "content_type": "application/pdf",
+      "status": 200,
+      "retrieved_at": "2026-10-09T15:57:00.400791+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "reviewed-extracts",
+      "path": "docs/comparison-net-sources/reviewed-extracts.json",
+      "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+      "bytes": 1753,
+      "evidence_class": "manual_review",
+      "content_type": "application/json",
+      "retrieved_at": "2026-10-09T15:59:13.595665+00:00",
+      "note": "structured extracted facts, not raw primary snapshot"
+    },
+    {
+      "id": "kalshi-football-gamewin-binding-20261009",
+      "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+      "final_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+      "status": 200,
+      "content_type": "application/pdf",
+      "path": "docs/comparison-net-sources/kalshi-football-gamewin-binding-20261009.pdf",
+      "bytes": 40410,
+      "sha256": "57b57e1ad96466e413e9274c0d2598225997e35d71262eb63c4ae13858b81d38",
+      "retrieved_at": "2026-10-09T16:02:10.448174+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "kalshi-football-spread-binding-20261009",
+      "url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+      "final_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+      "status": 200,
+      "content_type": "application/pdf",
+      "path": "docs/comparison-net-sources/kalshi-football-spread-binding-20261009.pdf",
+      "bytes": 35707,
+      "sha256": "1daaea87a853adcb485bdb80fb8bd5c5fa7c831d8e237f7446bc16ea43705f5a",
+      "retrieved_at": "2026-10-09T16:02:10.434570+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "kalshi-football-totals-binding-20261009",
+      "url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+      "final_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+      "status": 200,
+      "content_type": "application/pdf",
+      "path": "docs/comparison-net-sources/kalshi-football-totals-binding-20261009.pdf",
+      "bytes": 31142,
+      "sha256": "84be6b2cc3a16e1c3997824a6ec1ebac878a76f98609318cc223e67a6ace1572",
+      "retrieved_at": "2026-10-09T16:02:10.506768+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "us-refdata-binding-20261009",
+      "url": "https://docs.polymarket.us/institutional/refdata/overview.md",
+      "final_url": "https://docs.polymarket.us/institutional/refdata/overview.md",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "path": "docs/comparison-net-sources/us-refdata-binding-20261009.md",
+      "bytes": 14943,
+      "sha256": "4b2c91d482fbe1dff4cb0d4587e84e08b8f451e98f57bb89bba32965f9ebfda0",
+      "retrieved_at": "2026-10-09T16:02:11.174058+00:00",
+      "evidence_class": "primary_source"
+    },
+    {
+      "id": "binding-reviewed-extracts-20261009",
+      "path": "docs/comparison-net-sources/binding-reviewed-extracts-20261009.json",
+      "sha256": "53963abcaad2e529f6561fb789871064a4dcbdec0d317d5ec8613c045626782f",
+      "bytes": 2217,
+      "evidence_class": "manual_review",
+      "content_type": "application/json",
+      "retrieved_at": "2026-10-09T16:04:26.760839+00:00"
+    }
+  ],
+  "profiles": {
+    "kalshi_nfl_single_taker": {
+      "venue": "kalshi",
+      "product": "binary_or_alternative_football_single",
+      "channel": "direct_exchange_member",
+      "role": "taker",
+      "runtime_ready": false,
+      "source_ids": [
+        "reviewed-extracts",
+        "kalshi-rounding",
+        "kalshi-fixedpoint",
+        "kalshi-settlement",
+        "kalshi-football-gamewin-binding-20261009",
+        "kalshi-football-spread-binding-20261009",
+        "kalshi-football-totals-binding-20261009",
+        "binding-reviewed-extracts-20261009"
+      ],
+      "public_facts": {
+        "schedule_effective_date": "2026-07-07",
+        "schedule_effective_instant": null,
+        "taker_theta": "0.07",
+        "maker_theta": "0.0175",
+        "KXNFLGAME_taker_multiplier": "1",
+        "KXNFLGAME_maker_multiplier": "1",
+        "fee_basis": "theta * series_or_event_multiplier * dollar_face_quantity * p * (1-p)",
+        "fee_rounding": "ceil_6dp_model_fee_then_align_balance_debit_and_apply_order_accumulator",
+        "direct_member_balance_grid_usd": "0.0001",
+        "non_direct_member_balance_grid_usd": "0.01",
+        "simple_binary_settlement_fee_usd": "0",
+        "scalar_settlement_fee": "may_apply",
+        "settlement_payout_rounding_usd": "0.01",
+        "face_usd_per_contract": "1",
+        "wire_quantity_granularity_contracts": "0.01",
+        "valid_price_grid_authority": "exact market.price_ranges",
+        "contract_document_minimum_tick_usd": "0.01"
+      },
+      "applicability_requires": [
+        "exact_series_event_market_ids",
+        "exact_contract_url_and_instantiated_predicate",
+        "fee_schedule_asof_quote_plus_scoped_series_event_overrides",
+        "direct_member_or_non_direct_member_selected_account_evidence_or_explicit_hypothetical_channel",
+        "fractional_trade_eligibility_and_minimum_quantity_for_selected_market",
+        "selected_market_price_ranges",
+        "simple_binary_or_scalar_settlement_class",
+        "independent_mandatory_account_charges_known_or_explicitly_unresolved"
+      ],
+      "unavailable_codes": [
+        "fee_schedule_applicability_unverified",
+        "account_balance_precision_unknown",
+        "native_quantity_minimum_unknown",
+        "native_price_grid_unknown",
+        "mandatory_account_costs_unknown"
+      ],
+      "payout_fragments": {
+        "gamewin": {
+          "completed_decisive": {
+            "YES_if_team_wins": "1",
+            "YES_if_team_loses": "0",
+            "NO_if_team_wins": "0",
+            "NO_if_team_loses": "1"
+          },
+          "tie_if_Tie_strike_present": {
+            "team_YES": "0",
+            "team_NO": "1"
+          },
+          "tie_if_no_Tie_strike": {
+            "team_YES": "0.5",
+            "team_NO": "0.5"
+          },
+          "tie_strike_presence_required": true,
+          "overtime": "included_unless_exact_period_specifies_otherwise",
+          "exceptional": "last_fair_price_or_official_result_subject_exact_completion_clause; unknown_not_zero"
+        },
+        "spread": {
+          "underlying": "selected_team_score_minus_opponent_score",
+          "operators": [
+            "above",
+            "below",
+            "exactly",
+            "at_least",
+            "between_inclusive"
+          ],
+          "opposite_team_equivalence": "requires_exact_signed_line_operator_boundary_proof",
+          "push": "no_automatic_stake_refund",
+          "overtime": "included_unless_exact_period_specifies_otherwise"
+        },
+        "total": {
+          "over": "strictly_greater_than_threshold",
+          "under": "strictly_less_than_threshold",
+          "integer_boundary": "NO(over_X)_includes_equal_X_and_is_not_under_X",
+          "push": "no_automatic_stake_refund",
+          "overtime": "included_unless_exact_period_specifies_otherwise"
+        }
+      },
+      "historical_binding": false
+    },
+    "polymarket_us_single_taker": {
+      "venue": "polymarket_us",
+      "product": "single",
+      "channel": "us_exchange",
+      "role": "taker",
+      "runtime_ready": false,
+      "source_ids": [
+        "us-fees",
+        "us-fractional",
+        "us-settlement",
+        "us-structure",
+        "us-order-model",
+        "us-clearing-fees",
+        "us-refdata-binding-20261009",
+        "binding-reviewed-extracts-20261009"
+      ],
+      "public_facts": {
+        "effective_from": "2026-10-01T14:00:00Z",
+        "single_taker_theta": "0.0695",
+        "single_maker_theta": "-0.0125",
+        "fee_rounding": "half_even_cent_per_fill_with_taker_cumulative_order_cap",
+        "fee_grid_usd": "0.01",
+        "standard_contract_face_usd": "1",
+        "quantity_scale_authority": "selected_instrument.fractionalQtyScale; field_absent_in_true_reference_data_means_1",
+        "price_scale_authority": "selected_instrument.priceScale",
+        "quantity_minimum_authority": "selected_instrument.minimumTradeQty",
+        "price_tick_authority": "selected_instrument.tickSize",
+        "clearing_fee_to_clearing_members": "0",
+        "clearing_notice_scope": "clearing_members_only; not_a_blanket_participant_cost_attestation",
+        "maker_combo_rebate_change_effective": "2026-10-07T04:00:00Z",
+        "table_tennis_taker_theta": "0.10",
+        "taker_tier_rebates": "account_dependent_excluded_from_standalone_public_estimate"
+      },
+      "applicability_requires": [
+        "exact_selected_us_exchange_instrument",
+        "single_not_combo_not_table_tennis",
+        "Long_or_Short_and_yes_price_orientation_preserved",
+        "selected_instrument_scales_minimum_tick",
+        "selected_instrument_payout_and_completion_rules",
+        "participant_channel_and_mandatory_cost_scope_known"
+      ],
+      "unavailable_codes": [
+        "instrument_quantity_scale_unknown",
+        "native_quantity_minimum_unknown",
+        "native_price_tick_unknown",
+        "instrument_settlement_terms_unverified",
+        "mandatory_account_costs_unknown"
+      ],
+      "payout_fragments": {
+        "Long": {
+          "acquisition_per_contract": "YES_price",
+          "completed_YES_payout": "1",
+          "completed_NO_payout": "0"
+        },
+        "Short": {
+          "acquisition_per_contract": "1_minus_YES_price",
+          "completed_YES_synthetic_NO_payout": "0",
+          "completed_NO_synthetic_NO_payout": "1"
+        },
+        "alternative_settlement": "exact_market_rules_required",
+        "opponent_YES_equivalence": "never_inferred_from_NO_or_Short_alone",
+        "tie_push_exception_probability": "unknown_not_zero"
+      },
+      "historical_binding": false
+    },
+    "novig_v3_game_taker": {
+      "venue": "novig",
+      "product": "straight_game",
+      "channel": "v3_api",
+      "role": "taker",
+      "runtime_ready": false,
+      "source_ids": [
+        "novig-v3-fees",
+        "novig-v3-money",
+        "novig-fees"
+      ],
+      "public_facts": {
+        "fee_authority": "exact selected market.fee object; do not infer from league table",
+        "native_unit": "novig_v3_cent_contracts",
+        "face_usd_per_native": "0.01",
+        "native_quantity_type": "whole_integer",
+        "native_quantity_increment": "1",
+        "fee_grid_usd": "0.00001",
+        "fee_rounding": "half_up_each_fill",
+        "fee_basis": "coefficient * p * (1-p) * native_qty * 0.01",
+        "WHEN_LIVE_status": "OPEN_INGAME_at_match",
+        "ALWAYS_status": "all_phases",
+        "Oct8_NCAAF_MLB_NHL_live_theta": "0.06",
+        "Oct8_exact_effective_instant": null,
+        "other_game_live_theta": "0.03",
+        "maker_fee": "0",
+        "maker_credits": "contingent_excluded",
+        "native_price_bands": [
+          {
+            "start": "0.001",
+            "end": "0.050",
+            "step": "0.001"
+          },
+          {
+            "start": "0.055",
+            "end": "0.945",
+            "step": "0.005"
+          },
+          {
+            "start": "0.950",
+            "end": "0.999",
+            "step": "0.001"
+          }
+        ]
+      },
+      "applicability_requires": [
+        "native_market_outcome_ids_bound_to_aggregate_selection",
+        "execution_channel_and_v3_regime",
+        "native_market_fee_coefficient_charged_policy_asof",
+        "observed_or_declared_hypothetical_match_phase",
+        "selected_market_native_quantity_minimum",
+        "exact_event_payout_completion_terms",
+        "clearing_banking_payment_mandatory_cost_scope_known"
+      ],
+      "unavailable_codes": [
+        "aggregate_native_market_identity_unknown",
+        "execution_channel_unknown",
+        "native_fee_schedule_unknown",
+        "match_phase_unknown",
+        "native_quantity_minimum_unknown",
+        "settlement_terms_unverified",
+        "mandatory_account_costs_unknown"
+      ],
+      "aggregate_bookmaker_name_sufficient": false,
+      "pregame_zero_fee_sufficient": false,
+      "historical_binding": false
+    },
+    "prophetx_site_straight": {
+      "venue": "prophetx",
+      "product": "straight",
+      "channel": "public_site",
+      "role": "taker",
+      "runtime_ready": false,
+      "source_ids": [
+        "prophetx-fees",
+        "reviewed-extracts",
+        "binding-reviewed-extracts-20261009"
+      ],
+      "public_facts": {
+        "document_version": "1.2",
+        "published_update_date": "2026-10-01",
+        "effective_instant": null,
+        "settlement_fee_basis": "positive_net_gains_per_market",
+        "settlement_fee_rate": "0.02",
+        "standalone_formula": "0.02 * max(0, gross_payout - stake)",
+        "incremental_formula": "fee(existing_market_profit + candidate_profit) - fee(existing_market_profit)",
+        "rounding": null,
+        "API_fee_equals_site_fee": false,
+        "direct_link_native_unit": "stake_usd",
+        "direct_link_documented_minimum_stake_usd": "1",
+        "direct_link_native_price_unit": "american_odds",
+        "direct_link_valid_price_authority": "selected get_price_ladder response",
+        "direct_link_quantity_increment": null
+      },
+      "applicability_requires": [
+        "native_strike_market_ids_bound_to_aggregate_selection",
+        "selected_site_or_API_execution_channel",
+        "exact_per_market_netting_scope",
+        "settlement_commission_rounding",
+        "legal_stake_increment_and_selected_price_ladder",
+        "exact_payout_completion_tie_push_terms",
+        "independent_mandatory_account_charges_known"
+      ],
+      "unavailable_codes": [
+        "aggregate_native_market_identity_unknown",
+        "execution_channel_unknown",
+        "settlement_fee_rounding_unknown",
+        "native_quantity_increment_unknown",
+        "native_price_ladder_unknown",
+        "market_netting_scope_unknown",
+        "settlement_terms_unverified",
+        "mandatory_account_costs_unknown"
+      ],
+      "aggregate_bookmaker_name_sufficient": false,
+      "API_market_maker_zero_fee_sufficient": false,
+      "historical_binding": false
+    }
+  },
+  "ordinary_source_limitations": {
+    "aggregate_provider": "the_odds_api",
+    "aggregate_names_do_not_supply": [
+      "execution_account_or_channel",
+      "native_instrument_id",
+      "native_quantity_unit_grid_minimum",
+      "selected_fee_object",
+      "observed_fills_or_depth"
+    ],
+    "public_standalone_policy": {
+      "requested_budget_usd": "100",
+      "role": "taker",
+      "required_manual_size": false,
+      "order_assumption": "one_hypothetical_order",
+      "fill_assumption": "one_hypothetical_fill",
+      "observed_depth": false,
+      "capital_denominator": "actual_legal_quantity_acquisition_cost_plus_entry_fees_and_required_holds",
+      "fees_or_grid_unknown": "withhold_net_preserve_gross"
+    }
+  }
+}

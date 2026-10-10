@@ -10,6 +10,10 @@ IMPORT_ROUTES = frozenset(('/api/references', '/api/resolutions', '/api/math-sce
 BODY_READ_SECONDS = 10
 
 
+class PublicRequestError(ValueError):
+    """Explicit HTTP validation message; never wrap arbitrary exception text."""
+
+
 def body_limit(path):
     return IMPORT_BODY_LIMIT if path in IMPORT_ROUTES else CONTROL_BODY_LIMIT
 
@@ -49,9 +53,11 @@ def check_browser(request):
             raise web.HTTPUnsupportedMediaType(text='JSON required')
 
 
-async def read_json(request):
+async def read_json(request, *, max_size=None):
     """Bound actual bytes, including chunked requests, before parsing/dispatch."""
     limit = body_limit(request.path)
+    if max_size is not None:
+        limit = min(limit, max_size)
     if (request.content_length or 0) > limit:
         raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=request.content_length)
     body = bytearray()
@@ -91,4 +97,4 @@ async def read_json(request):
                           parse_constant=invalid_constant, parse_float=finite_float)
     except (ValueError, RecursionError):
         # Parser messages must not echo input fields, contents or encoding bytes.
-        raise ValueError('Invalid JSON body; use unique fields and finite values') from None
+        raise PublicRequestError('Invalid JSON body; use unique fields and finite values') from None

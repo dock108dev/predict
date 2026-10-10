@@ -1,0 +1,58 @@
+{
+  "version": "comparison-metrics-vectors-1",
+  "evidence_class": "authored independent literals",
+  "vectors": [
+    {
+      "id": "base-dallas",
+      "cost_per_face": "0.4",
+      "no_vig_probability": "3/5",
+      "expected_percent": "50",
+      "native_quantity": "199",
+      "deployed": "79.6",
+      "unused_ceiling": "20.4"
+    },
+    {
+      "id": "base-tampa",
+      "cost_per_face": "0.55",
+      "no_vig_probability": "2/5",
+      "expected_percent": "-300/11"
+    },
+    {
+      "id": "conditional-pair",
+      "quantities": [
+        "100",
+        "100"
+      ],
+      "base_prices": [
+        "0.4",
+        "0.55"
+      ],
+      "adverse_prices": [
+        "0.41",
+        "0.56"
+      ],
+      "funded_denominator": "97",
+      "ordinary_minimum_profit": "3",
+      "expected_percent": "300/97",
+      "unknown_state": "noncompleted",
+      "category": "conditional_known_states"
+    },
+    {
+      "id": "ordering",
+      "exact_percent": [
+        "100001/100000000",
+        "100002/100000000",
+        "0",
+        "-1",
+        null
+      ],
+      "expected_ids": [
+        "b",
+        "a",
+        "c",
+        "d",
+        "e"
+      ]
+    }
+  ]
+}

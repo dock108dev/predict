@@ -1,0 +1,37 @@
+{
+  "version": "comparison-net-cost-vectors-1",
+  "evidence_class": "independently_authored_controlled_arithmetic_not_account_terms_or_fills",
+  "upstream_inputs": [
+    {"path": "docs/comparison-r05-fee-vectors-20261008.json", "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1"},
+    {"path": "docs/comparison-r06-policy-vectors-20261008.json", "sha256": "e64c288506f2f7a9c4b3b5a49d33d8cb4bdab86fdd0892db1a4990ebdea5fb9f"}
+  ],
+  "vectors": [
+    {"id": "kalshi-direct-1", "venue": "kalshi", "price": "0.5", "quantity": "1", "precision": "0.0001", "entry_fee": "0.0175", "deployed": "0.5175", "win": "0.4825", "loss": "-0.5175"},
+    {"id": "kalshi-direct-100", "venue": "kalshi", "price": "0.5", "quantity": "100", "precision": "0.0001", "entry_fee": "1.75", "deployed": "51.75", "win": "48.25", "loss": "-51.75"},
+    {"id": "kalshi-cent-1", "venue": "kalshi", "price": "0.5", "quantity": "1", "precision": "0.01", "entry_fee": "0.02", "deployed": "0.52", "win": "0.48", "loss": "-0.52"},
+    {"id": "kalshi-cent-100", "venue": "kalshi", "price": "0.5", "quantity": "100", "precision": "0.01", "entry_fee": "1.75", "deployed": "51.75", "win": "48.25", "loss": "-51.75"},
+    {"id": "kalshi-direct-tiny", "venue": "kalshi", "price": "0.01", "quantity": "1", "precision": "0.0001", "entry_fee": "0.0007", "deployed": "0.0107", "win": "0.9893", "loss": "-0.0107"},
+    {"id": "kalshi-cent-tiny", "venue": "kalshi", "price": "0.01", "quantity": "1", "precision": "0.01", "entry_fee": "0.01", "deployed": "0.02", "win": "0.98", "loss": "-0.02"},
+    {"id": "us-1", "venue": "polymarket_us", "price": "0.5", "quantity": "1", "entry_fee": "0.02", "deployed": "0.52", "win": "0.48", "loss": "-0.52"},
+    {"id": "us-100", "venue": "polymarket_us", "price": "0.5", "quantity": "100", "entry_fee": "1.74", "deployed": "51.74", "win": "48.26", "loss": "-51.74"},
+    {"id": "us-tiny", "venue": "polymarket_us", "price": "0.01", "quantity": "1", "entry_fee": "0", "deployed": "0.01", "win": "0.99", "loss": "-0.01"},
+    {"id": "us-tiny-100", "venue": "polymarket_us", "price": "0.01", "quantity": "100", "entry_fee": "0.07", "deployed": "1.07", "win": "98.93", "loss": "-1.07"},
+    {"id": "novig-100", "venue": "novig", "price": "0.5", "quantity": "100", "entry_fee": "0.00750", "deployed": "0.5075", "win": "0.4925", "loss": "-0.5075"},
+    {"id": "novig-10000", "venue": "novig", "price": "0.5", "quantity": "10000", "entry_fee": "0.75", "deployed": "50.75", "win": "49.25", "loss": "-50.75"},
+    {"id": "novig-native-min-tiny", "venue": "novig", "price": "0.01", "quantity": "1", "entry_fee": "0", "deployed": "0.0001", "win": "0.0099", "loss": "-0.0001"},
+    {"id": "novig-half-up-boundary", "venue": "novig", "price": "0.5", "quantity": "1", "entry_fee": "0.00008", "deployed": "0.00508", "win": "0.00492", "loss": "-0.00508"},
+    {"id": "prophetx-hypothesis-10", "venue": "prophetx", "quantity": "10", "gross_win": "20", "settlement": "0.20", "deployed": "10", "win": "9.80", "loss": "-10"},
+    {"id": "prophetx-hypothesis-100", "venue": "prophetx", "quantity": "100", "gross_win": "200", "settlement": "2", "deployed": "100", "win": "98", "loss": "-100"},
+    {"id": "prophetx-hypothesis-tiny", "venue": "prophetx", "quantity": "0.01", "gross_win": "0.02", "settlement": "0", "deployed": "0.01", "win": "0.01", "loss": "-0.01"},
+    {"id": "prophetx-hypothesis-half-even-down", "venue": "prophetx", "quantity": "0.25", "gross_win": "0.50", "settlement": "0", "deployed": "0.25", "win": "0.25", "loss": "-0.25"},
+    {"id": "prophetx-hypothesis-half-even-up", "venue": "prophetx", "quantity": "0.75", "gross_win": "1.50", "settlement": "0.02", "deployed": "0.75", "win": "0.73", "loss": "-0.75"}
+  ],
+  "fragment_vectors": [
+    {"venue": "polymarket_us", "quantity": "2", "price": "0.5", "same_order_fee": "0.03", "different_orders_fee": "0.04"},
+    {"venue": "novig", "quantity": "2", "price": "0.5", "split_fee": "0.00016", "combined_fee": "0.00015"}
+  ],
+  "capital_vectors": [
+    {"acquisition": "50", "hold": "10", "returned_payout": "55", "hold_return": "10", "deployed": "60", "net_profit": "5"},
+    {"acquisition": "50", "hold": "10", "returned_payout": "55", "hold_return": "8", "deployed": "60", "net_profit": "3"}
+  ]
+}

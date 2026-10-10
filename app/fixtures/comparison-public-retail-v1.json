@@ -1,0 +1,376 @@
+{
+  "version": "comparison-public-retail-1",
+  "metadata": {
+    "version": "comparison-public-retail-1",
+    "market_id": "1083081",
+    "instrument_id": "2165646",
+    "side": "Long",
+    "team_id": "73",
+    "participant_id": "NFL:PHI",
+    "minimumTradeQty": "0.01",
+    "orderPriceMinTickSize": "0.0025",
+    "quantity_alignment_authority": "public_orders_minimumTradeQty_alignment",
+    "feeCoefficient": "0.0695",
+    "price": "0.2350",
+    "price_unit": "USD_per_contract",
+    "quantity_unit": "contracts",
+    "coefficient_unit": "USD_per_contract_times_p_times_one_minus_p",
+    "response_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+    "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+    "status": "MARKET_STATUS_OPEN",
+    "updatedAt": "2026-10-09T19:52:46Z",
+    "expiration": "2026-10-25T17:30:00Z",
+    "sibling": {
+      "id": "2165647",
+      "side": "Short",
+      "team_id": "62",
+      "price": "0.7675"
+    },
+    "entry_fee_effective_from": "2026-10-07T14:00:00Z",
+    "settlement_charge_status": "unknown",
+    "mandatory_charges_known": false
+  },
+  "receipt": {
+    "status": 200,
+    "outcome": "ok",
+    "request_at": "2026-10-09T19:53:54.799533+00:00",
+    "response_at": "2026-10-09T19:53:54.957379+00:00",
+    "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+    "retained_bytes": 4836
+  },
+  "binding": {
+    "native_key": [
+      "polymarket_us",
+      "129629",
+      "1083081",
+      "2165646",
+      "Long"
+    ],
+    "observation": {
+      "native_key": [
+        "polymarket_us",
+        "129629",
+        "1083081",
+        "2165646",
+        "Long"
+      ],
+      "original": {
+        "value": "0.2350",
+        "units": "usd_per_contract",
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "contracts",
+        "role": "comparison"
+      },
+      "source_at": null,
+      "received_at": "2026-10-09T19:53:54.957379+00:00",
+      "provenance_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a"
+    },
+    "effective_from": "2026-10-09T19:53:54.957379+00:00",
+    "effective_until": "2026-10-09T20:08:54.957379+00:00",
+    "material_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+    "facts": {
+      "fee": {
+        "status": "available_but_unbound",
+        "reason": "public_retail_mandatory_settlement_and_other_charges_unqualified",
+        "values": {
+          "version": "comparison-public-retail-1",
+          "market_id": "1083081",
+          "instrument_id": "2165646",
+          "side": "Long",
+          "team_id": "73",
+          "participant_id": "NFL:PHI",
+          "minimumTradeQty": "0.01",
+          "orderPriceMinTickSize": "0.0025",
+          "quantity_alignment_authority": "public_orders_minimumTradeQty_alignment",
+          "feeCoefficient": "0.0695",
+          "price": "0.2350",
+          "price_unit": "USD_per_contract",
+          "quantity_unit": "contracts",
+          "coefficient_unit": "USD_per_contract_times_p_times_one_minus_p",
+          "response_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+          "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+          "status": "MARKET_STATUS_OPEN",
+          "updatedAt": "2026-10-09T19:52:46Z",
+          "expiration": "2026-10-25T17:30:00Z",
+          "sibling": {
+            "id": "2165647",
+            "side": "Short",
+            "team_id": "62",
+            "price": "0.7675"
+          },
+          "entry_fee_effective_from": "2026-10-07T14:00:00Z",
+          "settlement_charge_status": "unknown",
+          "mandatory_charges_known": false
+        },
+        "evidence": [
+          {
+            "ref": "https://gateway.polymarket.us/v1/market/id/1083081",
+            "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+            "evidence_class": "retained"
+          },
+          {
+            "ref": "https://docs.polymarket.us/fees",
+            "sha256": "d2a8ae16181ebe8c08e9a4d3dc3f19cf0f99dce5a005c035c1ba159027fcff35",
+            "evidence_class": "primary_source"
+          }
+        ]
+      }
+    },
+    "facets": {
+      "quantity": {
+        "evidence": [
+          {
+            "ref": "https://gateway.polymarket.us/v1/market/id/1083081",
+            "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+            "evidence_class": "retained"
+          },
+          {
+            "ref": "https://docs.polymarket.us/api-reference/orders/overview",
+            "sha256": "e3f8461921d73c881a536eec766c660f75edc90e3be47edab8915bdfd68e954d",
+            "evidence_class": "primary_source"
+          }
+        ],
+        "value": {
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1"
+          },
+          "quantity_grid": {
+            "minimum_native": "0.01",
+            "increment_native": "0.01",
+            "legal_price_tick": "0.0025",
+            "evidence": {
+              "ref": "https://docs.polymarket.us/api-reference/orders/overview",
+              "sha256": "e3f8461921d73c881a536eec766c660f75edc90e3be47edab8915bdfd68e954d",
+              "evidence_class": "primary_source"
+            }
+          },
+          "quantity_grid_authority": "selected_public_retail_decimal_contracts"
+        }
+      },
+      "payout": {
+        "evidence": [
+          {
+            "ref": "https://gateway.polymarket.us/v1/market/id/1083081",
+            "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+            "evidence_class": "retained"
+          },
+          {
+            "ref": "https://docs.polymarket.us/learn/markets/contract-settlement",
+            "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+            "evidence_class": "primary_source"
+          }
+        ],
+        "value": {
+          "payout": {
+            "authority": "selected_evidenced_terms",
+            "decisive_face": "1",
+            "equal": "0.50",
+            "overtime": "included"
+          }
+        }
+      }
+    },
+    "binding_version": "df7ccf1f41b746914ac57c1542ac3c052a0273d28a68c0d726024a874e559ad4"
+  },
+  "normalized_record": {
+    "event": {
+      "id": "129629",
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": "regular_season",
+      "scheduled_start": "2026-10-11T13:30:00Z",
+      "home": "NFL:JAX",
+      "away": "NFL:PHI",
+      "participants": {
+        "Philadelphia Eagles": "NFL:PHI",
+        "Jacksonville Jaguars": "NFL:JAX"
+      },
+      "title": "PHI Eagles vs. JAC Jaguars"
+    },
+    "market_identity": {
+      "event": [
+        "comparison-provider-occurrence-1",
+        "polymarket_us",
+        "NFL",
+        "129629",
+        "NFL:JAX",
+        "NFL:PHI"
+      ],
+      "sport": "american_football",
+      "competition": "NFL",
+      "season": "2026",
+      "stage": "regular_season",
+      "scheduled_start": "2026-10-11T13:30:00Z",
+      "family": "moneyline",
+      "period": "full_game",
+      "line": null,
+      "outcome_set": "beddaa784b9c7e70dbf7bbab3a3ff95eaca97c06e8b786fabcdd50605ec1737e",
+      "rules": "public-retail-completed-winner-1"
+    },
+    "period_boundary": "Public full-game market; current event linkage unverified; completed-result terms only",
+    "anchor_participant": null,
+    "selection": {
+      "participant": "NFL:PHI",
+      "predicate": "win",
+      "signed_line": null,
+      "label": "Philadelphia Eagles"
+    },
+    "quote": {
+      "cost_note": "Public single taker entry schedule observed; mandatory settlement and other participant charges unqualified.",
+      "freshness_policy": {
+        "maximum_age_seconds": 30,
+        "version": "polymarket_us-book-age-engineering-1"
+      },
+      "original": {
+        "value": "0.2350",
+        "units": "usd_per_contract",
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "contracts",
+        "role": "comparison"
+      },
+      "provenance": {
+        "mode": "current",
+        "real_source": true,
+        "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+        "artifact": "docs/comparison-public-retail-evidence/requests/01.body.json"
+      },
+      "revision": 1,
+      "rule_note": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+      "source": {
+        "binding_id": "f845373e1d4166cf9b9c6ae00df3f4eefe984355b19ddb873cd393b231d6a01e",
+        "binding_version": "manual-comparison-2",
+        "native_event_id": "129629",
+        "native_line": null,
+        "native_market_id": "1083081",
+        "native_outcome_id": "2165646",
+        "native_side": "Long",
+        "provider": "polymarket_us",
+        "quote_side": "buy"
+      },
+      "state": "resyncing",
+      "times": {
+        "source_at": null,
+        "received_at": "2026-10-09T19:53:54.957379+00:00",
+        "projected_at": "2026-10-09T19:53:54.957379+00:00",
+        "source_time_kind": "unknown"
+      },
+      "venue": "polymarket_us",
+      "id": ""
+    },
+    "orientation_evidence": [
+      "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+      "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983"
+    ],
+    "verified": false,
+    "outcome_cardinality": 2,
+    "event_scope": {
+      "policy": "native-event-unverified-2",
+      "source": "polymarket_us",
+      "native_event_id": "129629"
+    },
+    "outcome_selections": [
+      {
+        "participant": "NFL:PHI",
+        "predicate": "win",
+        "signed_line": null,
+        "label": "Philadelphia Eagles"
+      },
+      {
+        "participant": "NFL:JAX",
+        "predicate": "win",
+        "signed_line": null,
+        "label": "Jacksonville Jaguars"
+      }
+    ],
+    "result_policy": "public-retail-completed-winner-1",
+    "comparison_source_metadata": {
+      "native_key": [
+        "polymarket_us",
+        "129629",
+        "1083081",
+        "2165646",
+        "Long"
+      ],
+      "material_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+      "overtime": "included",
+      "selected_public_retail_data": {
+        "version": "comparison-public-retail-1",
+        "market_id": "1083081",
+        "instrument_id": "2165646",
+        "side": "Long",
+        "team_id": "73",
+        "participant_id": "NFL:PHI",
+        "minimumTradeQty": "0.01",
+        "orderPriceMinTickSize": "0.0025",
+        "quantity_alignment_authority": "public_orders_minimumTradeQty_alignment",
+        "feeCoefficient": "0.0695",
+        "price": "0.2350",
+        "price_unit": "USD_per_contract",
+        "quantity_unit": "contracts",
+        "coefficient_unit": "USD_per_contract_times_p_times_one_minus_p",
+        "response_sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+        "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+        "status": "MARKET_STATUS_OPEN",
+        "updatedAt": "2026-10-09T19:52:46Z",
+        "expiration": "2026-10-25T17:30:00Z",
+        "sibling": {
+          "id": "2165647",
+          "side": "Short",
+          "team_id": "62",
+          "price": "0.7675"
+        },
+        "entry_fee_effective_from": "2026-10-07T14:00:00Z",
+        "settlement_charge_status": "unknown",
+        "mandatory_charges_known": false
+      }
+    }
+  },
+  "original_historical_observation": {
+    "native_key": [
+      "polymarket_us",
+      "129629",
+      "1083081",
+      "2165646",
+      "Long"
+    ],
+    "original": {
+      "payout": "1",
+      "payout_units": "USD",
+      "quantity_units": "contracts",
+      "role": "comparison",
+      "units": "usd_per_contract",
+      "value": "0.2350"
+    },
+    "source_at": "2026-10-09T03:55:16.261974+00:00",
+    "received_at": "2026-10-09T03:55:23.200604+00:00",
+    "provenance_sha256": "4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+  },
+  "applicability_policy": "Local metadata reuse capped at 900 seconds from response; not source guarantee, price freshness, historical applicability or event membership",
+  "evidence": [
+    {
+      "ref": "https://gateway.polymarket.us/v1/market/id/1083081",
+      "sha256": "ea95a8368b9bc758e57b72c87cb05588891724ea3f8b37e10b8a7c2b51d66a8a",
+      "evidence_class": "retained"
+    },
+    {
+      "ref": "https://docs.polymarket.us/api-reference/orders/overview",
+      "sha256": "e3f8461921d73c881a536eec766c660f75edc90e3be47edab8915bdfd68e954d",
+      "evidence_class": "primary_source"
+    },
+    {
+      "ref": "https://docs.polymarket.us/learn/markets/contract-settlement",
+      "sha256": "86b9a5bf54b27614019b95d608bed6a83c5a6714af54616ebd41e3f34ad95ad3",
+      "evidence_class": "primary_source"
+    },
+    {
+      "ref": "https://docs.polymarket.us/fees",
+      "sha256": "d2a8ae16181ebe8c08e9a4d3dc3f19cf0f99dce5a005c035c1ba159027fcff35",
+      "evidence_class": "primary_source"
+    }
+  ],
+  "binding_version": "313b7be560eb58f874d52f553c7ee2c08059a21866819824e39e89cf8bfb59e7"
+}

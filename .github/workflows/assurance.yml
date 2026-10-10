@@ -7,7 +7,7 @@ on:
       scope:
         description: Bounded assurance checks
         type: choice
-        options: [all, compatibility, postgres]
+        options: [all, compatibility, postgres, security]
         default: all
 env:
   CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -79,6 +79,36 @@ jobs:
         with:
           name: assurance-postgres-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/
+          if-no-files-found: error
+          retention-days: 14
+  security:
+    if: ${{ github.event_name == 'schedule' || inputs.scope == 'all' || inputs.scope == 'security' }}
+    name: Dependency refresh
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          python: '3.14'
+      - name: Audit current advisory data against locked dependencies
+        id: audit
+        run: |
+          mkdir -p test-results/quality
+          python -m pip_audit -r requirements-ci.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/audit.json
+      - name: Dependency refresh summary
+        if: always()
+        env:
+          CHECK_OUTCOMES: ${{ toJSON(steps) }}
+        run: python scripts/ci/quality_report.py --audit
+      - name: Retain dependency findings
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: assurance-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/quality/
           if-no-files-found: error
           retention-days: 14
   health:

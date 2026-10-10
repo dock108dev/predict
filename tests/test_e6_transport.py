@@ -1,8 +1,6 @@
 """Local servers only. No credential lookup or provider sockets."""
 import asyncio
 import base64
-from copy import deepcopy
-from dataclasses import replace
 from datetime import datetime,timezone,timedelta
 from decimal import Decimal
 import json
@@ -14,6 +12,7 @@ from aiohttp import web
 from websockets.asyncio.server import serve
 from app.collection.odds_http import HTTPPolicy,OddsHTTP,BudgetStop,Budget
 from app.collection.run_spec import preflight
+from app.collection.local_ownership import LocalOwnership
 from app.collection.transport_session import TransportSession,reopen,reference_identity
 from tests.test_kalshi import ack,frame
 from tests.test_polymarket_us_stream import message
@@ -135,13 +134,27 @@ class HTTPTests(unittest.IsolatedAsyncioTestCase):
 
 class PreflightTests(unittest.TestCase):
     def test_idle_preflight_and_real_start_blocked(self):
-        s=spec();s['mode']='real';s['reference_enabled']=False
-        with patch('aiohttp.ClientSession',side_effect=AssertionError('network')),patch('os.getenv',side_effect=AssertionError('credential')):
+        s = spec()
+        s['mode'] = 'real'
+        s['reference_enabled'] = False
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch('aiohttp.ClientSession', side_effect=AssertionError('network')),
+            patch('os.getenv', side_effect=AssertionError('credential')),
+        ):
             self.assertTrue(preflight(s)['valid'])
-            owner=TransportSession(s,'/unused',{})
-            self.assertEqual(owner.state,'idle')
-            with patch('app.collection.venue_access.load_credentials',side_effect=ValueError('missing credential')):
-                with self.assertRaises(ValueError):asyncio.run(owner.start())
+            ownership = LocalOwnership(Path(temporary) / 'owner.lock')
+            owner = TransportSession(s, Path(temporary) / 'output', {})
+            self.assertEqual(owner.state, 'idle')
+            with (
+                patch('app.collection.local_ownership.LocalOwnership', return_value=ownership),
+                patch('app.collection.venue_access.load_credentials',
+                      side_effect=ValueError('missing credential')),
+            ):
+                with self.assertRaises(ValueError):
+                    asyncio.run(owner.start())
+            self.assertIs(owner.acquisition_ownership, ownership)
+            self.assertIsNone(ownership.file)
     def test_missing_conflicts_and_null_economics(self):
         self.assertTrue(preflight(spec())['valid'])
         for field in ('participants','mapping_revision','http','cleanup'):

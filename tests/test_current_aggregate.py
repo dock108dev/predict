@@ -159,6 +159,35 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(QuotaStop):await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),1);self.assertNotIn('CONTROLLED-secret',str(self.q.snapshot()))
 
+    async def test_missing_headers_charge_stays_unknown_and_status_is_retained(self):
+        await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
+        self.wire.headers=[('Content-Type','application/json')]
+        with self.assertRaisesRegex(QuotaStop,'missing_duplicate'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
+        aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
+        self.assertIsNone(self.scheduler.issue_context['charged_credits']);self.assertNotIn('charged',a)
+        self.assertEqual(a['response_receipt']['status'],200);self.assertEqual(self.q.snapshot()['reserved'],3)
+
+    async def test_cancel_after_headers_accounts_receipt_without_reacquisition(self):
+        await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
+        self.wire.response_receipt=dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc())
+        self.wire.hold=asyncio.Event();task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+        await asyncio.sleep(.01);task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await task
+        aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
+        self.assertEqual(a['charged'],3);self.assertTrue(a['consumed']);self.assertEqual(a['interruption'],'aggregate_cancelled_after_dispatch')
+        self.assertEqual(self.q.snapshot()['reserved'],0)
+        count=len(self.wire.calls)
+        with self.assertRaises(QuotaStop):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
+        self.assertEqual(len(self.wire.calls),count)
+
+    async def test_body_transport_failure_with_received_headers_keeps_charge(self):
+        await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
+        self.wire.response_receipt=dict(status=503,headers=quota(self.wire.used+3,3),received_at=utc());self.wire.error=TimeoutError('CONTROLLED-secret')
+        with self.assertRaisesRegex(QuotaStop,'transport_uncertain'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
+        aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
+        self.assertEqual(a['charged'],3);self.assertEqual(a['response_receipt']['status'],503)
+        self.assertNotIn('CONTROLLED-secret',json.dumps(a))
+
 
 class AggregateAdmission(SchedulerTests):
     async def admit(self,raw,at=None):
@@ -225,7 +254,7 @@ class BrowserLifecycle(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);wire=Wire();q=QuotaLedger(root/'quota')
             def factory(s):return AggregateScheduler(s,ledger=q,transport=wire,key_loader=lambda:'CONTROLLED',window_loader=lambda:None)
-            service=CurrentService(directory=root/'service',ownership=LocalOwnership(root/'owner'),worker_factory=FakeWorker,aggregate_factory=factory)
+            service=CurrentService(config=deepcopy(DEFAULT),directory=root/'service',ownership=LocalOwnership(root/'owner'),worker_factory=FakeWorker,aggregate_factory=factory)
             async with TestClient(TestServer(create_app(owner=owner(),sessions={},current_provider=service))) as c:
                 a=await c.get('/api/current/updates');b=await c.get('/api/current/updates')
                 await a.content.readline();await b.content.readline();await asyncio.sleep(1.1)

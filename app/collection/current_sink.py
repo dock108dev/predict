@@ -17,7 +17,7 @@ def utc():
 
 
 def normalized_records(projection, states, previous):
-    from app.resolution.core import event_key
+    from app.comparison.event_links import current_event_key as event_key, provider_key
     from .v1_comparison import predicates
     records = []
     excluded = []
@@ -45,8 +45,8 @@ def normalized_records(projection, states, previous):
                 except (ValueError,KeyError):
                     if any(not event.get(k) for k in ('season','stage','scheduled_start','home','away')) or event['home']==event['away'] or set(event['participants'].values())!={event['home'],event['away']}:
                         raise ValueError('Complete source-local event identity unavailable')
-                    event_scope=dict(policy='native-event-unverified-1',source=venue,native_event_id=event['id'])
-                    key=['native-event-unverified-1',venue,event['id'],event['scheduled_start'],sorted(event['participants'].values())]
+                    event_scope=dict(policy='native-event-unverified-2',source=venue,native_event_id=event['id'])
+                    key=provider_key(venue,event)
                 ident = binding['identity']
                 if ident['period'] != 'full_game' or ident['family'] not in ('moneyline', 'spread', 'total'):
                     raise ValueError('Outside common full-game scope')
@@ -128,6 +128,10 @@ def normalized_records(projection, states, previous):
                         result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
                     from .current_occurrence import direct, VERSION as DIRECT_VERSION
                     if event_scope is None and direct(normalized, market, native, selection):
+                        if market['direct_win_binding'].get('prospective_only'):
+                            # Only the reviewed direct-win instrument shares this
+                            # reference basis. An unreviewed Short stays separate.
+                            normalized['market_identity']['rules']=DIRECT_VERSION+':prospective-reviewed-direct-win'
                         normalized['result_policy']=DIRECT_VERSION+':normal-full-game-win'
                         normalized['period_boundary']='Full game including applicable overtime; direct win only; exceptional cashflows differ'
                         normalized['outcome_selections']=[dict(participant=event[role],predicate='win',signed_line=None,label=next(n for n,c in event['participants'].items() if c==event[role])) for role in ('away','home')]
@@ -137,9 +141,54 @@ def normalized_records(projection, states, previous):
                             binding_sha256=market['direct_win_binding']['sha256'],
                             original_result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
                         q['rule_note']='Direct full-game win gross quote comparison only. Original native outcome domain is preserved. Tie pays 0.50; Kalshi postponement window is 48 hours, US is two weeks; fair-price/refund/cancellation treatment differs or remains unqualified. Kalshi NO is not opponent YES.'
+                        q['rule_note']=market['direct_win_binding'].get('rule_note',q['rule_note'])
                         q['rules_differ']=True
+                    material=market.get('_native') or market.get('native_metadata') or {}
+                    event_material=event.get('_native') or event.get('native_metadata') or {}
+                    normalized['comparison_source_metadata']=dict(
+                        native_key=[venue,source['native_event_id'],source['native_market_id'],source['native_outcome_id'],source['native_side']],
+                        material_sha256=stable(material),observed_at=q['times']['received_at'],
+                        rules_primary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_primary'),
+                        rules_secondary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_secondary'),
+                        series_id=event_material.get('series_ticker'),
+                        phase=('pregame' if event_material.get('period')=='NS' and event_material.get('active') is True and event_material.get('closed') is False else
+                               'live' if event_material.get('live') is True and event_material.get('ended') is False else 'unknown'))
+                    # Preserve only exact selected instrument fields. A neighboring
+                    # book/market or displayed face value cannot supply these units.
+                    instrument_material=material
+                    if venue=='polymarket_us':
+                        candidates=material.get('instruments',[])
+                        selected=[item for item in candidates if isinstance(item,dict) and str(item.get('id'))==native]
+                        instrument_material=selected[0] if len(selected)==1 else material if str(material.get('id'))==native else {}
+                    fields=('priceScale','fractionalQtyScale','minimumTradeQty','tickSize')
+                    normalized['comparison_source_metadata']['selected_reference_data']=dict(
+                        instrument_id=native,market_id=market['id'],
+                        present=bool(instrument_material),
+                        values={field:deepcopy(instrument_material[field]) for field in fields if field in instrument_material},
+                        material_sha256=stable(instrument_material))
+                    if venue=='polymarket_us':
+                        normalized['comparison_source_metadata']['public_event_occurrence']=dict(
+                            event_id=str(event_material.get('id')) if event_material.get('id') is not None else None,
+                            game_id=str(event_material.get('gameId')) if event_material.get('gameId') is not None else None,
+                            provider_game_id=event_material.get('sportradarGameId'),
+                            rescheduled_from_game_id=str(event_material.get('rescheduledFromGameId')) if event_material.get('rescheduledFromGameId') is not None else None)
+                        public_sides=[item for item in material.get('marketSides',[]) if
+                            isinstance(item,dict) and str(item.get('id'))==native and
+                            str(item.get('marketId'))==market['id']]
+                        if len(public_sides)==1 and str(material.get('id'))==market['id']:
+                            public_side=public_sides[0]
+                            normalized['comparison_source_metadata']['public_retail_observation']=dict(
+                                market_id=market['id'],instrument_id=native,
+                                long=public_side.get('long'),team_id=str(public_side.get('teamId')),
+                                values={field:str(material[field]) for field in
+                                    ('orderPriceMinTickSize','minimumTradeQty','feeCoefficient') if field in material},
+                                description=material.get('description'),
+                                updated_at=material.get('updatedAt'),material_sha256=stable(material),
+                                applicability='separate_metadata_requires_selected_binding')
                     if event_scope is not None:normalized['event_scope']=event_scope
                     instrument = stable([source, selection, key])
+                    # Metadata changes invalidate the shared input dependency
+                    # revision. They do not manufacture a quote/price revision.
                     fingerprint = stable([{k: q[k] for k in ('source', 'original', 'state', 'rule_note', 'cost_note', 'depth', 'freshness_policy')},binding['sha256'],q.get('native_predicate')])
                     prior = previous.get(instrument)
                     if prior:
@@ -151,6 +200,7 @@ def normalized_records(projection, states, previous):
                     records.append(normalized)
             except (ValueError, KeyError, TypeError, ArithmeticError, StopIteration) as exc:
                 excluded.append(dict(source=venue, market_id=market['id'], reason='Exact current binding incomplete or unsupported',
+                    sport=event.get('competition') if event else None,family=market.get('family'),reason_code='mapping_unresolved',
                     binding_status=binding.get('status'),binding_blockers=binding.get('blockers',[]),catalog_exclusion=reason))
     return records, excluded[:200]
 
@@ -222,7 +272,8 @@ class LatestStateSink:
                     'quote':dict(venue='pinnacle',source=q['source'],rule_note='',
                         original={'value':q['original']['value']},
                         times={k:q['times'][k] for k in ('source_at','received_at')},
-                        provenance={'sha256':q['provenance']['sha256']})})
+                        revision=q['revision'],provider_clocks=deepcopy(q.get('provider_clocks',{})),
+                        provenance=deepcopy(q['provenance']))})
             aggregate_receipts[sport]=row['received_at']
         observations=row['observations'] if row['type']=='prediction_books' else [row]
         if not observations or len(observations)>self.config['markets_per_source']:
@@ -309,7 +360,7 @@ class LatestStateSink:
         raw = deepcopy(self.envelope)
         raw.update(state_revision=self.store._state['state_revision']+1, clock_at=utc(), projected_at=utc(),
                    source_status=deepcopy(states), state='available' if records else 'degraded' if any(s['state']=='error' for s in states.values()) else 'empty')
-        raw = catalog_from_normalized(raw, records)
+        raw = catalog_from_normalized(raw, records, reference_records=reference_records)
         encoded = len(packed(raw))
         if not self.store.commit(raw):
             raise ValueError('Current commit sequence rejected')

@@ -1,0 +1,231 @@
+{
+  "schema": "comparison-coverage-authored-1",
+  "evidence_class": "authored offline expected observations",
+  "native_configured": [
+    "NFL"
+  ],
+  "aggregate_configured": [
+    "NFL",
+    "NCAAF",
+    "NBA",
+    "NCAAB",
+    "MLB",
+    "NHL"
+  ],
+  "observations": [
+    {
+      "sport": "NFL",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "offerings_returned",
+      "offered": {
+        "games": 1,
+        "markets": 2,
+        "quotes": 4
+      }
+    },
+    {
+      "sport": "NCAAF",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "offerings_returned",
+      "offered": {
+        "games": 1,
+        "markets": 2,
+        "quotes": 4
+      }
+    },
+    {
+      "sport": "NBA",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "offerings_returned",
+      "offered": {
+        "games": 1,
+        "markets": 2,
+        "quotes": 4
+      }
+    },
+    {
+      "sport": "NCAAB",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "no_offerings_returned",
+      "offered": {
+        "games": 0,
+        "markets": 0,
+        "quotes": 0
+      }
+    },
+    {
+      "sport": "MLB",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "offerings_returned",
+      "offered": {
+        "games": 1,
+        "markets": 2,
+        "quotes": 4
+      }
+    },
+    {
+      "sport": "NHL",
+      "venue": "novig",
+      "checked_at": "2026-10-08T20:00:00Z",
+      "status": "offerings_returned",
+      "offered": {
+        "games": 1,
+        "markets": 2,
+        "quotes": 4
+      }
+    }
+  ],
+  "inventory": [
+    {
+      "id": "NFL-0",
+      "sport": "NFL",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NFL-1",
+      "sport": "NFL",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NFL-2",
+      "sport": "NFL",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NFL-3",
+      "sport": "NFL",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NCAAF-0",
+      "sport": "NCAAF",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NCAAF-1",
+      "sport": "NCAAF",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NCAAF-2",
+      "sport": "NCAAF",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NCAAF-3",
+      "sport": "NCAAF",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NBA-0",
+      "sport": "NBA",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NBA-1",
+      "sport": "NBA",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NBA-2",
+      "sport": "NBA",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NBA-3",
+      "sport": "NBA",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "MLB-0",
+      "sport": "MLB",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "MLB-1",
+      "sport": "MLB",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "MLB-2",
+      "sport": "MLB",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "MLB-3",
+      "sport": "MLB",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NHL-0",
+      "sport": "NHL",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NHL-1",
+      "sport": "NHL",
+      "venue": "novig",
+      "family": "moneyline",
+      "mapping_verified": true
+    },
+    {
+      "id": "NHL-2",
+      "sport": "NHL",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": true
+    },
+    {
+      "id": "NHL-3",
+      "sport": "NHL",
+      "venue": "novig",
+      "family": "total",
+      "mapping_verified": false
+    }
+  ],
+  "expected": {
+    "all_admitted_quotes": 20,
+    "nba_displayed_quotes": 4,
+    "nba_filtered_quotes": 16,
+    "unresolved_nhl_quotes": 1
+  }
+}

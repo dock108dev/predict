@@ -1,0 +1,41 @@
+{
+  "schema": "comparison-lifecycle-authored-1",
+  "evidence_class": "authored finite sequences",
+  "at": "2026-10-08T20:00:00Z",
+  "edge_expiry": "2026-10-08T20:02:00Z",
+  "runtime_id": "CONTROLLED-runtime",
+  "attempt_id": "CONTROLLED-consumed-attempt",
+  "event_a": {
+    "id": "native-A",
+    "competition": "NFL",
+    "home": "NFL:DAL",
+    "away": "NFL:TB",
+    "scheduled_start": "2026-10-08T20:15:00Z",
+    "status": {
+      "live": false
+    }
+  },
+  "event_b": {
+    "id": "native-B",
+    "competition": "NFL",
+    "home": "NFL:BUF",
+    "away": "NFL:DET",
+    "scheduled_start": "2026-10-08T21:00:00Z",
+    "status": {
+      "live": false
+    }
+  },
+  "expected": {
+    "initial_creates": [
+      "A",
+      "B"
+    ],
+    "metadata_schedule": "2026-10-08T20:18:00Z",
+    "source_clock": "2026-10-08T19:59:55Z",
+    "unchanged_confirmation_clock": "2026-10-08T20:00:20Z",
+    "retired_market": "A",
+    "retained_unrelated_market": "B",
+    "cleanup_dispatch": false
+  },
+  "collection_authorized": false
+}

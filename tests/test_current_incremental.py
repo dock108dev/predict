@@ -50,6 +50,24 @@ class LatestOnly(unittest.TestCase):
         self.assertIs(current,previous)
         self.assertEqual(packed(store.snapshot()),packed(serialize(next_raw,allow_synthetic=True)))
         validate_snapshot(store.snapshot(),allow_synthetic=True)
+    def test_clock_ticks_and_unchanged_commits_share_temporal_projection(self):
+        ticks=[0];raw=catalog(1)
+        tick_store=CurrentStore(InjectedTestProvider(raw),monotonic=lambda:ticks[0])
+        commit_store=CurrentStore(InjectedTestProvider(raw),monotonic=lambda:0)
+        from app.dashboard import current_incremental
+        for elapsed in (1,1801):
+            with self.subTest(elapsed=elapsed):
+                ticks[0]=elapsed
+                with patch.object(current_incremental,'aged',wraps=current_incremental.aged) as policy:
+                    ticked=tick_store.snapshot()
+                self.assertGreaterEqual(policy.call_count,len(raw['events'][0]['groups']))
+                next_raw=deepcopy(raw)
+                next_raw['clock_at']=(stamp(raw['clock_at'])+timedelta(seconds=elapsed)).isoformat()
+                next_raw['state_revision']=commit_store._state['state_revision']+1
+                self.assertTrue(commit_store.commit(next_raw))
+                self.assertEqual(packed(ticked['events']),packed(commit_store._state['events']))
+                self.assertEqual(ticked.get('comparison_profiles',{}),commit_store._state.get('comparison_profiles',{}))
+
     def test_coalesced_cursor_delivers_latest_events_without_patch_history(self):
         raw=catalog();store=CurrentStore(InjectedTestProvider(raw),monotonic=lambda:0)
         one=changed(raw,0,2);store.commit(one)

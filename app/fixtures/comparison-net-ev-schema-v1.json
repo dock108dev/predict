@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparison-net-ev-schema-1",
+  "version": "comparison-net-ev-schema-1",
+  "type": "object",
+  "required": ["version", "revision", "available", "ranking_eligible", "conservative_ranking_eligible", "label", "exact", "value", "expected_profit_usd", "capital_denominator", "reason", "conditioning", "probability_basis", "fee_basis", "size_basis", "dependency_revisions", "gross_decisive_benchmark", "details"],
+  "properties": {
+    "version": {"const": "comparison-net-ev-1"},
+    "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "available": {"type": "boolean"},
+    "ranking_eligible": {"type": "boolean"},
+    "conservative_ranking_eligible": {"type": "boolean"},
+    "exact": {"type": ["object", "null"], "required": ["numerator", "denominator"], "properties": {"numerator": {"type": "string", "pattern": "^-?[0-9]+$"}, "denominator": {"type": "string", "pattern": "^[1-9][0-9]*$"}}, "additionalProperties": false},
+    "value": {"type": ["string", "null"]},
+    "expected_profit_usd": {"type": ["string", "null"]},
+    "capital_denominator": {"type": ["string", "null"]},
+    "reason": {"type": ["string", "null"]},
+    "dependency_revisions": {"type": "object"},
+    "details": {"type": "object"}
+  },
+  "description": "Exact percent values determine ordering; complete/conditional and base/depth-qualified-conservative bases remain distinct. Python typed partition gates are authoritative."
+}

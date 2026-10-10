@@ -1,0 +1,24 @@
+{
+  "version": "comparison-net-ev-vectors-1",
+  "evidence_class": "authored_independent_exact_rational_oracles",
+  "upstream_inputs": [
+    {"path": "docs/comparison-r07-probability-vectors-20261008.json", "sha256": "71a62146f5ff086d3ebe3c14710ca9c37022c631ccfb818363b3b7e25f6193bf"},
+    {"path": "docs/comparison-r07-probabilities.md", "sha256": "7b47a0138352596686c83fb06ff45666fa0280f886a04478a342830dc9613305"}
+  ],
+  "reference_odds": ["2", "3"],
+  "decisive_weights": ["3/5", "2/5"],
+  "vectors": [
+    {"id": "positive", "cost": "1/2", "deployed": "1/2", "deployed_decimal": "0.5", "expected_profit": "1/10", "percent": "20"},
+    {"id": "zero", "cost": "3/5", "deployed": "3/5", "deployed_decimal": "0.6", "expected_profit": "0", "percent": "0"},
+    {"id": "negative", "cost": "2/3", "deployed": "2/3", "deployed_decimal": "2/3", "expected_profit": "-1/15", "percent": "-10"},
+    {"id": "authored_cost_sign_change", "cost": "1/2", "deployed": "5/8", "deployed_decimal": "0.625", "expected_profit": "-1/40", "percent": "-4"}
+  ],
+  "complete_tie_sensitivity": {
+    "loss": "9/25", "tie": "1/10", "win": "27/50", "noncompleted": "0",
+    "expected_profit": "9/100", "percent": "18",
+    "ranking_authority": false,
+    "qualification": "Explicit authored distribution only; no empirical tie or exceptional probability claim"
+  },
+  "age_limits_seconds": {"net_pregame": 900, "net_live": 15, "existing_gross": 1800},
+  "zero_mass_unknown_payout_policy": "unknown remains blocking, even when explicitly supplied probability is zero"
+}

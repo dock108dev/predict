@@ -1,0 +1,740 @@
+{
+  "version": "comparison-domain-fixtures-1",
+  "evidence_class": "authored",
+  "samples": [
+    {
+      "id": "Dallas YES",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "team_binary",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": null,
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "gt",
+          "threshold": "0",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "fraction",
+          "payout": "1/2",
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas YES",
+          "instrument_id": "Dallas YES",
+          "side_id": "yes",
+          "original_wording": "Dallas YES",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas YES-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas YES",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas NO",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "team_binary",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": null,
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "le",
+          "threshold": "0",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "fraction",
+          "payout": "1/2",
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas NO",
+          "instrument_id": "Dallas NO",
+          "side_id": "no",
+          "original_wording": "Dallas NO",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas NO-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas NO",
+          "side_id": "no"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas moneyline",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "moneyline",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": null,
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "gt",
+          "threshold": "0",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "stake_refund",
+          "payout": null,
+          "refund_fees": "unknown",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "novig",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas moneyline",
+          "instrument_id": "Dallas moneyline",
+          "side_id": "Dallas",
+          "original_wording": "Dallas moneyline",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas moneyline-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas moneyline",
+          "side_id": "Dallas"
+        },
+        "price": {
+          "amount": "2.0000",
+          "unit": "decimal_odds",
+          "payout_unit": "usd_per_usd_stake",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Tampa Bay LONG",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "moneyline",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:TB",
+        "signed_line": null,
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "lt",
+          "threshold": "0",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "fraction",
+          "payout": "1/2",
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "polymarket_us",
+          "event_id": "authored-native-game",
+          "market_id": "Tampa Bay LONG",
+          "instrument_id": "Tampa Bay LONG",
+          "side_id": "authored-long",
+          "original_wording": "Tampa Bay LONG",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Tampa Bay LONG-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Tampa Bay LONG",
+          "side_id": "authored-long"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas -8.50",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "spread",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": "-8.50",
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "gt",
+          "threshold": "17/2",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "not_feasible",
+          "payout": null,
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas -8.50",
+          "instrument_id": "Dallas -8.50",
+          "side_id": "yes",
+          "original_wording": "Dallas -8.50",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas -8.50-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas -8.50",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Tampa Bay +8.5",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "spread",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:TB",
+        "signed_line": "+8.5",
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "lt",
+          "threshold": "8.5",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "not_feasible",
+          "payout": null,
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Tampa Bay +8.5",
+          "instrument_id": "Tampa Bay +8.5",
+          "side_id": "yes",
+          "original_wording": "Tampa Bay +8.5",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Tampa Bay +8.5-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Tampa Bay +8.5",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas -8",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "spread",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": "-8",
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "gt",
+          "threshold": "8",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "stake_refund",
+          "payout": null,
+          "refund_fees": "unknown",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "prophetx",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas -8",
+          "instrument_id": "Dallas -8",
+          "side_id": "yes",
+          "original_wording": "Dallas -8",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas -8-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas -8",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "-110",
+          "unit": "american_odds",
+          "payout_unit": "usd_per_usd_stake",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Combined over 20.5",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "total",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "combined",
+        "signed_line": null,
+        "predicate": {
+          "domain": "combined_score",
+          "operator": "gt",
+          "threshold": "20.5",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "not_feasible",
+          "payout": null,
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Combined over 20.5",
+          "instrument_id": "Combined over 20.5",
+          "side_id": "yes",
+          "original_wording": "Combined over 20.5",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Combined over 20.5-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Combined over 20.5",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas team over 20.5",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "team_total",
+        "scope": {
+          "period": "full_game",
+          "overtime": "included",
+          "completion": "authored:completed-regulation-and-applicable-overtime"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": null,
+        "predicate": {
+          "domain": "team_score",
+          "operator": "gt",
+          "threshold": "20.5",
+          "subject_id": "NFL:DAL"
+        },
+        "equality": {
+          "treatment": "not_feasible",
+          "payout": null,
+          "refund_fees": "not_applicable",
+          "unknown_reason": null
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas team over 20.5",
+          "instrument_id": "Dallas team over 20.5",
+          "side_id": "yes",
+          "original_wording": "Dallas team over 20.5",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas team over 20.5-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas team over 20.5",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    },
+    {
+      "id": "Dallas first-half win",
+      "selection": {
+        "schema_version": "comparison-domain-1",
+        "event": {
+          "occurrence_id": "authored:DAL-TB:occurrence-1",
+          "league": "NFL",
+          "home_id": "NFL:DAL",
+          "away_id": "NFL:TB",
+          "identity_evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "family": "moneyline",
+        "scope": {
+          "period": "first_half",
+          "overtime": "excluded",
+          "completion": "authored:completed-selected-period"
+        },
+        "participant_id": "NFL:DAL",
+        "signed_line": null,
+        "predicate": {
+          "domain": "home_margin",
+          "operator": "gt",
+          "threshold": "0",
+          "subject_id": null
+        },
+        "equality": {
+          "treatment": "unknown",
+          "payout": null,
+          "refund_fees": "not_applicable",
+          "unknown_reason": "Exact equality grading unavailable"
+        },
+        "native": {
+          "venue": "kalshi",
+          "event_id": "authored-native-game",
+          "market_id": "Dallas first-half win",
+          "instrument_id": "Dallas first-half win",
+          "side_id": "yes",
+          "original_wording": "Dallas first-half win",
+          "evidence": [
+            {
+              "ref": "authored:comparison-domain-v1",
+              "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+              "evidence_class": "authored"
+            }
+          ]
+        },
+        "payout": {
+          "profile_id": "Dallas first-half win-profile",
+          "version": "authored-profile-1",
+          "rule_revision": "authored-rules-1",
+          "instrument_id": "Dallas first-half win",
+          "side_id": "yes"
+        },
+        "price": {
+          "amount": "0.4000",
+          "unit": "usd_per_contract",
+          "payout_unit": "usd_per_contract",
+          "currency": "USD"
+        },
+        "payout_unknown": null
+      }
+    }
+  ],
+  "score_vectors": [
+    {
+      "home": 14,
+      "away": 7,
+      "selection_id": "Combined over 20.5",
+      "expected": true
+    },
+    {
+      "home": 14,
+      "away": 7,
+      "selection_id": "Dallas team over 20.5",
+      "expected": false
+    },
+    {
+      "home": 16,
+      "away": 8,
+      "selection_id": "Dallas -8.50",
+      "expected": false
+    },
+    {
+      "home": 17,
+      "away": 8,
+      "selection_id": "Dallas -8.50",
+      "expected": true
+    },
+    {
+      "home": 16,
+      "away": 8,
+      "selection_id": "Dallas -8",
+      "expected": false
+    },
+    {
+      "home": 16,
+      "away": 8,
+      "selection_id": "Dallas NO",
+      "expected": false
+    },
+    {
+      "home": 7,
+      "away": 7,
+      "selection_id": "Dallas NO",
+      "expected": true
+    },
+    {
+      "home": 7,
+      "away": 7,
+      "selection_id": "Tampa Bay LONG",
+      "expected": false
+    }
+  ],
+  "limitations": [
+    "Authored native IDs are examples, never current provider authority.",
+    "Payout references illustrate exact attachment; D04 binds applicable clauses."
+  ]
+}

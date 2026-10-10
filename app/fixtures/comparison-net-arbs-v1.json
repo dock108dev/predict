@@ -1,0 +1,12 @@
+{
+  "version": "comparison-net-arb-vectors-1",
+  "evidence_class": "independently_authored_disposable_portfolio_arithmetic",
+  "vectors": [
+    {"id": "ordinary-margin", "quantities": ["100", "100"], "prices": ["0.4", "0.55"], "gross_capital": "95", "buffered_capital": "97", "buffered_minimum": "3", "buffered_minimum_percent": "300/97", "complete": true},
+    {"id": "unknown-exception", "quantities": ["100", "100"], "prices": ["0.4", "0.55"], "buffered_capital": "97", "buffered_minimum": "3", "complete": false},
+    {"id": "fees-erase-margin", "quantities": ["50", "50"], "prices": ["0.4", "0.55"], "right_fee_per_face": "0.06", "buffered_capital": "51.5", "buffered_minimum": "-1.5", "complete": true},
+    {"id": "tie-loss", "quantities": ["100", "100"], "prices": ["0.4", "0.55"], "left_tie_payout": "0", "right_tie_payout": "0.5", "buffered_capital": "97", "buffered_minimum": "-47", "complete": true},
+    {"id": "unequal-face", "quantities": ["2", "1"], "prices": ["0.2", "0.55"], "left_win_payout": "0.5", "left_tie_payout": "0.25", "buffered_capital": "0.98", "buffered_minimum": "0.02", "complete": true},
+    {"id": "zero-diagnostic", "quantities": ["10", "10"], "prices": ["0.44", "0.54"], "buffered_capital": "10", "buffered_minimum": "0", "complete": true}
+  ]
+}

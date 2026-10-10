@@ -1,4 +1,4 @@
-"""Retained object accounting for the finite capture handoff."""
+"""Bounded retained-object accounting for finite captures."""
 import asyncio
 from dataclasses import fields, is_dataclass
 from sys import getsizeof

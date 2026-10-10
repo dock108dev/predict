@@ -509,3 +509,22 @@ class WatchdogProcesses(unittest.TestCase):
                     if worker.is_alive():worker.kill();worker.join(1)
                     if watchdog.is_alive():watchdog.kill();watchdog.join(1)
                     parent.close();control.close()
+
+
+class DrainReset(unittest.IsolatedAsyncioTestCase):
+    async def test_watchdog_reset_during_final_drain_still_releases_and_signals_done(self):
+        from unittest.mock import Mock
+        launcher=Launcher.__new__(Launcher)
+        launcher.anchor={'mono':0};launcher.failure='finalization_timeout'
+        launcher.process=Mock();launcher.process.is_alive.return_value=False
+        launcher.pipe=Mock();launcher.pipe.poll.return_value=False
+        launcher.guard=Mock();launcher.guard.is_alive.return_value=False
+        launcher.guard_pipe=Mock();launcher.guard_pipe.poll.return_value=True
+        launcher.guard_pipe.recv.side_effect=ConnectionResetError('authored peer reset')
+        launcher.guard_pipe.send.side_effect=ConnectionResetError('authored peer reset')
+        launcher.attempt=Mock();launcher.finish=Mock();launcher.done=asyncio.Event()
+        await launcher.observe()
+        launcher.finish.assert_called_once();launcher.attempt.release.assert_called_once()
+        launcher.pipe.close.assert_called_once();launcher.guard_pipe.close.assert_called_once()
+        self.assertTrue(launcher.done.is_set())
+        self.assertEqual(launcher.failure,'finalization_timeout')

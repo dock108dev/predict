@@ -83,7 +83,7 @@ class ServiceLifecycle(unittest.IsolatedAsyncioTestCase):
         code='from app.collection.local_ownership import LocalOwnership; import sys; LocalOwnership(sys.argv[1]).acquire("competing")'
         result=await asyncio.to_thread(subprocess.run,[sys.executable,'-c',code,str(self.root/'owner.lock')],capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
-        other=CurrentService(directory=self.root/'other',ownership=LocalOwnership(self.root/'owner.lock'),worker_factory=FakeWorker)
+        other=CurrentService(config=dict(DEFAULT,aggregate_enabled=False),directory=self.root/'other',ownership=LocalOwnership(self.root/'owner.lock'),worker_factory=FakeWorker)
         store=CurrentStore(other)
         await other.start(store)
         self.assertFalse(other.dispatch);self.assertFalse(list((self.root/'other').glob('attempt-*.json')))

@@ -45,9 +45,11 @@ class CurrentOddsTransport:
         self.client=None
         self.closed=False
         self.bytes=0
+        self.response_receipt=None
 
     async def request(self, request, key):
         if self.closed: raise QuotaStop('aggregate_transport_closed')
+        self.response_receipt=None
         if self.client is None:
             self.client=aiohttp.ClientSession(auto_decompress=False,trust_env=False,
                 connector=aiohttp.TCPConnector(limit=1),timeout=aiohttp.ClientTimeout(total=POLICY.timeout_seconds),
@@ -56,6 +58,10 @@ class CurrentOddsTransport:
         async with self.client.get(BASE+request['path'],params={**request['params'],'apiKey':key},
                 allow_redirects=False,headers={'Accept-Encoding':'identity'}) as response:
             headers=[(k.lower(),v) for k,v in response.headers.items() if k.lower() in ('x-requests-used','x-requests-remaining','x-requests-last')]
+            # Headers arrive before the body. Keep only bounded quota metadata
+            # so cancellation/body failure cannot lose received charge evidence.
+            safe=[(k,v if len(v)<=12 and v.isascii() and v.isdigit() else 'invalid') for k,v in headers]
+            self.response_receipt=dict(status=response.status,headers=safe,received_at=now())
             body=bytearray()
             async for chunk in response.content.iter_chunked(4096):
                 self.bytes+=len(chunk)
@@ -72,7 +78,6 @@ class CurrentOddsTransport:
             if any(secret in raw for secret in (key.encode(),base64.b64encode(key.encode()),quote(key).encode())):
                 raise QuotaStop('aggregate_secret_echo_suppressed')
             # Return header values only if bounded; never provider error body text.
-            safe=[(k,v if len(v)<=12 and v.isdigit() else 'invalid') for k,v in headers]
             return dict(status=response.status,headers=safe,body=raw if response.status==200 else b'',received_at=now())
 
     async def close(self):
@@ -148,25 +153,44 @@ class AggregateScheduler:
             self.metrics['http_response_ms']=(time.perf_counter()-tick)*1000
             self.metrics['last_received_at']=response['received_at']
         except asyncio.CancelledError:
-            # Marker already uncertain. Cancellation never refunds it.
+            self.retain_interrupted_response(aid,'aggregate_cancelled_after_dispatch')
+            # No receipt leaves the durable marker uncertain. Never refund it.
             raise
         except Exception:
+            self.retain_interrupted_response(aid,'aggregate_transport_uncertain')
             self.service.observation('the_odds_api','response',dict(attempt_id=aid,status=None,reason='aggregate_transport_uncertain'))
+            self.coverage_failure(sport)
             raise QuotaStop('aggregate_transport_uncertain') from None
         self.metrics['last_quota_headers']=deepcopy(response['headers'])
         self.ledger.reconcile(aid,response['headers'])
-        quota=self.ledger.snapshot()
-        self.issue_context['charged_credits']=None if quota['observation'] is None else quota['observation']['last']
+        self.ledger.record_response(aid,response)
+        self.issue_context['charged_credits']=self.ledger._read()['attempts'][aid].get('charged')
         self.metrics['body_bytes']+=len(response['body'])
         self.service.observation('the_odds_api','response',dict(attempt_id=aid,status=response['status'],
             request=request,headers=response['headers'],received_at=response['received_at'],body_bytes=len(response['body']),body_sha256=sha256(response['body']).hexdigest()))
         q=self.ledger.snapshot()
         if q['pause']:raise QuotaStop(q['pause'])
         if response['status']!=200:
+            self.coverage_failure(sport,response['received_at'])
             code='aggregate_rate_limit' if response['status']==429 else 'aggregate_authentication' if response['status'] in (401,403) else 'aggregate_http_failure'
             # No blind retry; preserve next-due and pause this runtime.
             raise QuotaStop(code)
         return response
+
+    def retain_interrupted_response(self, aid, reason):
+        receipt=getattr(self.transport,'response_receipt',None)
+        if receipt is not None:
+            self.ledger.reconcile(aid,receipt['headers'])
+            self.metrics['last_quota_headers']=deepcopy(receipt['headers'])
+            self.issue_context['charged_credits']=self.ledger._read()['attempts'][aid].get('charged')
+        self.ledger.record_response(aid,receipt,interruption=reason)
+        self.service.observation('the_odds_api','interrupted_response',dict(attempt_id=aid,reason=reason,receipt=deepcopy(receipt)))
+
+    def coverage_failure(self,sport,checked_at=None):
+        if sport and hasattr(self.service,'coverage'):
+            for venue in ('novig','prophetx','pinnacle'):
+                self.service.coverage.observe(sport,venue,checked_at=checked_at or now(),
+                    status='failed_source',reason='source_failed')
 
     async def step(self):
         async with self.acquisition_lock:await self.scheduled_step()
@@ -292,6 +316,9 @@ class AggregateScheduler:
         exclusions=market_exclusions(response['body'])
         self.metrics.setdefault('unsupported_market_exclusions',{})[sport]=exclusions
         batches,rejected=admit_venues(response['body'],sport,response['received_at'])
+        if hasattr(self.service,'coverage'):
+            from app.comparison.coverage import aggregate_observation
+            aggregate_observation(self.service.coverage,response['body'],sport,response['received_at'],rejected)
         records=[r for batch in batches.values() for r in batch]
         if not response.get('retained'):self.retain_diagnostic(response,sport,rejected)
         if len(rejected)==2:

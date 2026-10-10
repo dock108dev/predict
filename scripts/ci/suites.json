@@ -348,5 +348,53 @@
     "tests": [
       "tests/test_dashboard.py"
     ]
+  },
+  {
+    "name": "comparison-data",
+    "tests": [
+      "tests/test_comparison_adapters.py",
+      "tests/test_comparison_costs.py",
+      "tests/test_comparison_coverage.py",
+      "tests/test_comparison_discovery.py",
+      "tests/test_comparison_domain.py",
+      "tests/test_comparison_event_links.py",
+      "tests/test_comparison_integration.py",
+      "tests/test_comparison_lifecycle.py",
+      "tests/test_comparison_payouts.py",
+      "tests/test_comparison_pinnacle.py"
+    ]
+  },
+  {
+    "name": "current-reference-and-incremental",
+    "tests": [
+      "tests/test_current_benchmark.py",
+      "tests/test_current_incremental.py"
+    ]
+  },
+  {
+    "name": "comparison-software",
+    "tests": [
+      "tests/test_comparison_cashflows.py",
+      "tests/test_comparison_net_costs.py",
+      "tests/test_comparison_buffers.py",
+      "tests/test_comparison_net_ev.py",
+      "tests/test_comparison_net_arbs.py",
+      "tests/test_comparison_dependencies.py",
+      "tests/test_comparison_metrics.py"
+    ]
+  },
+  {
+    "name": "comparison-source-input-integration",
+    "tests": [
+      "tests/test_comparison_source_inputs.py",
+      "tests/test_current_comparison_inputs.py",
+      "tests/test_comparison_net_input_integration.py",
+      "tests/test_comparison_source_integration.py",
+      "tests/test_comparison_public_retail.py",
+      "tests/test_comparison_event_evidence.py",
+      "tests/test_comparison_public_event.py",
+      "tests/test_comparison_reference_gap.py",
+      "tests/test_comparison_occurrence_continuation.py"
+    ]
   }
 ]

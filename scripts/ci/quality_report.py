@@ -18,9 +18,11 @@ def read(path, expected):
     return value
 
 
-def render(outcomes, root, postgres=False, package=False):
+def render(outcomes, root, postgres=False, package=False, expanded=False, audit=False):
     required = (
-        {"package": root / "package/metrics.json"}
+        {"audit": root / "quality/audit.json"}
+        if audit
+        else {"package": root / "package/metrics.json"}
         if package
         else {"postgres": root / "postgres/junit.xml"}
         if postgres
@@ -30,6 +32,8 @@ def render(outcomes, root, postgres=False, package=False):
             "package": root / "package/metrics.json",
         }
     )
+    if expanded:
+        required.update(lint=None, workflow=None, docs=None)
     records = []
     errors = []
     for name, path in required.items():
@@ -42,7 +46,9 @@ def render(outcomes, root, postgres=False, package=False):
         }.get(raw, "NOT RUN")
         record = {"name": name, "status": status, "measurements": None}
         try:
-            if path.suffix == ".xml":
+            if path is None:
+                pass  # Exit status is the evidence for source/static checks.
+            elif path.suffix == ".xml":
                 cases = list(ET.parse(path).getroot().iter("testcase"))
                 if not cases:
                     raise ValueError("zero tests")
@@ -53,6 +59,7 @@ def render(outcomes, root, postgres=False, package=False):
                         for c in cases
                     ),
                     "skipped": sum(c.find("skipped") is not None for c in cases),
+                    "seconds": sum(float(c.get("time", "0")) for c in cases),
                 }
                 if record["measurements"]["failed"] or record["measurements"][
                     "skipped"
@@ -96,7 +103,12 @@ def render(outcomes, root, postgres=False, package=False):
         records.append(record)
 
     def safe(v):
-        return html.escape(str(v)).replace("|", "&#124;").replace("\n", " ")
+        return (
+            html.escape(str(v))
+            .replace("|", "&#124;")
+            .replace("`", "&#96;")
+            .replace("\n", " ")
+        )
 
     text = f"## {'Package' if package else 'Storage' if postgres else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
     text += "\n".join(
@@ -119,6 +131,8 @@ def main():
         root,
         "--postgres" in sys.argv,
         "--package" in sys.argv,
+        "--expanded" in sys.argv,
+        "--audit" in sys.argv,
     )
     name = (
         "package-summary"
@@ -140,6 +154,7 @@ def main():
         json.dumps(
             {
                 "tested_sha": os.environ.get("GITHUB_SHA"),
+                "overall": "FAIL" if failed else "PASS",
                 "pr_head": os.environ.get("PR_HEAD_SHA"),
                 "ref": os.environ.get("GITHUB_REF"),
                 "run_url": os.environ.get("CI_RUN_URL"),

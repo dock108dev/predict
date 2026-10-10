@@ -1,0 +1,1374 @@
+{
+  "schema": 1,
+  "version": "comparison-cost-inputs-1",
+  "domain_version": "comparison-domain-1",
+  "evidence_class": "controlled_authored_inputs_not_account_or_live_qualification",
+  "upstream_inputs": [
+    {
+      "ref": "docs/comparison-r05-fee-proposals-20261008.json",
+      "sha256": "edafaefc324ee3ff817514413422b80f4d8b9abd0d7937d4139ad750f278addf",
+      "evidence_class": "authored"
+    },
+    {
+      "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+      "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+      "evidence_class": "authored"
+    },
+    {
+      "ref": "docs/comparison-r06-estimate-policy.md",
+      "sha256": "0e76fe706550d694b9ac00a27df589b949852c02cae122e3c8935b28c7f864ab",
+      "evidence_class": "authored"
+    },
+    {
+      "ref": "docs/comparison-r06-policy-vectors-20261008.json",
+      "sha256": "e64c288506f2f7a9c4b3b5a49d33d8cb4bdab86fdd0892db1a4990ebdea5fb9f",
+      "evidence_class": "authored"
+    }
+  ],
+  "history_refs": [
+    {
+      "ref": "app/fixtures/fee-schedules-v1.json",
+      "sha256": "f50e9bd0de615cdd1aafcb85eeb85f890cd52756076102961b0f42341c0d7eca",
+      "evidence_class": "authored"
+    },
+    {
+      "ref": "app/fixtures/public-contracts-v1.json",
+      "sha256": "4ba73451499ef17463c4a19523f6dd02ec932b1367ddf7a8a0180bd6a89590e1",
+      "evidence_class": "authored"
+    }
+  ],
+  "research_proposals": [
+    {
+      "venue": "kalshi",
+      "version": "kalshi-public-july7-reviewed-oct8",
+      "effective_date": "2026-07-07",
+      "effective_instant": null,
+      "role": "taker",
+      "formula": "0.07 * multiplier * dollar_face_contracts * price * (1-price)",
+      "requires": [
+        "exact_series_and_event_fee_terms_asof",
+        "balance_precision_or_declared_envelope",
+        "bounded_fill_fragmentation",
+        "account_or_declared_direct_exchange_scenario"
+      ],
+      "maker_formula": "0.0175 * multiplier * C * p * (1-p); default maker multiplier zero, selected sport series can be one",
+      "settlement": "binary_schedule_zero; scalar_or_other_contract_requires_separate_applicability",
+      "rounding": "ceil raw fee to 6dp USD; align debit to account grid; order accumulator refunds deterministic overpayment",
+      "account_grid_scenarios_usd": [
+        "0.0001",
+        "0.01"
+      ],
+      "source_keys": [
+        "kalshi_schedule",
+        "kalshi_rounding",
+        "kalshi_series",
+        "kalshi_events"
+      ]
+    },
+    {
+      "venue": "polymarket_us",
+      "version": "pmus-standard-current-reviewed-oct8",
+      "effective_exchange_notice_et": "2026-10-01T10:00:00-04:00",
+      "standard_theta": "0.0695",
+      "maker_theta": "-0.0125",
+      "rounding": "half_even_cent_per_fill_with_taker_cumulative_order_cap",
+      "combo_change_effective_et": "2026-10-07T00:00:00-04:00",
+      "combo_maker_rebate_default": "0",
+      "exception": "table_tennis_taker_theta_0.10_outside_six_sport_pilot",
+      "conflict": "Page body still claims combo maker rebate continues; dated Oct7 notice supersedes for conservative proposal, no eligibility assumed",
+      "requires": [
+        "selected_single_or_whole_combo_identity",
+        "selected_fee_coefficient",
+        "fixed_point_quantity_scale",
+        "independent_settlement_fee_rule_or_named_scenario"
+      ],
+      "source_keys": [
+        "pmus"
+      ]
+    },
+    {
+      "venue": "novig",
+      "version": "novig-v3-current-reviewed-oct8",
+      "regime": "v3",
+      "effective_date": "2026-10-08",
+      "effective_instant": null,
+      "live_theta_by_league": {
+        "NFL": "0.03",
+        "NCAAF": "0.06",
+        "NBA": "0.03",
+        "NCAAB": "0.03",
+        "MLB": "0.06",
+        "NHL": "0.06"
+      },
+      "authority": "selected market.fee object; date-only transition does not retrospectively supply exact fee instant",
+      "formula": "coefficient * price * (1-price) * native_qty * 0.01 USD",
+      "rounding": "half_up_to_0.00001_USD_each_fill",
+      "maker_fee": "0",
+      "source_keys": [
+        "novig_v3",
+        "novig_credit",
+        "novig_rfq"
+      ],
+      "requires": [
+        "exact_market_fee",
+        "api_regime",
+        "fill_or_hypothetical_match_phase",
+        "quantity_units"
+      ],
+      "credits_default": "exclude_contingent_and_later_credits",
+      "other_products": "futures/RFQ are versioned separately and outside this pilot"
+    },
+    {
+      "venue": "prophetx",
+      "version": "prophetx-public-v1.2-oct1-reviewed-oct8",
+      "published_update_date": "2026-10-01",
+      "effective_instant": null,
+      "channel": "public_site_straight_only",
+      "rate": "0.02",
+      "base": "positive_net_gains_per_market",
+      "standalone_formula": "0.02*max(0,gross_payout-stake)",
+      "incremental_formula": "fee(existing_market_profit+candidate_profit)-fee(existing_market_profit)",
+      "rounding": null,
+      "requires": [
+        "exact_market_scope",
+        "public_site_or_explicit_account_terms",
+        "rounded_fee_rule_or_named_bounded_scenario"
+      ],
+      "api_default": null,
+      "source_keys": [
+        "prophetx"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "version": "authored-old",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": "2026-10-07T00:00:00Z",
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.04",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ]
+    },
+    {
+      "version": "authored-current",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-07T00:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.04",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "predecessor_version": "authored-old"
+    },
+    {
+      "version": "authored-market",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.06",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "market_id": "m1"
+    },
+    {
+      "version": "authored-account",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.08",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "account_ref": "account:authored",
+      "market_id": "m1"
+    },
+    {
+      "version": "authored-expired-account",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": "2026-10-08T12:00:00Z",
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.04",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "account_ref": "account:expired",
+      "market_id": "m1"
+    },
+    {
+      "version": "authored-unknown-account",
+      "venue": "controlled",
+      "product": "single",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": null,
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "declared_zero",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "account_ref": "account:unknown",
+      "market_id": "m1"
+    },
+    {
+      "version": "authored-commission",
+      "venue": "controlled",
+      "product": "market_commission",
+      "channel": "controlled",
+      "source_kind": "controlled_scenario",
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quantity",
+        "rate": "0",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "known_terms",
+      "mandatory_charges_known": true,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-vectors-20261008.json",
+          "sha256": "bbde972aff91275e33da4ecce7592ce740fcb9f5dd83faed72a76010efcd82d1",
+          "evidence_class": "authored"
+        }
+      ],
+      "settlement_terms": {
+        "basis": "net_gain",
+        "rate": "0.02",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": null,
+        "role": "taker",
+        "allow_fee_adjustment": true
+      },
+      "settlement_treatment": "already_withheld_from_payout"
+    },
+    {
+      "version": "r05-kalshi-proposal",
+      "venue": "kalshi",
+      "product": "binary",
+      "channel": "direct",
+      "source_kind": "research_proposal",
+      "effective_from": null,
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.07",
+        "grid_usd": null,
+        "rounding": "ceiling",
+        "aggregation": "order_accumulator",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "unknown",
+      "mandatory_charges_known": false,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-proposals-20261008.json",
+          "sha256": "edafaefc324ee3ff817514413422b80f4d8b9abd0d7937d4139ad750f278addf",
+          "evidence_class": "authored"
+        }
+      ],
+      "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+      "proposal_ref": "docs/comparison-r05-fee-proposals-20261008.json#kalshi"
+    },
+    {
+      "version": "r05-pmus-proposal",
+      "venue": "polymarket_us",
+      "product": "single",
+      "channel": "exchange",
+      "source_kind": "research_proposal",
+      "effective_from": "2026-10-01T14:00:00Z",
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "dollar_face_contracts",
+        "face_usd_per_native": "1"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": "0.0695",
+        "grid_usd": "0.01",
+        "rounding": "half_even",
+        "aggregation": "cumulative_order_cap",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "unknown",
+      "mandatory_charges_known": false,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-proposals-20261008.json",
+          "sha256": "edafaefc324ee3ff817514413422b80f4d8b9abd0d7937d4139ad750f278addf",
+          "evidence_class": "authored"
+        }
+      ],
+      "source_url": "https://docs.polymarket.us/fees",
+      "proposal_ref": "docs/comparison-r05-fee-proposals-20261008.json#polymarket_us"
+    },
+    {
+      "version": "r05-novig-proposal",
+      "venue": "novig",
+      "product": "v3_market",
+      "channel": "api",
+      "source_kind": "research_proposal",
+      "effective_from": null,
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "novig_v3_cent_contracts",
+        "face_usd_per_native": "0.01"
+      },
+      "terms": {
+        "basis": "quadratic",
+        "rate": null,
+        "grid_usd": "0.00001",
+        "rounding": "half_up",
+        "aggregation": "per_fill",
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "unknown",
+      "mandatory_charges_known": false,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-proposals-20261008.json",
+          "sha256": "edafaefc324ee3ff817514413422b80f4d8b9abd0d7937d4139ad750f278addf",
+          "evidence_class": "authored"
+        }
+      ],
+      "source_url": "https://docs.novig.com/api/concepts/fees",
+      "proposal_ref": "docs/comparison-r05-fee-proposals-20261008.json#novig"
+    },
+    {
+      "version": "r05-prophetx-proposal",
+      "venue": "prophetx",
+      "product": "straight",
+      "channel": "public_site",
+      "source_kind": "research_proposal",
+      "effective_from": null,
+      "effective_to": null,
+      "expires_at": null,
+      "unit": {
+        "unit": "stake_usd"
+      },
+      "terms": {
+        "basis": "net_gain",
+        "rate": "0.02",
+        "grid_usd": null,
+        "rounding": null,
+        "aggregation": null,
+        "role": "taker",
+        "allow_fee_adjustment": false
+      },
+      "settlement_status": "unknown",
+      "mandatory_charges_known": false,
+      "evidence": [
+        {
+          "ref": "docs/comparison-r05-fee-proposals-20261008.json",
+          "sha256": "edafaefc324ee3ff817514413422b80f4d8b9abd0d7937d4139ad750f278addf",
+          "evidence_class": "authored"
+        }
+      ],
+      "source_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+      "proposal_ref": "docs/comparison-r05-fee-proposals-20261008.json#prophetx"
+    }
+  ],
+  "portable_vectors": {
+    "unit_vectors": [
+      {
+        "id": "dollar-face-small",
+        "spec": {
+          "unit": "dollar_face_contracts",
+          "face_usd_per_native": "1"
+        },
+        "amount": "1",
+        "face": "1"
+      },
+      {
+        "id": "dollar-face-large",
+        "spec": {
+          "unit": "dollar_face_contracts",
+          "face_usd_per_native": "1"
+        },
+        "amount": "100",
+        "face": "100"
+      },
+      {
+        "id": "novig-small",
+        "spec": {
+          "unit": "novig_v3_cent_contracts",
+          "face_usd_per_native": "0.01"
+        },
+        "amount": "100",
+        "face": "1.00"
+      },
+      {
+        "id": "novig-large",
+        "spec": {
+          "unit": "novig_v3_cent_contracts",
+          "face_usd_per_native": "0.01"
+        },
+        "amount": "10000",
+        "face": "100.00"
+      },
+      {
+        "id": "fixed-point",
+        "spec": {
+          "unit": "fixed_point_contracts",
+          "face_usd_per_native": "1",
+          "quantity_scale": "100",
+          "price_scale": "10000"
+        },
+        "amount": "150",
+        "face": "1.5",
+        "wire_price": "5000",
+        "price": "0.5"
+      }
+    ],
+    "resolution_vectors": [
+      {
+        "id": "explicit-current",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "authored-current"
+        },
+        "version": "authored-current",
+        "entry": true,
+        "net": true,
+        "reasons": []
+      },
+      {
+        "id": "old-last-instant",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-06T23:59:59.999999Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "authored-old"
+        },
+        "version": "authored-old",
+        "entry": true,
+        "net": true,
+        "reasons": []
+      },
+      {
+        "id": "old-end-exclusive",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-07T00:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "authored-old"
+        },
+        "version": null,
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "fee_channel_scope_or_interval_unavailable"
+        ]
+      },
+      {
+        "id": "new-start-inclusive",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-07T00:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "authored-current"
+        },
+        "version": "authored-current",
+        "entry": true,
+        "net": true,
+        "reasons": []
+      },
+      {
+        "id": "unapproved-controlled",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": false
+        },
+        "version": "authored-current",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "controlled_fee_scenario_requires_explicit_pin"
+        ]
+      },
+      {
+        "id": "market-over-product",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1"
+        },
+        "version": "authored-market",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "controlled_fee_scenario_requires_explicit_pin"
+        ]
+      },
+      {
+        "id": "account-over-market",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1",
+          "account_ref": "account:authored"
+        },
+        "version": "authored-account",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "controlled_fee_scenario_requires_explicit_pin"
+        ]
+      },
+      {
+        "id": "expired-account-no-public-fallback",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T12:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1",
+          "account_ref": "account:expired"
+        },
+        "version": "authored-expired-account",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "fee_inputs_expired",
+          "controlled_fee_scenario_requires_explicit_pin"
+        ]
+      },
+      {
+        "id": "unknown-account-no-public-fallback",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1",
+          "account_ref": "account:unknown",
+          "pinned_version": "authored-unknown-account"
+        },
+        "version": "authored-unknown-account",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "fee_rate_unknown"
+        ]
+      },
+      {
+        "id": "pmus-proposal-quarantined",
+        "request": {
+          "venue": "polymarket_us",
+          "product": "single",
+          "channel": "exchange",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "r05-pmus-proposal"
+        },
+        "version": "r05-pmus-proposal",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "public_proposal_not_runtime_binding",
+          "settlement_charge_inputs_required",
+          "mandatory_channel_charges_unknown"
+        ]
+      },
+      {
+        "id": "novig-date-only",
+        "request": {
+          "venue": "novig",
+          "product": "v3_market",
+          "channel": "api",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "r05-novig-proposal"
+        },
+        "version": "r05-novig-proposal",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "public_proposal_not_runtime_binding",
+          "fee_effective_instant_unknown",
+          "fee_rate_unknown",
+          "settlement_charge_inputs_required",
+          "mandatory_channel_charges_unknown"
+        ]
+      },
+      {
+        "id": "prophet-api-not-public-site",
+        "request": {
+          "venue": "prophetx",
+          "product": "straight",
+          "channel": "api",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true
+        },
+        "version": null,
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "fee_channel_scope_or_interval_unavailable"
+        ]
+      },
+      {
+        "id": "prophet-unknown-rounding",
+        "request": {
+          "venue": "prophetx",
+          "product": "straight",
+          "channel": "public_site",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "pinned_version": "r05-prophetx-proposal"
+        },
+        "version": "r05-prophetx-proposal",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "public_proposal_not_runtime_binding",
+          "fee_effective_instant_unknown",
+          "fee_rounding_unknown",
+          "settlement_charge_inputs_required",
+          "mandatory_channel_charges_unknown"
+        ]
+      },
+      {
+        "id": "incremental-needs-positions",
+        "request": {
+          "venue": "controlled",
+          "product": "market_commission",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T10:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "incremental_existing_positions",
+          "allow_controlled_scenario": true,
+          "pinned_version": "authored-commission",
+          "market_id": "m1",
+          "account_ref": "account:authored"
+        },
+        "version": "authored-commission",
+        "entry": true,
+        "net": false,
+        "reasons": [
+          "scoped_existing_positions_required"
+        ]
+      },
+      {
+        "id": "expired-account-cannot-pin-lower-schedule",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T12:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1",
+          "account_ref": "account:expired",
+          "pinned_version": "authored-current"
+        },
+        "version": "authored-expired-account",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "pinned_fee_version_conflicts_with_scoped_override"
+        ]
+      },
+      {
+        "id": "unknown-account-cannot-pin-lower-schedule",
+        "request": {
+          "venue": "controlled",
+          "product": "single",
+          "channel": "controlled",
+          "trade_time": "2026-10-08T10:00:00Z",
+          "calculation_time": "2026-10-08T12:00:00Z",
+          "role": "taker",
+          "portfolio_basis": "standalone",
+          "allow_controlled_scenario": true,
+          "market_id": "m1",
+          "account_ref": "account:unknown",
+          "pinned_version": "authored-current"
+        },
+        "version": "authored-unknown-account",
+        "entry": false,
+        "net": false,
+        "reasons": [
+          "pinned_fee_version_conflicts_with_scoped_override"
+        ]
+      }
+    ],
+    "algebra_vectors": [
+      {
+        "id": "authored-small",
+        "terms": {
+          "basis": "quadratic",
+          "rate": "0.04",
+          "grid_usd": "0.01",
+          "rounding": "half_even",
+          "aggregation": "per_fill",
+          "role": "taker",
+          "allow_fee_adjustment": false
+        },
+        "fills": [
+          {
+            "price": "0.5",
+            "quantity": "1"
+          }
+        ],
+        "entry_fee": "0.01"
+      },
+      {
+        "id": "authored-large",
+        "terms": {
+          "basis": "quadratic",
+          "rate": "0.04",
+          "grid_usd": "0.01",
+          "rounding": "half_even",
+          "aggregation": "per_fill",
+          "role": "taker",
+          "allow_fee_adjustment": false
+        },
+        "fills": [
+          {
+            "price": "0.5",
+            "quantity": "100"
+          }
+        ],
+        "entry_fee": "1.00"
+      },
+      {
+        "id": "per-fill-rounding",
+        "terms": {
+          "basis": "quadratic",
+          "rate": "0.03",
+          "grid_usd": "0.00001",
+          "rounding": "half_up",
+          "aggregation": "per_fill",
+          "role": "taker",
+          "allow_fee_adjustment": false
+        },
+        "fills": [
+          {
+            "price": "0.5",
+            "quantity": "0.01"
+          },
+          {
+            "price": "0.5",
+            "quantity": "0.01"
+          }
+        ],
+        "entry_fee": "0.00016"
+      },
+      {
+        "id": "combined-rounding",
+        "terms": {
+          "basis": "quadratic",
+          "rate": "0.03",
+          "grid_usd": "0.00001",
+          "rounding": "half_up",
+          "aggregation": "per_fill",
+          "role": "taker",
+          "allow_fee_adjustment": false
+        },
+        "fills": [
+          {
+            "price": "0.5",
+            "quantity": "0.02"
+          }
+        ],
+        "entry_fee": "0.00015"
+      },
+      {
+        "id": "incremental-existing-loss",
+        "terms": {
+          "basis": "net_gain",
+          "rate": "0.02",
+          "grid_usd": "0.01",
+          "rounding": "half_even",
+          "aggregation": null,
+          "role": "taker",
+          "allow_fee_adjustment": true
+        },
+        "positions": {
+          "account": "account:authored",
+          "market": "m1",
+          "complete": true,
+          "net_before": {
+            "win": "-80"
+          }
+        },
+        "outcomes": {
+          "win": "100"
+        },
+        "fills": [],
+        "state_fees": {
+          "win": "0.40"
+        }
+      },
+      {
+        "id": "incremental-existing-win",
+        "terms": {
+          "basis": "net_gain",
+          "rate": "0.02",
+          "grid_usd": "0.01",
+          "rounding": "half_even",
+          "aggregation": null,
+          "role": "taker",
+          "allow_fee_adjustment": true
+        },
+        "positions": {
+          "account": "account:authored",
+          "market": "m1",
+          "complete": true,
+          "net_before": {
+            "win": "80"
+          }
+        },
+        "outcomes": {
+          "win": "-100"
+        },
+        "fills": [],
+        "state_fees": {
+          "win": "-1.60"
+        }
+      }
+    ],
+    "funding_vectors": [
+      {
+        "id": "deployed-44",
+        "components": [
+          {
+            "component_id": "buy1",
+            "amount_usd": "44",
+            "kind": "acquisition",
+            "timing": "entry"
+          }
+        ],
+        "ceiling_usd": "100",
+        "deployed_usd": "44",
+        "residual_usd": "56",
+        "reasons": []
+      },
+      {
+        "id": "hold-once",
+        "components": [
+          {
+            "component_id": "buy1",
+            "amount_usd": "50",
+            "kind": "acquisition",
+            "timing": "entry"
+          },
+          {
+            "component_id": "hold1",
+            "amount_usd": "10",
+            "kind": "refundable_hold",
+            "timing": "entry"
+          }
+        ],
+        "ceiling_usd": "100",
+        "deployed_usd": "60",
+        "residual_usd": "40",
+        "reasons": []
+      },
+      {
+        "id": "exclude-contingent-and-withheld",
+        "components": [
+          {
+            "component_id": "buy1",
+            "amount_usd": "50",
+            "kind": "acquisition",
+            "timing": "entry"
+          },
+          {
+            "component_id": "fee1",
+            "amount_usd": "2",
+            "kind": "entry_fee",
+            "timing": "entry"
+          },
+          {
+            "component_id": "refund1",
+            "amount_usd": "0.5",
+            "kind": "deterministic_rounding_refund",
+            "timing": "entry"
+          },
+          {
+            "component_id": "credit1",
+            "amount_usd": "9",
+            "kind": "later_credit",
+            "timing": "later",
+            "contingent": true
+          },
+          {
+            "component_id": "settle1",
+            "amount_usd": "2",
+            "kind": "charge_withheld_from_payout",
+            "timing": "outcome"
+          }
+        ],
+        "ceiling_usd": "100",
+        "deployed_usd": "51.5",
+        "residual_usd": "48.5",
+        "reasons": []
+      },
+      {
+        "id": "ceiling-not-credit-netted",
+        "components": [
+          {
+            "component_id": "buy1",
+            "amount_usd": "101",
+            "kind": "acquisition",
+            "timing": "entry"
+          },
+          {
+            "component_id": "credit1",
+            "amount_usd": "50",
+            "kind": "later_credit",
+            "timing": "later",
+            "contingent": true
+          }
+        ],
+        "ceiling_usd": "100",
+        "deployed_usd": "101",
+        "residual_usd": "-1",
+        "reasons": [
+          "comparison_capital_ceiling_exceeded"
+        ]
+      }
+    ],
+    "age_vectors": [
+      {
+        "phase": "pregame",
+        "source_age_seconds": 899,
+        "admit": true
+      },
+      {
+        "phase": "pregame",
+        "source_age_seconds": 900,
+        "admit": true
+      },
+      {
+        "phase": "pregame",
+        "source_age_seconds": 901,
+        "admit": false
+      },
+      {
+        "phase": "live",
+        "source_age_seconds": 15,
+        "admit": true
+      },
+      {
+        "phase": "live",
+        "source_age_seconds": 16,
+        "admit": false
+      },
+      {
+        "phase": "pregame",
+        "source_age_seconds": null,
+        "admit": false
+      },
+      {
+        "phase": "pregame",
+        "source_age_seconds": -1,
+        "admit": false
+      }
+    ],
+    "cashflow_vectors": [
+      {
+        "id": "cost-0",
+        "entry_usd": "50",
+        "gross_return_usd": "55",
+        "extra_consumed_cost_usd": "0",
+        "fixed_comparison_deployment_usd": "50",
+        "profit_usd": "5",
+        "roi_fixed_sensitivity_basis": "0.1"
+      },
+      {
+        "id": "cost-.5",
+        "entry_usd": "50",
+        "gross_return_usd": "55",
+        "extra_consumed_cost_usd": ".5",
+        "fixed_comparison_deployment_usd": "50",
+        "profit_usd": "4.5",
+        "roi_fixed_sensitivity_basis": "0.09"
+      },
+      {
+        "id": "cost-1",
+        "entry_usd": "50",
+        "gross_return_usd": "55",
+        "extra_consumed_cost_usd": "1",
+        "fixed_comparison_deployment_usd": "50",
+        "profit_usd": "4",
+        "roi_fixed_sensitivity_basis": "0.08"
+      },
+      {
+        "id": "cost-6",
+        "entry_usd": "50",
+        "gross_return_usd": "55",
+        "extra_consumed_cost_usd": "6",
+        "fixed_comparison_deployment_usd": "50",
+        "profit_usd": "-1",
+        "roi_fixed_sensitivity_basis": "-0.02"
+      },
+      {
+        "id": "hold-returned",
+        "entry_acquisition_usd": "50",
+        "prefunded_refundable_hold_usd": "10",
+        "outcome_returned_payout_plus_hold_usd": "65",
+        "capital_usd": "60",
+        "profit_usd": "5",
+        "roi": "0.08333333333333333333333333333"
+      },
+      {
+        "id": "hold-two-consumed",
+        "entry_acquisition_usd": "50",
+        "prefunded_refundable_hold_usd": "10",
+        "outcome_returned_payout_plus_hold_usd": "63",
+        "capital_usd": "60",
+        "profit_usd": "3",
+        "roi": "0.05"
+      }
+    ],
+    "quantity_grid_vector": {
+      "ceiling_usd": "100",
+      "actual_deployed_usd": "44",
+      "idle_usd": "56",
+      "profit_usd": "4.4",
+      "roi": "0.1",
+      "invalid_face_or_ceiling_denominator_roi": "0.044"
+    },
+    "negative_denominator_counterexample": {
+      "base_profit_usd": "-10",
+      "base_denominator_usd": "100",
+      "base_roi": "-0.10",
+      "stress_profit_usd": "-11",
+      "stress_denominator_usd": "120",
+      "stress_roi": "-0.09166666666666666666666666667",
+      "fixed_base_basis_stress_roi": "-0.11",
+      "accept_as_improvement": false
+    },
+    "grid_vectors": [
+      {
+        "id": "coarse-valid",
+        "minimum_native": "10",
+        "increment_native": "10",
+        "legal_price_tick": "0.02",
+        "amount": "20",
+        "reasons": [],
+        "movement_floor": "0.02"
+      },
+      {
+        "id": "coarse-invalid",
+        "minimum_native": "10",
+        "increment_native": "10",
+        "legal_price_tick": "0.005",
+        "amount": "21",
+        "reasons": [
+          "quantity_off_native_grid"
+        ],
+        "movement_floor": "0.01"
+      },
+      {
+        "id": "minimum-invalid",
+        "minimum_native": "10",
+        "increment_native": "10",
+        "legal_price_tick": null,
+        "amount": "0",
+        "reasons": [
+          "quantity_below_native_minimum"
+        ],
+        "movement_floor": null
+      },
+      {
+        "id": "missing-grid",
+        "minimum_native": null,
+        "increment_native": null,
+        "legal_price_tick": null,
+        "amount": "1",
+        "reasons": [
+          "quantity_minimum_unknown",
+          "quantity_increment_unknown"
+        ],
+        "movement_floor": null
+      }
+    ],
+    "depth_vectors": [
+      {
+        "id": "absent-depth",
+        "available_native": null,
+        "amount": "100",
+        "basis": "common_comparison_ceiling",
+        "reasons": [
+          "depth_inputs_unavailable"
+        ]
+      },
+      {
+        "id": "insufficient-depth",
+        "available_native": "80",
+        "amount": "100",
+        "basis": "common_comparison_ceiling",
+        "reasons": [
+          "target_size_depth_insufficient"
+        ]
+      },
+      {
+        "id": "separate-supported-size",
+        "available_native": "80",
+        "amount": "80",
+        "basis": "details_supported_size_sensitivity",
+        "reasons": []
+      }
+    ],
+    "native_fee_vectors": [
+      {
+        "id": "live-only-pregame",
+        "coefficient": "0.03",
+        "maker_credit": "0.3",
+        "charged": "WHEN_LIVE",
+        "phase": "OPEN_PREGAME",
+        "charge_active": false
+      },
+      {
+        "id": "live-only-live",
+        "coefficient": "0.06",
+        "maker_credit": "0.3",
+        "charged": "WHEN_LIVE",
+        "phase": "OPEN_INGAME",
+        "charge_active": true
+      },
+      {
+        "id": "live-only-unknown",
+        "coefficient": "0.03",
+        "maker_credit": "0.3",
+        "charged": "WHEN_LIVE",
+        "phase": null,
+        "charge_active": null
+      },
+      {
+        "id": "always-unknown",
+        "coefficient": "0.03",
+        "maker_credit": "0.3",
+        "charged": "ALWAYS",
+        "phase": null,
+        "charge_active": true
+      }
+    ]
+  },
+  "consumer_requirements": [
+    "maximum valid quantity on evidenced unit/minimum/increment grid within common ceiling; allocation/search belongs to S03",
+    "unknown charges are not replaced by adverse-price buffer",
+    "no public-site terms establish negotiated API rates",
+    "complete standalone or exact scoped positions basis; incremental reductions never fund entry",
+    "fixed allocation sensitivity uses common funded capital; if capital expands rebase both scenarios or show dollars only",
+    "missing depth or source clock withholds dependent future net metric, preserves price",
+    "S02 reuses existing venue fee engine for caps/accumulators; no fee-qualified UI net in D09"
+  ]
+}

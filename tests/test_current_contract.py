@@ -8,6 +8,20 @@ from tests.current_fixture import fixture
 
 
 class CurrentContractTests(unittest.TestCase):
+    def test_repeated_large_encoding_has_bounded_resident_growth(self):
+        import json,subprocess,sys
+        code="""
+import json,resource,sys
+from app.dashboard.current_contract import packed
+value={'large':['abc'*1000]*5000};peaks=[]
+for _ in range(10):
+    body=packed(value);del body
+    peaks.append(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*(1 if sys.platform=='darwin' else 1024))
+print(json.dumps(peaks))
+"""
+        peaks=json.loads(subprocess.check_output([sys.executable,'-c',code],text=True,timeout=30))
+        self.assertLess(peaks[-1]-peaks[2],32*1024*1024)
+
     def raw(self):return fixture()
     def snapshot(self):return serialize(self.raw(),allow_synthetic=True)
     def quote(self,r):return r['events'][0]['groups'][0]['outcomes'][0]['quotes']['kalshi']

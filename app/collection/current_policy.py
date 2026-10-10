@@ -51,8 +51,11 @@ def aggregate_scope(config):
 
 
 def load(path=None):
+    explicit = path is not None
     path = Path(path) if path else ROOT / '.local/predict-current-config.json'
     if not path.exists():
+        if explicit:
+            raise FileNotFoundError('Explicit current configuration file does not exist')
         return validate(DEFAULT)
     if path.is_symlink() or path.stat().st_size > 8192:
         raise ValueError('Native configuration file bound')

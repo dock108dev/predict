@@ -7,18 +7,20 @@ from hashlib import sha256
 from .current_contract import serialize, packed, quotes_of, age_basis, stamp, identity, MAX_BYTES
 
 
-def signature(event,group):
+def signature(event,group,profiles=None):
     def quote(q):return {k:v for k,v in q.items() if k!='id'}
-    g=dict(group,outcomes=[dict(o,quotes={v:quote(q) for v,q in o['quotes'].items()},
+    g=dict({k:v for k,v in group.items() if k not in ('comparison_pairs','comparison_search')},outcomes=[dict(o,quotes={v:quote(q) for v,q in o['quotes'].items()},
         alternatives={v:[quote(q) for q in qs] for v,qs in o.get('alternatives',{}).items()}) for o in group['outcomes']])
-    return sha256(packed([{k:v for k,v in event.items() if k!='groups'},g])).hexdigest()
+    from app.comparison.current_dependencies import group_dependencies
+    dependencies=group_dependencies(group,profiles or {})
+    return sha256(packed([{k:v for k,v in event.items() if k!='groups'},g,dependencies])).hexdigest()
 
 
 def signatures(raw):
-    return {(e['id'],g['id']):signature(e,g) for e in raw['events'] for g in e['groups']}
+    return {(e['id'],g['id']):signature(e,g,raw.get('comparison_profiles')) for e in raw['events'] for g in e['groups']}
 
 
-def aged(group,clock,old_clock):
+def aged(group,clock,old_clock,profiles=None):
     """Age scalar shells only; eligibility transitions require re-projection."""
     result=dict(group,outcomes=[]);changed=False
     for original in group['outcomes']:
@@ -27,6 +29,13 @@ def aged(group,clock,old_clock):
             output=[]
             for prior in values:
                 q=dict(prior,calculations=dict(prior['calculations']));age_basis(q,clock)
+                from app.comparison.current_dependencies import eligibility, temporal_revision, refresh_metadata_status
+                refresh_metadata_status(q,clock)
+                reasons=list(eligibility(q, profiles or {}, clock))
+                if reasons!=prior.get('comparison_dependency_reasons',[]):changed=True
+                q['comparison_dependency_reasons']=reasons
+                q['comparison_temporal_revision']=temporal_revision(q,profiles or {},clock)
+                if q['comparison_temporal_revision']!=prior.get('comparison_temporal_revision'):changed=True
                 future=lambda at,when:at is not None and stamp(at)>when
                 confirmation=q.get('book_confirmation',{})
                 if (q['stale']!=prior['stale'] or
@@ -65,9 +74,9 @@ def _project(raw,previous,known,sizes,*,allow_synthetic):
         if event_id in events:raise ValueError('Duplicate exact event')
         output=None;group_ids=set()
         for group in event['groups']:
-            k=(event_id,group['id']);sig=signature(event,group);cached=old.get(k)
+            k=(event_id,group['id']);sig=signature(event,group,raw.get('comparison_profiles'));cached=old.get(k)
             if cached is not None and known.get(k)==sig:
-                calculated,transition=aged(cached,clock,old_clock)
+                calculated,transition=aged(cached,clock,old_clock,raw.get('comparison_profiles'))
                 if transition:cached=None
             else:cached=None
             if cached is None:

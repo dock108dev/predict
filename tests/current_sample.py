@@ -1,11 +1,7 @@
-"""Isolated synthetic design route mounted by the ordinary app; no source owner."""
+"""Authored synthetic input catalog for current-contract tests; no server routes."""
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from aiohttp import web
-from .local_security import check_browser, HEADERS
-from .u0_display import VERSION, quote_display
+from app.dashboard.u0_display import VERSION, quote_display
 
-STATIC = Path(__file__).parent/'opportunity_static'/'u0'
 VENUES = ['kalshi', 'polymarket_us', 'novig', 'prophetx']
 
 
@@ -54,33 +50,5 @@ def sample_payload(revision=1):
         events.append(event)
     return dict(schema=VERSION,mode='synthetic',runtime_id='syn:runtime-1',state_revision=revision,projected_at=now.isoformat(),clock_at=now.isoformat(),
                 state='available',source_status={v:dict(state='available',next_due_at=None) for v in VENUES},events=events,
-                selection_policy=dict(ttl_seconds=300,maximum_per_client=1,restart_expires=True), admin_href='/preview/u0/admin')
+                selection_policy=dict(ttl_seconds=300,maximum_per_client=1,restart_expires=True), admin_href='/admin')
 
-
-def mount(app):
-    async def page(request):return web.FileResponse(STATIC/'index.html')
-    async def state(request):
-        if request.query.get('revision','1') not in ('1','2'):raise web.HTTPBadRequest(reason='Unknown fixture revision')
-        return web.json_response(sample_payload(int(request.query.get('revision','1'))))
-    async def admin(request):return web.FileResponse(STATIC/'admin.html')
-    app.router.add_get('/preview/u0',page)
-    app.router.add_get('/preview/u0/state',state)
-    app.router.add_get('/preview/u0/admin',admin)
-    app.router.add_static('/preview/u0/assets/',STATIC)
-
-
-def create_app():
-    @web.middleware
-    async def guard(request, handler):
-        try:
-            check_browser(request)
-            response=await handler(request)
-        except web.HTTPException as exc:
-            response=web.json_response({'error':exc.reason},status=exc.status)
-        response.headers.update(HEADERS)
-        return response
-    app=web.Application(middlewares=[guard])
-    mount(app)
-    async def root(request):raise web.HTTPFound('/preview/u0')
-    app.router.add_get('/',root)
-    return app

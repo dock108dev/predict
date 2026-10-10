@@ -7,7 +7,7 @@ from .odds_http import BudgetStop
 
 POLICY='sport-directed-games-v1'
 SPORTS=('NFL','NCAAF','NBA','NCAAB','MLB','NHL')
-# Observed in phase-0/kalshi-series.json; no inferred ticker construction.
+# Explicit observed series IDs; never construct tickers from inferred names.
 SERIES=dict(NFL='KXNFLGAME',NCAAF='KXNCAAFGAME',NBA='KXNBAGAME',
             NCAAB='KXNCAAMBGAME',MLB='KXMLBGAME',NHL='KXNHLGAME')
 # NFL successful league endpoint; remaining slugs observed in r4 league tags.

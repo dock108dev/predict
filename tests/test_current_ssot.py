@@ -3,6 +3,8 @@ from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 import json
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -40,6 +42,26 @@ class PolicyOwnership(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Exact native'):
                 CurrentService(config=config)
         self.assertFalse(current_policy.validate(dict(current_policy.DEFAULT, aggregate_enabled=False))['aggregate_enabled'])
+
+    def test_default_absence_and_explicit_config_have_distinct_contracts(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(current_policy,'ROOT',Path(temp)):
+            self.assertEqual(current_policy.load(),current_policy.validate(current_policy.DEFAULT))
+            for path in (Path(temp)/'missing.json',Path(temp)/'.local/predict-current-config.json'):
+                with self.subTest(path=path), self.assertRaisesRegex(FileNotFoundError,'Explicit current configuration'):
+                    current_policy.load(path)
+            path=Path(temp)/'config.json'
+            config=dict(current_policy.DEFAULT,enabled=False,aggregate_enabled=False)
+            path.write_text(json.dumps(config))
+            self.assertEqual(current_policy.load(path),config)
+            path.write_text('{}')
+            with self.assertRaisesRegex(ValueError,'Exact native'):
+                current_policy.load(path)
+
+    def test_retired_preview_flag_rejected_before_service_or_credentials(self):
+        result=subprocess.run([sys.executable,'-m','app.dashboard','--u0-preview'],
+            capture_output=True,text=True,timeout=10)
+        self.assertEqual(result.returncode,2)
+        self.assertIn('unrecognized arguments: --u0-preview',result.stderr)
 
     def test_unsupported_paid_transition_fails_before_any_durable_write(self):
         with tempfile.TemporaryDirectory() as temp:

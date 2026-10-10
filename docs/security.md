@@ -18,6 +18,27 @@ header receipt. `query_policy.py` validates selectors and manual assumptions.
 Reference/result imports append only to an active projected session; completed
 saved packages cannot be edited through those routes.
 
+Every request to the shared ordinary/retained router rejects duplicate query
+fields before reaching a handler. A single value per field is required, including
+comparison ceilings, current revision cursors and coverage filters. Admin controls
+require a JSON object before action selection; arrays, scalars and null return 422
+without invoking Stop, refresh, pause or recovery.
+
+Only explicit `PublicRequestError` validation messages are returned verbatim by
+the shared router. These must be authored messages, never provider text, parser
+errors, user values or messages copied from another exception. Other `ValueError`
+subclasses, including JSON and text decoding errors, receive a fixed 422 response.
+Safe diagnostics record the operation, exception class and traceback locations;
+they omit messages, chains, source lines and locals. Structured calculation
+refusals and `SelectionError` responses retain their separate existing contracts.
+
+The separate `app.collection.server` synthetic tool uses this same socket-derived
+Host, Origin, Fetch Metadata and response-header policy. Start and Stop require
+same-origin uncompressed JSON; Stop accepts an empty object. Its existing 2 KiB
+body limit also applies to chunked requests, with the shared ten-second body
+deadline. Local test clients must supply their actual Origin. Its database/session
+limits remain separate; normal dashboard startup does not launch this tool.
+
 Fetch Metadata, when present, must be one unambiguous `same-origin` or `none`
 value. A request from another localhost port can be `same-site` while still being
 cross-origin; those browser requests are rejected, including GET subresource
@@ -60,7 +81,7 @@ cross-process watchlist locking/directory-fsync durability guarantee.
 Failures use sanitized operation names, exception classes and traceback locations;
 raw provider content and credentials must not enter logs. See
 [failure handling](error-handling.md) for cleanup and incomplete packages.
-Native discovery failures now expose exception classes in source-stop, refresh
+Native discovery failures expose exception classes in source-stop, refresh
 and catalog error fields, rather than arbitrary exception text. Safe diagnostics
 retain traceback locations; explicitly generated policy/status codes remain in
 their normal dedicated fields. Healthy source isolation is unchanged.

@@ -4,8 +4,8 @@ import asyncio
 from datetime import datetime, timezone
 from app.diagnostics import failure
 from aiohttp import web
-from app.dashboard.local_security import HEADERS,check_browser,read_json,body_limit,IMPORT_BODY_LIMIT
-from app.dashboard.query_policy import validate_http_query,validate_assumptions
+from app.dashboard.local_security import HEADERS,check_browser,read_json,body_limit,IMPORT_BODY_LIMIT,PublicRequestError
+from app.dashboard.query_policy import validate_http_query,validate_assumptions,validate_unique_query
 from app.dashboard.opportunity_board import ROOT,load_sessions,present
 from app.dashboard.multi_game import OUTPUT,configuration,saved_rows,project_game,default_point,game_calculation,rank_filter
 from app.opportunities.board import SIDES,TEAMS,CANDIDATES
@@ -21,7 +21,7 @@ def selected_game(games, game_id):
     # StopIteration escaping an async route becomes RuntimeError (HTTP 503).
     game = next((game for game in games if game['id'] == game_id), None)
     if game is None:
-        raise ValueError('Unknown selection')
+        raise PublicRequestError('Unknown selection')
     return game
 
 
@@ -85,17 +85,18 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     def product_cutoff(sid,d,cutoff):
         from app.dashboard import session_history
         if owner.active() and owner.session and sid==owner.session.sid:
-            if owner.session.persistence_error:raise ValueError('Persistence failed')
+            if owner.session.persistence_error:raise PublicRequestError('Persistence failed')
             snapshot=owner.cutoffs.get(cutoff)
             if snapshot is None and not owner.session.segmented_history:
                 snapshot=session_history.project_rows(reopen(owner.session.journal.path)['rows'][:owner.session.journal.count],cutoff)
-            if snapshot is None:raise ValueError('Older segmented cutoff available after Stop')
+            if snapshot is None:raise PublicRequestError('Older segmented cutoff available after Stop')
             return snapshot
         return session_history.load(d['folder'],cutoff)
     @web.middleware
     async def guard(request,handler):
         try:
             check_browser(request)
+            validate_unique_query(request.query)
             limit=body_limit(request.path)
             if request.method=='POST' and (request.content_length or 0)>limit:
                 raise web.HTTPRequestEntityTooLarge(max_size=limit,actual_size=request.content_length)
@@ -107,8 +108,11 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if exc.status == 408:r.force_close()
             for header in ('Allow','Retry-After'):
                 if header in exc.headers:r.headers[header]=exc.headers[header]
-        except ValueError as exc:
+        except PublicRequestError as exc:
             r=web.json_response({'error':str(exc)},status=422)
+        except ValueError as exc:
+            failure(__name__, 'dashboard_input_or_data', exc)
+            r=web.json_response({'error':'Invalid input or unavailable local data; check inputs and the local log'},status=422)
         except ArithmeticError as exc:
             failure(__name__, 'dashboard_arithmetic', exc)
             r=web.json_response({'error':'Calculation unavailable; check inputs and the local log'},status=422)
@@ -129,33 +133,32 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         options=await read_json(req)
         if current_provider is not None and getattr(current_provider,'ownership',None) and current_provider.ownership.file:
             return web.json_response(dict(error='acquisition_owned',reason='The automatic native service owns acquisition. Stop it safely before a finite qualification.'),status=409)
-        if not isinstance(options,dict) or set(options)-owner.start_controls:raise ValueError('Unknown scan controls')
+        if not isinstance(options,dict) or set(options)-owner.start_controls:raise PublicRequestError('Unknown scan controls')
         return web.json_response(dict(session=await owner.start(**options)))
     async def stop(req):
-        if await read_json(req)!={}:raise ValueError('Stop does not accept options')
+        if await read_json(req)!={}:raise PublicRequestError('Stop does not accept options')
         await owner.stop()
         return web.json_response(owner.status())
     async def import_references(req):
-        if owner.spec_factory().get('two_source_qualification'):raise ValueError('Reference imports excluded from this frozen prediction-only attempt')
+        if owner.spec_factory().get('two_source_qualification'):raise PublicRequestError('Reference imports excluded from this frozen prediction-only attempt')
         from app.reference.product import emit_references
-        if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained references')
+        if not owner.active() or not getattr(owner.session,'projection',None):raise PublicRequestError('Start a product session before importing retained references')
         refs=await read_json(req)
         emit_references(owner.session,refs)
         await owner.session.queue.join()
         return web.json_response(dict(imported=len(refs),session=owner.session.sid))
     async def import_resolutions(req):
-        if owner.spec_factory().get('two_source_qualification'):raise ValueError('Result imports excluded from this frozen prediction-only attempt')
+        if owner.spec_factory().get('two_source_qualification'):raise PublicRequestError('Result imports excluded from this frozen prediction-only attempt')
         from app.resolution.core import emit_records
-        if not owner.active() or not getattr(owner.session,'projection',None):raise ValueError('Start a product session before importing retained resolution evidence')
+        if not owner.active() or not getattr(owner.session,'projection',None):raise PublicRequestError('Start a product session before importing retained resolution evidence')
         records=await read_json(req);emit_records(owner.session,records)
         await owner.session.queue.join()
         return web.json_response(dict(imported=len(records),session=owner.session.sid))
     async def resolution(req):
-        from app.dashboard import session_history
         from app.resolution.core import resolve
         q=req.query
         sid,gid=q['session'].split('~',1);d=datasets(sid,catalog_all=False)[sid]
-        if q['hash']!=sid or 'product' not in d:raise ValueError('Unbound prediction snapshot')
+        if q['hash']!=sid or 'product' not in d:raise PublicRequestError('Unbound prediction snapshot')
         snap=product_cutoff(sid,d,q['cutoff'])
         game=selected_game(snap['games'],gid)
         if (game['product_identity'].get('competition'),game['product_identity'].get('season')) not in (('NFL','2026'),('NBA','2026-2027'),('NCAAF','2026'),('NCAAB','2026-2027'),('MLB','2026'),('NHL','2026-2027')):return web.json_response(dict(options=[],unsupported='Resolution mapping unavailable for this competition/season'))
@@ -174,9 +177,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         result=dict(options=options,unavailable_sessions=unavailable,limitation='Choose a saved resolution cutoff. Original prediction calculations stay frozen.')
         requested=[q.get(k) for k in ('resolution_session','resolution_cutoff','resolution_asof')]
         if any(requested):
-            if not all(requested):raise ValueError('Explicit resolution session, cutoff and as-of required')
+            if not all(requested):raise PublicRequestError('Explicit resolution session, cutoff and as-of required')
             rsid,rcut,asof=requested
-            if not any(o['session']==rsid and o['cutoff']==rcut for o in options):raise ValueError('Unknown bound resolution selection')
+            if not any(o['session']==rsid and o['cutoff']==rcut for o in options):raise PublicRequestError('Unknown bound resolution selection')
             cursor=int(rcut.split('-',1)[0])
             records=[v for v in histories[rsid]['records'] if v['cursor']<=cursor]
             result['view']=resolve(records,snap,game,asof,q)
@@ -207,10 +210,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.json_response(items)
     async def calculation(req):
         q=req.query;sid,gid=q['session'].split('~',1);d=datasets(sid,catalog_all=False)[sid];g=next((g for g in d['games'] if g['id']==gid),None)
-        if g is None and 'product' not in d:raise ValueError('Unknown game')
-        if q['hash']!=sid:raise ValueError('session identity mismatch')
+        if g is None and 'product' not in d:raise PublicRequestError('Unknown game')
+        if q['hash']!=sid:raise PublicRequestError('session identity mismatch')
         if 'product' in d:
-            from app.dashboard import session_history,product_view
+            from app.dashboard import product_view
             snapshot=product_cutoff(sid,d,q['cutoff'])
             g=selected_game(snapshot['games'],gid)
             from app.dashboard.price_comparison import comparisons
@@ -225,7 +228,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
                 if q.get('public_binding_version'):
                     from app.collection.public_contracts import VERSION,details
                     from app.dashboard.decision_support import explanation
-                    if q['public_binding_version']!=VERSION:raise ValueError('Unknown public contract version')
+                    if q['public_binding_version']!=VERSION:raise PublicRequestError('Unknown public contract version')
                     payload['public_contracts']=details(g,snapshot)
                     for row in rows:
                         row['public_contracts']=payload['public_contracts']
@@ -242,7 +245,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             r['ev_decision']=explanation(dict(legs=[r['ev']['leg']],profit=r['ev']['expected_profit'],probability=r['ev']['probability']))
             return web.json_response(r)
         timeline,rows=project_game(d['rows'],g);point=next((p for p in timeline if p['id']==q['cutoff']),None)
-        if point is None:raise ValueError('Unknown cutoff')
+        if point is None:raise PublicRequestError('Unknown cutoff')
         r=present(game_calculation(point,rows,g,q.get('quantity','100'),q.get('scenario','cent'),q.get('probability') or None,q.get('contract')))
         r.update(session=q['session'],hash=sid,live=False)
         r['page_estimate']=for_saved_game(sid,g,q.get('quantity','100'),q.get('scenario','cent'),live=d['live'])
@@ -318,9 +321,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from app.dashboard.session_history import project_rows
         validate_http_query(req.query);q=dict(req.query)
         paths=owner.history_paths();sid=q.get('capture')
-        if not sid or sid not in paths:raise ValueError('Choose a retained interrupted session')
+        if not sid or sid not in paths:raise PublicRequestError('Choose a retained interrupted session')
         folder=paths[sid]
-        if (folder/'manifest.json').exists():raise ValueError('Completed sessions use ordinary history')
+        if (folder/'manifest.json').exists():raise PublicRequestError('Completed sessions use ordinary history')
         report,saved=inspect(folder/(sid+'.jsonl'))
         snapshot=project_rows(saved['rows']);snapshot.update(state='incomplete',view_mode='saved')
         value=dict(recovery=report,snapshot=snapshot,collection_authorized=False)
@@ -349,37 +352,37 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from app.dashboard.decision_support import size_report
         options=await read_json(req)
         if not isinstance(options,dict) or set(options)-{'session','hash','cutoff','sizes','ceiling','scenario','contract','probability','reference'}:
-            raise ValueError('Unknown size control')
+            raise PublicRequestError('Unknown size control')
         validate_http_query(options)
         sid,gid=options['session'].split('~',1)
-        if options['hash']!=sid:raise ValueError('Unbound size snapshot')
+        if options['hash']!=sid:raise PublicRequestError('Unbound size snapshot')
         d=datasets(sid,catalog_all=False)[sid]
-        if 'product' not in d:raise ValueError('Size exploration requires a product journal; original legacy output remains available')
+        if 'product' not in d:raise PublicRequestError('Size exploration requires a product journal; original legacy output remains available')
         snapshot=product_cutoff(sid,d,options['cutoff'])
         game=selected_game(snapshot['games'],gid)
         if game.get('manual_raw'):
             from app.collection.v1_comparison import size_report as manual_sizes
             return web.json_response(manual_sizes(snapshot,game,options))
-        if game.get('aggregated'):raise ValueError('Aggregate quantity, execution and fees unknown; contract sizing unavailable')
+        if game.get('aggregated'):raise PublicRequestError('Aggregate quantity, execution and fees unknown; contract sizing unavailable')
         return web.json_response(size_report(snapshot,game,options))
     math_downloads={}
     async def math_download(req):
         value=math_downloads.get(req.query.get("sha256"))
-        if value is None:raise ValueError("Reopen or recalculate the scenario before downloading")
+        if value is None:raise PublicRequestError("Reopen or recalculate the scenario before downloading")
         return web.json_response(value,headers={"Content-Disposition":"attachment; filename=predict-math-1.json"})
     async def math_scenario(req):
         from app.dashboard.math_scenarios import evaluate, replay
         options=await read_json(req)
-        if not isinstance(options,dict):raise ValueError('Scenario object required')
+        if not isinstance(options,dict):raise PublicRequestError('Scenario object required')
         if 'replay' in options:
             result=replay(options['replay'])
             math_downloads[result['sha256']]=result
             while len(math_downloads)>32:math_downloads.pop(next(iter(math_downloads)))
             return web.json_response(result)
         sid,gid=options['session'].split('~',1)
-        if options['hash']!=sid:raise ValueError('Unbound scenario snapshot')
+        if options['hash']!=sid:raise PublicRequestError('Unbound scenario snapshot')
         d=datasets(sid,catalog_all=False)[sid]
-        if 'product' not in d:raise ValueError('Product journal required')
+        if 'product' not in d:raise PublicRequestError('Product journal required')
         snapshot=product_cutoff(sid,d,options['cutoff'])
         game=selected_game(snapshot['games'],gid)
         result=evaluate(snapshot,game,options)
@@ -392,14 +395,14 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from app.dashboard.opportunity_history import build_history
         sid=req.query.get('capture')
         paths=owner.history_paths() if hasattr(owner,'history_paths') else {}
-        if sid not in paths:raise ValueError('Choose a retained product session')
+        if sid not in paths:raise PublicRequestError('Choose a retained product session')
         if owner.active() and owner.session and owner.session.sid==sid:
-            raise ValueError('Stop the session before rebuilding its historical summary')
+            raise PublicRequestError('Stop the session before rebuilding its historical summary')
         if history_busy:raise web.HTTPTooManyRequests(text='A history report is already being built')
         values=watches.read()
-        if not values:raise ValueError('Save an explicit watch threshold before building history')
+        if not values:raise PublicRequestError('Save an explicit watch threshold before building history')
         if req.query.get('watch_ids') and req.query['watch_ids']!=json.dumps([w['id'] for w in values],separators=(',',':')):
-            raise ValueError('Watchlists changed; rebuild the report before downloading')
+            raise PublicRequestError('Watchlists changed; rebuild the report before downloading')
         from app.dashboard.opportunity_history import retained_history_key
         cache_key=await asyncio.to_thread(retained_history_key,paths[sid],values)
         if cache_key in history_reports:
@@ -429,7 +432,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def native_review_download(req):
         from app.dashboard.session_projection import stable
         sid=req.query.get('capture');d=datasets(sid,catalog_all=False).get(sid)
-        if not d or 'product' not in d:raise ValueError('Choose a retained native product session')
+        if not d or 'product' not in d:raise PublicRequestError('Choose a retained native product session')
         snapshot=product_cutoff(sid,d,req.query.get('cutoff') or d['product']['durable_cursor'])
         payload=dict(session_id=sid,cutoff=snapshot['durable_cursor'],historical=True,review=snapshot.get('native_comparison_review'),collection_authorized=False)
         payload['sha256']=stable(payload)
@@ -441,14 +444,14 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         if (set(q)-{'capture','cutoff','download'} or
                 any(len(q.getall(k))!=1 for k in q) or
                 q.get('download','false') not in ('true','false')):
-            raise ValueError('Unknown source binding controls')
+            raise PublicRequestError('Unknown source binding controls')
         sid=q.get('capture')
         if q.get('cutoff') and not sid:
-            raise ValueError('A source binding cutoff requires its saved session')
+            raise PublicRequestError('A source binding cutoff requires its saved session')
         if sid:
             d=datasets(sid,catalog_all=False).get(sid)
             if not d or 'product' not in d:
-                raise ValueError('Choose a retained product session')
+                raise PublicRequestError('Choose a retained product session')
             snapshot=product_cutoff(sid,d,q.get('cutoff') or d['product']['durable_cursor'])
             payload=ledger_for_snapshot(snapshot)
         else:
@@ -462,17 +465,17 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from app.dashboard.session_projection import stable
         q=req.query
         if set(q)-{'capture','cutoff','game','download'} or any(len(q.getall(k))!=1 for k in q):
-            raise ValueError('Unknown public contract controls')
-        if q.get('download','false') not in ('true','false'):raise ValueError('Unknown download control')
+            raise PublicRequestError('Unknown public contract controls')
+        if q.get('download','false') not in ('true','false'):raise PublicRequestError('Unknown download control')
         if q.get('capture'):
             sid=q['capture'];d=datasets(sid,catalog_all=False).get(sid)
             if not d or 'product' not in d or not q.get('cutoff') or not q.get('game'):
-                raise ValueError('Exact retained capture, cutoff and game required')
+                raise PublicRequestError('Exact retained capture, cutoff and game required')
             snapshot=product_cutoff(sid,d,q['cutoff'])
             game=selected_game(snapshot['games'],q['game'])
             payload=dict(version=VERSION,session_id=sid,cutoff=snapshot['durable_cursor'],game_id=game['id'],
                 details=details(game,snapshot),historical=True,live=False,collection_authorized=False)
-        elif q.get('cutoff') or q.get('game'):raise ValueError('Unbound public contract selection')
+        elif q.get('cutoff') or q.get('game'):raise PublicRequestError('Unbound public contract selection')
         else:
             payload=load()
             payload['registry_sha256']=payload.pop('sha256')
@@ -552,6 +555,53 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.json_response(value)
     app.router.add_get('/arbs',arbs_page)
     app.router.add_get('/api/arbs',arbs_data)
+    async def comparison_data(req):
+        from .current_state import CURRENT_KEY
+        from .current_contract import stamp, packed
+        from app.comparison.metrics import snapshot_metrics
+        from app.comparison.current_metrics import apply_group_metrics
+        allowed={'view','venue','league','market','basis','results','search','ceiling'}
+        if set(req.query)-allowed:raise PublicRequestError('Unsupported comparison filter')
+        if req.query.get('view','ev') not in ('ev','arbs','odds'):raise PublicRequestError('Unsupported comparison view')
+        store=app[CURRENT_KEY];store.refresh_age();state=store._state
+        if 'ceiling' in req.query:
+            from fractions import Fraction
+            from copy import deepcopy
+            from .u0_display import bounded_decimal
+            ceiling=req.query['ceiling'];bounded_decimal(ceiling)
+            if not 0<Fraction(ceiling)<=100000:raise PublicRequestError('Comparison ceiling outside bounds')
+            state=deepcopy(state)
+            for event in state['events']:
+                for group in event['groups']:
+                    apply_group_metrics(group,state.get('comparison_profiles',{}),
+                        stamp(state['clock_at']),ceiling=ceiling,event=event)
+        return web.Response(body=packed(snapshot_metrics(state,venue=req.query.get('venue') or None,
+            league=req.query.get('league') or None,market=req.query.get('market') or None,
+            basis=req.query.get('basis') or None,results=req.query.get('results','all'),search=req.query.get('search','')[:200])),content_type='application/json')
+    async def comparison_coverage(req):
+        from .current_state import CURRENT_KEY
+        from app.comparison.coverage import CoverageLedger,current_rows
+        if set(req.query)-{'league','venue','market'}:raise PublicRequestError('Unsupported coverage filter')
+        store=app[CURRENT_KEY];store.refresh_age()
+        ledger=getattr(store.provider,'coverage',None) or CoverageLedger({})
+        market=req.query.get('market');family={'winner':'moneyline','spread':'spread','total':'total'}.get(market)
+        if market and family is None:raise PublicRequestError('Unsupported coverage market')
+        value=ledger.snapshot(current_rows(store.index(store._state)),
+            sports=[req.query['league']] if req.query.get('league') else None,
+            venues=[req.query['venue']] if req.query.get('venue') else None,
+            families=[family] if family else None,
+            exclusions=getattr(getattr(store.provider,'sink',None),'exclusions',()))
+        value.update(runtime_id=store._state['runtime_id'],state_revision=store._state['state_revision'],
+            clock_at=store._state['clock_at'],mode=store._state['mode'],acquisition_requests=0)
+        return web.json_response(value)
+    async def ev_page(req):return web.FileResponse(static_root/'opportunity_static/current/ev.html')
+    async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
+    app.router.add_get('/api/comparison',comparison_data)
+    app.router.add_get('/api/coverage',comparison_coverage)
+    app.router.add_get('/ev',ev_page)
+    # The retained session coverage page has its own reader at /coverage;
+    # current comparison coverage is explicitly namespaced.
+    app.router.add_get('/current/coverage',comparison_coverage_page)
     app.router.add_get('/admin/retained',retained_page)
     from .current_state import mount as mount_current
     mount_current(app,current_provider)
@@ -562,11 +612,12 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             status=getattr(provider,'status',None)
             return web.json_response(status() if status else dict(state='unavailable',reason='No native current service configured'))
         body=await read_json(req)
+        if not isinstance(body,dict):raise PublicRequestError('Exact native admin control object required')
         if body==dict(action='stop'):
             await provider.close()
         elif set(body) in ({'action','sports','request_id'},{'action','sports','request_id','reference'}) and body['action']=='refresh' and hasattr(provider,'refresh_aggregate'):
             try:
-                if 'reference' in body and type(body['reference']) is not bool:raise ValueError('Explicit reference flag required')
+                if 'reference' in body and type(body['reference']) is not bool:raise PublicRequestError('Explicit reference flag required')
                 await provider.refresh_aggregate(body['sports'],body['request_id'],reference=body.get('reference',False))
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
@@ -575,7 +626,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             try:await provider.recover(body['runtime_id'],body['candidate_digest'])
             except SelectionError as exc:
                 return web.json_response(exc.body,status=exc.status)
-        else:raise ValueError('Exact native admin control required')
+        else:raise PublicRequestError('Exact native admin control required')
         return web.json_response(provider.status())
     async def historical_issue(req):
         return web.FileResponse(static_root/'current-u4-issue.json')
@@ -586,6 +637,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def current_asset(req):
         name=req.match_info['name']
         allowed={'arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        for filename in ('comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js'):
+            allowed[filename]=static_root/'opportunity_static/current'/filename
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])
     app.router.add_get('/current/assets/{name}',current_asset)
@@ -594,8 +647,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def shared(req):return web.FileResponse(static_root/'e5_static/state.js')
     app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
     app.router.add_static('/view/',static_root/'opportunity_static')
-    from app.dashboard.u0_preview import mount as mount_design_preview
-    mount_design_preview(app)
     async def cleanup(app):
         await resolution_cache.close()
         await owner.close()

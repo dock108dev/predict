@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "version": "comparison-r06-policy-vectors-1",
+  "evidence_class": "independent_authored_arithmetic_and_policy_boundaries",
+  "cashflow_vectors": [
+    {
+      "id": "cost-0",
+      "entry_usd": "50",
+      "gross_return_usd": "55",
+      "extra_consumed_cost_usd": "0",
+      "fixed_comparison_deployment_usd": "50",
+      "profit_usd": "5",
+      "roi_fixed_sensitivity_basis": "0.1"
+    },
+    {
+      "id": "cost-.5",
+      "entry_usd": "50",
+      "gross_return_usd": "55",
+      "extra_consumed_cost_usd": ".5",
+      "fixed_comparison_deployment_usd": "50",
+      "profit_usd": "4.5",
+      "roi_fixed_sensitivity_basis": "0.09"
+    },
+    {
+      "id": "cost-1",
+      "entry_usd": "50",
+      "gross_return_usd": "55",
+      "extra_consumed_cost_usd": "1",
+      "fixed_comparison_deployment_usd": "50",
+      "profit_usd": "4",
+      "roi_fixed_sensitivity_basis": "0.08"
+    },
+    {
+      "id": "cost-6",
+      "entry_usd": "50",
+      "gross_return_usd": "55",
+      "extra_consumed_cost_usd": "6",
+      "fixed_comparison_deployment_usd": "50",
+      "profit_usd": "-1",
+      "roi_fixed_sensitivity_basis": "-0.02"
+    },
+    {
+      "id": "hold-returned",
+      "entry_acquisition_usd": "50",
+      "prefunded_refundable_hold_usd": "10",
+      "outcome_returned_payout_plus_hold_usd": "65",
+      "capital_usd": "60",
+      "profit_usd": "5",
+      "roi": "0.08333333333333333333333333333"
+    },
+    {
+      "id": "hold-two-consumed",
+      "entry_acquisition_usd": "50",
+      "prefunded_refundable_hold_usd": "10",
+      "outcome_returned_payout_plus_hold_usd": "63",
+      "capital_usd": "60",
+      "profit_usd": "3",
+      "roi": "0.05"
+    }
+  ],
+  "age_vectors": [
+    {
+      "phase": "pregame",
+      "source_age_seconds": 899,
+      "admit": true
+    },
+    {
+      "phase": "pregame",
+      "source_age_seconds": 900,
+      "admit": true
+    },
+    {
+      "phase": "pregame",
+      "source_age_seconds": 901,
+      "admit": false
+    },
+    {
+      "phase": "live",
+      "source_age_seconds": 15,
+      "admit": true
+    },
+    {
+      "phase": "live",
+      "source_age_seconds": 16,
+      "admit": false
+    },
+    {
+      "phase": "pregame",
+      "source_age_seconds": null,
+      "admit": false
+    },
+    {
+      "phase": "pregame",
+      "source_age_seconds": -1,
+      "admit": false
+    }
+  ],
+  "depth_vectors": [
+    {
+      "target_risk_ceiling_usd": "100",
+      "depth": "absent",
+      "depth_qualified": false,
+      "fee_scenario_allowed": "only_if_units_and_applicability_complete"
+    },
+    {
+      "target_quantity": "100",
+      "available_quantity": "80",
+      "target_size_admit": false,
+      "details_supported_size": "80_separate_basis"
+    }
+  ],
+  "quantity_grid_vector": {
+    "ceiling_usd": "100",
+    "actual_deployed_usd": "44",
+    "idle_usd": "56",
+    "profit_usd": "4.4",
+    "roi": "0.1",
+    "invalid_face_or_ceiling_denominator_roi": "0.044"
+  },
+  "negative_denominator_counterexample": {
+    "base_profit_usd": "-10",
+    "base_denominator_usd": "100",
+    "base_roi": "-0.10",
+    "stress_profit_usd": "-11",
+    "stress_denominator_usd": "120",
+    "stress_roi": "-0.09166666666666666666666666667",
+    "fixed_base_basis_stress_roi": "-0.11",
+    "accept_as_improvement": false
+  }
+}

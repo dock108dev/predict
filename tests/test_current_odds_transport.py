@@ -1,5 +1,7 @@
 """Controlled HTTP wire limits/redaction; no DNS, credential or provider I/O."""
 import unittest
+import asyncio
+from multidict import CIMultiDict
 from unittest.mock import patch
 from app.collection.current_aggregate import CurrentOddsTransport
 from app.collection.current_quota import QuotaStop
@@ -41,3 +43,17 @@ class WireSafety(unittest.IsolatedAsyncioTestCase):
     async def test_body_and_compression_bounds(self):
         with self.assertRaisesRegex(QuotaStop,'byte_cap'):await self.wire(Response(body=b'x'*(2*1024*1024+1)))
         with self.assertRaisesRegex(QuotaStop,'encoding'):await self.wire(Response(headers={'Content-Encoding':'gzip'}))
+
+    async def test_headers_survive_cancelled_body_and_duplicates_are_not_collapsed(self):
+        response=Response(headers=CIMultiDict([('X-Requests-Used','23'),('X-Requests-Remaining','477'),('X-Requests-Last','3'),('x-requests-last','3')]))
+        class CancelledContent:
+            async def iter_chunked(self,size):
+                raise asyncio.CancelledError()
+                yield b''
+        response.content=CancelledContent();transport=CurrentOddsTransport();client=Client(response)
+        with patch('app.collection.current_aggregate.aiohttp.ClientSession',return_value=client):
+            with self.assertRaises(asyncio.CancelledError):await transport.request(dict(path='/v4/sports',params={}), 'CONTROLLED-dummy-key')
+        self.assertEqual(transport.response_receipt['status'],200)
+        from app.collection.current_quota import headers,QuotaStop
+        with self.assertRaisesRegex(QuotaStop,'missing_duplicate'):headers(transport.response_receipt['headers'])
+        self.assertEqual(len(client.calls),1);await transport.close()

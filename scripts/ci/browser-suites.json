@@ -10,6 +10,7 @@
     "test_aggregate_ui.cjs",
     "test_board_security.cjs",
     "test_commercial_ui.cjs",
+    "test_comparison_ui.cjs",
     "test_concise_dashboard.cjs",
     "test_current_client.cjs",
     "test_dashboard_failures.cjs",

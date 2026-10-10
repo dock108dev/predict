@@ -1,0 +1,104 @@
+{
+  "version": "comparison-public-event-binding-1",
+  "event_id": "129629",
+  "market_id": "1083081",
+  "membership": true,
+  "market_pointer": "/events/0/markets/459",
+  "members": [
+    {
+      "native_key": [
+        "polymarket_us",
+        "129629",
+        "1083081",
+        "2165646",
+        "Long"
+      ],
+      "team_id": "73",
+      "participant_id": "NFL:PHI",
+      "name": "Philadelphia Eagles",
+      "role": "away",
+      "provider_ids": [
+        {
+          "provider": "PROVIDER_SPORTSDATAIO",
+          "providerId": "26"
+        },
+        {
+          "provider": "PROVIDER_SPORTRADAR",
+          "providerId": "386bdbf9-9eea-4869-bb9a-274b0bc66e80"
+        }
+      ],
+      "pointer": "/events/0/markets/459/marketSides/0"
+    },
+    {
+      "native_key": [
+        "polymarket_us",
+        "129629",
+        "1083081",
+        "2165647",
+        "Short"
+      ],
+      "team_id": "62",
+      "participant_id": "NFL:JAX",
+      "name": "Jacksonville Jaguars",
+      "role": "home",
+      "provider_ids": [
+        {
+          "provider": "PROVIDER_SPORTSDATAIO",
+          "providerId": "15"
+        },
+        {
+          "provider": "PROVIDER_SPORTRADAR",
+          "providerId": "f7ddd7fa-0bae-4f90-bc8e-669e4d6cf2de"
+        }
+      ],
+      "pointer": "/events/0/markets/459/marketSides/1"
+    }
+  ],
+  "participant_roles": {
+    "away": "NFL:PHI",
+    "home": "NFL:JAX"
+  },
+  "occurrence": {
+    "game_id": "19518",
+    "provider": "sportradar",
+    "provider_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+    "scheduled_start": "2026-10-11T13:30:00Z",
+    "rescheduled_from_game_id": null,
+    "replacement_field_present": false,
+    "original_start_time": null,
+    "period": "NS",
+    "active": true,
+    "closed": false,
+    "source_local_qualified": true,
+    "cross_source_qualified": false,
+    "reason": "public_event_source_local_occurrence_observed"
+  },
+  "scope": {
+    "family": "moneyline",
+    "period": "full_game",
+    "line": null,
+    "sports_market_type": "football_team_full_game_winner",
+    "overtime": "included",
+    "selection_meaning": "selected_team_win",
+    "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+  },
+  "provenance": {
+    "response_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+    "decoded_sha256": "10cbef8e6527a22bfb5d854671473847ba2e618bebff78fbb55ca177b911369b",
+    "url": "https://gateway.polymarket.us/v1/events?id=129629&limit=1&includePopularPlayerProps=false",
+    "request_started_at": "2026-10-09T20:53:02.818579+00:00",
+    "headers_at": "2026-10-09T20:53:03.098399+00:00",
+    "response_finished_at": "2026-10-09T20:53:03.417821+00:00",
+    "wire_bytes": 3662490,
+    "decoded_bytes": 3662490,
+    "event_pointer": "/events/0",
+    "game_pointer": "/events/0/gameId",
+    "provider_game_pointer": "/events/0/sportradarGameId",
+    "schedule_pointer": "/events/0/startTime"
+  },
+  "effective_from": "2026-10-09T20:53:03.417821+00:00",
+  "effective_until": "2026-10-09T21:08:03.417821+00:00",
+  "interval_policy": "New evidence-only 900-second local metadata reuse interval; no old facet/crosswalk renewal",
+  "historical_quote_applicability": false,
+  "binding_version": "6814c7a6239e8829f556b9abc080567cc91858388a8fc8244b011476f4a24c5a"
+}

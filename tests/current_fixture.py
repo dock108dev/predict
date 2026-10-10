@@ -1,6 +1,6 @@
 """Explicit test-only injected provider. Ordinary launcher has no switch to this."""
 from copy import deepcopy
-from app.dashboard.u0_preview import sample_payload
+from tests.current_sample import sample_payload
 from app.dashboard.current_contract import identity, stamp, line, binding_context, VENUES
 from app.dashboard.current_state import CurrentStateProvider
 

@@ -19,6 +19,10 @@ class CurrentService:
 
     def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None):
         self.config = load() if config is None else validate(config)
+        from app.comparison.coverage import CoverageLedger
+        self.coverage = CoverageLedger({v: self.config['sports'] if v in ('kalshi','polymarket_us') else
+            aggregate_scope(self.config) if self.config['aggregate_enabled'] else []
+            for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}, self.config['families'])
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
@@ -227,6 +231,11 @@ class CurrentService:
         self.observation(venue,'book',dict(market_id=book['raw']['ref']['market_id'],sequence=book['sequence'],
             source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],projected_at=self.store._state['projected_at'],
             quotes=len(self.store.index(self.store._state))))
+        inventory=self.sink.reducer.inventory.get(venue,{})
+        for value in books:
+            parent=next((e for e in inventory.get('events',[]) if e['id']==value['raw']['ref']['event_id']),None)
+            if parent and parent.get('competition') in self.coverage.configured[venue]:
+                self.coverage.observe_book(parent['competition'],venue,received_at=value['raw']['received_at'],source_at=value['raw'].get('exchange_at'))
 
     async def watch(self):
         from .continuous import rss
@@ -248,6 +257,7 @@ class CurrentService:
         if venue in ('novig','prophetx'):venue='the_odds_api'
         if venue not in self.workers: raise ValueError('Source is not running')
         self.workers[venue].closed=True
+        if hasattr(self.workers[venue],'lifecycle'):self.workers[venue].lifecycle.revoke()
         self.tasks[venue].cancel()
         done,pending=await asyncio.wait({self.tasks[venue]},timeout=self.config['cleanup_seconds'])
         if pending:
@@ -289,7 +299,9 @@ class CurrentService:
             if self.closed or (self.cleanup_errors and not self.dispatch): return
             self.dispatch=False;self.closing=True
             # Revocation precedes task cancellation and client/socket cleanup.
-            for worker in self.workers.values(): worker.closed=True
+            for worker in self.workers.values():
+                worker.closed=True
+                if hasattr(worker,'lifecycle'):worker.lifecycle.revoke()
             current=asyncio.current_task()
             tasks=[t for t in self.tasks.values() if t is not current]
             if self.watchdog and self.watchdog is not current:tasks.append(self.watchdog)

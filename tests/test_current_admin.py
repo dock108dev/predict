@@ -29,7 +29,7 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         now=datetime.now(timezone.utc)
         self.window=dict(WINDOW,starts_at=now.replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat(),ends_at=(now.replace(day=28)+timedelta(days=4)).replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat())
         self.q=QuotaLedger(self.root/'quota')
-        self.service=CurrentService(directory=self.root/'authority',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker,
+        self.service=CurrentService(config=deepcopy(DEFAULT),directory=self.root/'authority',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker,
             aggregate_factory=lambda svc:IdleAggregate(svc,ledger=self.q,window_loader=lambda:self.window))
         self.store=CurrentStore(self.service)
         await self.service.start(self.store);await asyncio.sleep(0)

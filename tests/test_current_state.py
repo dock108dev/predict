@@ -85,7 +85,7 @@ class Routes(AioHTTPTestCase):
     def origin(self):return str(self.client.make_url('/')).rstrip('/')
     async def post(self,path,body):return await self.client.post(path,json=body,headers={'Origin':self.origin()})
     async def test_root_assets_admin_preview_and_current(self):
-        for p in ['/','/admin','/admin/retained','/preview/u0','/current/assets/board.js','/current/assets/board.css','/current/assets/current.js']:
+        for p in ['/','/admin','/admin/retained','/current/assets/board.js','/current/assets/board.css','/current/assets/current.js']:
             r=await self.client.get(p);self.assertEqual(r.status,200,p);self.assertIn('Content-Security-Policy',r.headers)
         html=await (await self.client.get('/')).text();self.assertIn('/current/assets/current.js',html)
         for word in ['Start scan','Refresh','saved-scan','preview-tools','duration']:self.assertNotIn(word,html)

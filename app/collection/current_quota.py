@@ -498,28 +498,64 @@ class QuotaLedger:
         path=Path(evidence_path)
         if not path.is_absolute() or path.is_symlink() or path.stat().st_size>8192:raise QuotaStop('usage_recovery_evidence_invalid')
         raw=path.read_bytes();e=json.loads(raw)
-        if e.get('schema')!='predict-usage-observation-1' or e.get('status')!=200 or e.get('endpoint_class')!='sports_bootstrap' or e.get('purpose')!='read_only_usage_recovery':raise QuotaStop('usage_recovery_evidence_invalid')
+        if e.get('schema') not in ('predict-usage-observation-1','predict-usage-observation-2') or e.get('status')!=200 or e.get('endpoint_class')!='sports_bootstrap' or e.get('purpose')!='read_only_usage_recovery':raise QuotaStop('usage_recovery_evidence_invalid')
         def recover(v,at):
             pending=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
             if len(pending)!=1 or pending[0]['id']!=aid:raise QuotaStop('ambiguous_dispatch_unresolved')
             a=pending[0];baseline=a.get('baseline');q=headers(e['headers'],v['ceiling'])
-            if (a['state']!='uncertain' or not baseline or v['pause'] or not v['window'] or a['window_id']!=v['window']['id']
+            # Paid recovery must bind the actual credential selection and reset
+            # evidence. Legacy observations remain usable only in legacy ledgers.
+            if v.get('account_id') and (e.get('schema')!='predict-usage-observation-2'
+                or e.get('account_id')!=v['account_id'] or not v['window']
+                or e.get('window_id')!=v['window']['id']
+                or e.get('window_evidence_sha256')!=v['window']['evidence_sha256']
+                or e.get('endpoint')!='https://api.the-odds-api.com/v4/sports'
+                or e.get('method')!='GET' or e.get('params')!={}
+                or e.get('credential_reference')!='.env' or e.get('credential_unchanged_since_snapshot') is not True
+                or e.get('retries')!=0 or e.get('documented_cost')!=0):
+                raise QuotaStop('usage_recovery_account_or_window_mismatch')
+            if any(stamp(t['at'])>=stamp(a['at']) for t in v.get('account_transitions',[])):
+                raise QuotaStop('usage_recovery_account_or_window_mismatch')
+            old_pause=v['pause']
+            receipt_pause=(old_pause=='quota_missing_duplicate_or_malformed'
+                and a.get('quota_failure')==old_pause and a.get('response_at') is not None)
+            if (a['state']!='uncertain' or not baseline or old_pause and not receipt_pause or not v['window'] or a['window_id']!=v['window']['id']
                 or not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at'])
+                or not stamp(v['window']['starts_at'])<=stamp(e['received_at'])<stamp(v['window']['ends_at'])
                 or not 0<=(stamp(at)-stamp(e['received_at'])).total_seconds()<=300
                 or (stamp(e['received_at'])-stamp(a['dispatch_at'])).total_seconds()<120
                 or q['last']!=0 or any(q[k]!=baseline[k] or q[k]!=v['observation'][k] for k in ('used','remaining'))):
                 raise QuotaStop('usage_recovery_not_uncharged')
             a.update(state='confirmed',charged=0,reconciled_at=at,
-                recovery=dict(kind='unchanged_provider_usage_after_expired_dispatch',evidence=str(path),sha256=sha256(raw).hexdigest(),received_at=e['received_at'],headers=e['headers']))
+                recovery=dict(kind='unchanged_provider_usage_after_expired_dispatch',evidence=str(path),sha256=sha256(raw).hexdigest(),received_at=e['received_at'],headers=e['headers'],
+                    account_id=v.get('account_id'),window_id=a['window_id'],old_pause=old_pause,
+                    observation_id=e.get('id'),basis='Unchanged same-account/reset counters after expired dispatch; original response headers remain unchanged'))
             v['observation']=dict(q,at=e['received_at'],attempt_id=aid)
+            if receipt_pause:v['pause']=None
         self.transact(recover)
+
+    def record_response(self, aid, receipt, *, interruption=None):
+        """Persist sanitized response identity independently of optional capture."""
+        safe=None
+        if receipt is not None:
+            if type(receipt['status']) is not int or not 100<=receipt['status']<=599:raise QuotaStop('response_identity_invalid')
+            stamp(receipt['received_at'])
+            safe=dict(status=receipt['status'],received_at=receipt['received_at'],headers=[
+                [k.lower(),val if isinstance(val,str) and re.fullmatch(r'[0-9]{1,12}',val) else 'invalid']
+                for k,val in receipt['headers'] if k.lower() in ('x-requests-used','x-requests-remaining','x-requests-last')])
+        def record(v,at):
+            a=v['attempts'][aid]
+            if a['state'] not in ('uncertain','confirmed'):raise QuotaStop('response_without_dispatch')
+            a['response_receipt']=deepcopy(safe)
+            if interruption:a['interruption']=interruption
+        self.transact(record)
 
     def reconcile(self, aid, items):
         def reconcile(v,at):
             a=v['attempts'][aid]
             if a['state']=='confirmed': return # Duplicate response is a no-op.
             if a['state']!='uncertain': raise QuotaStop('response_without_dispatch')
-            a['quota_headers']=[[k,val] for k,val in items if k in ('x-requests-used','x-requests-remaining','x-requests-last') and isinstance(val,str) and len(val)<=12 and val.isdigit()]
+            a['quota_headers']=[[k.lower(),val if isinstance(val,str) and re.fullmatch(r'[0-9]{1,12}',val) else 'invalid'] for k,val in items if k.lower() in ('x-requests-used','x-requests-remaining','x-requests-last')]
             try:
                 q=headers(items,v['ceiling'])
                 previous=v['observation']

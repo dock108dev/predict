@@ -193,7 +193,16 @@ def _calculate(c, registry):
         elif unit!='contracts': raise ValueError('unknown quantity convention; no automatic native conversion')
         if venue=='polymarket_us' and not D('.01')<=p<=D('.99'):
             issues.append('PMUS documented price range .01 through .99'); return result
-        if venue=='polymarket_us' and c.get('public_binding_version')=='public-contract-bindings-1' and c.get('quantity_scale'):
+        if venue=='polymarket_us' and c.get('public_binding_version')=='comparison-public-retail-1':
+            grid=c.get('public_retail_quantity',{})
+            if (grid.get('market_id')!=c['market_id'] or
+                    grid.get('authority')!='public_orders_minimumTradeQty_alignment' or
+                    not isinstance(grid.get('response_sha256'),str) or len(grid['response_sha256'])!=64):
+                issues.append('US public retail selected quantity evidence required'); return result
+            minimum=number(grid['minimum_contracts']);increment=number(grid['increment_contracts']);tick=number(grid['price_tick_usd'])
+            if minimum<=ZERO or increment!=minimum or tick<=ZERO or q<minimum or q%increment or p%tick:
+                issues.append('US public retail quantity or price conflicts with selected decimal grid'); return result
+        elif venue=='polymarket_us' and c.get('public_binding_version')=='public-contract-bindings-1' and c.get('quantity_scale'):
             from app.fees.public_bindings import integer_scale
             scale=integer_scale(c['quantity_scale'])
             evidence=c.get('quantity_scale_evidence',{})

@@ -1,0 +1,89 @@
+{
+  "version": "predict-direct-win-1",
+  "event": {
+    "competition": "NFL",
+    "sport": "american_football",
+    "season": "2026",
+    "stage": "regular_season",
+    "game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+    "original_start": "2026-10-11T13:30:00Z",
+    "scheduled_start": "2026-10-11T13:30:00Z",
+    "schedule_status": "scheduled",
+    "home": "NFL:JAX",
+    "away": "NFL:PHI",
+    "participants": {
+      "Jacksonville Jaguars": "NFL:JAX",
+      "Philadelphia Eagles": "NFL:PHI"
+    },
+    "title": "Philadelphia Eagles at Jacksonville Jaguars"
+  },
+  "evidence": [
+    {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/comparison-occurrence-continuation-evidence/occurrence-review.json",
+      "sha256": "6b60f26bd5707c8b8fc02bb5e5923f7ad80b69b88145ab34d51c269af0310a9e",
+      "observed_at": "2026-10-09T21:55:06.130895+00:00"
+    }
+  ],
+  "original_start_evidence": [
+    {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/comparison-occurrence-continuation-evidence/official/jaguars-release.html",
+      "sha256": "1f9c5ddb787363305999f7f23d94579459b286c11d9f1e5414f81b5b0f61a28f",
+      "basis": "Original May14 schedule release examined now; prospective authority only"
+    }
+  ],
+  "schedule_status_evidence": [
+    {
+      "path": "/Users/michaelfuscoletti/Desktop/prediction-arb/docs/comparison-occurrence-continuation-evidence/official/jaguars-game.html",
+      "sha256": "e6a9f196329a612d8199d4cd24b3c837fa2265d26a735b5292f1da8daae663ab",
+      "basis": "Official upcoming Week5 page examined now; raw active/NS status is rechecked on every native catalog"
+    }
+  ],
+  "applicability": {
+    "start": "2026-10-09T21:55:06.130895+00:00",
+    "end": "2026-10-10T21:55:06.130895+00:00"
+  },
+  "prospective_only": true,
+  "sources": {
+    "polymarket_us": {
+      "event_id": "129629",
+      "game_id": "19518",
+      "shared_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+      "markets": {
+        "1083081": {
+          "material": {
+            "id": "1083081",
+            "sportsMarketType": "football_team_full_game_winner",
+            "description": "This market will settle to the winner of the Philadelphia Eagles vs Jacksonville Jaguars NFL game scheduled for Oct 11, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+            "gameStartTime": "2026-10-11T13:30:00Z",
+            "marketSides": [
+              {
+                "id": "2165646",
+                "marketId": "1083081",
+                "long": true,
+                "team_id": "73",
+                "team_name": "Philadelphia Eagles"
+              },
+              {
+                "id": "2165647",
+                "marketId": "1083081",
+                "long": false,
+                "team_id": "62",
+                "team_name": "Jacksonville Jaguars"
+              }
+            ]
+          },
+          "material_sha256": "467bfee9a3918f7ee55a4cd4c492012c1a509890d291823d4fe3d81825e1603d",
+          "outcomes": {
+            "2165646": {
+              "participant": "NFL:PHI",
+              "predicate": "win"
+            }
+          },
+          "rule_note": "Reviewed prospective full-game win only, including overtime. Pinnacle two-way tie is void; native tie pays 0.50. Postponement/suspension/fair-price rules differ; tie and exceptional probability mass remain unknown. Original Short remains its separately recorded contract; no opponent YES correspondence is inferred.",
+          "short_policy": "Preserve the separately recorded Short contract; no direct opponent YES correspondence reviewed."
+        }
+      }
+    }
+  },
+  "sha256": "40042574dad76e3474a67186c8bc90793fe2a547adaedf470df4812f14c5ec06"
+}

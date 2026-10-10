@@ -1,0 +1,683 @@
+{
+  "version": "comparison-payout-fixtures-1",
+  "evidence_class": "dated_retained_native_plus_authored",
+  "evaluation_at": "2026-10-08T12:00:00Z",
+  "profile_rows": [
+    {
+      "selection_id": "Dallas YES",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas YES",
+        "version": "payout-profile-1",
+        "rule_revision": "retained-rules-20261006",
+        "native_key": [
+          "kalshi",
+          "KXNFLGAME-26OCT08TBDAL",
+          "KXNFLGAME-26OCT08TBDAL-DAL",
+          "KXNFLGAME-26OCT08TBDAL-DAL",
+          "yes"
+        ],
+        "selection_sha256": "0ba3a09a671cf2d8022d83c063be0414f1a0e86fae15816c8921f430ae43fbce",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "retained:current-buccaneers-cowboys-20261006:kalshi-DAL",
+            "sha256": "f762d482100d2c7f558636e543bf74763c2809032a7b251927620f0521095953",
+            "evidence_class": "retained"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "evidenced",
+          "reason": null
+        },
+        "equal": {
+          "value": "1/2",
+          "status": "evidenced",
+          "reason": null
+        },
+        "above": {
+          "value": "1",
+          "status": "evidenced",
+          "reason": null
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "starts_within_hours",
+          "maximum": "48",
+          "original_start": "2026-10-09T00:15:00Z",
+          "original_scheduled_date": "2026-10-08",
+          "date_timezone": "America/New_York"
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas NO",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas NO",
+        "version": "payout-profile-1",
+        "rule_revision": "retained-rules-20261006",
+        "native_key": [
+          "kalshi",
+          "KXNFLGAME-26OCT08TBDAL",
+          "KXNFLGAME-26OCT08TBDAL-DAL",
+          "KXNFLGAME-26OCT08TBDAL-DAL",
+          "no"
+        ],
+        "selection_sha256": "b91a7857adb361805097ad6e836e205c9ea58c01c104610baf72c2970334dd75",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "retained:current-buccaneers-cowboys-20261006:kalshi-DAL",
+            "sha256": "f762d482100d2c7f558636e543bf74763c2809032a7b251927620f0521095953",
+            "evidence_class": "retained"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "1",
+          "status": "evidenced",
+          "reason": null
+        },
+        "equal": {
+          "value": "1/2",
+          "status": "evidenced",
+          "reason": null
+        },
+        "above": {
+          "value": "0",
+          "status": "evidenced",
+          "reason": null
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "starts_within_hours",
+          "maximum": "48",
+          "original_start": "2026-10-09T00:15:00Z",
+          "original_scheduled_date": "2026-10-08",
+          "date_timezone": "America/New_York"
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas moneyline",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas moneyline",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "novig",
+          "authored:novig:game",
+          "Dallas moneyline",
+          "Dallas moneyline",
+          "Dallas"
+        ],
+        "selection_sha256": "0ba3a09a671cf2d8022d83c063be0414f1a0e86fae15816c8921f430ae43fbce",
+        "payout_unit": "usd_per_usd_stake",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "unknown",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "above": {
+          "value": "2",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Tampa Bay LONG",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Tampa Bay LONG",
+        "version": "payout-profile-1",
+        "rule_revision": "retained-rules-20261006",
+        "native_key": [
+          "polymarket_us",
+          "124724",
+          "1030131",
+          "1030131",
+          "2059746"
+        ],
+        "selection_sha256": "9a8f440719fea4bb10d129f846ee16cfa41f32f1351ac9d14d510684440a6fa9",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "retained:current-buccaneers-cowboys-20261006:us-1030131",
+            "sha256": "c36d99f3ab8952f499c42c7d569f6167020606fa093cd4214f9e5f05bb3377ce",
+            "evidence_class": "retained"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "1",
+          "status": "evidenced",
+          "reason": null
+        },
+        "equal": {
+          "value": "1/2",
+          "status": "evidenced",
+          "reason": null
+        },
+        "above": {
+          "value": "0",
+          "status": "evidenced",
+          "reason": null
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "rescheduled_within_days",
+          "maximum": "14",
+          "original_start": "2026-10-09T00:15:00Z",
+          "original_scheduled_date": "2026-10-08",
+          "date_timezone": "America/New_York"
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas -8.50",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas -8.50",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "kalshi",
+          "authored:kalshi:game",
+          "Dallas -8.50",
+          "Dallas -8.50",
+          "yes"
+        ],
+        "selection_sha256": "75af46c2e32e4eb64352807bc4e6cfcb67538381a3768e6abbfc88a32ad38938",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Equality infeasible in integer scores"
+        },
+        "above": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Tampa Bay +8.5",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Tampa Bay +8.5",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "kalshi",
+          "authored:kalshi:game",
+          "Tampa Bay +8.5",
+          "Tampa Bay +8.5",
+          "yes"
+        ],
+        "selection_sha256": "15f95828136f27f12acb533153d5fdab50704341e126fc4e6d45f4853da78cf2",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Equality infeasible in integer scores"
+        },
+        "above": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas -8",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas -8",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "prophetx",
+          "authored:prophetx:game",
+          "Dallas -8",
+          "Dallas -8",
+          "yes"
+        ],
+        "selection_sha256": "31c4e5b6f1a82a35813924e71dd1a9abd318609439e5e05d3f4a051be98d0de1",
+        "payout_unit": "usd_per_usd_stake",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "unknown",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "above": {
+          "value": "21/11",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Combined over 20.5",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Combined over 20.5",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "kalshi",
+          "authored:kalshi:game",
+          "Combined over 20.5",
+          "Combined over 20.5",
+          "yes"
+        ],
+        "selection_sha256": "db73aec0e3b666a5272f3614216b8e295dba3d9981631d183f21d91bde6a01a0",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Equality infeasible in integer scores"
+        },
+        "above": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas team over 20.5",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas team over 20.5",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "kalshi",
+          "authored:kalshi:game",
+          "Dallas team over 20.5",
+          "Dallas team over 20.5",
+          "yes"
+        ],
+        "selection_sha256": "da917db9af81245e05a7a7f43d36bc8d9471cb0bea9762e5bf1c1a3d8b550551",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Equality infeasible in integer scores"
+        },
+        "above": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas first-half win",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas first-half win",
+        "version": "payout-profile-1",
+        "rule_revision": "authored-rules-1",
+        "native_key": [
+          "kalshi",
+          "authored:kalshi:game",
+          "Dallas first-half win",
+          "Dallas first-half win",
+          "yes"
+        ],
+        "selection_sha256": "c64968be702c6b664b5581c8a51d9dc78c41a7621755303dcf0e5a90c7cc36a3",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "authored:comparison-domain-v1",
+            "sha256": "61f4568d921c550a85bb7e245d4c7fce4d5fb190e42a6dbcaf96894958354030",
+            "evidence_class": "authored"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "equal": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact equality rule not available"
+        },
+        "above": {
+          "value": "1",
+          "status": "estimated",
+          "reason": "Authored payout scenario; current instrument applicability unverified"
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "authored_completed_assumption",
+          "maximum": null,
+          "original_start": null,
+          "original_scheduled_date": null,
+          "date_timezone": null
+        }
+      }
+    },
+    {
+      "selection_id": "Dallas SHORT",
+      "profile": {
+        "schema_version": "comparison-payout-inputs-1",
+        "profile_id": "payout:Dallas SHORT",
+        "version": "payout-profile-1",
+        "rule_revision": "retained-rules-20261006",
+        "native_key": [
+          "polymarket_us",
+          "124724",
+          "1030131",
+          "1030131",
+          "2059747"
+        ],
+        "selection_sha256": "0ba3a09a671cf2d8022d83c063be0414f1a0e86fae15816c8921f430ae43fbce",
+        "payout_unit": "usd_per_contract",
+        "effective_from": "2026-10-08T03:10:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "source_evidence": [
+          {
+            "ref": "retained:current-buccaneers-cowboys-20261006:us-1030131",
+            "sha256": "c36d99f3ab8952f499c42c7d569f6167020606fa093cd4214f9e5f05bb3377ce",
+            "evidence_class": "retained"
+          }
+        ],
+        "refund_fees": "not_applicable",
+        "below": {
+          "value": "0",
+          "status": "evidenced",
+          "reason": null
+        },
+        "equal": {
+          "value": "1/2",
+          "status": "evidenced",
+          "reason": null
+        },
+        "above": {
+          "value": "1",
+          "status": "evidenced",
+          "reason": null
+        },
+        "noncompleted": {
+          "value": null,
+          "status": "unknown",
+          "reason": "Exact cancellation/abandonment/fair-value decision and fee return unavailable"
+        },
+        "normal_condition": {
+          "kind": "rescheduled_within_days",
+          "maximum": "14",
+          "original_start": "2026-10-09T00:15:00Z",
+          "original_scheduled_date": "2026-10-08",
+          "date_timezone": "America/New_York"
+        }
+      }
+    }
+  ],
+  "normal_winner_expected": {
+    "below": [
+      "0",
+      "1",
+      "0"
+    ],
+    "equal": [
+      "1/2",
+      "1/2",
+      "1"
+    ],
+    "above": [
+      "1",
+      "0",
+      "2"
+    ]
+  },
+  "normal_winner_legs": [
+    "Dallas YES",
+    "Tampa Bay LONG",
+    "Dallas moneyline"
+  ],
+  "terminal_partition": {
+    "completed": "Integer-score regions of the applicable final sporting result",
+    "noncompleted": "One terminal complement including overlapping cancellation/abandonment labels",
+    "pending_or_delay": "Nonterminal; no scenario probability bucket",
+    "correction": "One authoritative grade revision; not simultaneous old/new outcomes"
+  },
+  "limitations": [
+    "Per-contract and per-stake units remain explicit; no normalized portfolio/cost arithmetic is performed.",
+    "Native profiles apply only to dated retained pregame terms; authored profiles remain estimates.",
+    "No exceptional unknown is numeric zero, half, refund or invented probability."
+  ],
+  "ordinary_context": {
+    "started_at": "2026-10-09T00:15:00Z",
+    "rescheduled_date": "2026-10-08",
+    "date_timezone": "America/New_York",
+    "evidence": [
+      {
+        "ref": "authored:completion-context-ordinary",
+        "sha256": "b29e1605a102cc3d8b29a71c5f4a7074c4d2f5c2a9f6eeda4533ce2c64b4e1a5",
+        "evidence_class": "authored"
+      }
+    ]
+  },
+  "72_hour_context": {
+    "started_at": "2026-10-12T00:15:00Z",
+    "rescheduled_date": "2026-10-11",
+    "date_timezone": "America/New_York",
+    "evidence": [
+      {
+        "ref": "authored:72-hour-start-with-independent-rescheduled-date",
+        "sha256": "b29e1605a102cc3d8b29a71c5f4a7074c4d2f5c2a9f6eeda4533ce2c64b4e1a5",
+        "evidence_class": "authored"
+      }
+    ]
+  },
+  "72_hour_expected": {
+    "Dallas YES": {
+      "normal": "unknown_fair_price",
+      "DAL_win": null
+    },
+    "Dallas SHORT": {
+      "normal": "normal_result_applicable",
+      "DAL_win": "1"
+    },
+    "US_missing_rescheduled_date": {
+      "normal": "unknown_applicability",
+      "DAL_win": null
+    }
+  }
+}

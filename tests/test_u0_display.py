@@ -2,10 +2,9 @@
 import unittest
 from fractions import Fraction
 from decimal import Decimal
-from unittest.mock import patch
 from aiohttp.test_utils import AioHTTPTestCase
 from app.dashboard.u0_display import quote_display
-from app.dashboard.u0_preview import create_app, sample_payload
+from tests.current_sample import sample_payload
 
 
 class OriginalConversions(unittest.TestCase):
@@ -69,27 +68,23 @@ class OriginalConversions(unittest.TestCase):
 
 
 class PreviewBoundary(AioHTTPTestCase):
-    async def get_application(self):return create_app()
-    async def test_isolated_routes_security_and_no_default_samples(self):
-        response=await self.client.get('/preview/u0/state')
-        self.assertEqual(response.status,200)
-        self.assertEqual((await response.json())['mode'],'synthetic')
-        self.assertIn("default-src 'self'",response.headers['Content-Security-Policy'])
-        for headers in [{'Host':'evil.example'}, {'Origin':'http://evil.example'}, {'Sec-Fetch-Site':'cross-site'}]:
-            self.assertEqual((await self.client.get('/preview/u0/state',headers=headers)).status,403)
-        self.assertEqual((await self.client.get('/preview/u0/state?revision=3')).status,400)
-        self.assertEqual((await self.client.post('/api/start',json={},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})).status,404)
-        self.assertEqual((await self.client.get('/preview/u0')).status,200)
+    async def get_application(self):
+        from unittest.mock import Mock, AsyncMock
+        from app.dashboard.multi_game_server import create_app
+        self.owner=Mock();self.owner.session=None;self.owner.active.return_value=False
+        self.owner.saved.return_value=[];self.owner.close=AsyncMock()
+        self.owner.status.return_value={'active':False}
+        return create_app(owner=self.owner,sessions={})
 
-    async def test_ordinary_app_mount_does_not_change_landing(self):
-        from unittest.mock import Mock,AsyncMock
-        from app.dashboard.multi_game_server import create_app as ordinary
-        owner=Mock();owner.session=None;owner.active.return_value=False;owner.saved.return_value=[]
-        owner.close=AsyncMock();owner.status.return_value={'active':False}
-        from aiohttp.test_utils import TestServer,TestClient
-        async with TestClient(TestServer(ordinary(owner=owner,sessions={}))) as client:
-            response=await client.get('/')
-            self.assertEqual(response.status,200)
-            self.assertNotIn('U0 DESIGN PREVIEW',await response.text())
-            self.assertEqual((await client.get('/preview/u0')).status,200)
-            owner.start.assert_not_called()
+    async def test_ordinary_router_has_no_design_preview_or_samples(self):
+        response=await self.client.get('/api/current')
+        self.assertEqual(response.status,200)
+        payload=await response.json()
+        self.assertEqual(payload['mode'],'current');self.assertEqual(payload['events'],[])
+        for path in ('/preview/u0','/preview/u0/state','/preview/u0/admin',
+                     '/preview/u0/assets/preview.js','/view/u0/preview.js',
+                     '/view/u0/index.html','/view/u0/admin.html'):
+            self.assertEqual((await self.client.get(path)).status,404,path)
+        response=await self.client.get('/admin')
+        self.assertNotIn('/preview/u0',await response.text())
+        self.owner.start.assert_not_called()

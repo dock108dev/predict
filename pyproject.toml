@@ -17,7 +17,9 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 "app.fixtures" = ["*.json"]
-"app.normalization" = ["registry-v1.json"]
+"app.normalization" = ["*.json"]
+
+"app.collection" = ["static/*"]
 
 "app.storage" = ["migrations/*.sql"]
-"app.dashboard" = ["static/*", "opportunity_static/*", "opportunity_static/u0/*", "opportunity_static/current/*", "e5_static/*", "*.json"]
+"app.dashboard" = ["static/*", "opportunity_static/*", "opportunity_static/u0/*", "opportunity_static/current/*", "e5_static/*", "e6_live_static/*", "e6_real_static/*", "e6_recovery_static/*", "*.json"]

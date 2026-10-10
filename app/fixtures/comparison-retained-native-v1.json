@@ -1,0 +1,567 @@
+{
+  "version": "comparison-retained-native-1",
+  "evidence_class": "authentic retained quotes; bounded saved projection; no fresh source or fills",
+  "source_artifact_sha256": "57964152361982e42518cf286d7a8e14b892b5bf6b3c7eed358ea56629be652d",
+  "snapshot": {
+    "admin_href": "/admin",
+    "clock_at": "2026-10-09T03:57:11.804436+00:00",
+    "mode": "current",
+    "projected_at": "2026-10-09T03:56:32.804443+00:00",
+    "runtime_id": "3fe759a2-0cf3-4979-aa41-30827351f879",
+    "schema": "predict-current-1",
+    "selection_policy": {
+      "maximum_per_client": 1,
+      "restart_expires": true,
+      "ttl_seconds": 300
+    },
+    "source_status": {
+      "kalshi": {
+        "next_due_at": null,
+        "reason": "Updates stopped. Reopen for a fresh runtime.",
+        "reason_code": "native_stopped",
+        "state": "stopped"
+      },
+      "novig": {
+        "next_due_at": null,
+        "reason": "Updates stopped. Reopen for a fresh runtime.",
+        "reason_code": "native_stopped",
+        "state": "stopped"
+      },
+      "polymarket_us": {
+        "next_due_at": null,
+        "reason": "Updates stopped. Reopen for a fresh runtime.",
+        "reason_code": "native_stopped",
+        "state": "stopped"
+      },
+      "prophetx": {
+        "next_due_at": null,
+        "reason": "Updates stopped. Reopen for a fresh runtime.",
+        "reason_code": "native_stopped",
+        "state": "stopped"
+      }
+    },
+    "state": "available",
+    "state_revision": 57,
+    "events": [
+      {
+        "event_discriminator": "comparison-occurrence-1:reviewed-event:a0e03ad4d87587c002aef54734e3476a",
+        "id": "event:64993878974aaaf4ee7faca0234f1cce",
+        "league": "NFL",
+        "participants": [
+          {
+            "id": "NFL:PHI",
+            "name": "Philadelphia Eagles",
+            "role": "away"
+          },
+          {
+            "id": "NFL:JAX",
+            "name": "Jacksonville Jaguars",
+            "role": "home"
+          }
+        ],
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "start_at": "2026-10-11T13:30:00+00:00",
+        "title": "PHI Eagles vs JAC Jaguars",
+        "groups": [
+          {
+            "anchor_participant": null,
+            "id": "group:35cdb22099217c8487baa3aebd9413e2",
+            "line": null,
+            "market": "winner",
+            "outcome_cardinality": 2,
+            "period": "full_game",
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+            "result_policy": "native-moneyline-normal-predicate-1:a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+            "outcomes": [
+              {
+                "id": "outcome:c27a2a3eac1282bcbe075711087acd29",
+                "label": "Jacksonville Jaguars",
+                "participant": "NFL:JAX",
+                "predicate": "win",
+                "signed_line": null,
+                "quotes": {
+                  "kalshi": {
+                    "binding": {
+                      "evidence": [
+                        "manual-comparison-2:4e82fbaae0345f69aa0aaa1e6e0283a17a9d94a772ba198fc400f797dd8a6dea"
+                      ],
+                      "selection": {
+                        "event_id": "event:64993878974aaaf4ee7faca0234f1cce",
+                        "group_id": "group:35cdb22099217c8487baa3aebd9413e2",
+                        "outcome_cardinality": 2,
+                        "outcome_id": "outcome:c27a2a3eac1282bcbe075711087acd29",
+                        "participant": "NFL:JAX",
+                        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+                        "predicate": "win",
+                        "result_interpretation": "normal_win",
+                        "signed_line": null
+                      },
+                      "verified": false
+                    },
+                    "book_confirmation": {
+                      "basis": "kalshi-complete-snapshot-send-1",
+                      "confirmed_at": "2026-10-09T03:56:21.348000+00:00",
+                      "content_sha256": "9814b4febc29fb7f07fbacf89c9942ce1f3c2cc19a46cd626ae12fce57ea6f02",
+                      "event_id": "KXNFLGAME-26OCT11PHIJAC",
+                      "generation": 1,
+                      "market_id": "KXNFLGAME-26OCT11PHIJAC-JAC",
+                      "payload_sha256": "5c75d51656e5dc8b6a266697c330e54c318636421690066ecac1fad9b46e57c9",
+                      "provider_source_at": null,
+                      "received_at": "2026-10-09T03:56:21.367704+00:00",
+                      "request_id": "100003",
+                      "requested_at": "2026-10-09T03:56:21.324131+00:00",
+                      "sequence": 106,
+                      "sha256": "8623eb50d08aabf672d0308d5675fd6a081250c8e28573e1164ff639803203d2",
+                      "subscription_id": "1",
+                      "venue": "kalshi",
+                      "version": "predict-book-confirmation-1"
+                    },
+                    "cost_note": "Current applicable costs unavailable",
+                    "depth": [
+                      {
+                        "price": "0.7700",
+                        "quantity": "2030810.43"
+                      },
+                      {
+                        "price": "0.7800",
+                        "quantity": "1594522.23"
+                      },
+                      {
+                        "price": "0.7900",
+                        "quantity": "565177.46"
+                      },
+                      {
+                        "price": "0.8000",
+                        "quantity": "24986.03"
+                      },
+                      {
+                        "price": "0.8100",
+                        "quantity": "12213.81"
+                      },
+                      {
+                        "price": "0.8200",
+                        "quantity": "745.00"
+                      },
+                      {
+                        "price": "0.8300",
+                        "quantity": "68.00"
+                      },
+                      {
+                        "price": "0.8400",
+                        "quantity": "164.00"
+                      },
+                      {
+                        "price": "0.8500",
+                        "quantity": "6434.21"
+                      },
+                      {
+                        "price": "0.8600",
+                        "quantity": "2247.00"
+                      },
+                      {
+                        "price": "0.8700",
+                        "quantity": "8064.10"
+                      },
+                      {
+                        "price": "0.8800",
+                        "quantity": "8932.29"
+                      },
+                      {
+                        "price": "0.8900",
+                        "quantity": "25282.31"
+                      },
+                      {
+                        "price": "0.9000",
+                        "quantity": "23011.06"
+                      },
+                      {
+                        "price": "0.9100",
+                        "quantity": "31026.91"
+                      },
+                      {
+                        "price": "0.9200",
+                        "quantity": "17052.65"
+                      },
+                      {
+                        "price": "0.9300",
+                        "quantity": "45224.90"
+                      },
+                      {
+                        "price": "0.9400",
+                        "quantity": "26911.89"
+                      },
+                      {
+                        "price": "0.9500",
+                        "quantity": "39040.56"
+                      },
+                      {
+                        "price": "0.9600",
+                        "quantity": "45832.50"
+                      },
+                      {
+                        "price": "0.9700",
+                        "quantity": "98104.47"
+                      },
+                      {
+                        "price": "0.9800",
+                        "quantity": "63126.82"
+                      },
+                      {
+                        "price": "0.9900",
+                        "quantity": "2321915.81"
+                      }
+                    ],
+                    "freshness_policy": {
+                      "maximum_age_seconds": 30,
+                      "version": "kalshi-book-age-engineering-1"
+                    },
+                    "id": "quote:a5dff6eb1c44d4987a1b7d43f89b23fc",
+                    "original": {
+                      "native_units": "usd_per_contract",
+                      "native_value": "0.2300",
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "transformation": "one_minus_native_bid",
+                      "units": "usd_per_contract",
+                      "value": "0.7700"
+                    },
+                    "provenance": {
+                      "mode": "current",
+                      "real_source": true,
+                      "sha256": "4e82fbaae0345f69aa0aaa1e6e0283a17a9d94a772ba198fc400f797dd8a6dea"
+                    },
+                    "revision": 7,
+                    "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+                    "source": {
+                      "binding_id": "cbe90785e707542b0e4f6ab6c0e80a8cabc139793422201bf4daab0f70e78103",
+                      "binding_version": "manual-comparison-2",
+                      "native_event_id": "KXNFLGAME-26OCT11PHIJAC",
+                      "native_line": null,
+                      "native_market_id": "KXNFLGAME-26OCT11PHIJAC-JAC",
+                      "native_outcome_id": "yes",
+                      "native_side": "yes",
+                      "provider": "kalshi",
+                      "quote_side": "buy"
+                    },
+                    "state": "resyncing",
+                    "times": {
+                      "projected_at": "2026-10-09T03:55:21.907809+00:00",
+                      "received_at": "2026-10-09T03:55:20.726451+00:00",
+                      "source_at": null,
+                      "source_time_kind": "unknown"
+                    },
+                    "venue": "kalshi"
+                  }
+                },
+                "alternatives": {}
+              },
+              {
+                "id": "outcome:6370a1fdcd0f27cefd9e7915fd1cf4dc",
+                "label": "Jacksonville Jaguars does not win",
+                "participant": "NFL:JAX",
+                "predicate": "not_win",
+                "signed_line": null,
+                "quotes": {},
+                "alternatives": {}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "event_discriminator": "comparison-occurrence-1:reviewed-event:c440e4589908890521383bba6d71cfbb",
+        "id": "event:fe11cc3f40a4315f83afd7dcbf4b82b0",
+        "league": "NFL",
+        "participants": [
+          {
+            "id": "NFL:PHI",
+            "name": "Philadelphia Eagles",
+            "role": "away"
+          },
+          {
+            "id": "NFL:JAX",
+            "name": "Jacksonville Jaguars",
+            "role": "home"
+          }
+        ],
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "start_at": "2026-10-11T13:30:00+00:00",
+        "title": "PHI Eagles vs. JAC Jaguars",
+        "groups": [
+          {
+            "anchor_participant": null,
+            "id": "group:d1733cb6b3f88fe590d2a4a4104fc3c0",
+            "line": null,
+            "market": "winner",
+            "outcome_cardinality": 2,
+            "period": "full_game",
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+            "result_policy": "native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+            "outcomes": [
+              {
+                "id": "outcome:b3c8b6068d9de0d731c174cd7a499240",
+                "label": "Philadelphia Eagles",
+                "participant": "NFL:PHI",
+                "predicate": "win",
+                "signed_line": null,
+                "quotes": {
+                  "polymarket_us": {
+                    "binding": {
+                      "evidence": [
+                        "manual-comparison-2:4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+                      ],
+                      "selection": {
+                        "event_id": "event:fe11cc3f40a4315f83afd7dcbf4b82b0",
+                        "group_id": "group:d1733cb6b3f88fe590d2a4a4104fc3c0",
+                        "outcome_cardinality": 2,
+                        "outcome_id": "outcome:b3c8b6068d9de0d731c174cd7a499240",
+                        "participant": "NFL:PHI",
+                        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+                        "predicate": "win",
+                        "result_interpretation": "normal_win",
+                        "signed_line": null
+                      },
+                      "verified": false
+                    },
+                    "book_confirmation": {
+                      "basis": "us-complete-book-transact-1",
+                      "confirmed_at": "2026-10-09T03:56:10.394579+00:00",
+                      "content_sha256": "4f2e8d4bfef9761861832974ab29131d88f941bc5820b7305dab65eaa5c014f4",
+                      "event_id": "129629",
+                      "generation": 2,
+                      "market_id": "1083081",
+                      "payload_sha256": "1f24e4676b3843ef2e6fafb9d977870f3c39bde3d669ade147386dfa891d7b20",
+                      "provider_source_at": "2026-10-09T03:56:10.394579+00:00",
+                      "received_at": "2026-10-09T03:56:10.631864+00:00",
+                      "request_id": "b75f8276-9bb1-496f-a296-fa171fa124a4",
+                      "requested_at": null,
+                      "sequence": null,
+                      "sha256": "1a02422cea684db7c69b562181ab1cf8adc20abf74eae15dd78ffff42e4f4f1a",
+                      "subscription_id": null,
+                      "venue": "polymarket_us",
+                      "version": "predict-book-confirmation-1"
+                    },
+                    "cost_note": "Current applicable costs unavailable",
+                    "depth": [
+                      {
+                        "price": "0.2350",
+                        "quantity": "975645.5300"
+                      },
+                      {
+                        "price": "0.2375",
+                        "quantity": "143562.8600"
+                      },
+                      {
+                        "price": "0.2400",
+                        "quantity": "302206.9300"
+                      },
+                      {
+                        "price": "0.2425",
+                        "quantity": "10416.0000"
+                      },
+                      {
+                        "price": "0.2450",
+                        "quantity": "19905.7200"
+                      },
+                      {
+                        "price": "0.2475",
+                        "quantity": "6809.0000"
+                      },
+                      {
+                        "price": "0.2500",
+                        "quantity": "14110.6700"
+                      },
+                      {
+                        "price": "0.2525",
+                        "quantity": "10.0000"
+                      },
+                      {
+                        "price": "0.2550",
+                        "quantity": "10222.8100"
+                      },
+                      {
+                        "price": "0.2650",
+                        "quantity": "29085.0000"
+                      },
+                      {
+                        "price": "0.2700",
+                        "quantity": "11634.0000"
+                      },
+                      {
+                        "price": "0.2725",
+                        "quantity": "11634.0000"
+                      },
+                      {
+                        "price": "0.2750",
+                        "quantity": "1351.7200"
+                      },
+                      {
+                        "price": "0.2800",
+                        "quantity": "11634.0000"
+                      },
+                      {
+                        "price": "0.2925",
+                        "quantity": "692.5700"
+                      },
+                      {
+                        "price": "0.3100",
+                        "quantity": "3900.0000"
+                      },
+                      {
+                        "price": "0.3150",
+                        "quantity": "3.0000"
+                      },
+                      {
+                        "price": "0.3200",
+                        "quantity": "23268.0000"
+                      },
+                      {
+                        "price": "0.3400",
+                        "quantity": "4380.0000"
+                      },
+                      {
+                        "price": "0.3900",
+                        "quantity": "17.0500"
+                      },
+                      {
+                        "price": "0.4600",
+                        "quantity": "11.0000"
+                      },
+                      {
+                        "price": "0.4700",
+                        "quantity": "5.0000"
+                      },
+                      {
+                        "price": "0.5700",
+                        "quantity": "5.0000"
+                      },
+                      {
+                        "price": "0.6000",
+                        "quantity": "27.7100"
+                      },
+                      {
+                        "price": "0.8700",
+                        "quantity": "1.9200"
+                      },
+                      {
+                        "price": "0.8800",
+                        "quantity": "2.0800"
+                      },
+                      {
+                        "price": "0.8900",
+                        "quantity": "2.2700"
+                      },
+                      {
+                        "price": "0.9000",
+                        "quantity": "52.5000"
+                      },
+                      {
+                        "price": "0.9100",
+                        "quantity": "2.7700"
+                      },
+                      {
+                        "price": "0.9200",
+                        "quantity": "3.1200"
+                      },
+                      {
+                        "price": "0.9300",
+                        "quantity": "3.5700"
+                      },
+                      {
+                        "price": "0.9350",
+                        "quantity": "250.0000"
+                      },
+                      {
+                        "price": "0.9400",
+                        "quantity": "54.1600"
+                      },
+                      {
+                        "price": "0.9500",
+                        "quantity": "37.0000"
+                      },
+                      {
+                        "price": "0.9600",
+                        "quantity": "106.2500"
+                      },
+                      {
+                        "price": "0.9700",
+                        "quantity": "99.3300"
+                      },
+                      {
+                        "price": "0.9800",
+                        "quantity": "5362.5000"
+                      },
+                      {
+                        "price": "0.9900",
+                        "quantity": "11197.8400"
+                      },
+                      {
+                        "price": "0.9975",
+                        "quantity": "2139377.5800"
+                      }
+                    ],
+                    "freshness_policy": {
+                      "maximum_age_seconds": 30,
+                      "version": "polymarket_us-book-age-engineering-1"
+                    },
+                    "id": "quote:72e0bef88ec1ab8edc32d68f58d7c20e",
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.2350"
+                    },
+                    "provenance": {
+                      "mode": "current",
+                      "real_source": true,
+                      "sha256": "4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+                    },
+                    "revision": 9,
+                    "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+                    "source": {
+                      "binding_id": "f845373e1d4166cf9b9c6ae00df3f4eefe984355b19ddb873cd393b231d6a01e",
+                      "binding_version": "manual-comparison-2",
+                      "native_event_id": "129629",
+                      "native_line": null,
+                      "native_market_id": "1083081",
+                      "native_outcome_id": "2165646",
+                      "native_side": "Long",
+                      "provider": "polymarket_us",
+                      "quote_side": "buy"
+                    },
+                    "state": "resyncing",
+                    "times": {
+                      "projected_at": "2026-10-09T03:55:24.358321+00:00",
+                      "received_at": "2026-10-09T03:55:23.200604+00:00",
+                      "source_at": "2026-10-09T03:55:16.261974+00:00",
+                      "source_time_kind": "provider_book"
+                    },
+                    "venue": "polymarket_us"
+                  }
+                },
+                "alternatives": {}
+              },
+              {
+                "id": "outcome:e24b06aeaa2a3f59f5cf29b7184bb82c",
+                "label": "Jacksonville Jaguars",
+                "participant": "NFL:JAX",
+                "predicate": "win",
+                "signed_line": null,
+                "quotes": {},
+                "alternatives": {}
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

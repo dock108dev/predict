@@ -2,9 +2,36 @@
 
 ## Current operation
 
-The ordinary launcher starts service-owned native streams and one shared Novig/ProphetX/Pinnacle aggregate scheduler. The current paid policy is 100,000 monthly credits with a 50-credit reserve. Automatic refresh covers every selected supported sport, including inactive sports with empty odds responses, at 15-minute slots during 09:00 inclusive to 23:00 exclusive America/New_York while the app runs; missed slots are skipped. Admin refresh selects its own sport scope without changing automatic scope or scheduled due times. Native sources are independent. The Odds board, Arbs and live Details require no stake entry; EV vs Pinnacle uses a matched two-way sharp-book reference with proportional margin removal; both reference and comparison source clocks must be within 30 minutes. It is gross conditional benchmark EV before fees, not a calibrated probability model. Whole-line pushes and unmatched markets remain unavailable.
+The ordinary launcher owns native Kalshi/Polymarket US streams and, when enabled,
+one shared Novig/ProphetX/Pinnacle aggregate scheduler. Native and aggregate access
+are independent; missing access leaves that source unavailable.
 
-`current_aggregate_policy.POLICY` owns schedule and dispatch limits; `current_policy` owns the startup configuration. `sports` scopes native discovery; optional `aggregate_sports` scopes the shared aggregate scheduler independently and inherits `sports` when omitted or empty. The owner configuration checks NFL, NCAAF, NBA, NCAAB, MLB and NHL every daytime slot. Empty responses retire prior sport quotes and actual provider headers determine credits; reserve the worst case before dispatch. Both `enabled` and `aggregate_enabled` must be explicit booleans in a complete configuration. Missing keys fail before service ownership or credential access. `aggregate_enabled=False` is supported native-only operation and remains disabled through guarded recovery. Use `config/current.example.json` as a complete native-only template. It disables aggregate dispatch; it still attempts native acquisition. Copy it to `.local/predict-current-config.json` or pass its path to the foreground CLI. Set `enabled` to false for idle startup.
+Start with `config/current.example.json`, a complete native-only template. Copy it
+to `.local/predict-current-config.json` for launcher use, or pass its path with
+`--current-config` to the foreground CLI. It enables native acquisition and disables
+aggregate requests. Set `enabled` to `false` for idle startup. Both `enabled` and
+`aggregate_enabled` must be explicit booleans; an incomplete or missing explicit
+configuration fails before ownership or credential access.
+
+If the default local file is absent, `current_policy.load()` uses validated
+`DEFAULT`, which enables native and aggregate acquisition with NFL scope.
+`sports` scopes native discovery. `aggregate_sports` independently scopes the
+aggregate scheduler, inheriting `sports` when omitted or empty. Supported values
+are NFL, NCAAF, NBA, NCAAB, MLB and NHL; select the scope appropriate to your access.
+Native-only operation remains aggregate-disabled through recovery.
+
+The aggregate policy is implemented in `current_aggregate_policy.POLICY`: a
+100,000-credit monthly ceiling, 50-credit reserve and automatic 15-minute slots
+between 09:00 inclusive and 23:00 exclusive in America/New_York while the app runs.
+Missed slots are skipped. This configured ceiling is not proof of a provider plan
+or balance. The scheduler checks selected sports even when odds are empty, retires
+old sport quotes after empty responses, reserves the worst case before dispatch
+and reconciles actual provider headers. Admin refresh chooses its own scope without
+changing automatic scope or due times.
+
+The board, Arbs and live Details require no stake entry. EV keeps the gross
+Pinnacle benchmark and modeled/net estimates separate; see
+[calculation basis](benchmark-ev.md) for formulas and limits.
 
 Startup can make read-only network requests within the configured resource limits. Aggregate requests consume account credits. Stop the app before changing credentials; preserve ledger reservations and uncertain charges when investigating failures.
 
@@ -17,18 +44,18 @@ Use the [README](../README.md) for installation. The supported ordinary workflow
 | Launcher | `scripts/opportunity-board start\|status\|stop`, normally at loopback port 8783; start reuses a verified existing process or finds a free port |
 | Instance | `beta` (default) and `poc` separate process records/logs; both use the same ordinary application |
 | Current provider | `CurrentService` uses validated `current_policy.load()` configuration and starts native workers plus the shared aggregate scheduler when enabled |
-| Current configuration | `.local/predict-current-config.json`, or `--current-config`; default native scope is NFL winner/spread/total; owner aggregate scope is all six supported sports while the process runs; explicitly reduced durations are finite |
+| Current configuration | `.local/predict-current-config.json`, or `--current-config`; default scope is NFL winner/spread/total; aggregate scope inherits native scope unless configured separately; reduced durations are finite |
 | Board / Details | `/` reads latest state and Details follows current revisions; `/arbs` names opposing legs; filters and Details do not dispatch paid requests |
 | Admin | `/admin` exposes source status, quota, Stop/Pause and guarded fresh-runtime recovery |
 | Retained inspection | `/admin/retained` keeps finite/saved-session readers; it does not populate the ordinary live board |
 
-The launcher uses `.venv/bin/python` with a minimal environment. It does not load `.env` or forward shell credentials. The aggregate worker itself reads the approved ignored/untracked repository `.env` through the guarded credential loader. `process.json` and `server.log` live in the selected `.local/opportunity-board*` directory. Start does not reload an existing worker; restart through verified owned-process controls after application or credential changes.
+The launcher uses `.venv/bin/python` with a minimal environment. It does not load `.env` or forward shell credentials. The aggregate worker itself reads the ignored/untracked repository `.env` through the guarded credential loader. `process.json` and `server.log` live in the selected `.local/opportunity-board*` directory. Start does not reload an existing worker; restart through verified owned-process controls after application or credential changes.
 
 Current startup acquires lifecycle ownership and records fresh consumed authority before source dispatch. It does not load saved or synthetic quotes. Native source/resource limits remain bounded by `current_policy.DEFAULT`; the process-lifetime sentinel is declared as `APP_RUNNING_DURATION`. Aggregate envelopes are declared once by `current_aggregate_policy.POLICY` and copied into each consumed attempt. Keep Stop and accounting intact.
 
 ## External access
 
-`app/collection/venue_access.py` fixes native production destinations:
+`app/collection/venue_access.py` fixes native provider destinations:
 
 | Venue | REST | WebSocket | macOS Keychain service / account |
 | --- | --- | --- | --- |

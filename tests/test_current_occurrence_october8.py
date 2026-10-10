@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
-from app.collection.current_occurrence import annotate,load
+from app.collection.current_occurrence import annotate,load,direct
 from tests import test_current_occurrence as fixtures
 from app.collection.current_service import CurrentService
 from app.collection.current_policy import DEFAULT
@@ -23,12 +23,11 @@ class CurrentOccurrence(unittest.TestCase):
    annotate(c,v);self.assertEqual(c['events'][0]['current_occurrence_binding'],b['sha256'])
    self.assertTrue(all(m.get('direct_win_binding') for m in c['markets']))
  def test_invalidation_preserves_local_catalog_without_current_binding(self):
-  for kind in ('shared_us','shared_kalshi','schedule','home_away','season','postponed','closed_event','closed_market','side','rules','expired'):
+  for kind in ('shared_us','shared_kalshi','home_away','season','postponed','closed_event','closed_market','side','rules','expired'):
    with self.subTest(kind=kind):
     v='kalshi' if kind=='shared_kalshi' else 'polymarket_us';c=catalogs()[v];e=c['events'][0];m=c['markets'][0]
     if kind=='shared_us':e['_native']['sportradarGameId']='another-occurrence'
     if kind=='shared_kalshi':e['observed_identity_facts'][0]['source_id']='another-occurrence'
-    if kind=='schedule':e['scheduled_start']='2026-10-10T00:15:00Z'
     if kind=='home_away':e['home']='NFL:TB'
     if kind=='season':e['season']='2027'
     if kind=='postponed':e['_native']['rescheduledFromGameId']='19519'
@@ -38,6 +37,25 @@ class CurrentOccurrence(unittest.TestCase):
     if kind=='rules':m['_native']['description']='changed settlement material'
     if kind=='expired':self.clock.now.return_value=datetime(2026,10,9,0,16,tzinfo=timezone.utc)
     annotate(c,v);self.assertFalse(m.get('direct_win_binding'));self.assertEqual(len(c['markets']),2 if v=='kalshi' else 1)
+ def test_same_evidenced_occurrence_schedule_is_metadata(self):
+  for v,c in catalogs().items():
+   c['events'][0]['scheduled_start']='2026-10-09T00:18:00Z'
+   annotate(c,v)
+   self.assertEqual(c['events'][0]['game_id'],'aa6b58bf-4feb-11f1-abca-2c54536568a9')
+   self.assertTrue(all(m.get('direct_win_binding') for m in c['markets']))
+ def test_direct_binding_rechecks_expiry_scope_and_preserves_unrelated_proofs(self):
+  c=catalogs()['polymarket_us'];annotate(c,'polymarket_us');m=c['markets'][0]
+  native='2059747';selection=dict(m['direct_win_binding']['outcomes'][native])
+  record=dict(event=c['events'][0],quote=dict(venue='polymarket_us'))
+  self.assertTrue(direct(record,m,native,selection,clock=datetime(2026,10,7,1,tzinfo=timezone.utc)))
+  self.assertFalse(direct(record,m,native,selection,clock=datetime(2026,10,9,0,15,tzinfo=timezone.utc)))
+  self.assertFalse(direct(record,dict(m,id='sibling'),native,selection,clock=datetime(2026,10,7,1,tzinfo=timezone.utc)))
+  other=dict(id='unrelated',game_id='independent-occurrence',current_occurrence_binding='f'*64)
+  other_market=dict(id='unrelated-market',event_id='unrelated',direct_win_binding=dict(sha256='f'*64))
+  c['events'].append(other);c['markets'].append(other_market)
+  self.clock.now.return_value=datetime(2026,10,9,0,16,tzinfo=timezone.utc)
+  annotate(c,'polymarket_us')
+  self.assertEqual(other['game_id'],'independent-occurrence');self.assertEqual(other_market['direct_win_binding']['sha256'],'f'*64)
 class CurrentSelections(unittest.IsolatedAsyncioTestCase):
  setUp=CurrentOccurrence.setUp
  async def test_polymarket_identity_rebinds_after_occurrence_without_kalshi(self):

@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "version": "comparison-source-bindings-retained-1",
+  "evidence_class": "retained_redacted_excerpt",
+  "original_diagnostic_sha256": "ed38fef531d5ecf81f8244925b3c53cbfa0e82b1881da5a1112f47e5a8be2b67",
+  "original_body_sha256": "c3e5c44edbb8b906cbde514c64a32a0d28e0761ff0d1c17787f8fcf3a8f9719a",
+  "original_body_bytes": 23638,
+  "received_at": "2026-10-08T23:52:51.615447+00:00",
+  "sport": "NHL",
+  "events": [
+    {
+      "away_team": "Toronto Maple Leafs",
+      "bookmakers": [
+        {
+          "key": "novig",
+          "last_update": "2026-10-08T23:52:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-10-08T23:52:47Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "price": "2.53"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "price": "1.64"
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2026-10-08T23:52:47Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "point": "1.5",
+                  "price": "1.61"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "point": "-1.5",
+                  "price": "2.56"
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-10-08T23:52:47Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "point": "6.5",
+                  "price": "1.9"
+                },
+                {
+                  "name": "Under",
+                  "point": "6.5",
+                  "price": "2.06"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "pinnacle",
+          "last_update": "2026-10-08T23:52:44Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-10-08T23:52:44Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "price": "2.47"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "price": "1.61"
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2026-10-08T23:52:44Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "point": "1.5",
+                  "price": "1.58"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "point": "-1.5",
+                  "price": "2.52"
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-10-08T23:52:44Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "point": "6.5",
+                  "price": "1.89"
+                },
+                {
+                  "name": "Under",
+                  "point": "6.5",
+                  "price": "2.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "prophetx",
+          "last_update": "2026-10-08T23:52:43Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-10-08T23:52:43Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "price": "2.54"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "price": "1.64"
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2026-10-08T23:52:43Z",
+              "outcomes": [
+                {
+                  "name": "Toronto Maple Leafs",
+                  "point": "1.5",
+                  "price": "1.6"
+                },
+                {
+                  "name": "Vegas Golden Knights",
+                  "point": "-1.5",
+                  "price": "2.58"
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-10-08T23:52:43Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "point": "6.5",
+                  "price": "1.91"
+                },
+                {
+                  "name": "Under",
+                  "point": "6.5",
+                  "price": "2.06"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "commence_time": "2026-10-09T02:10:00Z",
+      "home_team": "Vegas Golden Knights",
+      "id": "a46280b902edb2cb0a859b0efcd01e8e",
+      "sport_key": "icehockey_nhl"
+    }
+  ],
+  "retention_note": "Exact redacted retained event excerpt; reconstructed replay bytes have their own digest and are not the original provider body.",
+  "replay_sha256": "548b330e4cebd9c5bf7798afdf6c1a758d671a340ba13b51f42cff9f67cc0d1c",
+  "expected_moneyline": {
+    "selected_outcome": "Toronto Maple Leafs",
+    "pinnacle_odds": [
+      "2.47",
+      "1.61"
+    ],
+    "conditional_selected_probability": "161/408",
+    "novig_odds": "2.53",
+    "prophetx_odds": "2.54"
+  }
+}

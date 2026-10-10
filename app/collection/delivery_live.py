@@ -306,7 +306,7 @@ class Launcher:
             if self.guard.is_alive():terminate(self.guard.pid);self.guard.join(1)
             while self.guard_pipe.poll():
                 try:self.event('watchdog',value=self.guard_pipe.recv())
-                except EOFError:break
+                except (EOFError,OSError):break
             self.pipe.close();self.guard_pipe.close()
             try:self.finish()
             except BaseException:

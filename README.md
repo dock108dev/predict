@@ -5,13 +5,16 @@ prices, shows opposing-leg arbitrage percentages, and exposes the inputs and
 limitations behind each calculation. It does not place trades.
 
 - **Odds board:** matched selections, local filters and live price Details.
-- **Arbs:** explicit opposing legs and signed gross conditional percentages.
+- **EV:** bound modeled/net estimates and the separate gross Pinnacle benchmark.
+- **Arbs:** explicit opposing legs and signed conditional percentages.
+- **Coverage:** supported source/market combinations and missing inputs.
 - **Admin:** source status, quota, refresh, pause, Stop and guarded recovery.
 - **Manual What-if:** calculations with explicit probability, costs and quantity.
 
 Kalshi and Polymarket US use native adapters. Novig and ProphetX can arrive through
 The Odds API. Venue coverage varies; unknown fees, settlement, probabilities and
-depth withhold dependent calculations. Positive, zero and negative results are
+depth withhold dependent actual calculations. Direct-site modeled estimates keep
+their explicit assumptions separate. Positive, zero and negative results are
 valid. Reference prices are separate from executable comparison legs.
 
 ## Quickstart
@@ -22,14 +25,23 @@ are not required. From the repository root:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[stream]'
+mkdir -p .local
+cp -n config/current.example.json .local/predict-current-config.json
+```
+
+Configure credentials and edit the copied settings using
+[configuration and operation](docs/configuration.md), then launch:
+
+```sh
 scripts/opportunity-board start
 ```
 
+The example enables native sources and disables aggregate requests. Set `enabled`
+to `false` for idle startup. Existing settings are preserved by `cp -n`.
 Open the printed address, normally [localhost:8783](http://127.0.0.1:8783/).
-Startup automatically attempts configured read-only source acquisition; configure
-credentials and scope first using [configuration and operation](docs/configuration.md).
-Missing access is reported per source. Saved or synthetic prices never replace
-missing current data.
+Startup attempts configured read-only acquisition; aggregate requests consume
+provider credits when enabled. Missing access is reported per source. Saved or
+synthetic prices never replace missing current data.
 
 ```sh
 scripts/opportunity-board status
@@ -60,4 +72,5 @@ populated UI data without provider access.
 - [CI workflows](docs/CI.md)
 - [Security](docs/security.md) and [failure recovery](docs/error-handling.md)
 - [Sport support](docs/sports-integration.md) and [data limitations](docs/market-data-gaps.md)
+- [Calculation basis and benchmark EV](docs/benchmark-ev.md)
 - [UI design](docs/ui-design.md)

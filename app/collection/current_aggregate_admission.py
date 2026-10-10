@@ -78,7 +78,8 @@ def admit(body, sport, received_at, *, venue=None):
         event=dict(id=event_id,sport={'NFL':'american_football','NCAAF':'american_football','NBA':'basketball','NCAAB':'basketball','MLB':'baseball','NHL':'ice_hockey'}[sport],
             competition=sport,season='unverified',stage='unverified',scheduled_start=raw['scheduled_start'],home=home,away=away,
             participants={raw['home_team']:home,raw['away_team']:away},title=raw['away_team']+' at '+raw['home_team'])
-        key=['aggregate-provider-event-1',sport,event_id,raw['scheduled_start'],home,away]
+        from app.comparison.event_links import provider_key
+        key=provider_key('the_odds_api',event)
         family={'h2h':'moneyline','spreads':'spread','totals':'total'}[market]
         canonical=None if market=='h2h' else next(x['original']['point'] for x in values if market=='totals' or x['participant']==home)
         selections=[dict(participant=None if market=='totals' else x['participant'],predicate=x['predicate'] if market!='spreads' else 'cover',
@@ -101,13 +102,14 @@ def admit(body, sport, received_at, *, venue=None):
                 cost_note='Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.',
                 observation_time_evidence='The Odds API original update clocks: '+json.dumps(clocks,sort_keys=True)+
                     '; selected basis: '+clock_basis+'; upstream delay unknown.',
+                provider_clocks=dict(book=clocks['book'],market=clocks['market'],selected_basis=clock_basis),
                 provenance=dict(mode='current',real_source=True,sha256=sha256(body).hexdigest()))
             record=dict(event=deepcopy(event),market_identity=dict(event=key,sport=event['sport'],competition=sport,season='unverified',stage='unverified',
                 scheduled_start=raw['scheduled_start'],family=family,period='full_game',line=canonical,outcome_set=stable(selections),rules='aggregate-common-1'),
                 period_boundary='Provider full-game market; exceptional settlement unverified',anchor_participant=home if market=='spreads' else None,
                 selection=selection,quote=q,orientation_evidence=[r['version']+':'+r['registry_sha256'],raw['receipt_sha256']],verified=True,
                 outcome_cardinality=2,outcome_selections=deepcopy(selections),result_policy='aggregate-common-1:'+market,
-                event_scope=dict(policy='aggregate-provider-event-1',source='the_odds_api',native_event_id=event_id))
+                event_scope=dict(policy='aggregate-provider-event-2',source='the_odds_api',native_event_id=event_id))
             instrument=stable([book,event_id,market,raw['outcome'],raw['point']])
             # Binder IDs include receipt hashes; revision identity must not.
             source['binding_id']=instrument

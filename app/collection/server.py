@@ -13,12 +13,16 @@ from app.collection.storage import Repository
 from app.collection.synthetic import WallClock
 from app.reference.fixtures import before
 from app.collection.reopen import reopen
+from app.dashboard.local_security import HEADERS, check_browser, read_json, PublicRequestError
+from app.dashboard.query_policy import validate_unique_query
+from app.diagnostics import failure
 
 ROOT=Path(__file__).resolve().parents[2]
+BODY_LIMIT=2048
 
 
 def create_app(env,output):
-    app=web.Application(client_max_size=2048)
+    app=web.Application(client_max_size=BODY_LIMIT,handler_args={'auto_decompress':False})
     import fcntl
     owner_lock=(env.root/'owner.lock').open('a')
     fcntl.flock(owner_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -47,7 +51,7 @@ def create_app(env,output):
             with env.connect() as check_db:
                 count=check_db.execute('SELECT count(*) AS n FROM capture_session WHERE provenance=%s',('E6 bounded injected synthetic collection',)).fetchone()['n']
             if count>=8:raise web.HTTPConflict(text='eight-session environment limit; retain evidence and use fresh environment')
-            body=await request.json();limits=checked(body)
+            body=await read_json(request,max_size=BODY_LIMIT);limits=checked(body)
             if previous:previous.repo.db.close()
             repo=Repository(env.connect(),output,limits)
             s=Session(repo,app['clock'],output,limits);app['session']=s
@@ -56,6 +60,7 @@ def create_app(env,output):
                 repo.db.close();s.dbworker.shutdown();s.calcworker.shutdown();raise
             return web.json_response(dict(id=s.sid,state=s.state))
     async def stop(request):
+        if await read_json(request,max_size=BODY_LIMIT)!={}:raise web.HTTPUnprocessableEntity(reason='Stop accepts an empty object')
         s=app['session']
         if s:await s.stop()
         return await status(request)
@@ -71,16 +76,28 @@ def create_app(env,output):
         finally:app['reading']=False
     @web.middleware
     async def guard(request,handler):
-        if request.host not in ('127.0.0.1:'+str(request.url.port),'localhost:'+str(request.url.port)):
-            raise web.HTTPForbidden(text='loopback host only')
-        if request.method=='POST' and request.headers.get('Origin') not in (None,'http://'+request.host):raise web.HTTPForbidden()
-        if app['active_requests']>=8:raise web.HTTPServiceUnavailable(text='bounded request capacity')
-        app['active_requests']+=1
         try:
+            check_browser(request)
+            validate_unique_query(request.query)
+            if request.method=='POST' and (request.content_length or 0)>BODY_LIMIT:
+                raise web.HTTPRequestEntityTooLarge(max_size=BODY_LIMIT,actual_size=request.content_length)
+            if app['active_requests']>=8:raise web.HTTPServiceUnavailable(reason='bounded request capacity')
+            app['active_requests']+=1
             try:response=await handler(request)
-            except (ValueError,FileNotFoundError) as exc:return web.json_response({'error':str(exc)},status=422)
-        finally:app['active_requests']-=1
-        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+            finally:app['active_requests']-=1
+        except web.HTTPException as exc:
+            response=web.json_response({'error':exc.reason},status=exc.status)
+            if exc.status==408:response.force_close()
+            if 'Allow' in exc.headers:response.headers['Allow']=exc.headers['Allow']
+        except PublicRequestError as exc:
+            response=web.json_response({'error':str(exc)},status=422)
+        except (ValueError,FileNotFoundError) as exc:
+            failure(__name__,'synthetic_collection_request',exc)
+            response=web.json_response({'error':'Invalid input or unavailable synthetic data'},status=422)
+        except Exception as exc:
+            failure(__name__,'synthetic_collection_request',exc)
+            response=web.json_response({'error':'Synthetic data unavailable'},status=503)
+        response.headers.update(HEADERS)
         return response
     app.middlewares.append(guard)
     app.add_routes([web.get('/',page),web.get('/watch.js',asset),web.get('/style.css',css),web.get('/watch.css',local_css),web.get('/api/status',status),

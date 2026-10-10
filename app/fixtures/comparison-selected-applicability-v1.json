@@ -1,0 +1,186 @@
+{
+  "version": "comparison-selected-applicability-1",
+  "schema": 1,
+  "evidence_class": "retained_selected_facts_only_no_current_net_qualification",
+  "records": [
+    {
+      "native_key": [
+        "kalshi",
+        "KXNFLGAME-26OCT11PHIJAC",
+        "KXNFLGAME-26OCT11PHIJAC-JAC",
+        "yes",
+        "yes"
+      ],
+      "observation": {
+        "native_key": [
+          "kalshi",
+          "KXNFLGAME-26OCT11PHIJAC",
+          "KXNFLGAME-26OCT11PHIJAC-JAC",
+          "yes",
+          "yes"
+        ],
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.2300",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.7700"
+        },
+        "source_at": null,
+        "received_at": "2026-10-09T03:55:20.726451+00:00",
+        "provenance_sha256": "4e82fbaae0345f69aa0aaa1e6e0283a17a9d94a772ba198fc400f797dd8a6dea"
+      },
+      "effective_from": "2026-10-09T03:55:20.726451+00:00",
+      "effective_until": null,
+      "facets": {},
+      "facts": {
+        "quantity": {
+          "status": "absent",
+          "reason": "selected_Kalshi_price_ranges_quantity_precision_unqualified",
+          "values": {
+            "price_ranges": null,
+            "minimum_quantity": null,
+            "quantity_increment": null,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "fee": {
+          "status": "applicability_unresolved",
+          "reason": "selected_participant_channel_mandatory_cost_scope_unqualified",
+          "values": {
+            "execution_channel": null,
+            "mandatory_charges_known": false,
+            "balance_precision": null,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "payout": {
+          "status": "applicability_unresolved",
+          "reason": "selected_period_overtime_completion_terms_unqualified",
+          "values": {
+            "display_face": "1",
+            "display_face_is_settlement_evidence": false,
+            "completion": null,
+            "overtime": null,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        }
+      },
+      "binding_version": "08aeb6e5f5d3c3c06559809b6295ac01c8d8c135116c52bcd52fbc7071cc6f23"
+    },
+    {
+      "native_key": [
+        "polymarket_us",
+        "129629",
+        "1083081",
+        "2165646",
+        "Long"
+      ],
+      "observation": {
+        "native_key": [
+          "polymarket_us",
+          "129629",
+          "1083081",
+          "2165646",
+          "Long"
+        ],
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.2350"
+        },
+        "source_at": "2026-10-09T03:55:16.261974+00:00",
+        "received_at": "2026-10-09T03:55:23.200604+00:00",
+        "provenance_sha256": "4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+      },
+      "effective_from": "2026-10-09T03:55:23.200604+00:00",
+      "effective_until": null,
+      "facets": {},
+      "facts": {
+        "quantity": {
+          "status": "absent",
+          "reason": "selected_US_refdata_scale_minimum_tick_absent",
+          "values": {
+            "priceScale": null,
+            "fractionalQtyScale": null,
+            "minimumTradeQty": null,
+            "tickSize": null,
+            "default_fractional_scale_applied": false,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "fee": {
+          "status": "applicability_unresolved",
+          "reason": "selected_participant_channel_mandatory_cost_scope_unqualified",
+          "values": {
+            "execution_channel": null,
+            "mandatory_charges_known": false,
+            "balance_precision": null,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "payout": {
+          "status": "applicability_unresolved",
+          "reason": "selected_period_overtime_completion_terms_unqualified",
+          "values": {
+            "display_face": "1",
+            "display_face_is_settlement_evidence": false,
+            "completion": null,
+            "overtime": null,
+            "actual_applicability_interval": null
+          },
+          "evidence": [
+            {
+              "ref": "app/fixtures/comparison-retained-native-v1.json",
+              "sha256": "9929befe76b378c922c82908c2fcb5de128c47a49a22578565bbfff8cc574983",
+              "evidence_class": "retained"
+            }
+          ]
+        }
+      },
+      "binding_version": "88cc5e6223a28f3da83a5242756e49c3795b24c1071955b9acddaa438982c1a8"
+    }
+  ]
+}

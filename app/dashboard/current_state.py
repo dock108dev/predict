@@ -11,7 +11,7 @@ import time
 from uuid import uuid4
 from aiohttp import web
 from .current_contract import VERSION, VENUES, serialize, packed, quotes_of, manual_scenario, stamp, snapshot_inputs
-from .local_security import HEADERS, read_json
+from .local_security import HEADERS, read_json, PublicRequestError
 
 CURRENT_KEY=web.AppKey('current',object)
 MAX_STREAMS=8
@@ -86,27 +86,17 @@ class CurrentStore:
         elapsed=max(0,int(self.monotonic()-self._age_origin))
         clock=self._clock_origin+timedelta(seconds=elapsed)
         if clock<=stamp(self._state['clock_at']):return
-        # Age updates change only quote scalars and EV, not the large immutable
-        # comparison/evidence graphs. Copy the tree and quote shells once.
-        state=dict(self._state);state['clock_at']=clock.isoformat();changed=False
-        def aged_quote(q):return dict(q,calculations=dict(q['calculations']))
-        state['events']=[dict(e,groups=[dict(g,outcomes=[dict(o,
-            quotes={v:aged_quote(q) for v,q in o['quotes'].items()},
-            alternatives={v:[aged_quote(q) for q in qs] for v,qs in o.get('alternatives',{}).items()})
-            for o in g['outcomes']]) for g in e['groups']]) for e in self._state['events']]
-        for e in state['events']:
-            for g in e['groups']:
-                for o in g['outcomes']:
-                    for q in quotes_of(o):
-                        from .current_contract import age_basis
-                        old_stale=q['stale'];age_basis(q,clock)
-                        if q.get('sharp_reference') is not None:
-                            from app.collection.current_benchmark import calculate
-                            ev=calculate(q,clock)
-                            if ev['eligible']!=q['calculations']['ev']['eligible']:changed=True
-                            q['calculations']['ev']=ev
-                        if old_stale!=q['stale']:
-                            changed=True
+        # Incremental commits and clock ticks share one temporal policy. Only
+        # quote shells change until a dependency transition needs re-projection.
+        from .current_incremental import aged
+        state=dict(self._state,clock_at=clock.isoformat(),events=[]);changed=False
+        old_clock=stamp(self._state['clock_at'])
+        for event in self._state['events']:
+            groups=[]
+            for group in event['groups']:
+                value,transition=aged(group,clock,old_clock,state.get('comparison_profiles'))
+                groups.append(value);changed=changed or transition
+            state['events'].append(dict(event,groups=groups))
         if changed:
             state['state_revision']+=1
             # Every dependent result is rebuilt from its original bound inputs,
@@ -144,7 +134,7 @@ class CurrentStore:
                 if prev:
                     if q['revision']<prev['revision']:raise ValueError('Quote revision regressed')
                     # Receipt/projection clocks alone do not reprice a quote.
-                    content=lambda v:dict({k:v.get(k) for k in ('original','source','state','rule_note','binding','calculation_inputs','depth','freshness_policy','rules_differ','cost_note','sharp_reference')},source_time_kind=v['times']['source_time_kind'])
+                    content=lambda v:dict({k:v.get(k) for k in ('original','source','state','rule_note','binding','calculation_inputs','depth','freshness_policy','rules_differ','cost_note','sharp_reference','occurrence_link')},source_time_kind=v['times']['source_time_kind'])
                     if q['revision']==prev['revision'] and content(q)!=content(prev):raise ValueError('Quote changed without a coherent revision')
                     if q['revision']>prev['revision'] and content(q)==content(prev):raise ValueError('Heartbeat cannot reprice a quote')
                     new=q.get('book_confirmation');prior=prev.get('book_confirmation')
@@ -196,11 +186,11 @@ class CurrentStore:
 
     def create(self,request):
         expected={'schema','runtime_id','state_revision','quote_id','quote_revision','client_id'}
-        if not isinstance(request,dict) or set(request)!=expected or request['schema']!=VERSION:raise ValueError('Exact selection request required')
+        if not isinstance(request,dict) or set(request)!=expected or request['schema']!=VERSION:raise PublicRequestError('Exact selection request required')
         for k in ('runtime_id','quote_id','client_id'):
-            if not isinstance(request[k],str) or not 1<=len(request[k])<=160:raise ValueError('Bounded selection identity required')
+            if not isinstance(request[k],str) or not 1<=len(request[k])<=160:raise PublicRequestError('Bounded selection identity required')
         for k in ('state_revision','quote_revision'):
-            if type(request[k]) is not int or request[k]<1:raise ValueError('Positive selection revision required')
+            if type(request[k]) is not int or request[k]<1:raise PublicRequestError('Positive selection revision required')
         self.prune();self.refresh_age()
         state=self._state
         if self.closed or request['runtime_id']!=state['runtime_id']:
@@ -229,7 +219,10 @@ class CurrentStore:
         if self.closed or not lease:
             raise SelectionError(410,'selection_expired','Selection expired, released or runtime restarted')
         review=lease['review'];q=review['quote'];latest=self.index(self._state).get(q['id'])
-        newer=latest is None or latest['quote']['revision']!=q['revision']
+        newer=latest is None or latest['quote']['revision']!=q['revision'] or (
+            latest['quote'].get('comparison_input_refs')!=q.get('comparison_input_refs') or
+            latest['quote'].get('comparison_dependency_reasons')!=q.get('comparison_dependency_reasons') or
+            latest['quote'].get('comparison_temporal_revision')!=q.get('comparison_temporal_revision'))
         return dict(schema=VERSION,selection_id=token,runtime_id=self._state['runtime_id'],status='newer_available' if newer else 'held',
             ttl_remaining=max(0,lease['deadline']-self.monotonic()),review=deepcopy(review),
             latest=None if latest is None else dict(quote_id=q['id'],quote_revision=latest['quote']['revision'],state_revision=self._state['state_revision'],state=latest['quote']['state'],display=deepcopy(latest['quote']['display'])))
@@ -255,7 +248,7 @@ def mount(app,provider=None):
     store=CurrentStore(provider);app[CURRENT_KEY]=store
 
     def strict_query(req):
-        if req.query:raise ValueError('Current endpoints do not accept filters or acquisition controls')
+        if req.query:raise PublicRequestError('Current endpoints do not accept filters or acquisition controls')
 
     async def current(req):
         strict_query(req)
@@ -298,7 +291,7 @@ def mount(app,provider=None):
             if req.method=='GET':return web.json_response(store.get(token))
             body=await read_json(req)
             if req.path.endswith('/release'):
-                if body!={}:raise ValueError('Release accepts an empty object')
+                if body!={}:raise PublicRequestError('Release accepts an empty object')
                 return web.json_response(store.release(token))
             review=store.get(token)['review']
             return web.json_response(manual_scenario(review,body))

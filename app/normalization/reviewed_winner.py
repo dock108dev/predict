@@ -1,4 +1,4 @@
-"""Shared native review and settlement plumbing for bounded winner slices."""
+"""Shared native review and settlement logic for bounded winner comparisons."""
 from hashlib import sha256
 import json
 from app.normalization.registry import Registry

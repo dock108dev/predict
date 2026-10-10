@@ -1,0 +1,101 @@
+{
+  "version": "comparison-d02-vectors-1",
+  "evidence_class": "retained_regression_and_authored",
+  "retained_registry": {
+    "version": "comparison-event-links-1",
+    "edges": [
+      {
+        "occurrence_id": "aa6b58bf-4feb-11f1-abca-2c54536568a9",
+        "league": "NFL",
+        "home_id": "NFL:DAL",
+        "away_id": "NFL:TB",
+        "observed_at": "2026-10-08T03:09:14.329921+00:00",
+        "effective_from": "2026-10-06T00:00:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "evidence_class": "retained_reviewed",
+        "review_class": "manual_review",
+        "supersedes": [],
+        "provider": "the_odds_api",
+        "provider_event_id": "259b5df9aa0d10257f56de78523495e0",
+        "source_sha256": "cee206dd5b01c8bdcc8e6f36db1607ab8a2a678905d896a4e4aa77900f71b3f5"
+      },
+      {
+        "occurrence_id": "aa6b58bf-4feb-11f1-abca-2c54536568a9",
+        "league": "NFL",
+        "home_id": "NFL:DAL",
+        "away_id": "NFL:TB",
+        "observed_at": "2026-10-08T03:09:14.329921+00:00",
+        "effective_from": "2026-10-06T00:00:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "evidence_class": "retained_reviewed",
+        "review_class": "manual_review",
+        "supersedes": [],
+        "provider": "kalshi",
+        "provider_event_id": "KXNFLGAME-26OCT08TBDAL",
+        "source_sha256": "2924f6508a38af4271939723195133e70ef8cd51b79e093fff71c4db8ba8575a"
+      },
+      {
+        "occurrence_id": "aa6b58bf-4feb-11f1-abca-2c54536568a9",
+        "league": "NFL",
+        "home_id": "NFL:DAL",
+        "away_id": "NFL:TB",
+        "observed_at": "2026-10-08T03:09:14.329921+00:00",
+        "effective_from": "2026-10-06T00:00:00Z",
+        "effective_until": "2026-10-09T00:15:00Z",
+        "evidence_class": "retained_reviewed",
+        "review_class": "manual_review",
+        "supersedes": [],
+        "provider": "polymarket_us",
+        "provider_event_id": "124724",
+        "source_sha256": "2924f6508a38af4271939723195133e70ef8cd51b79e093fff71c4db8ba8575a"
+      },
+      {
+        "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+        "league": "NFL",
+        "home_id": "NFL:JAX",
+        "away_id": "NFL:PHI",
+        "source_sha256": "6b60f26bd5707c8b8fc02bb5e5923f7ad80b69b88145ab34d51c269af0310a9e",
+        "observed_at": "2026-10-09T21:55:06.130895+00:00",
+        "effective_from": "2026-10-09T21:55:06.130895+00:00",
+        "effective_until": "2026-10-10T21:55:06.130895+00:00",
+        "evidence_class": "retained_reviewed",
+        "review_class": "manual_review",
+        "supersedes": [],
+        "provider": "the_odds_api",
+        "provider_event_id": "21b26266f3d78af02eb672e606275d95"
+      },
+      {
+        "occurrence_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+        "league": "NFL",
+        "home_id": "NFL:JAX",
+        "away_id": "NFL:PHI",
+        "source_sha256": "6b60f26bd5707c8b8fc02bb5e5923f7ad80b69b88145ab34d51c269af0310a9e",
+        "observed_at": "2026-10-09T21:55:06.130895+00:00",
+        "effective_from": "2026-10-09T21:55:06.130895+00:00",
+        "effective_until": "2026-10-10T21:55:06.130895+00:00",
+        "evidence_class": "retained_reviewed",
+        "review_class": "manual_review",
+        "supersedes": [],
+        "provider": "polymarket_us",
+        "provider_event_id": "129629"
+      }
+    ]
+  },
+  "schedule_shift": {
+    "provider_event_id": "259b5df9aa0d10257f56de78523495e0",
+    "before": "2026-10-09T00:15:00Z",
+    "after": "2026-10-09T00:18:00Z",
+    "expectation": "same source-local event/outcome/quote identity; cross-provider admission requires effective edges"
+  },
+  "authority": "Dated historical edges plus separately recorded prospective manual review; intervals and source IDs remain independent.",
+  "cases": [
+    "rematch",
+    "doubleheader",
+    "swapped_roles",
+    "conflicting_edges",
+    "explicit_supersession",
+    "replacement",
+    "expired_review",
+    "bounded_review_queue"
+  ]
+}

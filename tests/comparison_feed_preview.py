@@ -9,7 +9,7 @@ from aiohttp.test_utils import TestServer
 from app.collection.continuous import ContinuousSession
 from app.dashboard.coverage_owner import CoverageOwner, spec
 from app.dashboard.multi_game_server import create_app
-from tests.comparison_preview import ComparisonFixture
+from tests.retained_comparison_fixture import ComparisonFixture
 from tests.test_coverage import ke, km, pe
 
 TEAMS=[('Detroit Lions','Buffalo Bills'),('Chicago Bears','Minnesota Vikings'),

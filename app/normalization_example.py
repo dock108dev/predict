@@ -1,4 +1,4 @@
-"""Offline adapter replay and normalization; JSON output for the next slice."""
+"""Offline adapter replay and normalization with JSON output."""
 import asyncio
 from collections import Counter
 from dataclasses import asdict

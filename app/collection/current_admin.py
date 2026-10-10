@@ -74,6 +74,10 @@ def project(service, raw):
     if store:store.refresh_age()
     state=store._state if store else None
     index=store.index(state) if state else {}
+    from app.comparison.coverage import current_rows
+    if hasattr(service,'coverage'):
+        exclusions=[dict(sport=e.get('sport'),venue=e.get('source'),reason=e.get('reason_code')) for e in getattr(service.sink,'exclusions',[])]
+        raw['coverage']=service.coverage.snapshot(current_rows(index),exclusions=exclusions)
     panels=[]
     for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),('the_odds_api',['novig','prophetx'])):
         worker=service.workers.get(provider)

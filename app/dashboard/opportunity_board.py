@@ -32,18 +32,13 @@ def create_app(sessions=None, **kwargs):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8783)
     p.add_argument('--current-config',help='Bounded native operational configuration JSON')
-    p.add_argument('--u0-preview',action='store_true',help='Isolated synthetic board design; no collection or retained-data loading')
     a=p.parse_args()
     import psycopg
     def deny(*args,**kwargs):raise PermissionError('File-only board forbids database connections')
     psycopg.connect=psycopg.Connection.connect=psycopg.AsyncConnection.connect=deny
-    if a.u0_preview:
-        from app.dashboard.u0_preview import create_app as preview_app
-        application=preview_app()
-    else:
-        from app.collection.current_service import CurrentService
-        from app.collection.current_policy import load
-        application=create_app(current_provider=CurrentService(config=load(a.current_config), config_loader=lambda:load(a.current_config)))
+    from app.collection.current_service import CurrentService
+    from app.collection.current_policy import load
+    application=create_app(current_provider=CurrentService(config=load(a.current_config), config_loader=lambda:load(a.current_config)))
     web.run_app(application,host='127.0.0.1',port=a.port,access_log=None)
 
 if __name__=='__main__':main()

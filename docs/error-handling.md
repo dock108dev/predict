@@ -2,6 +2,13 @@
 
 The ordinary app reports current source issues and guarded recovery through `/admin`. Stop revokes dispatch and closes workers before releasing ownership. Recovery preserves spend, reservations, uncertain charges and due times; it does not reset accounting. The saved-session behavior below applies to the separate retained collectors.
 
+The shared HTTP router distinguishes explicit public validation messages from
+internal failures. `PublicRequestError` is reserved for authored safe validation
+text. Other `ValueError` subclasses return a fixed 422 and log only the operation,
+exception class and traceback locations. Do not copy arbitrary exception messages
+into this public class. Duplicate query fields and non-object Admin bodies are
+rejected before their handlers can act. See [local security](security.md).
+
 Collection stops on persistence or unconfirmed resource cleanup failures. A saved
 journal is not a completion receipt; only successful finalization publishes a
 completed package. Use `/api/status` to distinguish stopping, saving and failed

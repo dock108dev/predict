@@ -41,6 +41,67 @@ class DurableQuota(unittest.TestCase):
         self.bootstrap();self.assertEqual(self.q.snapshot()['remaining'],480)
         with self.assertRaisesRegex(QuotaStop,'reset_window_unknown'):self.paid()
         with self.assertRaisesRegex(QuotaStop,'bootstrap_budget_delayed'):self.bootstrap()
+
+    def usage_evidence(self,used=20,**changes):
+        e=dict(schema='predict-usage-observation-2',id='CONTROLLED-observation',status=200,endpoint_class='sports_bootstrap',
+            purpose='read_only_usage_recovery',received_at=self.at,headers=quota(used),account_id='CONTROLLED-paid',
+            window_id=WINDOW['id'],window_evidence_sha256=WINDOW['evidence_sha256'],
+            endpoint='https://api.the-odds-api.com/v4/sports',method='GET',params={},credential_reference='.env',
+            credential_unchanged_since_snapshot=True,retries=0,documented_cost=0)
+        e.update(changes);path=self.root/'usage.json';path.write_text(json.dumps(e));return path
+
+    def paused_paid(self):
+        self.q.bind_window(WINDOW);self.q.transact(lambda v,at:v.update(account_id='CONTROLLED-paid'))
+        self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner);self.q.reconcile(aid,[])
+        self.at='2026-10-03T15:00:00+00:00';return aid
+
+    def test_same_account_paused_receipt_zero_resolution_preserves_history_and_due(self):
+        aid=self.paused_paid();before=self.q._read();self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence())
+        after=self.q._read();a=after['attempts'][aid]
+        self.assertEqual(a['charged'],0);self.assertEqual(a['quota_headers'],[])
+        self.assertEqual(a['quota_failure'],'quota_missing_duplicate_or_malformed');self.assertTrue(a['consumed'])
+        self.assertEqual(a['recovery']['account_id'],'CONTROLLED-paid');self.assertEqual(a['recovery']['old_pause'],before['pause'])
+        for k in ('next_due_at','bootstrap_due_at','rotation','window','account_id','account_transitions','cycle'):
+            self.assertEqual(after.get(k),before.get(k))
+        self.assertEqual(len(after['attempts']),len(before['attempts']));self.assertIsNone(after['pause'])
+        self.assertEqual(QuotaLedger(self.root/'quota',clock=lambda:self.at).snapshot()['reserved'],0)
+        with self.assertRaisesRegex(QuotaStop,'ambiguous'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence())
+
+    def test_positive_delta_intervening_spend_and_delayed_counters_do_not_resolve(self):
+        aid=self.paused_paid();before=(self.root/'quota/quota.json').read_bytes()
+        for used in (21,23,100):
+            with self.assertRaisesRegex(QuotaStop,'not_uncharged'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence(used))
+            self.assertEqual((self.root/'quota/quota.json').read_bytes(),before)
+        for changes in (dict(received_at=AT),dict(received_at='2026-10-03T15:06:00+00:00'),dict(received_at='2026-10-03T14:54:00+00:00')):
+            with self.assertRaises(QuotaStop):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence(**changes))
+        self.assertEqual(self.q.snapshot()['reserved'],3)
+
+    def test_account_reset_credential_and_endpoint_mismatch_preserve_reservation(self):
+        aid=self.paused_paid()
+        for changes in (dict(account_id='other'),dict(window_id='other'),dict(window_evidence_sha256='b'*64),
+            dict(schema='predict-usage-observation-1'),dict(credential_unchanged_since_snapshot=False),
+            dict(endpoint='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds'),dict(documented_cost=3)):
+            with self.assertRaisesRegex(QuotaStop,'account_or_window'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence(**changes))
+        self.q.transact(lambda v,at:v.update(account_transitions=[dict(at=self.at,reason='CONTROLLED-account-change')]))
+        with self.assertRaisesRegex(QuotaStop,'account_or_window'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence())
+        self.assertEqual(self.q.snapshot()['reserved'],3)
+
+    def test_unrelated_pause_and_extra_uncertain_attempt_remain_blocked(self):
+        aid=self.paused_paid();self.q.pause('aggregate_authentication')
+        with self.assertRaisesRegex(QuotaStop,'not_uncharged'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence())
+        self.q.pause('quota_missing_duplicate_or_malformed')
+        def extra(v,at):
+            a=deepcopy(v['attempts'][aid]);a['id']='CONTROLLED-other';v['attempts'][a['id']]=a
+        self.q.transact(extra)
+        with self.assertRaisesRegex(QuotaStop,'ambiguous'):self.q.reconcile_uncharged(self.owner,aid,self.usage_evidence())
+        self.assertEqual(self.q.snapshot()['reserved'],6)
+
+    def test_header_case_duplicate_and_malformed_provenance(self):
+        self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)
+        self.q.reconcile(aid,[('X-Requests-Used','23'),('X-Requests-Remaining','477'),('X-Requests-Last','secret'),('x-requests-last','3')])
+        a=self.q._read()['attempts'][aid]
+        self.assertEqual(a['quota_headers'],[['x-requests-used','23'],['x-requests-remaining','477'],['x-requests-last','invalid'],['x-requests-last','3']])
+        self.assertEqual(self.q.snapshot()['reserved'],3);self.assertNotIn('secret',json.dumps(a))
     def test_atomic_reservation_restart_schedule_and_duplicate(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid()
         other=QuotaLedger(self.root/'quota',clock=lambda:self.at)

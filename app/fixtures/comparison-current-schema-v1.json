@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparison-current-dependencies-1",
+  "title": "Additive immutable-profile transport contract",
+  "description": "Extension to predict-current-1 and predict-current-changes-1; original strict current schema remains authoritative. Runtime validator enforces hashes, kinds, privacy, 128 profiles, 32KiB per profile, 2MiB total and bound semantic associations.",
+  "type": "object",
+  "required": [
+    "comparison_profiles"
+  ],
+  "properties": {
+    "comparison_profiles": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "kind",
+          "payload",
+          "expires_at"
+        ],
+        "properties": {
+          "version": {
+            "const": "comparison-current-dependencies-1"
+          },
+          "kind": {
+            "enum": [
+              "identity",
+              "payout",
+              "reference",
+              "fee",
+              "quantity",
+              "buffer",
+              "probability"
+            ]
+          },
+          "payload": {
+            "type": "object"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "quote_refs": {
+      "type": "object",
+      "required": [
+        "version",
+        "refs",
+        "phase"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "comparison-current-dependencies-1"
+        },
+        "phase": {
+          "enum": [
+            "pregame",
+            "live",
+            "unknown"
+          ]
+        },
+        "refs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identity",
+            "payout",
+            "reference",
+            "fee",
+            "quantity",
+            "buffer",
+            "probability"
+          ],
+          "properties": {
+            "identity": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "payout": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "reference": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "fee": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "quantity": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "buffer": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "probability": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

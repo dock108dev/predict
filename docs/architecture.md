@@ -2,7 +2,7 @@
 
 The product is a local read-only prediction-market comparison board. Its ordinary runtime owns bounded latest state and source acquisition; retained finite-session collectors and saved readers remain separate. Module ownership below identifies the authoritative components. Venue and market support varies; inspect exact market identity and calculation basis before interpreting a result.
 
-Current production behavior is the Odds board, explicit opposing-pair Arbs page and Admin, with live Details. Native streams run while the app runs; shared aggregate acquisition uses 15-minute Eastern daytime slots and the paid 100,000-credit policy. `current_aggregate_policy.POLICY` owns current aggregate constants; `current_schedule.schedule` computes slots and `QuotaLedger.begin_cycle` consumes them.
+Current production behavior is the Odds board, EV, opposing-pair Arbs, Coverage and Admin, with current Details. Native streams run while the app runs; shared aggregate acquisition uses 15-minute Eastern daytime slots and the paid 100,000-credit policy. `current_aggregate_policy.POLICY` owns current aggregate constants; `current_schedule.schedule` computes slots and `QuotaLedger.begin_cycle` consumes them.
 
 ## Current request and collection flow
 
@@ -22,6 +22,8 @@ Current production behavior is the Odds board, explicit opposing-pair Arbs page 
    state atomically. This path does not advance a quote journal or archive.
 4. `CurrentStore` validates the `predict-current-1` contract, advances source
    eligibility with monotonic aging and publishes bounded latest revision notices.
+   `current_incremental.aged` supplies temporal updates for both clock ticks and
+   unchanged-group commits; dependency transitions trigger strict re-projection.
    The browser filters existing rows locally; tabs, filters and Details do not
    create source workers or multiply paid requests.
 5. A price selection opens live Details on the current coherent quote revision.
@@ -79,7 +81,8 @@ qualification collectors and explicit test instances.
 
 | Route | Responsibility |
 | --- | --- |
-| `GET /`, `/arbs`, `/admin` | Odds board, explicit opposing pairs and separate operator surface |
+| `GET /`, `/ev`, `/arbs`, `/current/coverage`, `/admin` | Current comparison journey and separate operator surface |
+| `GET /api/comparison`, `/api/coverage` | Bound comparison metrics (optional size) and source coverage; neither dispatches acquisition |
 | `GET /api/arbs` | Signed conditional opposing-pair results from the current snapshot |
 | `GET /api/current`, `/api/current/updates` | Latest validated state and bounded revision notices |
 | `POST /api/selections`, `GET /api/selections/{token}` | Create and inspect a temporary immutable calculation lease |
@@ -173,8 +176,11 @@ Retained helpers still have runtime and fixture callers. Check those callers bef
 | Configuration and ownership | `collection/current_policy.py`, `current_service.py`, `local_ownership.py` | Validation precedes workers and credentials; the service owns Stop/recovery |
 | Aggregate policy | `collection/current_aggregate_policy.py`, `current_schedule.py` | One immutable policy supplies scheduler, transport, account and cycle limits |
 | Credentials and quota | `collection/credential_handoff.py`, `current_quota.py` | Hidden key entry, guarded selection and durable reservations/reconciliation |
+| Native HTTP protocol | `collection/native_http_transport.py` | HTTP framing, bounded plaintext callbacks and redacted provenance; producer retains budgets/admission and compatibility aliases |
 | Current ingestion | `current_native.py`, `current_aggregate_admission.py`, `current_overlap.py`, `current_sink.py` | Exact source admission and identity precede publication |
-| Current state and math | `dashboard/current_state.py`, `current_contract.py`, `opportunities/percentages.py` | Validated revisions, temporary leases and original-input calculations |
+| Current state and temporal policy | `dashboard/current_state.py`, `current_contract.py`, `current_incremental.aged` | Strict admission, validated revisions, temporary leases and shared clock/commit transitions |
+| Comparison assembly | `comparison/current_metrics.apply_group_metrics` | Admission and optional-size reads call the same assembly; gross/model/net contracts stay separate |
+| Gross benchmark and opposing percentage | `collection/current_benchmark.py`, `opportunities/percentages.py` | Exact bound sharp reference and normalized opposing-leg arithmetic |
 | Browser boundary | `dashboard/local_security.py`, `query_policy.py` | Shared request/body and retained-selector validation |
 | Browser presentation | Current browser modules and shared `u0/board.js` | Server-supplied values, ordered notices and keyed rendering |
 | Retained data | `coverage_owner.py`, `session_projection.py`, `session_history.py`, finite collectors | Explicit saved cutoffs and durable completion; no current-data fallback |
@@ -185,3 +191,7 @@ explicit dependencies supplied by the public collector constructor. Discovery an
 finite-session ownership stay in `continuous.py`; the stream module never imports
 its owner. Keep saved schema versions and required fixture identities stable when
 changing these boundaries.
+
+Synthetic servers in [development](development.md#synthetic-preview) inject test
+providers. The fictional catalog is `tests/current_sample.py`; shared
+`u0_display.py`, `u0/board.js` and `u0/board.css` serve current browser callers.

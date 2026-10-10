@@ -1,0 +1,232 @@
+{
+  "version": "comparison-selected-reference-gap-1",
+  "evidence_class": "authentic retained candidate excerpts; diagnostics only, no reviewed occurrence edge",
+  "records": [
+    {
+      "observation": {
+        "native_key": [
+          "polymarket_us",
+          "129629",
+          "1083081",
+          "2165646",
+          "Long"
+        ],
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.2350"
+        },
+        "source_at": "2026-10-09T03:55:16.261974+00:00",
+        "received_at": "2026-10-09T03:55:23.200604+00:00",
+        "provenance_sha256": "4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+      },
+      "selection": {
+        "event_id": "event:fe11cc3f40a4315f83afd7dcbf4b82b0",
+        "group_id": "group:d1733cb6b3f88fe590d2a4a4104fc3c0",
+        "outcome_cardinality": 2,
+        "outcome_id": "outcome:b3c8b6068d9de0d731c174cd7a499240",
+        "participant": "NFL:PHI",
+        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+        "predicate": "win",
+        "result_interpretation": "normal_win",
+        "signed_line": null
+      },
+      "assessment": {
+        "status": "candidate_only_occurrence_edge_unqualified",
+        "candidate_provider_event_id": "21b26266f3d78af02eb672e606275d95",
+        "source_game_id": "19518",
+        "sportradar_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+        "retained_observations": [
+          {
+            "retained_path": ".local/predict-odds/baselines/7903803b781cc9c3b923cb05/NFL.json",
+            "retained_sha256": "de2eb0f7d11e60d7138bb12758d3170aa6304683f29605c7c196e8bc0cff356e",
+            "original_body_sha256": "cee206dd5b01c8bdcc8e6f36db1607ab8a2a678905d896a4e4aa77900f71b3f5",
+            "original_body_bytes": 38863,
+            "received_at": "2026-10-08T03:09:14.329921+00:00",
+            "provider_event_id": "21b26266f3d78af02eb672e606275d95",
+            "sport_key": "americanfootball_nfl",
+            "home": "Jacksonville Jaguars",
+            "away": "Philadelphia Eagles",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "bookmaker": "pinnacle",
+            "book_at": "2026-10-08T03:08:49Z",
+            "market_at": "2026-10-08T03:08:49Z",
+            "market_key": "h2h",
+            "outcomes": [
+              {
+                "name": "Jacksonville Jaguars",
+                "price": "1.28"
+              },
+              {
+                "name": "Philadelphia Eagles",
+                "price": "3.96"
+              }
+            ],
+            "period_evidence": "aggregate h2h key; explicit selected grading not retained",
+            "overtime_evidence": null,
+            "original_quote_applicability": false
+          },
+          {
+            "retained_path": ".local/predict-odds/diagnostics/NFL.json",
+            "retained_sha256": "f609aa877b06c8290aebb9cf4f26dd4ae95b4ba5d22e19c9ea69554e7ac20847",
+            "original_body_sha256": "286f6352d125b39499f1499222d5606ec6f7c22677d4dea9aec8c4bee80efb25",
+            "original_body_bytes": 39208,
+            "received_at": "2026-10-09T00:00:02.522608+00:00",
+            "provider_event_id": "21b26266f3d78af02eb672e606275d95",
+            "sport_key": "americanfootball_nfl",
+            "home": "Jacksonville Jaguars",
+            "away": "Philadelphia Eagles",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "bookmaker": "pinnacle",
+            "book_at": "2026-10-08T23:59:58Z",
+            "market_at": "2026-10-08T23:59:58Z",
+            "market_key": "h2h",
+            "outcomes": [
+              {
+                "name": "Jacksonville Jaguars",
+                "price": "1.27"
+              },
+              {
+                "name": "Philadelphia Eagles",
+                "price": "4.0"
+              }
+            ],
+            "period_evidence": "aggregate h2h key; explicit selected grading not retained",
+            "overtime_evidence": null,
+            "original_quote_applicability": false
+          }
+        ],
+        "occurrence_edge_qualified": false,
+        "original_quote_reference_qualified": false,
+        "current_reference_qualified": false,
+        "probability_complete": false,
+        "execution_qualified": false,
+        "missing": [
+          "independently evidenced Odds API-to-Sportradar occurrence edge with roles, observation clock and effective interval",
+          "exact Pinnacle full-game winner grading and overtime/outcome-space evidence",
+          "Pinnacle opposition applicable to the original 2026-10-09T03:55:16.261974Z quote; newest retained source clock is 3h55m18.261974s earlier"
+        ],
+        "review_record": "evidence/source-bindings-20260929/event-dependencies.json#/17",
+        "review_record_status": "canonical_native_match=unbound"
+      }
+    },
+    {
+      "observation": {
+        "native_key": [
+          "polymarket_us",
+          "129629",
+          "1083081",
+          "2165647",
+          "Short"
+        ],
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.2325",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.7675"
+        },
+        "source_at": "2026-10-09T03:55:16.261974+00:00",
+        "received_at": "2026-10-09T03:55:23.200604+00:00",
+        "provenance_sha256": "4e0d3ffff6eadfa2a99bc2f4e4e2223d6dbc33fc47147b5313896ad05d1e4348"
+      },
+      "selection": {
+        "event_id": "event:fe11cc3f40a4315f83afd7dcbf4b82b0",
+        "group_id": "group:d1733cb6b3f88fe590d2a4a4104fc3c0",
+        "outcome_cardinality": 2,
+        "outcome_id": "outcome:e24b06aeaa2a3f59f5cf29b7184bb82c",
+        "participant": "NFL:JAX",
+        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:83e6aca10792324981b8b2485ff55e2871801baa964b0677de88dc475d6aed50",
+        "predicate": "win",
+        "result_interpretation": "normal_win",
+        "signed_line": null
+      },
+      "assessment": {
+        "status": "candidate_only_occurrence_edge_unqualified",
+        "candidate_provider_event_id": "21b26266f3d78af02eb672e606275d95",
+        "source_game_id": "19518",
+        "sportradar_game_id": "b635ddd1-4827-4593-ae8f-f41ae2f8914f",
+        "retained_observations": [
+          {
+            "retained_path": ".local/predict-odds/baselines/7903803b781cc9c3b923cb05/NFL.json",
+            "retained_sha256": "de2eb0f7d11e60d7138bb12758d3170aa6304683f29605c7c196e8bc0cff356e",
+            "original_body_sha256": "cee206dd5b01c8bdcc8e6f36db1607ab8a2a678905d896a4e4aa77900f71b3f5",
+            "original_body_bytes": 38863,
+            "received_at": "2026-10-08T03:09:14.329921+00:00",
+            "provider_event_id": "21b26266f3d78af02eb672e606275d95",
+            "sport_key": "americanfootball_nfl",
+            "home": "Jacksonville Jaguars",
+            "away": "Philadelphia Eagles",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "bookmaker": "pinnacle",
+            "book_at": "2026-10-08T03:08:49Z",
+            "market_at": "2026-10-08T03:08:49Z",
+            "market_key": "h2h",
+            "outcomes": [
+              {
+                "name": "Jacksonville Jaguars",
+                "price": "1.28"
+              },
+              {
+                "name": "Philadelphia Eagles",
+                "price": "3.96"
+              }
+            ],
+            "period_evidence": "aggregate h2h key; explicit selected grading not retained",
+            "overtime_evidence": null,
+            "original_quote_applicability": false
+          },
+          {
+            "retained_path": ".local/predict-odds/diagnostics/NFL.json",
+            "retained_sha256": "f609aa877b06c8290aebb9cf4f26dd4ae95b4ba5d22e19c9ea69554e7ac20847",
+            "original_body_sha256": "286f6352d125b39499f1499222d5606ec6f7c22677d4dea9aec8c4bee80efb25",
+            "original_body_bytes": 39208,
+            "received_at": "2026-10-09T00:00:02.522608+00:00",
+            "provider_event_id": "21b26266f3d78af02eb672e606275d95",
+            "sport_key": "americanfootball_nfl",
+            "home": "Jacksonville Jaguars",
+            "away": "Philadelphia Eagles",
+            "scheduled_start": "2026-10-11T13:30:00Z",
+            "bookmaker": "pinnacle",
+            "book_at": "2026-10-08T23:59:58Z",
+            "market_at": "2026-10-08T23:59:58Z",
+            "market_key": "h2h",
+            "outcomes": [
+              {
+                "name": "Jacksonville Jaguars",
+                "price": "1.27"
+              },
+              {
+                "name": "Philadelphia Eagles",
+                "price": "4.0"
+              }
+            ],
+            "period_evidence": "aggregate h2h key; explicit selected grading not retained",
+            "overtime_evidence": null,
+            "original_quote_applicability": false
+          }
+        ],
+        "occurrence_edge_qualified": false,
+        "original_quote_reference_qualified": false,
+        "current_reference_qualified": false,
+        "probability_complete": false,
+        "execution_qualified": false,
+        "missing": [
+          "independently evidenced Odds API-to-Sportradar occurrence edge with roles, observation clock and effective interval",
+          "exact Pinnacle full-game winner grading and overtime/outcome-space evidence",
+          "Pinnacle opposition applicable to the original 2026-10-09T03:55:16.261974Z quote; newest retained source clock is 3h55m18.261974s earlier"
+        ],
+        "review_record": "evidence/source-bindings-20260929/event-dependencies.json#/17",
+        "review_record_status": "canonical_native_match=unbound"
+      }
+    }
+  ],
+  "sha256": "0cda4794e4b98530e6ecc302eb9d19cec88441bd04abefeb49e87c404926aa30"
+}

@@ -175,22 +175,31 @@ class Credentials(unittest.TestCase):
         with self.assertRaises(QuotaStop):headers([('x-requests-used','0'),('x-requests-remaining','500'),('x-requests-last','0')],100000)
 
 class Overlap(unittest.TestCase):
-    def test_exact_schedule_roles_and_unique_occurrence_required(self):
+    def test_evidenced_provider_roles_and_unique_occurrence_required(self):
         from app.collection.current_overlap import associate
         from app.collection.current_aggregate_admission import admit
+        from app.comparison.event_links import EventLinks,ProviderEdge
         rows=admit(body(),'MLB','2026-10-07T14:00:00Z')
         # Explicit controlled canonical identities; provider-slot fallbacks withheld.
         for r in rows:
             for role in ('home','away'):r['event'][role]='CONTROLLED-'+role
             r['event']['participants']={'CONTROLLED HOME':'CONTROLLED-home','CONTROLLED AWAY':'CONTROLLED-away'}
         r=rows[0];native=deepcopy(r);native['result_policy']='predict-direct-win-1:normal-full-game-win';native['market_identity']['event']=['CONTROLLED-native-occurrence'];native['event_scope']=None
-        joined=associate([native],rows);self.assertNotIn('event_scope',joined[0]);self.assertIn('predict-exact-scheduled-overlap-1',joined[0]['orientation_evidence'][-1])
+        native['event']['game_id']='CONTROLLED-occurrence'
+        native['quote']['source'].update(provider='kalshi',native_event_id='CONTROLLED-native-event')
+        at=datetime(2026,10,7,14,tzinfo=timezone.utc)
+        def edge(provider,native_id):
+            return ProviderEdge(provider,native_id,'CONTROLLED-occurrence','MLB','CONTROLLED-home','CONTROLLED-away','a'*64,
+                '2026-10-06T00:00:00Z','2026-10-06T00:00:00Z','2026-10-11T00:00:00Z','authored','manual_review')
+        links=EventLinks([edge('the_odds_api','CONTROLLED-event'),edge('kalshi','CONTROLLED-native-event')])
+        self.assertIn('event_scope',associate([native],rows,links=EventLinks(),clock=at)[0])
+        joined=associate([native],rows,links=links,clock=at);self.assertNotIn('event_scope',joined[0]);self.assertIn('comparison-evidenced-overlap-2',joined[0]['orientation_evidence'][-1])
         changed=deepcopy(native);changed['event']['scheduled_start']='2026-10-10T12:01:00Z'
-        self.assertIn('event_scope',associate([changed],rows)[0])
+        self.assertNotIn('event_scope',associate([changed],rows,links=links,clock=at)[0])
         changed=deepcopy(native);changed['market_identity']['event']=['CONTROLLED-other-occurrence']
-        self.assertIn('event_scope',associate([native,changed],rows)[0])
+        self.assertIn('event_scope',associate([native,changed],rows,links=links,clock=at)[0])
         changed=deepcopy(native);changed['event']['home'],changed['event']['away']=changed['event']['away'],changed['event']['home']
-        self.assertIn('event_scope',associate([changed],rows)[0])
+        self.assertIn('event_scope',associate([changed],rows,links=links,clock=at)[0])
 
 class SelectionRepair(unittest.TestCase):
     def test_only_returned_free_wrong_account_bootstrap_can_be_resolved(self):
