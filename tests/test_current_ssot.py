@@ -37,6 +37,20 @@ class PolicyOwnership(unittest.TestCase):
         self.assertEqual(config['sports'], ['NFL'])
         self.assertEqual(POLICY.bookmakers, ('novig', 'prophetx', 'pinnacle'))
 
+    def test_narrowed_attempt_declares_actual_markets_without_raising_policy(self):
+        config=dict(current_policy.DEFAULT,aggregate_sports=['NFL'],families=['moneyline'])
+        with tempfile.TemporaryDirectory() as temp:
+            attempt=current_policy.consume(temp,'controlled-winners',config,'synthetic-candidate')
+            retained=json.loads((Path(temp)/'attempt-controlled-winners.json').read_text())
+        self.assertEqual(retained,attempt)
+        self.assertEqual(attempt['aggregate_policy']['markets'],['h2h'])
+        self.assertEqual(attempt['aggregate_policy']['scope'],['NFL'])
+        self.assertEqual(attempt['aggregate_policy']['worst_case_credits_per_cycle'],18)
+        self.assertEqual(POLICY.markets,('h2h','spreads','totals'))
+        for families in ([],['winner'],['moneyline','moneyline']):
+            with self.assertRaises(ValueError):current_policy.aggregate_markets(dict(config,families=families))
+        with self.assertRaises(ValueError):POLICY.record(['NFL'],markets=['props'])
+
     def test_incomplete_config_never_enables_acquisition_implicitly(self):
         for field in ('enabled', 'aggregate_enabled'):
             config = dict(current_policy.DEFAULT)

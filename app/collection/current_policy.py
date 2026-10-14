@@ -50,6 +50,14 @@ def aggregate_scope(config):
     return list(config.get('aggregate_sports') or config['sports'])
 
 
+def aggregate_markets(config):
+    families=config.get('families',DEFAULT['families'])
+    mapping={'moneyline':'h2h','spread':'spreads','total':'totals'}
+    if not isinstance(families,list) or not families or len(set(families))!=len(families) or set(families)-set(mapping):
+        raise ValueError('Exact aggregate market families required')
+    return tuple(mapping[family] for family in DEFAULT['families'] if family in families)
+
+
 def load(path=None):
     explicit = path is not None
     path = Path(path) if path else ROOT / '.local/predict-current-config.json'
@@ -83,7 +91,7 @@ def consume(directory, runtime, config, digest):
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
         grant='Owner approves necessary live-data attempts and retries; bounded native and shared aggregate read-only scope',
-        aggregate_policy=AGGREGATE_POLICY.record(aggregate_scope(config)))
+        aggregate_policy=AGGREGATE_POLICY.record(aggregate_scope(config),markets=aggregate_markets(config)))
     import os
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:

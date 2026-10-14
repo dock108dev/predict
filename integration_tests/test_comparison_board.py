@@ -38,6 +38,64 @@ class ComparisonBoardSQL(unittest.TestCase):
     def setUp(self):
         self.transaction=self.db.transaction(force_rollback=True);self.transaction.__enter__()
     def tearDown(self):self.transaction.__exit__(None,None,None)
+    def test_sql_read_omits_irrelevant_projection_facts_preserves_whole_originals(self):
+        original=self.store.combined_read_capture()
+        quote=self.db.execute("SELECT payload,envelope_id FROM current_source_projection WHERE source='the_odds_api' AND kind='quote' LIMIT 1").fetchone()
+        # Authored out-of-scope projection facts in this disposable SQL only.
+        # Their immutable original receipts remain untouched and retained.
+        for field,value in (('competition','NHL'),('family','spread'),('period','first_half')):
+            row=json.loads(quote['payload'])
+            row['event' if field=='competition' else 'market_identity'][field]=value
+            self.store.source('the_odds_api','quote','authored-offscope-'+field,AT,quote['envelope_id'],row)
+        book=self.db.execute("SELECT payload,envelope_id FROM current_source_projection WHERE source='kalshi' AND kind='book' LIMIT 1").fetchone()
+        row=json.loads(book['payload']);ref=row['book']['raw']['ref'];ref['market_id']='authored-nonwinner'
+        self.store.source('kalshi','book',ref['event_id']+':'+ref['market_id'],AT,book['envelope_id'],row)
+        self.assertEqual(self.store.combined_read_capture(),original)
+        self.assertEqual(self.db.execute("SELECT count(*) AS n FROM current_source_projection WHERE native_id LIKE 'authored-offscope-%'").fetchone()['n'],3)
+        for item in original[0]:
+            stored=self.db.execute('SELECT payload,payload_sha256 FROM current_envelope WHERE id=%s',(item['id'],)).fetchone()
+            self.assertEqual(json.loads(stored['payload']),item['record'])
+            self.assertEqual(stored['payload_sha256'],item['payload_sha256'])
+
+    def test_sql_native_winner_scope_keeps_outer_or_bound_identity_and_whole_catalog(self):
+        catalog_row=self.db.execute("SELECT native_id,payload FROM current_source_projection WHERE source='kalshi' AND kind='catalog'").fetchone()
+        original=json.loads(catalog_row['payload'])
+        winner=next(m for m in original['markets'] if m['market_type']=='moneyline')
+        native=winner['event_id']+':'+winner['id']
+        for changed_side in ('outer','binding'):
+            inventory=deepcopy(original);market=next(m for m in inventory['markets'] if m['id']==winner['id'])
+            if changed_side=='outer':market['market_type']='spread'
+            else:market['v1_raw_binding']['identity']['family']='spread'
+            self.db.execute("UPDATE current_source_projection SET payload=%s WHERE source='kalshi' AND kind='catalog' AND native_id=%s",(json.dumps(inventory),catalog_row['native_id']))
+            _,associations,rows=self.store.combined_read_capture()
+            self.assertIn(('kalshi','book',native),associations)
+            kept=next(row for row in rows if row['source']=='kalshi' and row['kind']=='catalog')
+            self.assertEqual(json.loads(kept['payload']),inventory)
+        inventory=deepcopy(original);market=next(m for m in inventory['markets'] if m['id']==winner['id'])
+        market['market_type']='spread';market['v1_raw_binding']['identity']['family']='spread'
+        self.db.execute("UPDATE current_source_projection SET payload=%s WHERE source='kalshi' AND kind='catalog' AND native_id=%s",(json.dumps(inventory),catalog_row['native_id']))
+        _,associations,rows=self.store.combined_read_capture()
+        self.assertNotIn(('kalshi','book',native),associations)
+        self.assertTrue(any(row['source']=='kalshi' and row['kind']=='catalog' for row in rows))
+
+    def test_project_queries_exact_event_before_decoding_and_keeps_event_families(self):
+        key=':'.join(SELECTED)
+        quote=self.db.execute("SELECT payload,envelope_id FROM current_source_projection WHERE source='the_odds_api' AND kind='quote' AND payload::jsonb->'quote'->'source'->>'native_event_id'=%s LIMIT 1",(SELECTED[1],)).fetchone()
+        unrelated=json.loads(quote['payload']);unrelated['quote']['source']['native_event_id']='authored-other-event'
+        self.store.source('the_odds_api','quote','authored-other-event',AT,quote['envelope_id'],unrelated)
+        spread=json.loads(quote['payload']);spread['market_identity'].update(family='spread',line='-1.5');spread['quote']['id']='authored-selected-spread'
+        self.store.source('the_odds_api','quote','authored-selected-spread',AT,quote['envelope_id'],spread)
+        decode=json.loads
+        def selected_only(payload):
+            value=decode(payload)
+            if isinstance(value,dict) and 'quote' in value:self.assertNotEqual(value['quote']['source']['native_event_id'],'authored-other-event')
+            return value
+        with patch('app.storage.current_games.json.loads',side_effect=selected_only):self.store.project(key)
+        projection=json.loads(self.db.execute('SELECT payload FROM current_game_projection WHERE game_key=%s',(key,)).fetchone()['payload'])
+        records=projection['inputs']['records']+projection['inputs']['references']
+        self.assertTrue(any(row['market_identity']['family']=='spread' for row in records))
+        self.assertTrue(all(row['quote']['source']['native_event_id']==SELECTED[1] for row in records))
+
     def test_authentic_sql_catalog_and_saved_numeric_trace(self):
         b=choose(discover(self.store,at=AT),self.game);self.assertEqual(b['game_key'],retained()[0]['game_key'])
         n01={q['id']:q for _,_,q in entries(retained()[1])}

@@ -34,6 +34,8 @@
     "test_ev09_u01.cjs",
     "test_ev09_game_continuity.cjs",
     "test_ev09_read_polling.cjs",
-    "test_stored_views.cjs"
+    "test_stored_views.cjs",
+    "test_slate_ui.cjs",
+    "test_slate_polling.cjs"
   ]
 }

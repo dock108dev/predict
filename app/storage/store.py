@@ -11,7 +11,6 @@ from functools import lru_cache
 from collections import OrderedDict
 
 import psycopg
-from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg import sql
 
@@ -39,8 +38,9 @@ def stamp(t):
 
 def connect(database='prediction_arb'):
     if not database.startswith('prediction_arb'): raise ValueError('dedicated project databases only')
+    from .payload_codec import payload_row
     return psycopg.connect(host=str(ROOT/'.local/pgsocket'),port=55432,user='prediction_arb',
-        dbname=database,autocommit=True,row_factory=dict_row,connect_timeout=5,
+        dbname=database,autocommit=True,row_factory=payload_row,connect_timeout=5,
         options='-c statement_timeout=30000 -c lock_timeout=5000')
 
 

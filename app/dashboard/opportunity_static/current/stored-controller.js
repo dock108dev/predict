@@ -5,9 +5,10 @@ import {
   percent,
   quantity,
   settings,
-  checkBoard,
+  checkSlate,
   checkDetails,
   LatestRead,
+  SavedReadPoller,
   followGame,
 } from "./board-client.js";
 import {
@@ -21,7 +22,7 @@ import {
   price,
   labelsFor,
 } from "./board-elements.js";
-import { createBoardViews } from "./stored-views.js";
+import { createSlateViews } from "./stored-views.js";
 import { renderSavedDetails } from "./stored-details.js";
 
 const setStatus = (message, state = "ready") => {
@@ -48,7 +49,12 @@ let applied = { ...defaults },
   stopRequested = false,
   detail = null,
   opener = null,
-  failures = 0;
+  failures = 0,
+  unloading = false;
+const polling = new SavedReadPoller({
+  onRead: pull,
+  canRead: () => !unloading && failures < 4 && !read.pending && (!$("details").open || detail?.kind === "result"),
+});
 try {
   const saved = JSON.parse(sessionStorage.getItem("predict-board-settings"));
   if (saved)
@@ -57,11 +63,11 @@ try {
       String(numeric(saved.buffer) * 100),
       saved.benchmark_venue,
     );
-  game = sessionStorage.getItem("predict-board-game") || "";
+  game = sessionStorage.getItem("predict-board-slate-game") || "";
   previousSelection = JSON.parse(
     sessionStorage.getItem("predict-board-selection") || "null",
   );
-  $("search").value = sessionStorage.getItem("predict-board-search") || "";
+  $("search").value = sessionStorage.getItem("predict-board-slate-search") || "";
 } catch {}
 function form() {
   $("amount").value = applied.amount;
@@ -72,14 +78,15 @@ function context() {
   return { ...applied, game, view, filter };
 }
 function query(c) {
-  return new URLSearchParams({
-    game: c.game,
+  const qs = new URLSearchParams({
     amount: c.amount,
     buffer: c.buffer,
     benchmark_venue: c.benchmark_venue,
     benchmark_method: c.benchmark_method,
     sizing_mode: c.sizing_mode,
   });
+  if (c.game) qs.set("game", c.game);
+  return qs;
 }
 function persist() {
   const selected = games.find((g) => g.game_key === game);
@@ -88,8 +95,8 @@ function persist() {
     sessionStorage.setItem("predict-board-selection", JSON.stringify(selected));
   }
   sessionStorage.setItem("predict-board-settings", JSON.stringify(applied));
-  sessionStorage.setItem("predict-board-game", game);
-  sessionStorage.setItem("predict-board-search", $("search").value);
+  sessionStorage.setItem("predict-board-slate-game", game);
+  sessionStorage.setItem("predict-board-slate-search", $("search").value);
 }
 function preserveContent(draw) {
   const active = document.activeElement,
@@ -107,22 +114,16 @@ function preserveContent(draw) {
         if (b.dataset.key === key) b.focus({ preventScroll: true });
       });
 }
-function currentParticipants() {
-  return games.find((g) => g.game_key === game)?.participants;
-}
 function draw(v) {
-  const participants = currentParticipants();
-  const renderers = createBoardViews({
+  const renderers = createSlateViews({
     content: $("content"),
-    participants,
     onDetails: openDetails,
     onOriginal: openOriginal,
   });
-  if (stopRequested && view !== "odds" && filter !== "all")
+  if ((stopRequested || failures) && view !== "odds" && filter !== "all")
     v = {
       ...v,
-      rows: [],
-      empty_reason: "Collection stop requested · positive authority withdrawn",
+      boards: v.boards.map(b => ({ ...b, rows: [] })),
     };
   current = v;
   $("applied").textContent =
@@ -131,22 +132,19 @@ function draw(v) {
     percent(String(numeric(applied.buffer) * 100)) +
     " buffer · " +
     venue(applied.benchmark_venue);
-  setStatus(
-    (stopped || v.delivery_state === "stopped" ? "Collection stopped · " : "") +
-      (v.delivery_state === "pending"
-        ? "Calculation pending · original prices available · " +
-          (v.result_id ? "prior complete result retained · " : "")
-        : "") +
-      (v.status === "mixed" ? "Mixed input ages · " : "") +
-      "Result as-of " +
-      time(v.result_as_of) +
-      (v.as_of !== v.result_as_of ? " · prices captured " + time(v.as_of) : ""),
-    v.delivery_state === "pending" ? "busy" : "ready",
-  );
+  const pending = v.boards.filter(b => b.delivery_state === "pending").length;
+  const unavailable = v.storage?.state === "unavailable",
+    storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
+  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached · " : "Saved updates paused · ") : v.storage?.state === "catching_up" ? "Saving new inputs · " : "";
+  setStatus((stopped ? "Collection stopped · " : "") + storageNote + v.games.length + " saved games · " + (!unavailable && pending ? pending + " calculations pending · " : "") + "Each price and result keeps its own source age", unavailable ? "error" : pending ? "busy" : "ready");
+  if (failures) setStatus("Saved reads unavailable · retained values have unverified freshness", "error");
   preserveContent(() =>
     renderers.draw(v, {
       view,
       filter,
+      game,
+      search: $("search").value,
+      sort: $("sort").value,
       onShowAll: () => $("filters").querySelector("[data-filter=all]").click(),
     }),
   );
@@ -157,9 +155,10 @@ function catalogOptions() {
       (g) => g.title.toLowerCase().includes(search) || g.game_key === game,
     );
   const signature = JSON.stringify(visible.map((g) => [g.game_key, g.title]));
-  if ($("game").dataset.signature === signature) return;
+  if ($("game").dataset.signature === signature) { $("game").value = game; return; }
   $("game").dataset.signature = signature;
   $("game").replaceChildren(
+    (() => { const o = el("option", "All games"); o.value = ""; return o; })(),
     ...visible.map((g) => {
       const o = el(
         "option",
@@ -172,82 +171,56 @@ function catalogOptions() {
       return o;
     }),
   );
-  if (game) $("game").value = game;
-  if ($("search").value) $("search").closest("details").open = true;
+  $("game").value = game;
 }
 async function pull() {
+  polling.cancel();
   if (failures >= 4) return;
   const c = context();
   try {
-    const catalog = await read.read("/api/boards/games", (v) => {
-      if (v.version !== "predict-board-catalog-1" || !Array.isArray(v.games))
-        throw Error("Game catalog unavailable.");
-      return v;
-    });
-    if (!catalog) return;
+    const qs = query({ ...c, game: "" });
+    qs.set("view", c.view);
+    qs.set("filter", c.filter);
+    const value = await read.read("/api/boards/slate?" + qs, v => checkSlate(v, c), 8388608);
+    if (!value) return;
+    polling.setSlate({ ...value, stopped: stopRequested || value.stopped });
     const continued = followGame(
       games.find((g) => g.game_key === game) ||
         (previousSelection?.game_key === game ? previousSelection : null),
-      catalog.games,
+      value.games,
       game,
     );
     if (continued !== game) {
       game = continued;
-      c.game = game;
-      current = null;
-      $("content").replaceChildren();
-      setStatus(
-        "Loading the same observed game at its new saved identity…",
-        "busy",
-      );
     }
-    games = catalog.games;
+    games = value.games;
     $("game").disabled = !games.length;
     document.querySelector(".selection").hidden = !games.length;
     $("settings").hidden = !games.length;
     $("applied").hidden = !games.length;
     $("filters").hidden = view === "odds" || !games.length;
-    stopped = stopRequested || catalog.stopped;
+    $("sort-setting").hidden = view === "odds" || !games.length;
+    stopped = stopRequested || value.stopped;
     $("stop").disabled = stopped;
-    game = game || games[0]?.game_key || "";
     catalogOptions();
     persist();
     if (!games.length) {
-      const empty = el("div", undefined, "empty");
-      empty.append(
-        el("h2", "No saved games yet"),
-        el(
-          "p",
-          "Open Admin to check your source setup. Observed NFL winner games will appear here as prices are saved.",
-        ),
-      );
-      const admin = el("a", "Check sources in Admin");
-      admin.href = "/admin";
-      empty.append(admin);
-      $("content").replaceChildren(empty);
+      draw(value);
       setStatus("No saved NFL winner games available.");
       return;
     }
-    if (!games.some((g) => g.game_key === game)) {
-      setStatus(
-        "Selected game is no longer in the catalog. Choose another game; open Details remains saved.",
-        "error",
-      );
-      return;
+    if (game && !games.some((g) => g.game_key === game)) {
+      game = "";
+      catalogOptions();
+      persist();
     }
-    c.game = game;
-    const qs = query(c);
-    qs.set("filter", c.filter);
-    const value = await read.read("/api/boards/" + view + "?" + qs, (v) =>
-      checkBoard(v, c),
-    );
-    if (!value) return;
-    draw(value);
     failures = 0;
+    draw(value);
     $("retry").hidden = true;
     if (detail?.kind === "result") refreshDetails();
   } catch (e) {
     if (e.name === "AbortError") return;
+    polling.setSlate(null);
     failures++;
     if (!games.length) {
       $("game").disabled = true;
@@ -268,6 +241,8 @@ async function pull() {
       "error",
     );
     $("retry").hidden = false;
+  } finally {
+    if (!read.pending) polling.schedule();
   }
 }
 function showDialog(button) {
@@ -282,6 +257,7 @@ function closeDetails() {
   originalRead.cancel();
   historyRead.cancel();
   $("details").close();
+  polling.schedule();
   if (wasOpen) {
     const target = opener?.isConnected
       ? opener
@@ -300,7 +276,7 @@ $("details").addEventListener("cancel", (e) => {
 function reconcile(v) {
   const { advanced, history } = renderSavedDetails(v, {
     root: $("detail-content"),
-    participants: currentParticipants(),
+    participants: detail.participants,
   });
   const load = el("button", "Load original input envelopes");
   load.onclick = async () => {
@@ -409,21 +385,22 @@ async function refreshDetails() {
       );
   }
 }
-function openDetails(row, button) {
+function openDetails(row, button, selectedGame) {
   detailRead.cancel();
   originalRead.cancel();
   historyRead.cancel();
-  detail = { kind: "result", context: context(), identity: { ...row.details } };
+  detail = { kind: "result", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
   $("detail-content").replaceChildren(el("p", "Loading exact saved Details…"));
   showDialog(button);
   refreshDetails();
 }
-async function openOriginal(q, button) {
-  const { selection } = labelsFor(currentParticipants());
+async function openOriginal(q, button, selectedGame) {
+  polling.cancel();
+  const { selection } = labelsFor(selectedGame.participants);
   detailRead.cancel();
   originalRead.cancel();
   historyRead.cancel();
-  const held = (detail = { kind: "price", context: context(), quote: q });
+  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q });
   $("detail-content").replaceChildren(
     el("h3", selection(q)),
     el("p", venue(q.venue) + " · " + price(q)),
@@ -491,18 +468,14 @@ $("restore").onclick = () => changeSettings({ ...defaults });
 $("search").oninput = () => {
   catalogOptions();
   persist();
+  if (current) draw(current);
 };
 $("game").onchange = () => {
   game = $("game").value;
-  read.cancel();
-  closeDetails();
-  current = null;
-  failures = 0;
   persist();
-  $("content").replaceChildren();
-  setStatus("Loading selected game…", "busy");
-  pull();
+  if (current) draw(current);
 };
+$("sort").onchange = () => { if (current) draw(current); };
 for (const b of $("filters").querySelectorAll("button")) {
   b.onclick = () => {
     filter = b.dataset.filter;
@@ -518,6 +491,8 @@ $("retry").onclick = () => {
   pull();
 };
 $("stop").onclick = async () => {
+  polling.cancel();
+  polling.setSlate(null);
   read.cancel();
   detailRead.cancel();
   stopRequested = true;
@@ -543,22 +518,19 @@ $("title").textContent =
   view === "odds" ? "Odds" : view === "ev" ? "Expected value" : "Arbitrage";
 $("purpose").textContent =
   view === "odds"
-    ? "Available winner prices, with a separate fair benchmark."
+    ? "Every saved game and its available winner prices, with a separate fair benchmark."
     : view === "ev"
-      ? "Estimated profit after modeled costs, rule effects and one buffer."
-      : "Opposing selections, one shared amount, and margins after costs.";
+      ? "Compare estimated profit across all games after modeled costs, rule effects and one buffer."
+      : "Compare opposing selections across all games, with one shared amount and margins after costs.";
 $("filters").hidden = view === "odds";
 $("filters").querySelector("[data-filter=hedges]").hidden = view !== "arbs";
 for (const a of document.querySelectorAll("nav a"))
   if (a.getAttribute("href") === location.pathname)
     a.setAttribute("aria-current", "page");
 form();
-const timer = setInterval(() => {
-  if (!read.pending && (!$("details").open || detail?.kind === "result"))
-    pull();
-}, 10000);
 window.addEventListener("pagehide", () => {
-  clearInterval(timer);
+  unloading = true;
+  polling.cancel();
   read.cancel();
   detailRead.cancel();
   originalRead.cancel();

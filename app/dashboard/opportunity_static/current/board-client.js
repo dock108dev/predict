@@ -181,6 +181,44 @@ export function checkBoard(v, c) {
   }
   return v;
 }
+export function checkSlate(v, c) {
+  checkPolicy(v.policy, c);
+  if (
+    v.version !== "predict-comparison-slate-1" ||
+    v.view !== c.view ||
+    v.filter !== c.filter ||
+    !Array.isArray(v.games) ||
+    !Array.isArray(v.boards) ||
+    v.games.length > 200 ||
+    v.boards.length > 200 ||
+    v.bounds?.maximum_games !== 200 ||
+    v.bounds?.maximum_bytes !== 8388608 ||
+    (v.errors !== undefined && !Array.isArray(v.errors)) ||
+    typeof v.stopped !== "boolean"
+  )
+    throw Error("Slate or view identity crossed; response withheld.");
+  const catalog = new Map();
+  for (const g of v.games) {
+    if (!g.game_key || !g.title || !Array.isArray(g.participants) || catalog.has(g.game_key))
+      throw Error("Slate occurrence identity crossed; response withheld.");
+    catalog.set(g.game_key, g);
+  }
+  const seen = new Set();
+  for (const b of v.boards) {
+    if (!catalog.has(b.game_key) || seen.has(b.game_key) || b.policy?.revision !== v.policy.revision)
+      throw Error("Slate board occurrence crossed; response withheld.");
+    checkBoard(b, { ...c, game: b.game_key });
+    seen.add(b.game_key);
+  }
+  for (const error of v.errors || []) {
+    if (!catalog.has(error.game_key) || seen.has(error.game_key) || typeof error.reason !== "string")
+      throw Error("Slate unavailable occurrence crossed; response withheld.");
+    seen.add(error.game_key);
+  }
+  if (seen.size !== catalog.size)
+    throw Error("Slate occurrence board absent; response withheld.");
+  return v;
+}
 export function checkDetails(v, c, d) {
   checkPolicy(v.policy, c);
   if (
@@ -248,5 +286,35 @@ export class LatestRead {
       clearTimeout(timeout);
       if (this.active === active) this.active = undefined;
     }
+  }
+}
+
+// Schedule the next saved read after completion. A delayed timer cannot start
+// overlapping work or resume a modal/closed controller that withdrew reads.
+export class SavedReadPoller {
+  constructor({ onRead, canRead, setTimer = (callback, delay) => globalThis.setTimeout(callback, delay), clearTimer = timer => globalThis.clearTimeout(timer) }) {
+    this.onRead = onRead;
+    this.canRead = canRead;
+    this.setTimer = setTimer;
+    this.clearTimer = clearTimer;
+    this.delay = 10000;
+    this.generation = 0;
+  }
+  setSlate(v) {
+    this.delay = v && !v.stopped && v.storage?.state !== "unavailable" && v.boards?.some(b => b.delivery_state === "pending") ? 2000 : 10000;
+  }
+  cancel() {
+    this.generation++;
+    if (this.timer !== undefined) this.clearTimer(this.timer);
+    this.timer = undefined;
+  }
+  schedule() {
+    this.cancel();
+    if (!this.canRead()) return;
+    const token = this.generation;
+    this.timer = this.setTimer(() => {
+      this.timer = undefined;
+      if (token === this.generation && this.canRead()) this.onRead();
+    }, this.delay);
   }
 }

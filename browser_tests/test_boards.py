@@ -63,21 +63,22 @@ def test_saved_board_journey(width):
                     status=503, json={"error": "Saved reads temporarily unavailable"}
                 )
                 return
-            if view == "games":
-                value = deepcopy(fixture["catalog"])
-                value["stopped"] = state["stopped"]
-                if state["mode"] == "empty":
-                    value["games"] = []
-            elif view == "details":
+            if view == "details":
                 value = fixture["pair" if "pair" in query else "single"]
             else:
+                assert view == "slate"
+                view = query["view"][0]
                 value = deepcopy(fixture[view])
                 value["filter"] = query["filter"][0]
                 if view != "odds" and value["filter"] != "all":
                     value["rows"] = [
                         r
                         for r in value["rows"]
-                        if r["classification"]["main_positive_eligible"]
+                        if r["classification"][
+                            "positive_rule_sensitive_eligible"
+                            if value["filter"] == "hedges"
+                            else "main_positive_eligible"
+                        ]
                     ]
                 value["empty_reason"] = (
                     "No positive EV found"
@@ -86,6 +87,19 @@ def test_saved_board_journey(width):
                 )
                 if state["stopped"]:
                     value["delivery_state"] = "stopped"
+                value = dict(
+                    version="predict-comparison-slate-1",
+                    view=view,
+                    filter=query["filter"][0],
+                    policy=value["policy"],
+                    games=[]
+                    if state["mode"] == "empty"
+                    else fixture["catalog"]["games"],
+                    boards=[] if state["mode"] == "empty" else [value],
+                    stopped=state["stopped"],
+                    as_of=value["read_at"],
+                    bounds=dict(maximum_games=200, maximum_bytes=8388608),
+                )
             request.fulfill(json=value)
 
         context.route("**/*", route)
@@ -96,9 +110,13 @@ def test_saved_board_journey(width):
             page.goto("http://board.invalid/ev")
             page.wait_for_selector(".empty")
             page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".cards .card")
+            page.wait_for_selector(".slate-result")
             page.locator(
-                'button[data-key="' + fixture["single"]["quote"]["id"] + '"]'
+                'button[data-key="'
+                + fixture["ev"]["game_key"]
+                + ":"
+                + fixture["single"]["quote"]["id"]
+                + '"]'
             ).click()
             page.wait_for_selector("#detail-content dl")
             page.keyboard.press("Shift+Tab")
@@ -110,14 +128,18 @@ def test_saved_board_journey(width):
             page.keyboard.press("Escape")
             assert (
                 page.evaluate("document.activeElement.dataset.key")
-                == fixture["single"]["quote"]["id"]
+                == fixture["ev"]["game_key"] + ":" + fixture["single"]["quote"]["id"]
             )
             page.goto("http://board.invalid/arbs")
             page.wait_for_selector(".empty")
             page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".arbs-card .metrics")
+            page.wait_for_selector(".slate-arb .metric")
             page.locator(
-                'button[data-key="' + fixture["pair"]["pair"]["id"] + '"]'
+                'button[data-key="'
+                + fixture["arbs"]["game_key"]
+                + ":"
+                + fixture["pair"]["pair"]["id"]
+                + '"]'
             ).click()
             page.wait_for_selector("#detail-content dl")
             page.keyboard.press("Escape")
@@ -128,7 +150,7 @@ def test_saved_board_journey(width):
             page.locator("#retry").click()
             page.wait_for_selector(".empty")
             page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".arbs-card")
+            page.wait_for_selector(".slate-arb")
             page.evaluate("document.documentElement.style.fontSize='20px'")
             assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
             page.locator("#stop").click()

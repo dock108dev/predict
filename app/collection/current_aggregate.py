@@ -10,7 +10,7 @@ from urllib.parse import quote
 import aiohttp
 from app.dashboard.current_contract import stamp
 from app.reference.product import SPORT_KEYS
-from .current_policy import ROOT, aggregate_scope
+from .current_policy import ROOT, aggregate_scope, aggregate_markets
 from .current_aggregate_policy import POLICY
 from .current_quota import QuotaLedger, QuotaStop, load_window, now
 
@@ -317,7 +317,8 @@ class AggregateScheduler:
         # Inventory activity is advisory: an empty odds response costs no credits
         # and explicitly retires old quotes for a sport between seasons/rounds.
         sports=list(aggregate_scope(self.service.config))
-        requests=[dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(PARAMS)) for sport in sports]
+        params=dict(PARAMS,markets=','.join(aggregate_markets(self.service.config)))
+        requests=[dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(params)) for sport in sports]
         self.cycle_id=self.ledger.begin_cycle(self.service.ownership,requests)
         if self.cycle_id is None:return
         self.metrics['selected_scope']=list(aggregate_scope(self.service.config))

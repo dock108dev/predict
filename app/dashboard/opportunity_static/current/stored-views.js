@@ -5,6 +5,7 @@ import {
   unit,
   venue,
   words,
+  time,
   residual,
   textLine,
   metric,
@@ -335,6 +336,193 @@ export function createBoardViews({
           el("p", selection(q) + " · " + venue(q.venue) + " " + price(q)),
         );
       content.append(d);
+    }
+  }
+  return { draw };
+}
+
+// The slate formats server-owned values. Details retains each row's own game,
+// result and snapshot rather than borrowing the optional screen filter.
+export function createSlateViews({ content, onDetails, onOriginal }) {
+  function action(root, label, key, callback) {
+    const b = el("button", label, "slate-action");
+    b.dataset.key = key;
+    b.onclick = () => callback(b);
+    root.append(b);
+    return b;
+  }
+  function shortClock(value) {
+    if (!value) return "Unknown";
+    return new Date(value).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(",", "").replace(" AM", "a").replace(" PM", "p");
+  }
+  function fullClock(value) {
+    return time(value) + (value ? " [" + value + "]" : "");
+  }
+  function gameHeading(root, g, b, paused) {
+    const heading = el("div", undefined, "slate-game-heading");
+    heading.append(el("h2", g.title), el("small", "Kickoff " + shortClock(g.start_at)));
+    heading.title = "Kickoff " + fullClock(g.start_at);
+    root.append(heading);
+    if (b.delivery_state === "pending")
+      root.append(el("small", paused ? "Saved updates paused · prices retained" : b.result_id ? "Calculation pending · prior saved result" : "Calculation pending · prices available", "pending-label"));
+    if (b.delivery_state === "stopped") root.append(el("small", "Collection stopped · saved inputs", "pending-label"));
+  }
+  function odds(g, b, paused) {
+    const root = el("article", undefined, "slate-game slate-odds");
+    root.dataset.key = g.game_key;
+    gameHeading(root, g, b, paused);
+    const table = el("div", undefined, "slate-prices");
+    const books = ["novig", "prophetx", "kalshi", "polymarket_us"];
+    for (const team of g.participants) {
+      const row = el("div", undefined, "slate-price-row team");
+      row.append(el("strong", team.name, "slate-team-name"));
+      for (const book of books) {
+        const cell = el("div", undefined, "slate-price-cell");
+        cell.append(el("small", venue(book), "mobile-price-label"));
+        const quotes = b.prices.filter(q => q.selection.participant === team.id && q.venue === book && q.selection.predicate === "win" && !["no", "short"].includes(q.native_side.toLowerCase()));
+        if (!quotes.length) {
+          const absent = el("span", "—", "unavailable-price");
+          absent.title = venue(book) + " price unavailable for " + team.name + " in this game";
+          absent.setAttribute("aria-label", absent.title);
+          cell.append(absent);
+        }
+        for (const q of quotes) {
+          const button = action(cell, price(q), g.game_key + ":" + q.quote_id, button => onOriginal(q, button, g));
+          const meaning = team.name + " · " + venue(book) + " · " + side(q.native_side) + " · " + words(q.selection.predicate) + " · original " + String(q.original.value ?? "Unknown") + " " + words(q.original.units) + " · " + (q.freshness?.status === "current" ? "Current inputs" : "As-of inputs") + " · Source " + fullClock(q.freshness?.source_at) + " · Received " + fullClock(q.freshness?.received_at) + (q.freshness?.reasons?.length ? " · " + q.freshness.reasons.map(words).join(" · ") : "") + " · Open original price";
+          button.title = meaning;
+          button.setAttribute("aria-label", meaning);
+          const clock = el("small", (q.freshness?.status === "current" ? "" : "As-of ") + shortClock(q.freshness?.source_at) + (q.native_side === "bookmaker_outcome" ? "" : " · " + side(q.native_side)), "compact-source-clock");
+          clock.title = meaning;
+          cell.append(clock);
+        }
+        row.append(cell);
+      }
+      const fair = el("div", undefined, "slate-price-cell slate-fair");
+      const reference = b.benchmark.fair.find(f => f.participant === team.id);
+      fair.append(el("small", venue(b.benchmark.venue) + " fair", "mobile-price-label"));
+      if (reference) fair.append(el("strong", numeric(reference.fair_decimal_odds).toFixed(3)), el("small", (b.benchmark.freshness === "current" ? "" : "As-of ") + percent(String(numeric(reference.decisive_probability) * 100)) + " decisive"));
+      else fair.append(el("strong", "—"), el("small", "Benchmark missing"));
+      fair.title = venue(b.benchmark.venue) + " fair benchmark · " + (reference ? b.benchmark.freshness === "current" ? "Current benchmark" : "As-of benchmark" : words(b.benchmark.reason)) + " · " + words(b.benchmark.conditioning) + " · " + (b.benchmark.originals || []).map(original => String(original.decimal_odds ?? "Unknown") + " original decimal odds · Source " + fullClock(original.book_at || original.market_at) + " · Received " + fullClock(original.received_at)).join("; ");
+      fair.setAttribute("aria-label", fair.title);
+      row.append(fair);
+      table.append(row);
+    }
+    root.append(table);
+    const alternatives = b.prices.filter(q => q.selection.predicate !== "win" || ["no", "short"].includes(q.native_side.toLowerCase()));
+    if (alternatives.length) {
+      const { selection } = labelsFor(g.participants), d = el("details", undefined, "slate-alternatives");
+      d.dataset.key = g.game_key + ":alternatives";
+      d.append(el("summary", "Native alternatives · " + alternatives.length));
+      for (const q of alternatives) {
+        const item = el("div", undefined, "slate-alternative");
+        item.append(el("span", selection(q) + " · " + venue(q.venue)));
+        action(item, price(q) + " · Original", g.game_key + ":" + q.quote_id, button => onOriginal(q, button, g));
+        freshness(item, q.freshness);
+        d.append(item);
+      }
+      root.append(d);
+    }
+    content.append(root);
+  }
+  function financial(g, b, row, view, paused) {
+    const root = el("article", undefined, "slate-result " + (view === "arbs" ? "slate-arb" : "slate-ev")), identity = el("div", undefined, "slate-result-identity"), { selection } = labelsFor(g.participants);
+    root.dataset.key = g.game_key + ":" + (row.quote_id || row.pair_id);
+    identity.append(el("h2", g.title), el("small", time(g.start_at)));
+    if (view === "ev") identity.append(el("h3", selection(row)), el("p", venue(row.venue) + " · " + price(row)));
+    else for (const [i, leg] of row.legs.entries()) {
+      const line = el("p", undefined, "slate-leg");
+      line.append(el("strong", selection(leg)), el("span", venue(leg.venue) + " " + price(leg) + " · " + money(row.funding?.legs?.[i]?.deployed_capital_usd)));
+      identity.append(line);
+    }
+    root.append(identity);
+    const m = row.financial_metrics || {}, values = el("div", undefined, "slate-result-values");
+    if (view === "ev") {
+      metric(values, "Complete EV after buffer", m.buffered_ev_usd);
+      metric(values, "Return on deployed", m.buffered_return_percent, percent);
+      if (m.buffered_ev_usd == null && m.conditional_buffered_ev_usd != null) values.append(el("small", "Conditional decisive EV " + money(m.conditional_buffered_ev_usd) + " · " + percent(m.conditional_buffered_return_percent), "conditional-label"));
+      const fair = el("div", undefined, "slate-result-benchmark");
+      benchmark(fair, b.benchmark, row.selection.participant);
+      values.append(fair);
+    } else {
+      metric(values, "Minimum across modeled outcomes", m.buffered_complete_modeled_minimum_usd);
+      metric(values, "Decisive margin after buffer", m.buffered_decisive_opposing_margin_usd);
+      values.append(el("small", "Decisive return " + percent(m.buffered_decisive_return_percent) + " · all-outcome return " + percent(m.buffered_complete_minimum_return_percent)));
+      if (row.classification?.positive_rule_sensitive_eligible) values.append(el("strong", "Rule-sensitive hedge", "conditional-label"));
+      if (m.buffered_ev_usd == null) values.append(el("small", "Complete EV unknown" + (m.conditional_buffered_ev_usd != null ? " · conditional decisive EV " + money(m.conditional_buffered_ev_usd) : "")));
+      const adverse = Object.entries(row.classification?.adverse_outcomes || {});
+      if (adverse.length || row.classification?.unknown_outcomes?.length) {
+        const { outcome } = labelsFor(g.participants);
+        values.append(el("small", "Adverse outcomes before buffer: " + [...adverse.map(([name, value]) => outcome(name) + " " + money(value)), ...(row.classification.unknown_outcomes || []).map(name => outcome(name) + " Unknown")].join(" · "), "conditional-label"));
+      }
+    }
+    root.append(values);
+    const meta = el("div", undefined, "slate-result-meta");
+    meta.append(el("small", "Deployed " + money(row.funding?.deployed_usd) + " · residual " + residual(row.funding?.residual_usd)));
+    meta.append(el("small", "Result as-of " + time(b.result_as_of)));
+    freshness(meta, row.freshness);
+    if (b.delivery_state === "pending") meta.append(el("small", paused ? "Saved updates paused · prior saved result" : "Calculation pending · prior saved result", "pending-label"));
+    if (b.delivery_state === "stopped") meta.append(el("small", "Collection stopped"));
+    if (row.classification?.reason) meta.append(el("small", words(row.classification.reason)));
+    root.append(meta);
+    action(root, "Details", root.dataset.key, button => onDetails(row, button, g));
+    content.append(root);
+  }
+  function draw(v, { view, filter, game = "", search = "", sort = "best", onShowAll }) {
+    content.replaceChildren();
+    content.classList.toggle("compact-odds", view === "odds");
+    const visible = new Map(v.games.filter(g => (!game || g.game_key === game) && g.title.toLowerCase().includes(search.toLowerCase())).map(g => [g.game_key, g]));
+    const boards = v.boards.filter(b => visible.has(b.game_key));
+    const errors = (v.errors || []).filter(e => visible.has(e.game_key)), paused = v.storage?.state === "unavailable";
+    const summary = el("div", undefined, "slate-summary");
+    summary.append(el("strong", visible.size + " of " + v.games.length + " games"));
+    if (view !== "odds") summary.append(el("span", boards.reduce((n, b) => n + b.rows.length, 0) + " comparisons · " + (filter === "all" ? "all saved results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
+    content.append(summary);
+    const coverage = el("div", undefined, "slate-coverage");
+    coverage.append(el("small", "Saved venue coverage across all games"));
+    for (const book of ["novig", "prophetx", "kalshi", "polymarket_us", "pinnacle"]) {
+      const count = v.boards.filter(b => b.prices.some(q => q.venue === book) || (b.benchmark.venue === book && b.benchmark.available)).length;
+      coverage.append(el("span", venue(book) + " " + count + "/" + v.games.length));
+    }
+    content.append(coverage);
+    if (!visible.size) {
+      const empty = el("div", undefined, "empty");
+      empty.append(el("h2", v.games.length ? "No games match this filter" : "No saved games yet"), el("p", v.games.length ? "Clear the team search or choose All games." : "Open Admin to check your source setup. Observed NFL winner games will appear here as prices are saved."));
+      if (!v.games.length) { const a = el("a", "Check sources in Admin"); a.href = "/admin"; empty.append(a); }
+      content.append(empty);
+      return;
+    }
+    if (view === "odds") {
+      const headings = el("div", undefined, "slate-price-headings slate-shared-headings");
+      headings.append(el("span", "Game / team"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " fair"));
+      content.append(headings);
+      for (const g of visible.values()) {
+        const b = boards.find(b => b.game_key === g.game_key);
+        if (b) odds(g, b, paused);
+        else { const root = el("article", undefined, "slate-game"), error = errors.find(e => e.game_key === g.game_key); root.append(el("h2", g.title), el("p", "Saved prices unavailable · " + words(error?.reason))); content.append(root); }
+      }
+      return;
+    }
+    const rows = boards.flatMap(b => b.rows.map(row => ({ g: visible.get(b.game_key), b, row })));
+    const score = row => {
+      const m = row.financial_metrics || {};
+      return numeric(view === "ev" ? m.buffered_ev_usd ?? m.conditional_buffered_ev_usd : m.buffered_complete_modeled_minimum_usd ?? m.buffered_decisive_opposing_margin_usd);
+    };
+    rows.sort((a, b) => sort === "start" ? (a.g.start_at || "").localeCompare(b.g.start_at || "") || (score(b.row) ?? -Infinity) - (score(a.row) ?? -Infinity) : (score(b.row) ?? -Infinity) - (score(a.row) ?? -Infinity) || (a.g.start_at || "").localeCompare(b.g.start_at || ""));
+    if (!rows.length) {
+      const empty = el("div", undefined, "empty");
+      empty.append(el("h2", filter === "all" ? "No saved calculations available" : filter === "hedges" ? "No positive rule-sensitive hedges" : view === "arbs" ? "No eligible positive arbs" : "No eligible positive EV"), el("p", filter === "all" ? "Prices remain available in Odds. Check source status or wait for a pending calculation." : "This applies across all visible games and your settings. Losing, conditional and historical results remain available under All comparisons."));
+      if (filter !== "all") { const b = el("button", "Show all comparisons"); b.onclick = onShowAll; empty.append(b); }
+      content.append(empty);
+    }
+    for (const entry of rows) financial(entry.g, entry.b, entry.row, view, paused);
+    const unavailable = boards.filter(b => !b.rows.length && (b.delivery_state === "pending" || filter === "all"));
+    if (unavailable.length || errors.length) {
+      const note = el("details", undefined, "slate-pending");
+      note.dataset.key = "pending-games";
+      note.append(el("summary", unavailable.length + errors.length + " games with no saved calculations"));
+      for (const b of unavailable) note.append(el("p", visible.get(b.game_key).title + " · " + (paused ? "Saved updates paused" : b.delivery_state === "pending" ? "Calculation pending" : b.empty_reason || "No eligible comparisons") + " · " + b.prices.length + " original prices in Odds"));
+      for (const e of errors) note.append(el("p", visible.get(e.game_key).title + " · Saved view unavailable · " + words(e.reason)));
+      content.append(note);
     }
   }
   return { draw };

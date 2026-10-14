@@ -71,6 +71,30 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_running_app_without_tabs_dispatches(self):
         await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
+    async def test_winner_scope_requests_only_winners_and_reconciles_actual_charge(self):
+        self.service.config.update(sports=['NFL'],aggregate_sports=['NFL'],families=['moneyline'])
+        original=self.wire.request
+        async def winners(req,key):
+            response=await original(req,key)
+            if req['path'].endswith('/odds'):
+                self.wire.used-=2
+                data=json.loads(body('NFL',books=('novig','prophetx','pinnacle')))
+                for bookmaker in data[0]['bookmakers']:
+                    bookmaker['markets']=[m for m in bookmaker['markets'] if m['key']=='h2h']
+                response.update(body=json.dumps(data).encode(),headers=quota(self.wire.used,1))
+            return response
+        self.wire.request=winners
+        await self.scheduler.step()
+        request=self.wire.calls[1]
+        self.assertEqual(request['path'],'/v4/sports/americanfootball_nfl/odds')
+        self.assertEqual(request['params'],dict(PARAMS,markets='h2h'))
+        self.assertEqual(len(self.wire.calls),2)
+        attempts=list(self.q._read()['attempts'].values())
+        paid=[a for a in attempts if not a['bootstrap']]
+        self.assertEqual(len(paid),1);self.assertEqual(paid[0]['cost'],3);self.assertEqual(paid[0]['charged'],1)
+        quotes=self.store.index(self.store.snapshot())
+        self.assertEqual(len(quotes),4)
+        self.assertEqual(len(self.store.snapshot()['events'][0]['groups']),1)
     async def test_bootstrap_receipt_is_not_restored_twice(self):
         await self.scheduler.step()
         before=self.store._state['state_revision']

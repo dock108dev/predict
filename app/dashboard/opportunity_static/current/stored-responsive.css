@@ -328,3 +328,90 @@ opposing comparisons have four. */
     padding:12px;
   }
 }
+
+.slate-selection {
+  grid-template-columns:minmax(180px,420px) minmax(160px,240px) minmax(160px,220px);
+  justify-content:stretch
+}
+.slate-selection>label { max-width:none }
+@media(max-width:900px) {
+  .slate-price-headings,.slate-price-row {
+    grid-template-columns:minmax(135px,1.2fr) repeat(4,minmax(70px,1fr))
+  }
+  .slate-price-headings>span:last-child { display:none }
+  .slate-fair { grid-column:2/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px }
+  .slate-fair small:first-child { flex-basis:100% }
+  .slate-result { grid-template-columns:minmax(200px,1fr) minmax(220px,1fr) auto; gap:8px 14px }
+}
+@media(max-width:600px) {
+  .slate-selection { grid-template-columns:1fr 1fr; gap:8px 12px }
+  .slate-selection>label:first-child { grid-column:1/-1 }
+  .slate-selection>label { grid-column:auto }
+  .slate-selection>label:nth-child(2) { grid-column:1/-1 }
+  .slate-selection>label:nth-child(3) { grid-column:1/-1 }
+  .slate-game,.slate-result { padding:12px; margin-bottom:10px }
+  .slate-game-heading { display:block; margin-bottom:4px }
+  .slate-game-heading small { font-size:.6875rem; margin-top:3px }
+  .slate-price-headings { display:none }
+  .slate-price-row { grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; padding:8px 0 }
+  .slate-team-name { grid-column:1/-1; padding:0; font-size:.875rem }
+  .slate-price-cell .mobile-price-label { display:block; margin-bottom:3px; font-size:.625rem }
+  .slate-price-cell .slate-action { padding:3px 5px; font-size:16px; min-height:40px; max-width:100% }
+  .slate-price-cell small { overflow-wrap:anywhere }
+  .slate-price-cell .tag { font-size:.625rem }
+  .slate-price-cell .tag+small { font-size:.625rem }
+  .slate-fair { grid-column:1/-1; padding:6px 8px; gap:0 7px }
+  .slate-fair small:first-child { flex-basis:auto }
+  .slate-fair small { font-size:.625rem }
+  .slate-fair strong { font-size:.8125rem }
+  .slate-result { grid-template-columns:minmax(0,1fr) auto; gap:8px 12px }
+  .slate-result-identity { grid-column:1; grid-row:1 }
+  .slate-result>button { grid-column:2; grid-row:1; align-self:start; padding:6px 9px }
+  .slate-result-values { grid-column:1/-1; grid-row:2 }
+  .slate-result-values .metric strong { font-size:22px }
+  .slate-result-meta { grid-column:1/-1; grid-row:3 }
+  .slate-summary { font-size:.8125rem; gap:3px 8px }
+}
+
+@media(min-width:1100px) {
+  header { min-height:64px }
+  .heading { margin:14px 0 12px }
+  .board-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px }
+  .board-controls .slate-selection { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+  .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:minmax(150px,1.1fr) minmax(130px,1fr) }
+  .board-controls #settings { margin:0; gap:8px }
+  .board-controls #settings label { width:125px }
+  .board-controls #settings label:nth-child(2) { width:80px }
+  .board-controls #settings .benchmark-setting { width:155px }
+  .board-controls #settings button { padding:8px 10px }
+  .context-bar { margin:8px 0 12px }
+}
+@media(max-width:900px) and (min-width:601px) {
+  .compact-odds .slate-fair { grid-column:2/-1; display:flex; flex-wrap:wrap; gap:2px 8px }
+  .compact-odds .slate-fair .mobile-price-label { display:block; flex-basis:auto }
+}
+@media(max-width:600px) {
+  .compact-odds .slate-game { padding:10px 12px; margin-bottom:8px }
+  .compact-odds .slate-game-heading { margin-bottom:5px }
+  .compact-odds .slate-game-heading h2 { font-size:.875rem }
+  .compact-odds .slate-game-heading small { font-size:.6875rem }
+  .compact-odds .slate-price-row { padding:6px 0; gap:4px 7px }
+  .compact-odds .slate-team-name { font-size:.875rem }
+  .compact-odds .slate-price-cell .slate-action { min-height:40px; padding:3px 5px; font-size:16px }
+  .compact-odds .slate-price-cell .mobile-price-label { font-size:.625rem }
+  .compact-odds .compact-source-clock { font-size:.625rem; white-space:normal }
+  .compact-odds .slate-fair { display:flex; flex-wrap:wrap; gap:2px 8px; margin-top:3px }
+  .compact-odds .slate-fair .mobile-price-label { flex-basis:auto; margin:0 }
+  .compact-odds .slate-fair strong { font-size:.875rem }
+  .compact-odds .slate-fair small { font-size:.6875rem }
+  .compact-odds .slate-summary { margin-bottom:5px }
+  .compact-odds .slate-coverage { margin-bottom:8px; font-size:.6875rem }
+}
+@media(min-width:1100px) {
+  .compact-odds .slate-game { padding:6px 12px }
+  .compact-odds .slate-price-row { padding:2px 0 }
+  .compact-odds .slate-price-cell .slate-action { display:inline-flex; vertical-align:middle }
+  .compact-odds .compact-source-clock { display:inline-block; vertical-align:middle; margin:0 0 0 5px; white-space:nowrap }
+  .compact-odds .slate-fair strong { display:inline; vertical-align:middle }
+  .compact-odds .slate-fair>small:not(.mobile-price-label) { display:inline-block; vertical-align:middle; margin-left:5px; white-space:nowrap }
+}

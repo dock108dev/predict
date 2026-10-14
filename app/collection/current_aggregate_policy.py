@@ -32,8 +32,11 @@ class AggregatePolicy:
     def worst_case_credits_per_cycle(self):
         return self.shared_batches_per_cycle * self.credits_per_batch
 
-    def record(self, sports):
+    def record(self, sports, *, markets=None):
         """Return a detached declaration with the existing attempt schema."""
+        selected=self.markets if markets is None else tuple(markets)
+        if not selected or len(set(selected))!=len(selected) or set(selected)-set(self.markets):
+            raise ValueError('Aggregate markets must stay within the declared policy')
         return dict(version=self.version, requests_per_cycle=self.requests_per_cycle,
             bootstrap_requests=self.bootstrap_requests,
             shared_batches_per_cycle=self.shared_batches_per_cycle,
@@ -42,7 +45,7 @@ class AggregatePolicy:
             response_bytes=self.response_bytes, cycle_bytes=self.cycle_bytes,
             timeout_seconds=self.timeout_seconds, retries=self.retries,
             endpoint=self.endpoint+'/v4/sports', bookmakers=list(self.bookmakers),
-            markets=list(self.markets), interval_seconds=self.interval_seconds,
+            markets=list(selected), interval_seconds=self.interval_seconds,
             window=f'{self.opens_at_hour:02}:00 inclusive to {self.closes_at_hour:02}:00 exclusive {self.timezone}',
             scope=list(sports))
 

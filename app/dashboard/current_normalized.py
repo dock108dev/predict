@@ -8,7 +8,7 @@ from copy import deepcopy
 from .current_contract import identity, stamp, line, binding_context, fields, event_identity
 
 
-def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None):
+def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True):
     from app.resolution.core import event_key
     from app.comparison.event_links import provider_key, current_event_key, ordinary_event_key
     if occurrence_resolver is not None:
@@ -114,22 +114,24 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         o=outcomes[o['id']]
         q['binding']=dict(verified=record['verified'],evidence=deepcopy(record['orientation_evidence']),selection=binding_context(e,g,o))
         if q.get('sharp_reference') is not None:q['sharp_reference']['selection_digest']=identity('binding',q['binding']['selection'])
-        proposal=produce(record,dict(event=e,group=g,outcome=o,quote=q,source_rules=source_rules,profile_factory=profile_factory,
-            selected_applicability=selected_applicability,
-            reference_records=reference_groups.get(encoded(record['market_identity']),[])),at=stamp(result['clock_at']))
-        q['comparison_input_refs']=proposal['comparison_input_refs']
-        # Admission is facet-local: one exhausted/absent facet cannot erase
-        # independently bound policy, fee, payout or original price observations.
-        for kind,key in q['comparison_input_refs']['refs'].items():
-            if key is not None and not pool.add(key,proposal['profiles'][key]):
-                q['comparison_input_refs']['refs'][kind]=None
-                proposal['gaps'][kind].update(status='available_but_unbound',
-                    reason='comparison_representation_capacity_deferred')
-        q['comparison_input_status']=proposal['gaps']
+        if include_profiles:
+            proposal=produce(record,dict(event=e,group=g,outcome=o,quote=q,source_rules=source_rules,profile_factory=profile_factory,
+                selected_applicability=selected_applicability,
+                reference_records=reference_groups.get(encoded(record['market_identity']),[])),at=stamp(result['clock_at']))
+            q['comparison_input_refs']=proposal['comparison_input_refs']
+            # Admission is facet-local: one exhausted/absent facet cannot erase
+            # independently bound policy, fee, payout or original price observations.
+            for kind,key in q['comparison_input_refs']['refs'].items():
+                if key is not None and not pool.add(key,proposal['profiles'][key]):
+                    q['comparison_input_refs']['refs'][kind]=None
+                    proposal['gaps'][kind].update(status='available_but_unbound',
+                        reason='comparison_representation_capacity_deferred')
+            q['comparison_input_status']=proposal['gaps']
         v=q['venue']
         if v in o['quotes']:o['alternatives'].setdefault(v,[]).append(q)
         else:o['quotes'][v]=q
     result['comparison_profiles']=pool.finish()
-    from app.collection.current_comparison_inputs import attach
-    result['comparison_profiles']=attach(result,reference_records=reference_records,selected_applicability=selected_applicability)
+    if include_profiles:
+        from app.collection.current_comparison_inputs import attach
+        result['comparison_profiles']=attach(result,reference_records=reference_records,selected_applicability=selected_applicability)
     return result

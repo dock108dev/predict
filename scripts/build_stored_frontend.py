@@ -32,8 +32,10 @@ CLIENT_NAMES = (
     "quantity",
     "settings",
     "checkBoard",
+    "checkSlate",
     "checkDetails",
     "LatestRead",
+    "SavedReadPoller",
     "followGame",
 )
 

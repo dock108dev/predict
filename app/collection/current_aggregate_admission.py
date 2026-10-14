@@ -14,10 +14,19 @@ from app.reference.aggregate import bind, VENUES
 from app.reference.product import SPORT_KEYS
 
 
-def admit(body, sport, received_at, *, venue=None):
+def admit(body, sport, received_at, *, venue=None, event_ids=None):
     from app.reference.odds_acquire import strict_json
     strict_json(body)
     payload=json.loads(body,parse_float=str)
+    if event_ids is not None:
+        # A read may normalize only already-admitted provider events. Keep the
+        # full original receipt hash below; filtering is never new acquisition
+        # or an assertion that omitted games/books were present.
+        if not isinstance(event_ids,(set,frozenset,tuple,list)) or len(event_ids)>200 or any(not isinstance(v,str) or not v for v in event_ids):
+            raise ValueError('aggregate_selected_event_identity')
+        if not isinstance(payload,list) or len(payload)>200:
+            raise ValueError('aggregate_event_bound')
+        payload=[e for e in payload if isinstance(e,dict) and e.get('id') in event_ids]
     if venue is not None and isinstance(payload,list):
         payload=deepcopy(payload)
         for event in payload:

@@ -15,7 +15,7 @@ from . import coverage, native_payload
 from .continuous import REST
 from .prediction_producer import MockREST, PredictionBudget
 from .native_scope_bindings import selectors_for, POLICY as SCOPE_POLICY
-from .native_selectors import query, candidates
+from .native_selectors import query, candidates, PAGE_SIZE
 from .venue_access import ENDPOINTS, load_credentials
 from .current_sink import utc
 from .odds_http import BudgetStop
@@ -248,6 +248,7 @@ class NativeWorker:
         # selected-event metadata. Empty pages prove only this query's result.
         if self.venue == 'kalshi':
             for sport in self.config['sports']:
+                if len(selected)>=self.config['events_per_source']:break
                 self._coverage_sport=sport
                 for family in self.config['families']:
                     selectors = selectors_for(sport+'/full_game/'+family)
@@ -261,20 +262,24 @@ class NativeWorker:
                     native_events=[coverage.event_record(self.venue,page,raw,e,i,now) for i,e in enumerate(rows)]
                     found = [dict(id=e['id']) for e in native_events if not e.get('exclusion') and e.get('scheduled_start')]
                     found.sort(key=lambda e:next(n['scheduled_start'] for n in native_events if n['id']==e['id']))
-                    self.findings.append(dict(sport=sport,family=family,rows=len(rows),selected=[e['id'] for e in found[:1]],
-                        scope='first bounded listing page; later pages unobserved'))
-                    for event in found[:1]:
+                    admitted=[]
+                    for event in found:
+                        if len(selected)>=self.config['events_per_source']:break
                         if event['id'] not in {x[0] for x in selected}:
                             selected.append((event['id'], selector['binding']))
+                            admitted.append(event['id'])
+                    self.findings.append(dict(sport=sport,family=family,rows=len(rows),selected=admitted,
+                        scope='first bounded listing page; later pages unobserved'))
                     if len(selected) >= self.config['events_per_source']: break
             for eid, scope in selected:
                 self._coverage_sport=scope['sport']
                 await self.get('/trade-api/v2/markets', dict(event_ticker=eid, limit=50), 'markets', scope)
         else:
             for sport in self.config['sports']:
+                if len(selected)>=self.config['events_per_source']:break
                 self._coverage_sport=sport
                 path, params = query(self.venue, sport, now)
-                try:rows = await self.get(path, dict(params, limit=1, offset=0), 'events')
+                try:rows = await self.get(path, dict(params, limit=min(PAGE_SIZE,self.config['events_per_source']-len(selected)), offset=0), 'events')
                 except BudgetStop as exc:
                     query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
                     if str(exc) not in query_caps:raise
@@ -282,10 +287,13 @@ class NativeWorker:
                     self.findings.append(dict(sport=sport,state='query_capacity_exclusion',reason=str(exc),scope='one bounded query; no support inference'))
                     continue
                 found, excluded = candidates(self.pages[-1:], self.venue, sport, now)
-                self.findings.append(dict(sport=sport,rows=len(rows),selected=[e['id'] for e in found[:1]],exclusions=excluded[:5],
+                admitted=[]
+                for event in found:
+                    if len(selected)>=self.config['events_per_source']:break
+                    if event['id'] not in {x['id'] for x in selected}:
+                        selected.append(event);admitted.append(event['id'])
+                self.findings.append(dict(sport=sport,rows=len(rows),selected=admitted,exclusions=excluded[:5],
                     scope='first bounded listing page; later pages unobserved'))
-                for event in found[:1]:
-                    if event['id'] not in {x['id'] for x in selected}: selected.append(event)
             for event in selected[:self.config['events_per_source']]:
                 self._coverage_sport=event.get('competition',event.get('sport'))
                 # Listing-bound game ID is the only permitted market locator.

@@ -6,19 +6,21 @@ from hashlib import sha256
 import json
 from threading import RLock
 from pathlib import Path
+from time import monotonic
 from app.storage.current_games import GameStore,calculate,utc
 from app.storage.store import connect,Store
 from app.comparison.estimated_policy import load
 from .current_storage_policy import SQL_BYTE_CAP,sql_usage,require_disk_space
 
 
-def catch_up_segments(store,journal,records=8):
+def catch_up_segments(store,journal,records=8, *, deadline=None):
     """One shared record budget over stable per-path SQL checkpoints."""
     paths=journal.paths() if hasattr(journal,'paths') else (journal.path,)
     keys=set();count=0;backlog=0
     for path in paths:
-        if count<records:
-            changed,n=store.catch_up(path,records=records-count)
+        if count<records and (deadline is None or monotonic()<deadline):
+            options={} if deadline is None else dict(deadline=deadline)
+            changed,n=store.catch_up(path,records=records-count,**options)
             keys.update(changed);count+=n
         cursor=store.db.execute('SELECT byte_offset FROM current_import_cursor WHERE path=%s',(str(path.resolve()),)).fetchone()
         size=path.stat().st_size if path.exists() else 0
@@ -76,6 +78,8 @@ class DatabaseIngressSink:
 
 class DatabasePipeline:
     MAX_PENDING=4
+    INGRESS_RECORDS=64
+    INGRESS_SECONDS=1.0
     def __init__(self,service,selected):
         self.service=service;self.selected=selected;self.pending={};self.closed=False
         self.wake=asyncio.Event();self.queue_lock=RLock();self.generations={};self.generation_counter=0;self.active_scope=None
@@ -99,7 +103,7 @@ class DatabasePipeline:
             self.generations={k:v for k,v in self.generations.items() if k in live}
         self.wake.set()
     def tick(self, *, ingress=True, import_only=False):
-        from app.comparison.calculation_control import cancellation, CalculationStopped
+        from app.comparison.calculation_control import cancellation, CalculationStopped, checkpoint
         if self.closed:return 0
         with cancellation(lambda:self.closed), connect() as db:
             Store(db).migrate();s=GameStore(db)
@@ -108,7 +112,8 @@ class DatabasePipeline:
             require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
             count=0
             if ingress:
-                keys,count,self.backlog=catch_up_segments(s,self.service.journal,records=8);self.imported+=count
+                keys,count,self.backlog=catch_up_segments(s,self.service.journal,
+                    records=self.INGRESS_RECORDS,deadline=monotonic()+self.INGRESS_SECONDS);self.imported+=count
                 # Bootstrap allowlisted retained diagnostics without claiming wire bytes.
                 if not getattr(self,'bootstrapped',False):
                     for path in self.service.retained_directory.glob('NFL.json'):
@@ -117,7 +122,9 @@ class DatabasePipeline:
                             value=dict(sport=v['sport'],received_at=v['received_at'],body_sha256=sha256(body).hexdigest(),body_b64=base64.b64encode(body).decode()))
                         keys.update(s.import_record(r))
                     self.bootstrapped=True
-                for key in sorted(keys):s.project(key)
+                for key in sorted(keys):
+                    checkpoint()
+                    s.project(key)
             if import_only:return count
             from app.storage.comparison_board import capture, saved
             policy=load()
@@ -151,7 +158,14 @@ class DatabasePipeline:
                 with self.queue_lock:
                     allowed=not self.closed and generation==self.generations.get(scope,0)
                     _,published=s.publish(snapshot,result,allow_latest=allowed)
-                    if published and self.pending.get((key,p.revision))==p:self.pending.pop((key,p.revision),None)
+                    if self.pending.get((key,p.revision))==p:
+                        if published:self.pending.pop((key,p.revision),None)
+                        elif not self.closed:
+                            # A changing native dependency may continuously
+                            # refuse latest publication. Retain its exact job
+                            # and generation, but let other visible jobs take
+                            # their bounded turn before retrying it.
+                            self.pending[(key,p.revision)]=self.pending.pop((key,p.revision))
                 with self.queue_lock:self.active_scope=None
                 break
         return count

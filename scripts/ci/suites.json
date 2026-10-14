@@ -5,6 +5,7 @@
       "tests/test_current_contract.py",
       "tests/test_current_state.py",
       "tests/test_current_native.py",
+      "tests/test_current_native_discovery.py",
       "tests/test_current_confirmation.py",
       "tests/test_current_occurrence.py",
       "tests/test_current_occurrence_october8.py",
@@ -451,7 +452,12 @@
       "tests/test_ev09_asset_delivery.py",
       "tests/test_ev09_calculation_stop.py",
       "tests/test_ev09_ingress_isolation.py",
-      "tests/test_ev09_registry_index.py"
+      "tests/test_ev09_registry_index.py",
+      "tests/test_comparison_slate.py",
+      "tests/test_comparison_read_context.py",
+      "tests/test_comparison_slate_fairness.py",
+      "tests/test_ingress_catchup_budget.py",
+      "tests/test_payload_codec.py"
     ]
   }
 ]

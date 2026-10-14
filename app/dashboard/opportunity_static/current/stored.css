@@ -520,6 +520,125 @@ summary {
 .native-alternatives summary {
   color:#245bcc
 }
+
+/* The ordinary slate keeps every game visible and reserves full evidence for Details. */
+.slate-summary {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px 16px;
+  margin:0 0 12px;
+  font-size:.875rem;
+  color:var(--muted)
+}
+.slate-summary strong { color:#23354c }
+.slate-game,.slate-result {
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:10px;
+  margin:0 0 12px;
+  padding:14px 16px
+}
+.slate-game-heading {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  gap:4px 16px;
+  margin-bottom:10px
+}
+.slate-game h2,.slate-result h2 { font-size:16px; margin:0 }
+.slate-game h2 { font-weight:650 }
+.slate-prices { display:grid }
+.slate-price-headings,.slate-price-row {
+  display:grid;
+  grid-template-columns:minmax(160px,1.2fr) repeat(4,minmax(90px,1fr)) minmax(155px,1.3fr);
+  align-items:start;
+  gap:10px
+}
+.slate-price-headings {
+  color:var(--muted);
+  font-size:.75rem;
+  border-bottom:1px solid var(--line);
+  padding:0 0 8px
+}
+.slate-price-row { padding:10px 0 }
+.slate-price-row+.slate-price-row { border-top:1px solid #e5eaf2 }
+.slate-price-row.team { border-top:0 }
+.slate-price-row.team+.slate-price-row.team { border-top:1px solid #e5eaf2 }
+.slate-team-name { font-size:.875rem; padding-top:7px }
+.slate-price-cell { min-width:0 }
+.slate-price-cell .slate-action {
+  font-size:17px;
+  font-variant-numeric:tabular-nums;
+  min-height:36px;
+  padding:3px 10px;
+  color:var(--blue);
+  border-color:#cfdaec;
+  background:#f8faff
+}
+.slate-price-cell small { font-size:.6875rem; line-height:1.35 }
+.slate-price-cell .tag { font-size:.6875rem; margin-top:2px }
+.slate-price-cell .tag+small { font-size:.6875rem }
+.mobile-price-label { display:none }
+.unavailable-price { display:block; font-size:18px; line-height:36px; color:#718096 }
+.slate-fair { background:#f1f5fe; padding:6px 8px; border-radius:6px }
+.slate-fair strong { font-size:15px; display:block }
+.slate-alternatives { margin-top:0 }
+.slate-alternatives summary,.slate-pending summary { min-height:36px; font-size:.8125rem; color:var(--blue) }
+.slate-alternative { display:flex; gap:4px 12px; align-items:baseline; flex-wrap:wrap; padding:5px 0; font-size:.8125rem }
+.slate-alternative button { min-height:36px; padding:4px 10px }
+.slate-result {
+  display:grid;
+  grid-template-columns:minmax(240px,1.2fr) minmax(260px,1fr) auto;
+  gap:8px 20px;
+  align-items:start
+}
+.slate-result-identity h3 { font-size:.875rem; margin:8px 0 2px }
+.slate-result-identity p { font-size:.8125rem; margin:3px 0 }
+.slate-result-identity>small { font-size:.6875rem }
+.slate-result-values { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px }
+.slate-result-values .metric strong { font-size:21px; letter-spacing:-.2px }
+.slate-result-values .metric small { font-size:.75rem }
+.slate-result-values>small,.slate-result-values>.conditional-label,.slate-result-benchmark { grid-column:1/-1; font-size:.75rem }
+.slate-result-benchmark { display:flex; align-items:baseline; flex-wrap:wrap; gap:0 8px }
+.slate-result-benchmark strong { font-size:.875rem }
+.slate-result-benchmark small { font-size:.6875rem }
+.slate-result-meta { grid-column:1/3; display:flex; flex-wrap:wrap; gap:2px 12px; align-items:baseline }
+.slate-result-meta small,.slate-result-meta .tag { font-size:.6875rem; margin:0 }
+.slate-result-meta .tag+small { font-size:.6875rem }
+.slate-result>button { grid-column:3; grid-row:1/3; align-self:center; min-height:40px; padding:6px 12px }
+.slate-leg { display:flex; flex-direction:column; gap:1px; padding-top:6px }
+.slate-leg strong { font-size:.8125rem }
+.slate-leg span { color:var(--muted); font-size:.75rem }
+.conditional-label { color:#815613 }
+.pending-label { color:#174d9b; font-size:.75rem; margin-bottom:4px }
+.slate-pending { padding:0 4px; font-size:.8125rem }
+.slate-coverage { display:flex; flex-wrap:wrap; gap:4px 12px; margin:-4px 0 12px; color:var(--muted); font-size:.75rem }
+.slate-coverage small { flex-basis:100%; font-size:.6875rem }
+.slate-coverage span { white-space:nowrap }
+
+.compact-odds .slate-game {
+  padding:8px 12px;
+  margin-bottom:6px;
+  border-radius:7px
+}
+.compact-odds .slate-game-heading { margin-bottom:2px; align-items:baseline }
+.compact-odds .slate-game-heading h2 { font-size:13px; line-height:1.3 }
+.compact-odds .slate-game-heading small { font-size:.625rem }
+.slate-shared-headings { padding:0 12px 5px; margin-bottom:4px; border-bottom:0 }
+.compact-odds .slate-price-row { padding:3px 0; align-items:center }
+.compact-odds .slate-team-name { font-size:.8125rem; padding:0 }
+.compact-odds .slate-price-cell .slate-action { font-size:16px; min-height:28px; padding:1px 8px; line-height:1.3 }
+.compact-odds .compact-source-clock { font-size:.625rem; line-height:1.25; margin-top:1px }
+.compact-odds .slate-fair { background:none; padding:0; border-radius:0 }
+.compact-odds .slate-fair strong { font-size:15px; line-height:1.3 }
+.compact-odds .slate-fair small { font-size:.625rem; line-height:1.25 }
+.compact-odds .unavailable-price { font-size:16px; line-height:28px }
+.compact-odds .pending-label { font-size:.625rem; margin:1px 0 }
+.compact-odds .slate-alternatives summary { min-height:26px; padding:3px 0; font-size:.6875rem }
+.compact-odds .slate-summary { display:inline-flex; font-size:.75rem; margin:0 12px 7px 0 }
+.compact-odds .slate-coverage { display:inline-flex; gap:2px 10px; font-size:.6875rem; margin:0 0 7px; vertical-align:baseline }
+.compact-odds .slate-coverage small { flex-basis:auto; font-size:.6875rem }
 dialog {
   width:min(800px,calc(100% - 24px));
   max-height:90dvh;
@@ -954,4 +1073,91 @@ opposing comparisons have four. */
   .arbs-card>.metrics {
     padding:12px;
   }
+}
+
+.slate-selection {
+  grid-template-columns:minmax(180px,420px) minmax(160px,240px) minmax(160px,220px);
+  justify-content:stretch
+}
+.slate-selection>label { max-width:none }
+@media(max-width:900px) {
+  .slate-price-headings,.slate-price-row {
+    grid-template-columns:minmax(135px,1.2fr) repeat(4,minmax(70px,1fr))
+  }
+  .slate-price-headings>span:last-child { display:none }
+  .slate-fair { grid-column:2/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px }
+  .slate-fair small:first-child { flex-basis:100% }
+  .slate-result { grid-template-columns:minmax(200px,1fr) minmax(220px,1fr) auto; gap:8px 14px }
+}
+@media(max-width:600px) {
+  .slate-selection { grid-template-columns:1fr 1fr; gap:8px 12px }
+  .slate-selection>label:first-child { grid-column:1/-1 }
+  .slate-selection>label { grid-column:auto }
+  .slate-selection>label:nth-child(2) { grid-column:1/-1 }
+  .slate-selection>label:nth-child(3) { grid-column:1/-1 }
+  .slate-game,.slate-result { padding:12px; margin-bottom:10px }
+  .slate-game-heading { display:block; margin-bottom:4px }
+  .slate-game-heading small { font-size:.6875rem; margin-top:3px }
+  .slate-price-headings { display:none }
+  .slate-price-row { grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; padding:8px 0 }
+  .slate-team-name { grid-column:1/-1; padding:0; font-size:.875rem }
+  .slate-price-cell .mobile-price-label { display:block; margin-bottom:3px; font-size:.625rem }
+  .slate-price-cell .slate-action { padding:3px 5px; font-size:16px; min-height:40px; max-width:100% }
+  .slate-price-cell small { overflow-wrap:anywhere }
+  .slate-price-cell .tag { font-size:.625rem }
+  .slate-price-cell .tag+small { font-size:.625rem }
+  .slate-fair { grid-column:1/-1; padding:6px 8px; gap:0 7px }
+  .slate-fair small:first-child { flex-basis:auto }
+  .slate-fair small { font-size:.625rem }
+  .slate-fair strong { font-size:.8125rem }
+  .slate-result { grid-template-columns:minmax(0,1fr) auto; gap:8px 12px }
+  .slate-result-identity { grid-column:1; grid-row:1 }
+  .slate-result>button { grid-column:2; grid-row:1; align-self:start; padding:6px 9px }
+  .slate-result-values { grid-column:1/-1; grid-row:2 }
+  .slate-result-values .metric strong { font-size:22px }
+  .slate-result-meta { grid-column:1/-1; grid-row:3 }
+  .slate-summary { font-size:.8125rem; gap:3px 8px }
+}
+
+@media(min-width:1100px) {
+  header { min-height:64px }
+  .heading { margin:14px 0 12px }
+  .board-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px }
+  .board-controls .slate-selection { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+  .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:minmax(150px,1.1fr) minmax(130px,1fr) }
+  .board-controls #settings { margin:0; gap:8px }
+  .board-controls #settings label { width:125px }
+  .board-controls #settings label:nth-child(2) { width:80px }
+  .board-controls #settings .benchmark-setting { width:155px }
+  .board-controls #settings button { padding:8px 10px }
+  .context-bar { margin:8px 0 12px }
+}
+@media(max-width:900px) and (min-width:601px) {
+  .compact-odds .slate-fair { grid-column:2/-1; display:flex; flex-wrap:wrap; gap:2px 8px }
+  .compact-odds .slate-fair .mobile-price-label { display:block; flex-basis:auto }
+}
+@media(max-width:600px) {
+  .compact-odds .slate-game { padding:10px 12px; margin-bottom:8px }
+  .compact-odds .slate-game-heading { margin-bottom:5px }
+  .compact-odds .slate-game-heading h2 { font-size:.875rem }
+  .compact-odds .slate-game-heading small { font-size:.6875rem }
+  .compact-odds .slate-price-row { padding:6px 0; gap:4px 7px }
+  .compact-odds .slate-team-name { font-size:.875rem }
+  .compact-odds .slate-price-cell .slate-action { min-height:40px; padding:3px 5px; font-size:16px }
+  .compact-odds .slate-price-cell .mobile-price-label { font-size:.625rem }
+  .compact-odds .compact-source-clock { font-size:.625rem; white-space:normal }
+  .compact-odds .slate-fair { display:flex; flex-wrap:wrap; gap:2px 8px; margin-top:3px }
+  .compact-odds .slate-fair .mobile-price-label { flex-basis:auto; margin:0 }
+  .compact-odds .slate-fair strong { font-size:.875rem }
+  .compact-odds .slate-fair small { font-size:.6875rem }
+  .compact-odds .slate-summary { margin-bottom:5px }
+  .compact-odds .slate-coverage { margin-bottom:8px; font-size:.6875rem }
+}
+@media(min-width:1100px) {
+  .compact-odds .slate-game { padding:6px 12px }
+  .compact-odds .slate-price-row { padding:2px 0 }
+  .compact-odds .slate-price-cell .slate-action { display:inline-flex; vertical-align:middle }
+  .compact-odds .compact-source-clock { display:inline-block; vertical-align:middle; margin:0 0 0 5px; white-space:nowrap }
+  .compact-odds .slate-fair strong { display:inline; vertical-align:middle }
+  .compact-odds .slate-fair>small:not(.mobile-price-label) { display:inline-block; vertical-align:middle; margin-left:5px; white-space:nowrap }
 }

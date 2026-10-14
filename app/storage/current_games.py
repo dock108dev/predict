@@ -34,11 +34,21 @@ class GameStore:
     def immutable(self, table, key, row):
         # DO NOTHING does not fire the immutable UPDATE trigger on a retry.
         from psycopg import sql
+        from .payload_codec import TABLES, encode
         cols=list(row)
+        select=sql.SQL('SELECT * FROM {} WHERE {}=%s').format(sql.Identifier(table),sql.Identifier(key))
+        if table in TABLES:
+            saved=self.db.execute(select,(row[key],)).fetchone()
+            if saved:
+                if any(saved[c]!=row[c] for c in cols if c not in ('retained_at','as_of','calculated_at')):
+                    raise ValueError('conflicting immutable identity: '+table)
+                return
+        stored=dict(row)
+        if table in TABLES:stored['payload']=encode(row['payload'])
         self.db.execute(sql.SQL('INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO NOTHING').format(
             sql.Identifier(table),sql.SQL(',').join(map(sql.Identifier,cols)),
-            sql.SQL(',').join(sql.Placeholder() for _ in cols),sql.Identifier(key)),list(row.values()))
-        saved=self.db.execute(sql.SQL('SELECT * FROM {} WHERE {}=%s').format(sql.Identifier(table),sql.Identifier(key)),(row[key],)).fetchone()
+            sql.SQL(',').join(sql.Placeholder() for _ in cols),sql.Identifier(key)),list(stored.values()))
+        saved=self.db.execute(select,(row[key],)).fetchone()
         if any(saved[c]!=row[c] for c in cols if c not in ('retained_at','as_of','calculated_at')):
             raise ValueError('conflicting immutable identity: '+table)
 
@@ -89,7 +99,9 @@ class GameStore:
                     affected.add(source+':'+ref['event_id'])
             return affected
 
-    def catch_up(self, path, *, records=16):
+    def catch_up(self, path, *, records=16, deadline=None):
+        from time import monotonic
+        from app.comparison.calculation_control import checkpoint
         path=Path(path);name=str(path.resolve())
         cursor=self.db.execute('SELECT byte_offset FROM current_import_cursor WHERE path=%s',(name,)).fetchone()
         offset=cursor['byte_offset'] if cursor else 0;affected=set();count=0
@@ -98,6 +110,8 @@ class GameStore:
         with path.open('rb') as stream:
             stream.seek(offset)
             for _ in range(records):
+                checkpoint()
+                if deadline is not None and monotonic()>=deadline:break
                 start=stream.tell();line=stream.readline(MAX_PAYLOAD+1)
                 if not line:break
                 if len(line)>MAX_PAYLOAD:raise ValueError('journal_record_cap')
@@ -108,13 +122,15 @@ class GameStore:
                     self.db.execute('''INSERT INTO current_import_cursor VALUES (%s,%s)
                      ON CONFLICT(path) DO UPDATE SET byte_offset=excluded.byte_offset''',(name,stream.tell()))
                 count+=1
+                checkpoint()
         return affected,count
 
     def project(self, key):
         source,native=key.split(':',1)
         if source=='the_odds_api':
-            allrows=self.db.execute("SELECT payload,envelope_id FROM current_source_projection WHERE source=%s AND kind='quote'",(source,)).fetchall()
-            rows=[r for r in allrows if json.loads(r['payload'])['quote']['source']['native_event_id']==native]
+            rows=self.db.execute("""SELECT payload,envelope_id FROM current_source_projection
+              WHERE source=%s AND kind='quote'
+                AND payload::jsonb->'quote'->'source'->>'native_event_id'=%s""",(source,native)).fetchall()
             records=[json.loads(r['payload']) for r in rows]
         else:
             cat=self.db.execute("SELECT payload,envelope_id FROM current_source_projection WHERE source=%s AND kind='catalog'",(source,)).fetchone()
@@ -158,22 +174,86 @@ class GameStore:
         Historical replay supplies retained envelopes to build() explicitly.
         Never scan/refresh providers or replace source-local projections.
         """
-        from app.comparison.combined_inputs import MAX_ENVELOPES
-        with self.db.transaction():
-            rows=self.db.execute('SELECT DISTINCT e.id,e.payload_sha256,e.payload FROM current_source_projection p JOIN current_envelope e ON e.id=p.envelope_id WHERE p.source IN (%s,%s,%s) LIMIT %s',
-                ('the_odds_api','kalshi','polymarket_us',MAX_ENVELOPES+1)).fetchall()
-        if len(rows)>MAX_ENVELOPES:raise ValueError('combined_envelope_capacity')
-        return [dict(id=r['id'],payload_sha256=r['payload_sha256'],record=json.loads(r['payload'])) for r in rows]
+        originals,_,_=self.combined_read_capture()
+        return originals
 
     def combined_capture(self):
         """One statement binds current per-member projections to full originals."""
+        originals,associations,_=self.combined_read_capture()
+        return originals,associations
+
+    def combined_read_capture(self):
+        """Capture exact current projections and full originals in one statement.
+
+        The ordinary read context uses admitted event records rather than
+        replaying every game in every retained aggregate batch. Immutable
+        receipt bytes and the exact current association remain independently
+        checked; this performs no capture/publication or provider operation.
+        """
         from .comparison_board import MAX_ASSOCIATIONS
-        rows=self.db.execute('SELECT e.id,e.payload_sha256,e.payload,json_agg(json_build_array(p.source,p.kind,p.native_id)) AS associations FROM current_source_projection p JOIN current_envelope e ON e.id=p.envelope_id WHERE p.source IN (%s,%s,%s) GROUP BY e.id,e.payload_sha256,e.payload ORDER BY e.id LIMIT 257',
-            ('the_odds_api','kalshi','polymarket_us')).fetchall()
-        if len(rows)>256 or sum(len(r['payload'].encode()) for r in rows)>24*1024*1024:raise ValueError('combined_input_capacity')
-        if sum(len(r['associations']) for r in rows)>MAX_ASSOCIATIONS:raise ValueError('board_source_association_capacity')
+        from .payload_codec import logical_size_sql
+        from psycopg import sql
+        captured=self.db.execute(sql.SQL('''WITH catalogs AS MATERIALIZED (
+          SELECT source,payload::jsonb AS inventory FROM current_source_projection
+          WHERE source IN (%s,%s) AND kind='catalog'
+          ), winners AS MATERIALIZED (
+          SELECT c.source,event->>'id' AS event_id,market->>'id' AS market_id
+          FROM catalogs c CROSS JOIN LATERAL jsonb_array_elements(c.inventory->'events') event
+            CROSS JOIN LATERAL jsonb_array_elements(c.inventory->'markets') market
+          WHERE event->>'competition'='NFL' AND market->>'event_id'=event->>'id'
+            AND ((market->>'market_type'='moneyline' AND market->>'period'='full_game')
+              OR (market->'v1_raw_binding'->'identity'->>'family'='moneyline'
+                AND market->'v1_raw_binding'->'identity'->>'period'='full_game'))
+          ), p AS MATERIALIZED (
+          SELECT p.* FROM current_source_projection p WHERE
+            (p.source=%s AND p.kind='quote'
+              AND p.payload::jsonb->'event'->>'competition'='NFL'
+              AND p.payload::jsonb->'market_identity'->>'family'='moneyline'
+              AND p.payload::jsonb->'market_identity'->>'period'='full_game')
+            OR (p.source IN (%s,%s) AND (p.kind='catalog'
+              OR (p.kind='book' AND EXISTS (
+                SELECT 1 FROM winners w WHERE w.source=p.source
+                  AND p.native_id=w.event_id||':'||w.market_id
+                  AND w.event_id=p.payload::jsonb->'book'->'raw'->'ref'->>'event_id'
+                  AND w.market_id=p.payload::jsonb->'book'->'raw'->'ref'->>'market_id'))))
+          LIMIT %s
+          ), e AS MATERIALIZED (
+          SELECT e.id,e.payload_sha256,e.payload FROM
+            (SELECT DISTINCT envelope_id FROM p LIMIT 257) originals
+            JOIN current_envelope e ON e.id=originals.envelope_id
+          ), bounds AS (
+          SELECT (SELECT count(*) FROM p) AS associations,
+            COALESCE((SELECT sum(octet_length(payload)) FROM p),0) AS projection_bytes,
+            (SELECT count(*) FROM e) AS envelopes,
+            COALESCE((SELECT sum({logical_size}) FROM e),0) AS envelope_bytes
+          )
+          SELECT NULL::text AS id,NULL::text AS payload_sha256,NULL::text AS payload,
+            NULL::json AS projections,row_to_json(bounds) AS bounds FROM bounds
+          UNION ALL
+          SELECT e.id,e.payload_sha256,e.payload,
+            json_agg(json_build_object('source',p.source,'kind',p.kind,
+              'native_id',p.native_id,'envelope_id',p.envelope_id,'payload',p.payload)
+              ORDER BY p.source,p.kind,p.native_id) AS projections,NULL::json AS bounds
+          FROM p JOIN e ON e.id=p.envelope_id CROSS JOIN bounds
+          WHERE bounds.associations<=%s AND bounds.projection_bytes<=%s
+            AND bounds.envelopes<=256 AND bounds.envelope_bytes<=%s
+          GROUP BY e.id,e.payload_sha256,e.payload''').format(logical_size=logical_size_sql()),
+          ('kalshi','polymarket_us','the_odds_api','kalshi','polymarket_us',
+           MAX_ASSOCIATIONS+1,MAX_ASSOCIATIONS,24*1024*1024,24*1024*1024)).fetchall()
+        bounds=next(r['bounds'] for r in captured if r['id'] is None)
+        if bounds['associations']>MAX_ASSOCIATIONS:raise ValueError('board_source_association_capacity')
+        if bounds['projection_bytes']>24*1024*1024:raise ValueError('board_source_association_byte_capacity')
+        if bounds['envelopes']>256 or bounds['envelope_bytes']>24*1024*1024:raise ValueError('combined_input_capacity')
+        rows=[r for r in captured if r['id'] is not None]
+        if len(rows)>256 or sum(len(r['payload'].encode()) for r in rows)>24*1024*1024:
+            raise ValueError('combined_input_capacity')
+        projections=[p for row in rows for p in row['projections']]
+        if len(projections)>MAX_ASSOCIATIONS:
+            raise ValueError('board_source_association_capacity')
+        if sum(len(p['payload'].encode()) for p in projections)>24*1024*1024:
+            raise ValueError('board_source_association_byte_capacity')
         originals=[dict(id=r['id'],payload_sha256=r['payload_sha256'],record=json.loads(r['payload'])) for r in rows]
-        return originals,{tuple(a):r['id'] for r in rows for a in r['associations']}
+        return originals,{(p['source'],p['kind'],p['native_id']):p['envelope_id'] for p in projections},sorted(projections,key=lambda p:(p['source'],p['kind'],p['native_id']))
 
     def retain_combined(self, bundle, *, storage_key=None, source_guard=None):
         """Add a combined projection without changing original source history."""

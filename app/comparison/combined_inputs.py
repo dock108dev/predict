@@ -7,6 +7,8 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
+from collections import OrderedDict
+from threading import RLock
 from app.storage.store import hashed, encoded, stamp
 from app.comparison.occurrence_matching import OccurrenceResolver
 from app.comparison.combined_native import normalize
@@ -21,6 +23,53 @@ from app.dashboard.current_contract import quotes_of
 
 VERSION = 'predict-combined-occurrence-inputs-1'
 MAX_ENVELOPES = 256
+_ADMITTED_CACHE = OrderedDict()
+_ADMITTED_CACHE_LOCK = RLock()
+_ADMITTED_CACHE_BYTES = 4*1024*1024
+
+
+def _admitted_rows(item, body, projected):
+    """Verify current SQL rows against their exact immutable provider frame.
+
+    Cache only successful normalization, keyed by receipt identity/hash and
+    original event subset. Bytes in the cache are immutable; callers receive
+    fresh objects. Current source membership is never cached here.
+    """
+    from app.collection.current_aggregate_admission import admit
+    by_venue={}
+    for row in projected:
+        r=row['value'];q=r['quote'];s=q['source']
+        native=hashed([q['venue'],s['native_event_id'],s['native_market_id'],s['native_outcome_id']])
+        if row['native_id']!=native or row['envelope_id']!=item['id'] or s['provider']!='the_odds_api':
+            raise ValueError('combined_admitted_projection_association_conflict')
+        by_venue.setdefault(q['venue'],{})[native]=r
+    result=[];value=item['record']['value']
+    for venue in SPORTSBOOKS:
+        wanted=by_venue.pop(venue,{})
+        if not wanted:continue
+        ids=tuple(sorted({r['quote']['source']['native_event_id'] for r in wanted.values()}))
+        key=(item['id'],item['payload_sha256'],venue,ids)
+        with _ADMITTED_CACHE_LOCK:
+            cached=_ADMITTED_CACHE.get(key)
+            if cached is not None:_ADMITTED_CACHE.move_to_end(key)
+        if cached is None:
+            rows=admit(body,'NFL',value['received_at'],venue=venue,event_ids=ids)
+            cached=encoded(rows)
+            if len(cached)<=512*1024:
+                with _ADMITTED_CACHE_LOCK:
+                    _ADMITTED_CACHE[key]=cached;_ADMITTED_CACHE.move_to_end(key)
+                    while len(_ADMITTED_CACHE)>32 or sum(map(len,_ADMITTED_CACHE.values()))>_ADMITTED_CACHE_BYTES:
+                        _ADMITTED_CACHE.popitem(last=False)
+        seen=set()
+        for r in json.loads(cached):
+            q=r['quote'];s=q['source']
+            native=hashed([q['venue'],s['native_event_id'],s['native_market_id'],s['native_outcome_id']])
+            if native not in wanted:continue
+            if r!=wanted[native]:raise ValueError('combined_admitted_projection_original_conflict')
+            seen.add(native);result.append(r)
+        if seen!=set(wanted):raise ValueError('combined_admitted_projection_original_absent')
+    if by_venue:raise ValueError('combined_admitted_projection_venue_conflict')
+    return result
 
 
 def _key(row):
@@ -58,17 +107,19 @@ def _benchmark(rows, state, venue):
         grouped_market_id=grouped,source_originals=deepcopy(candidates))
 
 
-def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None):
-    """Return all source-local/combined NFL winner bundles, optionally selected.
-
-    `selected=(provider,native_event_id)` selects the resolved occurrence that
-    contains that original source member. Unresolved games remain separate.
-    Expired prices remain inspectable at `at`; no clock is renewed.
-    """
-    if benchmark_venue not in SPORTSBOOKS:raise ValueError('unsupported_selected_benchmark')
+def prepare(envelopes, *, at, resolver=None, associations=None, admitted_records=None):
+    """Resolve current membership once, before financial/profile hydration."""
     if len(envelopes)>MAX_ENVELOPES or len(encoded(envelopes))>24*1024*1024:
         raise ValueError('combined_input_capacity')
     instant=stamp(at); originals={};catalogs={};books={};aggregate={};excluded=[]
+    projected={}
+    if admitted_records is not None:
+        if associations is None:raise ValueError('combined_admitted_associations_required')
+        known_ids={item['id'] for item in envelopes}
+        for row in admitted_records:
+            if row['envelope_id'] not in known_ids or associations.get(('the_odds_api','quote',row['native_id']))!=row['envelope_id']:
+                raise ValueError('combined_admitted_projection_association_conflict')
+            projected.setdefault(row['envelope_id'],[]).append(row)
     from app.collection.current_aggregate_admission import admit
     for item in sorted(envelopes,key=lambda x:stamp(x['record']['retained_at'])):
         item=deepcopy(item);record=item['record'];eid=item['id']
@@ -81,30 +132,49 @@ def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=
         elif kind=='aggregate_batch' and value['sport']=='NFL':
             body=base64.b64decode(value['body_b64'],validate=True)
             if sha256(body).hexdigest()!=value['body_sha256']:raise ValueError('combined_aggregate_body_hash_conflict')
-            for venue in SPORTSBOOKS:
-                try:records=admit(body,'NFL',value['received_at'],venue=venue)
-                except (ValueError,KeyError,TypeError) as error:
-                    excluded.append(dict(venue=venue,envelope_id=eid,reason=str(error)));continue
-                for r in records:
-                    q=r['quote'];native=hashed([q['venue'],q['source']['native_event_id'],q['source']['native_market_id'],q['source']['native_outcome_id']])
-                    if associations is not None and associations.get(('the_odds_api','quote',native))!=eid:continue
-                    if r['market_identity']['family']!='moneyline':continue
-                    for name in ('_instrument','_fingerprint'):r.pop(name,None)
-                    r['comparison_scope']=dict(overtime='included')
-                    r['comparison_source_metadata']=dict(phase='pregame' if instant<stamp(r['event']['scheduled_start']) else 'unknown',
-                        overtime='included',combined_envelope_id=eid,
-                        scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
-                    old=aggregate.get(_key(r));time=r['quote']['times']
-                    order=stamp(time['source_at'] or time['received_at'])
-                    if old is None or order>=old[0]:aggregate[_key(r)]=(order,r)
+            venue_records=[]
+            if admitted_records is not None:
+                venue_records=_admitted_rows(item,body,projected.pop(eid,[]))
+            else:
+                for venue in SPORTSBOOKS:
+                    try:venue_records.extend(admit(body,'NFL',value['received_at'],venue=venue))
+                    except (ValueError,KeyError,TypeError) as error:
+                        excluded.append(dict(venue=venue,envelope_id=eid,reason=str(error)))
+            for r in venue_records:
+                q=r['quote'];native=hashed([q['venue'],q['source']['native_event_id'],q['source']['native_market_id'],q['source']['native_outcome_id']])
+                if associations is not None and associations.get(('the_odds_api','quote',native))!=eid:continue
+                if r['market_identity']['family']!='moneyline':continue
+                for name in ('_instrument','_fingerprint'):r.pop(name,None)
+                r['comparison_scope']=dict(overtime='included')
+                r['comparison_source_metadata']=dict(phase='pregame' if instant<stamp(r['event']['scheduled_start']) else 'unknown',
+                    overtime='included',combined_envelope_id=eid,
+                    scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
+                old=aggregate.get(_key(r));time=r['quote']['times']
+                order=stamp(time['source_at'] or time['received_at'])
+                if old is None or order>=old[0]:aggregate[_key(r)]=(order,r)
+    if any(stamp(originals[eid]['record']['retained_at'])<=instant for eid in projected if eid in originals):
+        raise ValueError('combined_admitted_projection_envelope_conflict')
     records=[r for _,r in aggregate.values()]
     for source,catalog in catalogs.items():
         native,errors=normalize(catalog,books.get(source,[]),at=at,associations=associations);records.extend(native);excluded.extend(errors)
     resolved=(resolver or OccurrenceResolver()).resolve(records,clock=at)
     groups={}
     for r in resolved:groups.setdefault(encoded(r['market_identity']['event']),[]).append(r)
+    return dict(at=at,originals=originals,groups=list(groups.values()),excluded=excluded)
+
+
+def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None, admitted_records=None, prepared=None):
+    """Hydrate only selected resolved occurrences; preserve original clocks.
+
+    A read context may supply one verified prepared frame across several boards.
+    Legacy retained replay without admitted rows uses its unchanged admission.
+    """
+    if benchmark_venue not in SPORTSBOOKS:raise ValueError('unsupported_selected_benchmark')
+    prepared=prepared or prepare(envelopes,at=at,resolver=resolver,associations=associations,admitted_records=admitted_records)
+    if prepared['at']!=at:raise ValueError('combined_prepared_clock_conflict')
+    originals=prepared['originals'];excluded=prepared['excluded']
     result=[]
-    for rows in groups.values():
+    for rows in prepared['groups']:
         members={(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows}
         if selected is not None and tuple(selected) not in members:continue
         references_rows=[r for r in rows if r['quote']['venue']=='pinnacle']
