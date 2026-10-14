@@ -51,7 +51,7 @@ class Metrics(unittest.TestCase):
         with self.assertRaises(ValueError):ranked([dict(id='x',net_ev=dict(metric('1'),exact={'numerator':'1','denominator':'-1'}))])
 
     def test_typed_common_ceiling_actual_capital_and_literal_net_pair(self):
-        raw=software_fixture();state=serialize(raw,allow_synthetic=True);view=snapshot_metrics(state)
+        raw=software_fixture();state=serialize(raw,allow_synthetic=True,legacy=True);view=snapshot_metrics(state)
         values={r['venue']:r for r in view['rows']}
         self.assertEqual(Fraction(values['kalshi']['net_ev']['value']),50)
         self.assertEqual(Fraction(values['kalshi']['gross']['value']),50)
@@ -165,9 +165,9 @@ class Metrics(unittest.TestCase):
         key,value=profile('fee',fee);raw['comparison_profiles'][key]=value;refs['fee']=key
         ticks=[0];store=CurrentStore(InjectedTestProvider(raw),monotonic=lambda:ticks[0])
         initial=store.snapshot();old=next(r for r in snapshot_metrics(initial)['rows'] if r['venue']=='kalshi')
-        self.assertEqual(Fraction(old['net_ev']['details']['entry_fee_usd']),Fraction('3.3432'))
+        self.assertEqual(Fraction(old['net_ev']['details']['entry_fee_usd']),Fraction('39.9336'))
         ticks[0]=11;changed=store.snapshot();new=next(r for r in snapshot_metrics(changed)['rows'] if r['venue']=='kalshi')
-        self.assertEqual(Fraction(new['net_ev']['details']['entry_fee_usd']),Fraction('6.6864'))
+        self.assertEqual(Fraction(new['net_ev']['details']['entry_fee_usd']),Fraction('76.5408'))
         self.assertEqual(old['quote_revision'],new['quote_revision'])
         self.assertNotEqual(old['net_ev']['basis']['dependency_revisions'],new['net_ev']['basis']['dependency_revisions'])
         validate_snapshot(changed,allow_synthetic=True)
@@ -180,13 +180,13 @@ class MetricRoutes(AioHTTPTestCase):
     async def test_default_and_optional_sizes_use_same_metric_assembly(self):
         from app.comparison import current_metrics
         raw=software_fixture()
-        with patch.object(current_metrics,'apply_group_metrics',wraps=current_metrics.apply_group_metrics) as assembly:
+        with patch.object(current_metrics,'group_metric_steps',wraps=current_metrics.group_metric_steps) as assembly:
             serialize(raw,allow_synthetic=True)
         self.assertEqual(assembly.call_count,sum(len(e['groups']) for e in raw['events']))
         store=self.app[CURRENT_KEY];before=store.encoded_snapshot()
         for size in ('20','100'):
             with self.subTest(size=size):
-                with patch.object(current_metrics,'apply_group_metrics',wraps=current_metrics.apply_group_metrics) as assembly:
+                with patch.object(current_metrics,'group_metric_steps',wraps=current_metrics.group_metric_steps) as assembly:
                     response=await self.client.get('/api/comparison?ceiling='+size)
                 self.assertEqual(response.status,200)
                 self.assertEqual(assembly.call_count,sum(len(e['groups']) for e in raw['events']))
@@ -207,6 +207,10 @@ class MetricRoutes(AioHTTPTestCase):
         first=await (await self.client.get('/api/current')).json()
         before=packed(self.app[CURRENT_KEY]._state)
         view=await (await self.client.get('/api/comparison?view=ev')).json()
+        self.assertEqual(first['estimate_policy'],view['estimate_policy'])
+        self.assertEqual(view['estimate_policy']['capital_ceiling_usd'],'1000')
+        for row in view['rows']:
+            self.assertEqual(row['net_ev']['estimate_policy']['revision'],first['estimate_policy']['revision'])
         self.assertEqual(view['state_revision'],first['state_revision'])
         self.assertEqual(view['acquisition_requests'],0)
         sized=await (await self.client.get('/api/comparison?ceiling=20')).json()
@@ -229,5 +233,5 @@ class MetricRoutes(AioHTTPTestCase):
         self.assertEqual(coverage['acquisition_requests'],0)
         self.assertEqual((await self.client.get('/api/comparison?ceiling=0')).status,422)
         minimum=await (await self.client.get('/api/comparison?ceiling=0.4')).json()
-        self.assertIn('capital_ceiling_below_adverse_funded_native_minimum',
-            next(r for r in minimum['rows'] if r['venue']=='kalshi')['net_ev']['reason'])
+        self.assertTrue(next(r for r in minimum['rows'] if r['venue']=='kalshi')['net_ev']['eligible'])
+        self.assertFalse(next(r for r in minimum['rows'] if r['venue']=='kalshi')['conservative']['eligible'])

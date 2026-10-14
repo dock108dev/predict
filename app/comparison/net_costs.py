@@ -1,6 +1,6 @@
-"""S02 current-size costs over S01 receipts; acquisition-free and exact.
+"""Current-size costs over scenario receipts; acquisition-free and exact.
 
-The D09 rule gate precedes arithmetic. Public proposals are never a numeric
+The versioned cost-rule gate precedes arithmetic. Public proposals are never a numeric
 binding. Venue caps/accumulators use the retained shared engine, while explicitly
 named controlled policies use its source-independent algebra. Public results
 contain private-position digests, never accounts, raw portfolios or engine audits.
@@ -100,7 +100,7 @@ def _parsed_fills(fills, request, fill_inputs):
 
 
 def _venue_entry(rule, request, fills, fill_inputs, engine_context, engine_registry):
-    """Delegate provider formulas; bind exact D09 terms to the selected engine."""
+    """Delegate provider formulas; bind exact versioned cost terms to the selected engine."""
     if engine_context is None or not isinstance(engine_registry, Registry):
         raise ValueError("shared_venue_engine_binding_required")
     context = deepcopy(engine_context)
@@ -143,7 +143,7 @@ def _venue_entry(rule, request, fills, fill_inputs, engine_context, engine_regis
         raise ValueError("unsupported shared venue entry adapter")
     context.update(fills=deepcopy(fills), complete_order_history=fill_inputs.complete_order_history,
                    outcomes={})
-    # Outcome fees are independently bound to S01 state receipts below. The
+    # Outcome fees are independently bound to original state receipts below. The
     # engine's old default outcome assumptions cannot establish settlement fees.
     context.pop("refund_outcomes", None)
     audit = calculate(context, engine_registry)
@@ -177,7 +177,7 @@ def calculate_net_costs(request, scenario, *, native_quantity, native_price, gri
                         fill_inputs, fills, registry=None, engine_context=None,
                         engine_registry=None, positions=None, extra_funding=(),
                         hold_returns_usd=None, credits=(), ceiling_usd="100", leg_index=0):
-    """Bind one S01 leg to exact costs. No quantity optimizer or acquisition.
+    """Bind one scenario leg to exact costs. No quantity optimizer or acquisition.
 
     `scenario` is ScenarioCashflows or its versioned .to_dict() mapping. `fills`
     are explicit shared-engine fill records; Novig uses native cent contracts.

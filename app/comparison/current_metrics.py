@@ -16,6 +16,7 @@ from .cashflows import cashflow_inputs, exact_wire
 from .net_costs import calculate_net_costs
 from .buffers import calculate_buffered_costs, DepthLeg, DepthLevel
 from .costs import DepthInputs
+from .estimated_policy import load as load_estimate_policy
 
 VERSION = 'comparison-current-metrics-1'
 MAX_SIZE_EVALUATIONS = 64
@@ -190,7 +191,7 @@ def depth_leg(q, rule, quantity, grid, native_key):
     return DepthLeg(q['id'], rule.unit, grid, info, levels, value['partial_final'],value.get('exclusive_group'),native_key)
 
 
-def _size(bound, request, rule, quantity, kwargs, at, ceiling, policy):
+def _size(bound, request, rule, quantity, kwargs, at, ceiling, policy, *, reserve_adverse=True):
     """Bounded maximum native-grid size for disclosed single-order hypotheses.
 
     Observed fills and arbitrary fragment sets cannot be scaled to another size.
@@ -216,7 +217,7 @@ def _size(bound, request, rule, quantity, kwargs, at, ceiling, policy):
     from .buffers import adverse_price
     movement = adverse_price(rule.unit,grid,native_price,policy=policy)
     stressed_bound = None
-    if movement['available'] and bound.selection.price.unit in {'usd_per_contract','cents_per_contract'}:
+    if reserve_adverse and movement['available'] and bound.selection.price.unit in {'usd_per_contract','cents_per_contract'}:
         stressed_selection = replace(bound.selection,price=replace(bound.selection.price,
             amount=ExactNumber(exact_wire(Fraction(movement['adverse_normalized_price']) *
                 (100 if bound.selection.price.unit == 'cents_per_contract' else 1)))))
@@ -267,6 +268,9 @@ def _size(bound, request, rule, quantity, kwargs, at, ceiling, policy):
 
 
 def reference_set(value):
+    if value.get('version') == 'comparison-two-way-benchmark-1':
+        from .benchmark import TwoWayBenchmark
+        return TwoWayBenchmark.from_dict(value)
     from .pinnacle import ReferenceOutcome, ReferenceSet
     outcomes = tuple(ReferenceOutcome(selection=CanonicalSelection.from_dict(row['selection']),
         decimal_odds=ExactNumber.parse(row['decimal_odds']),book_at=row['book_at'],market_at=row['market_at'],
@@ -277,7 +281,27 @@ def reference_set(value):
     return result
 
 
-def calculate_quote(q, profiles, at, *, ceiling=None, event=None, group=None, outcome=None):
+def publish_policy(metric, policy, *, sensitivity=False):
+    metric['estimate_policy'] = policy.reference()
+    metric['buffer_applied'] = False
+    metric['size_status'] = 'supported_size' if metric.get('depth_qualified') else 'size_unverified'
+    if sensitivity:metric['sensitivity_name'] = 'adverse_price_stress'
+    if 'basis' in metric:
+        metric['basis']['size_basis'] = dict(policy=policy.version, policy_revision=policy.revision,
+            ceiling_usd=policy.capital_ceiling_usd, role='taker', portfolio='standalone')
+    return metric
+
+
+def calculate_quote(q, profiles, at, *, ceiling=None, event=None, group=None, outcome=None, estimate_policy=None, legacy=False):
+    policy = (estimate_policy or load_estimate_policy()).with_ceiling(ceiling)
+    result, sensitivity = _calculate_quote(q, profiles, at, ceiling=ceiling, event=event,
+        group=group, outcome=outcome, estimate_policy=policy, legacy=legacy)
+    return (result, sensitivity) if legacy else (publish_policy(result,policy),
+        publish_policy(sensitivity,policy,sensitivity=True))
+
+
+def _calculate_quote(q, profiles, at, *, ceiling=None, event=None, group=None, outcome=None, estimate_policy=None, legacy=False):
+    estimate_policy = (estimate_policy or load_estimate_policy()).with_ceiling(ceiling)
     values=references(q,profiles)
     independent=values.get('probability',{}).get('payload',{}).get('version')=='comparison-state-probabilities-1'
     kinds=('identity','payout','fee','quantity','buffer','probability') if independent else (
@@ -292,11 +316,11 @@ def calculate_quote(q, profiles, at, *, ceiling=None, event=None, group=None, ou
     try:
         at=calculation_instant((q,),profiles,at)
         bound, request, rule, quantity, kwargs, values = typed_quote(q,profiles,at,event=event,group=group,outcome=outcome)
-        size = ceiling or DEFAULT_POLICY.ceiling_usd
+        size = estimate_policy.capital_ceiling_usd
         if Fraction(size) <= 0 or Fraction(size) > 100000:
             raise ValueError('comparison_ceiling_outside_bounds')
         policy = replace(ComparisonCostPolicy(**values['buffer']['payload']),ceiling_usd=size)
-        native, fills, scenario, costs, evaluations, complete = _size(bound,request,rule,quantity,kwargs,at,size,policy)
+        native, fills, scenario, costs, evaluations, complete = _size(bound,request,rule,quantity,kwargs,at,size,policy,reserve_adverse=legacy)
         details = dict(costs=costs,scenario=scenario.to_dict(),size_evaluations=evaluations,
             maximum_quantity_proven=complete,native_quantity=native,unused_ceiling_usd=None,
             fill_basis=kwargs['fill_inputs'].basis,fill_partition_basis=quantity.get('fill_partition_basis'))
@@ -389,10 +413,11 @@ def adapt_ev(natural,q,ceiling,rule,values,details):
     return result
 
 
-def calculate_group_pairs(group, profiles, at, *, ceiling=None, event=None):
-    """Bounded S05 consumer. Reference/probability inputs never gate arbs."""
+def calculate_group_pairs(group, profiles, at, *, ceiling=None, event=None, estimate_policy=None):
+    """Bounded opposing-allocation consumer. Reference/probability inputs never gate arbs."""
     from app.dashboard.current_contract import quotes_of, exact_wire as metric_wire, display_decimal
     from .net_arbs import ArbLeg, ArbLimits, search_arbs
+    estimate_policy = (estimate_policy or load_estimate_policy()).with_ceiling(ceiling)
     required=('identity','payout','fee','quantity','buffer')
     candidates=[];quotes={};labels={};diagnostics=[];policies=set()
     for outcome in group['outcomes']:
@@ -406,7 +431,7 @@ def calculate_group_pairs(group, profiles, at, *, ceiling=None, event=None):
                 bound,request,rule,quantity,kwargs,values=typed_quote(quote,profiles,
                     calculation_instant((quote,),profiles,at),event=event,group=group,outcome=outcome)
                 policy=replace(ComparisonCostPolicy(**values['buffer']['payload']),
-                    ceiling_usd=ceiling or DEFAULT_POLICY.ceiling_usd)
+                    ceiling_usd=estimate_policy.capital_ceiling_usd)
                 depth=depth_leg(quote,rule,quantity,kwargs.pop('grid'),bound.selection.native.key)
                 kwargs.pop('fill_inputs')
                 if depth is None:raise ValueError('arb_depth_inputs_unavailable')
@@ -422,7 +447,7 @@ def calculate_group_pairs(group, profiles, at, *, ceiling=None, event=None):
             reasons=['incomparable_buffer_policies'],diagnostics=diagnostics,results=0)
     evaluated_at=calculation_instant(tuple(quotes.values()),profiles,at) if candidates else at
     search=search_arbs(tuple(candidates),at=evaluated_at,limits=ArbLimits(),
-        policy=policy if candidates else replace(DEFAULT_POLICY,ceiling_usd=ceiling or DEFAULT_POLICY.ceiling_usd))
+        policy=policy if candidates else replace(DEFAULT_POLICY,ceiling_usd=estimate_policy.capital_ceiling_usd))
     pairs=[]
     for result in search['results']:
         readable=state_labels(result['state_descriptors'],event)
@@ -449,7 +474,7 @@ def calculate_group_pairs(group, profiles, at, *, ceiling=None, event=None):
     return pairs,summary
 
 
-def apply_group_metrics(group, profiles, at, *, event=None, ceiling=None):
+def group_metric_steps(group, profiles, at, *, event=None, ceiling=None, estimate_policy=None, legacy=False, details=False, funded=True, supported=True):
     """Assemble the same current metrics for admission and optional-size reads.
 
     Mutates only the caller-owned group. Engines retain their distinct gross,
@@ -457,11 +482,36 @@ def apply_group_metrics(group, profiles, at, *, event=None, ceiling=None):
     """
     from app.dashboard.current_contract import quotes_of
     from .public_retail import direct_site_estimate
-    size = DEFAULT_POLICY.ceiling_usd if ceiling is None else ceiling
+    estimate_policy = (estimate_policy or load_estimate_policy()).with_ceiling(ceiling)
+    size = DEFAULT_POLICY.ceiling_usd if legacy and ceiling is None else estimate_policy.capital_ceiling_usd
     for outcome in group['outcomes']:
         for quote in quotes_of(outcome):
             quote['calculations']['net_ev'],quote['calculations']['conservative']=calculate_quote(
-                quote,profiles,at,ceiling=size,event=event,group=group,outcome=outcome)
-            quote['calculations']['direct_site_estimate']=direct_site_estimate(quote,profiles,at,size)
+                quote,profiles,at,ceiling=size,event=event,group=group,outcome=outcome,estimate_policy=estimate_policy,legacy=legacy)
+            quote['calculations']['direct_site_estimate']=direct_site_estimate(quote,profiles,at,size,estimate_policy=estimate_policy)
+            if legacy:
+                for key in ('unused_cash_usd','estimate_policy','buffer_applied'):
+                    quote['calculations']['direct_site_estimate'].pop(key,None)
+                yield ('quote', quote['id'])
+                continue
+            publish_policy(quote['calculations']['direct_site_estimate'],estimate_policy)
+            if funded:
+                from .estimated_ev import evaluate, compact
+                result=evaluate(quote,profiles,at=at,event=event,group=group,policy=estimate_policy,details=details,supported_result=supported)
+                quote['calculations']['funded_estimate']=result if details else compact(result)
+            yield ('quote', quote['id'])
     group['comparison_pairs'],group['comparison_search']=calculate_group_pairs(
-        group,profiles,at,ceiling=size,event=event)
+        group,profiles,at,ceiling=size,event=event,estimate_policy=estimate_policy)
+    yield ('legacy_pairs', group['id'])
+    if legacy:return
+    for pair in group['comparison_pairs']:
+        pair['estimate_policy'] = estimate_policy.reference()
+        pair['details']['target_ceiling_usd'] = size
+        base = pair['details']['base']
+        deployed = base['full']['return_denominator'] or (base['conditional']['return_denominator'] if base['conditional'] else None)
+        pair['details']['deployed_capital_usd'] = deployed
+        pair['details']['unused_cash_usd'] = exact_wire(Fraction(size)-Fraction(deployed)) if deployed else None
+        pair['buffered_minimum_return']['sensitivity_name'] = 'adverse_price_stress'
+        pair['buffered_minimum_return']['label'] = 'adverse-price minimum return'
+        pair['buffered_minimum_return']['buffer_applied'] = False
+        pair['revision'] = digest({k:v for k,v in pair.items() if k!='revision'})

@@ -1,8 +1,16 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{const source=fs.readFileSync('app/dashboard/opportunity_static/current/current-client.js','utf8');const client=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
-assert.deepEqual(Object.keys(client),['NoticeGate','applyChanges']);
+assert.deepEqual(Object.keys(client),['NoticeGate','ReadRecovery','RetainedPriceBootstrap','SizingPolicy','applyChanges','captureExpiry','initializeBoardControls','requireCapture','selectionMeaning','validateRetainedPrices']);
+const sizing=new client.SizingPolicy(),policy={version:'predict-estimate-policy-2',revision:'server:1',capital_ceiling_usd:'1000',buffer_rate:'0.005'};
+assert.equal(sizing.ceiling,null);assert(sizing.update(policy));assert.equal(sizing.ceiling,'1000');assert(!sizing.update(policy));const generation=sizing.generation;
+sizing.setCeiling('20');assert.equal(sizing.ceiling,'20');assert(!sizing.matches({estimate_policy:policy},generation));assert(sizing.matches({estimate_policy:{...policy,capital_ceiling_usd:'20'}},sizing.generation));
+assert(sizing.update({...policy,revision:'server:2',buffer_rate:'0.01'}));assert.equal(sizing.ceiling,'20');assert(!sizing.matches({estimate_policy:{...policy,capital_ceiling_usd:'20'}},sizing.generation));assert.throws(()=>sizing.update(null),/unavailable/);
 const {NoticeGate}=client,schema='predict-current-1',gate=new NoticeGate(schema),notice=(runtime,revision)=>({schema,runtime_id:runtime,state_revision:revision});
 assert(gate.accept(notice('a',2)));assert(!gate.accept(notice('a',2)));assert(!gate.accept(notice('a',1)));assert(gate.accept(notice('a',3)));assert(gate.accept(notice('b',1)));
+assert(gate.accept({...notice('b',1),calculation_epoch:1,eligibility:'pending'}));
+assert(!gate.accept({...notice('b',1),calculation_epoch:1,eligibility:'pending'}));
+assert(gate.accept({...notice('b',1),calculation_epoch:1,eligibility:'ready'}));
+assert(!gate.accept({...notice('b',1),calculation_epoch:0,eligibility:'pending'}));
 for(const invalid of [{...notice('b',2),schema:'bad'},notice(null,2),notice('b',0),notice('b',1.5),notice('b',Number.MAX_SAFE_INTEGER+1)])assert.throws(()=>gate.accept(invalid),/Unsupported update schema/);
 const minimal=(id,at)=>({id,start_at:at,groups:[{outcomes:[{quotes:{novig:{times:{source_at:at},age_seconds:0}},alternatives:{}}]}]});
 const prior={schema,runtime_id:'a',state_revision:1,clock_at:'2026-10-08T00:00:00Z',events:[minimal('one','2026-10-08T00:00:00Z'),minimal('two','2026-10-08T00:00:00Z')]};

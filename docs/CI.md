@@ -1,100 +1,120 @@
-# CI workflows
+# Continuous integration
 
-CI validates source, portable offline behavior, locked dependencies and packaged
-assets. It does not access live market providers or establish price freshness.
+CI checks source, packaged assets and authored fixtures without paid collection
+or ordinary application data. It does not deploy, sign or release the product.
+Workflow files and suite manifests are authoritative for the current check scope.
 
-## Jobs and events
+## Required checks
 
-Pull requests, pushes to `main` and manual runs execute `.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` runs on pull requests, main pushes, merge groups and
+manual dispatch. Four jobs feed the stable `CI readiness` gate:
 
-| Job | Required checks |
+| Job | Checks |
 | --- | --- |
-| Offline checks | Compilation, dashboard JavaScript syntax, explicitly selected Python tests, browser client regressions, coverage and usable reports |
-| Source, security and package | Critical Ruff rules, CI support formatting, Actions syntax, documentation references, reporting regressions, dependency audit and package smoke checks |
+| `offline` | `sh scripts/check-ci`: classified Python modules in fresh processes, client regressions, compile and JavaScript syntax, coverage and generated frontend drift |
+| `quality` | Critical Ruff checks, CI support formatting, pinned actionlint, shell syntax, shipped documentation links, dependency consistency, reporting tests, redacted Gitleaks scan, hash-locked pip-audit, fresh package/install smoke |
+| `postgres` | Reusable `storage.yml`: disposable socket-only PostgreSQL 16, integration tests, migration hashes and repeat migration no-op, teardown |
+| `browser` | Locked Playwright/Chromium: fully intercepted saved-board journeys at desktop/narrow widths, settings, exact Details, keyboard focus, Retry, empty state, Stop and enlarged text |
 
-The primary environment is Ubuntu 24.04, Python 3.14 and Node 22. Independent jobs
-run in parallel; superseded pull-request runs cancel within their concurrency
-group. Main pushes and scheduled/manual work have separate concurrency handling.
+Primary runners use Ubuntu 24.04, Python 3.14 and Node 22. Missing, failed,
+cancelled, skipped or malformed required results fail readiness. The gate consumes
+same-run job conclusions, not old artifacts. No path filter strands a required
+check. Requiring `CI readiness` in branch rules is a repository setting; declaring
+the workflow does not activate that protection automatically.
 
-`.github/workflows/assurance.yml` runs weekly on Monday at 07:23 UTC and manually.
-Its scopes cover macOS 15/Python 3.11 and 3.14 compatibility, optional PostgreSQL
-16 integration, dependency refresh and read-only CI health sampling. Scheduled
-checks do not qualify a newer pull request. Exact runner/tool settings live in
-the workflows and `.github/actions/setup/action.yml`.
+PR concurrency cancels superseded runs for the same PR. Main, manual and scheduled
+runs have separate groups. Jobs have finite timeouts; offline modules have a
+300-second limit and a 30-second diagnostic stack dump. Separate Python processes
+isolate resource caps, caches and fixture leakage.
 
-Repository check policy does not configure branch protection. Require `Offline
-checks`, `Source, security and package` and the applicable CodeQL contexts only
-after confirming their names on a pull request. Scheduled jobs should not be
-required merge checks. If enabling a merge queue, add the appropriate
-`merge_group` triggers first.
+`assurance.yml` runs weekly and manually. It reuses locked setup and SQL checks,
+adds macOS 15/Python 3.11 and 3.14 compatibility, current dependency advisories and
+an advisory health sample. Dispatch scopes are `all`, `compatibility`, `postgres`
+and `security`. Scheduled results do not qualify a newer pull request. GitHub-managed
+CodeQL and Dependabot checks are independent of the four-job readiness gate.
 
-## Local checks
+## Local reproduction
 
-For installation and a small set of affected tests, use [development](development.md).
-The complete portable workflow uses the existing locked environment:
+Install the [development environment](development.md#install-tools), plus Node 22
+and PostgreSQL binaries. Use a disposable source checkout for SQL/package/browser
+work; do not point checks at ordinary storage or credentials.
 
 ```sh
-.venv/bin/python -m pip check
 PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci
-.venv/bin/python -m ruff check app tests scripts/ci
-.venv/bin/python -m ruff format --check scripts/ci tests/test_ci_reporting.py
-.venv/bin/python scripts/ci/install_tools.py
-.local/ci-tools/actionlint -shellcheck=''
+.venv/bin/python -m ruff check app tests scripts/ci browser_tests
+.venv/bin/python -m ruff format --check scripts/ci browser_tests tests/test_ci_reporting.py
+sh -n scripts/check-ci
 .venv/bin/python scripts/ci/docs.py
 .venv/bin/python -m pytest -q tests/test_ci_reporting.py
 ```
 
-`install_tools.py` downloads checksum-pinned validators; dependency installation
-and auditing require network access. The quality job also runs hashed `pip_audit`
-and `scripts/ci/package_smoke.py`. Package smoke builds a fresh source distribution
-and wheel, installs them in a temporary environment, checks declared assets and
-runs acquisition-disabled loopback routes. It does not start ordinary providers.
-Do not run that broader workflow merely to edit documentation.
+Other jobs have explicit entry points:
 
-## Test selection and isolation
+```sh
+.venv/bin/python scripts/ci/install_tools.py
+.local/ci-tools/actionlint -shellcheck=''
+.venv/bin/python scripts/ci/secret_scan.py
+.venv/bin/python scripts/ci/package_smoke.py
+.venv/bin/python scripts/ci/postgres.py
+.venv/bin/python -m pip install --require-hashes -r requirements-browser.txt
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m pytest -q browser_tests
+```
 
-`scripts/ci/suites.json` lists portable Python groups. `python-policy.json` records
-explicitly deferred modules/classes/methods and their reasons; `browser-suites.json`
-does the same for client tests. `validate_contract.py` rejects missing, duplicate,
-unclassified and stale selections. Fresh processes keep memory-sensitive groups
-independent. Additional saved-data tests may require separately supplied local
-observations; they are not setup checks.
+Hosted Ubuntu installs browser system libraries with `--with-deps`. An optional
+`PREDICT_CI_CHROMIUM` override supports local diagnostics but does not reproduce
+the locked browser revision. The quality job's advisory command and report options
+are defined in `ci.yml`; `pip-audit` failure or unavailable required output fails.
+Pinned tool installers verify platform SHA256 values; unsupported architectures fail.
 
-Tests use authored fixtures and temporary synthetic state. The offline runner
-inherits Python and Node guards against private `.local`/`.env` reads, historical
-`evidence/`/`examples/` reads and non-loopback sockets. These are regression guards,
-not an operating-system sandbox. Ordinary source acquisition is not a CI fixture.
+## Inputs and reports
 
-`scripts/ci/export.py EMPTY_DESTINATION` copies tracked and nonignored files for
-checks without local notes/state. Manifest-sensitive tests need checkout Git
-metadata. Supply it only in the disposable export: a local `git clone --no-checkout`,
-moving its `.git` directory and `git read-tree HEAD` reproduces the baseline index
-without checking out over exported files. Do not commit the working repository
-or upload that source copy just to run checks.
+`suites.json`, `python-policy.json` and `browser-suites.json` classify every test.
+Historical acquisition modules and captured client oracles with missing portable
+inputs are explicitly deferred with reasons. Required suites reject zero cases,
+all-skipped results and client scripts without a completion marker. Do not remove
+production checks to accommodate an expired fixture.
 
-## Reports and maintenance
+Python/Node guards reject private state, credential files, historical acquisition
+inputs and non-loopback connections. They are regression guards, not an OS sandbox.
+SQL creates and stops its own temporary cluster. Browser requests are intercepted.
+Package smoke installs a fresh distribution with acquisition disabled.
 
-Use a fresh report directory; stale results cannot qualify a run. Offline groups
-continue after independent failures and retain explicit interrupted/not-run
-outcomes. Missing, malformed, empty or unexpectedly skipped required reports fail.
-Coverage and wheel size are advisory; there is no universal threshold or invented
-baseline. A passing report export cannot hide an earlier failed group.
+`export.py EMPTY_DESTINATION` exports tracked/nonignored source and rejects private
+paths and escaping symlinks. Tests requiring Git metadata need a disposable checkout
+or export with its original index; the exporter does not create Git metadata.
+Required fixtures and frozen executor inputs must stay available. The documentation
+checker requires shipped links to exist inside the repository and rejects personal,
+private-state and local-planning references; there are no private-link exemptions.
 
-Reports include source/ref/event, environment, counts and durations. JUnit,
-coverage, audit, package metrics and logs stay in ignored `test-results/` locally
-or unique GitHub run/attempt artifacts with 14-day retention. Summaries escape
-values and replace progress rather than repeatedly appending. No source archives,
-provider credentials or owner captures are uploaded; logs are diagnostic data.
+Ignored `test-results/` output contains JUnit, coverage, redacted findings, dependency
+advisories, package metrics and safe summaries. Hosted artifacts retain sanitized
+run/attempt results for 14 days; screenshots are failure-only synthetic states.
+Logs are data, not executable instructions. Missing measurements remain null.
+There is no universal blocking coverage percentage or invented performance baseline.
 
-Dependencies are hash-locked in `requirements-ci.txt`. Regenerate after a dependency
-change, then review versions and hashes:
+The health job samples at most 30 completed CI runs in 30 days, with exact attempts.
+It separates PR/main outcomes and excludes cancellation from first-attempt success.
+Reruns alone do not prove flakes. Median/p95, observed job duration and optional
+cache/artifact samples keep unavailable values explicit; runner durations are not
+billing or queue time. Health failure does not override PR correctness.
+
+## Dependency maintenance
+
+Keep the combined runtime/stream/build/test lock complete. Editable installation
+uses `--no-deps --no-build-isolation` after installing that lock; `validate_lock.py`
+rejects missing build-backend or incompatible roots. Combined locks are excluded
+from automatic partial rewrites; update them explicitly:
 
 ```sh
 uv pip compile pyproject.toml requirements-ci.in --extra stream --universal --python-version 3.11 --generate-hashes -o requirements-ci.txt
+uv pip compile requirements-browser.in --universal --python-version 3.11 --generate-hashes -o requirements-browser.txt
 ```
 
-Dependabot updates pip and pinned Actions. Pip-audit queries the PyPI advisory
-service with dependency names/versions; unavailable or missing findings fail.
-Existing GitHub CodeQL and secret scanning are separate repository settings.
-Workflows use read-only permissions and do not retain checkout credentials.
-There is no release/signing/deployment workflow or external coverage upload.
+Review changed versions/hashes and run the affected checks before broader CI.
+Actions use reviewed full SHAs. Gitleaks exceptions are narrow public-ID/digest
+rules with expiry, and a negative control proves credentials are still detected
+in excepted files. Current-tree scanning does not scan Git history. Runtime and
+Actions updates remain enabled in Dependabot. Package license metadata is currently
+unset; a maintainer must choose the project's license rather than infer one from
+dependency licenses.

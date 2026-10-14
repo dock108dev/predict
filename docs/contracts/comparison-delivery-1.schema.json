@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparison-delivery-1.schema.json",
+  "title": "Completed Comparison delivery validation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "validated_clock_at", "calculation_clock_at", "runtime_id", "state_revision"],
+  "properties": {
+    "version": {"const": "comparison-delivery-1"},
+    "validated_clock_at": {"type": "string", "format": "date-time"},
+    "calculation_clock_at": {"type": "string", "format": "date-time"},
+    "runtime_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "state_revision": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+  }
+}

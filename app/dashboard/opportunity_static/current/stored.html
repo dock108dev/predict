@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Predict · Odds, EV and Arbs</title>
+<link rel="stylesheet" href="/current/assets/stored.css">
+<script type="module" src="/current/assets/stored.js"></script>
+</head>
+<body><a class="skip-link" href="#content">Skip to comparisons</a><main>
+<header>
+<a class="brand" href="/" aria-label="Predict home">Predict<span class="brand-mark" aria-hidden="true">↗</span></a>
+<nav aria-label="Views"><a href="/">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/arbs" title="Opposing opportunities">Arbs</a><a href="/admin">Admin</a></nav>
+<button id="stop" class="secondary">Stop collection</button>
+</header>
+<div class="heading"><div class="view-title"><h1 id="title">Odds</h1><span class="scope">NFL · Full game, including overtime</span></div>
+<details class="view-help"><summary>About this view</summary><div><p id="purpose">Compare winner prices against a named fair benchmark.</p><p>American odds make prices comparable. Native payouts can differ; inspect Details before interpreting an estimate.</p></div></details></div>
+<section class="selection" aria-label="Game selection">
+<label>Game<select id="game"><option value="">Loading games…</option></select></label>
+<details class="game-search"><summary>Find a game</summary><label>Search teams<input id="search" type="search" placeholder="Team name" autocomplete="off"></label></details>
+</section>
+<form id="settings" aria-label="Calculation settings">
+<label>Trade amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
+<label>Buffer (%)<input id="buffer" type="text" inputmode="decimal" value="0.5"></label>
+<label class="benchmark-setting">Benchmark<select id="benchmark"><option value="pinnacle">Pinnacle</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
+<button type="submit" class="primary">Apply</button><button id="restore" type="button" class="secondary">Restore</button>
+</form>
+<div class="context-bar"><p id="applied" class="muted"></p><p id="status" role="status">Loading saved games…</p><button id="retry" hidden>Retry saved reads</button></div>
+<div id="filters" hidden role="group" aria-label="Results"><button data-filter="positive" aria-pressed="true">Positive</button><button data-filter="all" aria-pressed="false">All comparisons</button><button data-filter="hedges" aria-pressed="false" hidden>Rule-sensitive hedges</button></div>
+<section id="content" aria-label="Comparison results" tabindex="-1"></section>
+<dialog id="details" aria-labelledby="details-title"><div class="dialog-head"><h2 id="details-title">Details</h2><button id="close-details">Close / Back</button></div><div id="detail-content"></div></dialog>
+<footer>Modeled estimates. Actual fills, fees and venue grades remain unknown. <a href="/admin">Source status &amp; collection</a></footer>
+</main></body></html>

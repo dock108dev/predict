@@ -8,7 +8,7 @@ from app.collection.current_confirmation import Confirmations,validate,content
 from app.collection.current_service import CurrentService
 from app.collection.current_policy import DEFAULT
 from app.collection.current_sink import LatestStateSink,utc
-from app.dashboard.current_state import CurrentStore
+from app.dashboard.current_state import CurrentStore,SelectionError
 from app.dashboard.current_contract import snapshot_inputs
 from tests.test_current_occurrence import catalogs,book
 from app.dashboard.session_projection import stable
@@ -76,7 +76,11 @@ class Held(unittest.IsolatedAsyncioTestCase):
   b,d,r=observation('kalshi',m,NOW,sequence=3);b['outcomes'][0]['asks']['levels'][0]['price']['value']='.47';b['book_confirmation']=proof(trackers['kalshi'],b,d,r);svc.book('kalshi',b)
   latest=store.index(store.snapshot())[chosen['id']]['quote'];self.assertGreater(latest['revision'],chosen['revision']);self.assertEqual(store.get(held['selection_id'])['review'],frozen)
   state=store.snapshot();adopted=store.create(dict(schema=state['schema'],runtime_id=state['runtime_id'],state_revision=state['state_revision'],quote_id=latest['id'],quote_revision=latest['revision'],client_id='adopt-test'));self.assertEqual(adopted['review']['quote']['original']['value'],'.47')
-  start=store.monotonic();store.monotonic=lambda:start+40;store.refresh_age();stale=store.index(store.snapshot())[chosen['id']]['quote'];self.assertTrue(stale['stale']);self.assertFalse(stale['comparison']['eligible'])
+  start=store.monotonic();store.monotonic=lambda:start+40;store.refresh_age()
+  with self.assertRaises(SelectionError) as pending:store.snapshot()
+  self.assertEqual(pending.exception.body['error'],'temporal_pending')
+  await store.temporal.driver
+  stale=store.index(store.snapshot())[chosen['id']]['quote'];self.assertTrue(stale['stale']);self.assertFalse(stale['comparison']['eligible'])
   self.assertEqual(store.get(held['selection_id'])['review'],frozen)
   svc.source_state('kalshi','resyncing','Controlled sequence failure');self.assertFalse(store.index(store.snapshot())[chosen['id']]['quote']['comparison']['eligible'])
   await store.close()

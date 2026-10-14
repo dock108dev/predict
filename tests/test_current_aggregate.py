@@ -71,6 +71,12 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_running_app_without_tabs_dispatches(self):
         await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
+    async def test_bootstrap_receipt_is_not_restored_twice(self):
+        await self.scheduler.step()
+        before=self.store._state['state_revision']
+        with patch.object(self.scheduler,'admit_response',side_effect=AssertionError('duplicate retained admission')):
+            self.scheduler.restore_retained()
+        self.assertEqual(self.store._state['state_revision'],before)
     async def test_inactive_supported_sport_is_checked_and_empty_response_retires_quotes(self):
         self.service.config['aggregate_sports']=['MLB','NFL']
         self.service.sink.commit(dict(type='current_aggregate',sport='MLB',body=body(),received_at=utc()),self.service.states)
@@ -169,9 +175,8 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancel_after_headers_accounts_receipt_without_reacquisition(self):
         await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
-        self.wire.response_receipt=dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc())
         self.wire.hold=asyncio.Event();task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
-        await asyncio.sleep(.01);task.cancel()
+        await asyncio.sleep(.01);self.wire.response_receipt=dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc());task.cancel()
         with self.assertRaises(asyncio.CancelledError):await task
         aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
         self.assertEqual(a['charged'],3);self.assertTrue(a['consumed']);self.assertEqual(a['interruption'],'aggregate_cancelled_after_dispatch')
@@ -180,9 +185,29 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(QuotaStop):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
         self.assertEqual(len(self.wire.calls),count)
 
+    async def test_stop_retains_late_charge_headers_without_publication_or_retry(self):
+        await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
+        entered=asyncio.Event();release=asyncio.Event();calls=[]
+        async def response(req,key):
+            calls.append(req);entered.set();await release.wait()
+            return dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc(),body=body())
+        self.wire.request=response
+        task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+        await entered.wait();sequence=self.service.sink.sequence
+        self.service.dispatch=False;task.cancel();release.set()
+        with self.assertRaises(asyncio.CancelledError):await task
+        a=self.q._read()['attempts'][self.scheduler.issue_context['attempt_id']]
+        self.assertEqual(a['charged'],3);self.assertEqual(a['response_receipt']['status'],200)
+        self.assertEqual(self.q.snapshot()['reserved'],0);self.assertEqual(len(calls),1)
+        self.assertEqual(self.service.sink.sequence,sequence)
+
     async def test_body_transport_failure_with_received_headers_keeps_charge(self):
         await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
-        self.wire.response_receipt=dict(status=503,headers=quota(self.wire.used+3,3),received_at=utc());self.wire.error=TimeoutError('CONTROLLED-secret')
+        async def failed_response(req,key):
+            self.wire.calls.append(req)
+            self.wire.response_receipt=dict(status=503,headers=quota(self.wire.used+3,3),received_at=utc())
+            raise TimeoutError('CONTROLLED-secret')
+        self.wire.request=failed_response
         with self.assertRaisesRegex(QuotaStop,'transport_uncertain'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
         aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
         self.assertEqual(a['charged'],3);self.assertEqual(a['response_receipt']['status'],503)
@@ -276,6 +301,13 @@ class RestartScheduler(unittest.IsolatedAsyncioTestCase):
         self.scheduler.ledger=self.q;self.q.bind_window(self.window)
         a=self.q.reserve(self.service.ownership,'c',{},0,bootstrap=True);self.q.dispatched(a,self.service.ownership);self.q.reconcile(a,quota(20))
         at[0]=datetime.now(timezone.utc);mono[0]=60;boot[0]=dict(id='CONTROLLED-new',started_at=(at[0]-timedelta(seconds=60)).isoformat(),uptime=60)
+        original_request=self.wire.request
+        async def consistent_receipt(req,key):
+            response=await original_request(req,key)
+            new_at=datetime.fromisoformat(response['received_at'])
+            elapsed=(new_at-at[0]).total_seconds();at[0]=new_at;mono[0]+=elapsed;boot[0]['uptime']=mono[0]
+            return response
+        self.wire.request=consistent_receipt
         self.store.subscribers.add(asyncio.Queue(maxsize=1));self.wire.hold=asyncio.Event()
         task=asyncio.create_task(self.scheduler.step())
         for _ in range(50):

@@ -1,7 +1,7 @@
 """Reviewed adverse-price/age/depth gates over fixed comparison allocations.
 
 No acquisition or account access. Existing depth owns liquidity consumption;
-S02 owns all fee, capital and net cashflow arithmetic. Smaller supported depth
+The net-cost owner owns all fee, capital and net cashflow arithmetic. Smaller supported depth
 is a separately named size sensitivity, never the common ranking size.
 """
 from copy import deepcopy
@@ -167,7 +167,7 @@ def depth_allocation(legs, native_quantities, *, size_basis="common_comparison_c
     """Validate fixed native quantities through the existing shared depth solver.
 
     Null fee/payout inputs deliberately prevent this mechanical audit from
-    producing a net result. Fee/capital qualification remains with S02.
+    producing a net result. Fee/capital qualification remains with the net-cost owner.
     """
     if (not isinstance(legs, tuple) or not 1 <= len(legs) <= 8 or len(legs) != len(native_quantities)
             or not all(isinstance(x, DepthLeg) for x in legs)):
@@ -227,7 +227,7 @@ def depth_allocation(legs, native_quantities, *, size_basis="common_comparison_c
 
 
 def supported_size(leg: DepthLeg):
-    """Largest evidenced depth point; funding must still be requalified by S02."""
+    """Largest evidenced depth point; funding must still be requalified by the net-cost owner."""
     if leg.depth.available_native is None or leg.grid.minimum_native is None or leg.grid.increment_native is None:
         return dict(version=VERSION, native_quantity=None, reasons=["supported_size_inputs_unavailable"],
                     size_basis="details_supported_size_sensitivity", ranking_replacement=False)
@@ -247,7 +247,7 @@ def supported_size(leg: DepthLeg):
 def fixed_sensitivity(base_profits, conservative_profits, *, base_capital_usd,
                       conservative_capital_usd, base_quantities, conservative_quantities,
                       policy=DEFAULT_POLICY):
-    """Pair supplied S02 cashflows on a common funded denominator.
+    """Pair supplied net-cost cashflows on a common funded denominator.
 
     Funding added for the base case is an unused refundable sensitivity
     allowance. Its return does not change dollars of profit. Null state
@@ -300,7 +300,7 @@ def fixed_sensitivity(base_profits, conservative_profits, *, base_capital_usd,
 
 
 def paired_net_costs(base, conservative, *, policy=DEFAULT_POLICY):
-    """Reviewed S02 adapter; retain each dependency revision and local refusal."""
+    """Reviewed net-cost adapter; retain each dependency revision and local refusal."""
     from app.comparison.net_costs import VERSION as COST_VERSION
     if base.get("version") != COST_VERSION or conservative.get("version") != COST_VERSION:
         raise ValueError("reviewed versioned S02 results required")
@@ -323,7 +323,7 @@ def paired_net_costs(base, conservative, *, policy=DEFAULT_POLICY):
     known_states = [state for state in bp if bp[state] is not None and cp[state] is not None]
     unknown_states = [state for state in bp if state not in known_states]
     capital = lambda value: None if value["capital"] is None else value["capital"]["deployed_capital_usd"]
-    # D04 exceptional unknowns never suppress qualified completed-state
+    # Exceptional payout unknowns never suppress qualified completed-state
     # sensitivity. Its scope remains explicitly conditional and those states
     # stay visible as null; they cannot establish all-modeled assurance.
     result = fixed_sensitivity({state: bp[state] for state in known_states} if known_states else bp,
@@ -358,7 +358,7 @@ def calculate_buffered_costs(bound_leg, request, *, unit, native_quantity, nativ
                              positions=None, extra_funding=(), hold_returns_usd=None,
                              credits=(), depth_leg=None, include_exceptions=True,
                              policy=DEFAULT_POLICY):
-    """Rebuild S01 at a legal adverse price and recompute S02 on frozen fills.
+    """Rebuild cashflows at a legal adverse price and recompute costs on frozen fills.
 
     No resizing, fee extrapolation or source clock refresh. A null depth input
     permits only a disclosed hypothetical estimate, never depth qualification.

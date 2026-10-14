@@ -1,7 +1,7 @@
 """Exact state-weighted benchmark estimates beside independently qualified EV.
 
-D08 owns proportional no-vig weights; S02 owns net costs, S03 owns original
-clock/depth gates, and settlement owns cashflow aggregation. Two-way market
+The benchmark owner supplies proportional no-vig weights; net costs and original
+clock/depth gates remain separate, and settlement owns cashflow aggregation. Two-way market
 weights cannot become tie, push or exceptional probability mass.
 """
 from copy import deepcopy
@@ -24,7 +24,7 @@ KINDS = {"independent_model", "independently_qualified_states", "authored_sensit
 class ProbabilityInputs:
     """Independent state distribution, never the two-way benchmark weights.
 
-    Complete means every state in one exact D04 terminal partition. Conditional
+    Complete means every state in one exact terminal-state partition. Conditional
     means an explicit subset with its condition named. Authored sensitivity is
     inspectable arithmetic and can never enter ordinary ranking.
     """

@@ -154,3 +154,7 @@ app/reviews/*
 /docs/comparison-platform-operator-action.md
 /docs/comparison-net-sources/
 /docs/comparison-q03-authorized-stop-*/
+
+
+# Internal completion notes are local working material, not contributor guides.
+/docs/*-closeout.md

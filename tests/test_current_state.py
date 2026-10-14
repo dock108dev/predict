@@ -103,7 +103,9 @@ class Routes(AioHTTPTestCase):
         self.assertEqual((await self.client.post('/api/selections',json=request(store))).status,403)
         self.assertEqual((await self.client.post('/api/selections',data='{"schema":1,"schema":2}',headers={'Origin':self.origin(),'Content-Type':'application/json'})).status,422)
         self.assertEqual((await self.client.post('/api/selections',data='x'*4097,headers={'Origin':self.origin(),'Content-Type':'application/json'})).status,413)
-        self.assertEqual((await self.client.get('/api/current?league=NFL')).status,422)
+        self.assertEqual((await self.client.get('/api/current?league=NFL')).status,200)
+        self.assertEqual((await self.client.get('/api/current?league=unknown')).status,422)
+        self.assertEqual((await self.client.get('/api/current?league=NFL&league=NFL')).status,422)
     async def test_update_multiple_clients_coalescing_and_reconnect(self):
         store=self.app[CURRENT_KEY]
         a=await self.client.get('/api/current/updates');b=await self.client.get('/api/current/updates')

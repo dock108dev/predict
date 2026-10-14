@@ -1,0 +1,330 @@
+@media(max-width:900px) {
+  .cards .card {
+    grid-template-columns:minmax(150px,1fr) minmax(180px,1.25fr) auto;
+    gap:12px 18px
+  }
+  .cards .fair {
+    grid-column:1;
+    grid-row:2
+  }
+  .ev-meta {
+    grid-column:1/3
+  }
+  .cards .metrics {
+    grid-column:2;
+    grid-row:1/3
+  }
+  .cards .card>button {
+    grid-column:3;
+    grid-row:1/4
+  }
+  .quotes {
+    grid-template-columns:repeat(4,minmax(0,1fr))
+  }
+  .quote.fair {
+    grid-column:1/-1;
+    margin-top:14px;
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:6px 16px
+  }
+  .quote.fair strong {
+    margin:0
+  }
+  .card>.metrics {
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+}
+@media(max-width:600px) {
+  main {
+    padding:0 16px 24px
+  }
+  header {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:4px;
+    padding:12px 0 6px
+  }
+  .brand {
+    font-size:23px
+  }
+  nav {
+    grid-column:1/-1;
+    grid-row:2;
+    margin:0;
+    justify-content:space-between
+  }
+  nav a {
+    flex:1;
+    padding:8px 12px
+  }
+  #stop {
+    font-size:.8125rem;
+    padding:8px 10px
+  }
+  .heading {
+    margin:16px 0 12px;
+    align-items:start
+  }
+  .view-title {
+    gap:5px;
+    display:block
+  }
+  .view-title h1 {
+    font-size:24px
+  }
+  .scope {
+    display:block;
+    margin-top:4px;
+    max-width:230px;
+    font-size:.75rem
+  }
+  .view-help {
+    flex-shrink:0
+  }
+  .view-help summary {
+    font-size:.75rem
+  }
+  .selection {
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:12px
+  }
+  .selection>label {
+    grid-column:1
+  }
+  .game-search {
+    min-width:0;
+    align-self:end
+  }
+  .game-search[open] {
+    grid-column:1/-1;
+    grid-row:2;
+    min-width:0
+  }
+  .game-search label {
+    margin-top:2px
+  }
+  #settings {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    gap:10px 8px;
+    margin:14px 0 10px
+  }
+  #settings label {
+    width:auto!important
+  }
+  #settings label:first-child {
+    grid-column:1/3
+  }
+  #settings label:nth-child(2) {
+    grid-column:3
+  }
+  #settings .benchmark-setting {
+    grid-column:1
+  }
+  #settings button {
+    align-self:end;
+    padding:8px 10px
+  }
+  .context-bar {
+    display:block;
+    margin-bottom:14px
+  }
+  #applied {
+    font-size:.75rem
+  }
+  #status {
+    margin-top:4px;
+    font-size:.75rem
+  }
+  .context-bar #retry {
+    margin-top:8px
+  }
+  #filters {
+    max-width:none;
+    width:100%;
+    gap:0
+  }
+  #filters button {
+    padding:8px 10px;
+    font-size:.8125rem;
+    flex:1
+  }
+  .team {
+    padding:16px
+  }
+  .team h2 {
+    font-size:19px
+  }
+  .quotes {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px 0
+  }
+  .quote {
+    padding-right:10px
+  }
+  .quote:nth-child(3) {
+    border-left:0;
+    padding-left:0
+  }
+  .quote:nth-child(4) {
+    padding-left:10px
+  }
+  .quote+.quote {
+    padding-left:10px
+  }
+  .quote strong {
+    font-size:27px
+  }
+  .quote.fair {
+    margin:0;
+    gap:4px 12px
+  }
+  .quote.fair>small:first-child {
+    width:100%
+  }
+  .cards .card {
+    grid-template-columns:minmax(0,1fr) auto;
+    padding:16px;
+    gap:12px
+  }
+  .cards .fair {
+    grid-column:1/-1;
+    grid-row:auto
+  }
+  .cards .metrics {
+    grid-column:1/-1;
+    grid-row:auto
+  }
+  .cards .card>button {
+    grid-column:2;
+    grid-row:1;
+    align-self:start
+  }
+  .ev-meta {
+    grid-column:1/-1;
+    display:block
+  }
+  .ev-meta small {
+    margin-top:3px
+  }
+  .card {
+    padding:16px
+  }
+  .legs {
+    grid-template-columns:1fr;
+    gap:10px
+  }
+  .metric strong {
+    font-size:25px
+  }
+  .empty {
+    padding:22px 20px
+  }
+  dialog {
+    padding:0 16px 20px
+  }
+  .dialog-head {
+    padding:12px 0
+  }
+  dl {
+    gap:0 12px
+  }
+  th,td {
+    padding:8px 4px;
+    font-size:.8125rem
+  }
+  footer {
+    display:block
+  }
+  footer a {
+    display:block;
+    min-height:44px;
+    padding-top:10px
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  * {
+    scroll-behavior:auto!important
+  }
+}
+@media(prefers-reduced-transparency:reduce) {
+  dialog::backdrop {
+    background:#28384d
+  }
+}
+/* EV has two headline values;
+opposing comparisons have four. */
+.cards .card>.metrics {
+  grid-template-columns:repeat(2,minmax(0,1fr))
+}
+@media(max-width:600px) {
+  .selection {
+    grid-template-columns:minmax(0,1fr);
+    gap:0
+  }
+  .selection>label {
+    grid-column:1
+  }
+  .game-search {
+    grid-column:1;
+    justify-self:end
+  }
+  .game-search[open] {
+    grid-row:auto;
+    justify-self:stretch
+  }
+  #settings {
+    grid-template-columns:repeat(4,minmax(0,1fr))
+  }
+  #settings label {
+    min-width:0
+  }
+  #settings label:first-child {
+    grid-column:1/3
+  }
+  #settings label:nth-child(2) {
+    grid-column:3/5
+  }
+  #settings .benchmark-setting {
+    grid-column:1/3
+  }
+  #settings button {
+    padding:8px
+  }
+}
+
+.arbs-card {
+  position:relative;
+}
+.arbs-card>h2 {
+  display:flex;
+  align-items:center;
+  min-height:44px;
+  margin-bottom:0;
+  padding-right:100px;
+}
+.arbs-card>button {
+  position:absolute;
+  top:18px;
+  right:20px;
+}
+.arbs-card>.metrics {
+  background:#f1f5fe;
+  border-radius:7px;
+  padding:14px 16px;
+}
+.leg p strong {
+  display:inline;
+  font-weight:500;
+}
+@media(max-width:600px) {
+  .arbs-card>button {
+    top:16px;
+    right:16px;
+  }
+  .arbs-card>.metrics {
+    padding:12px;
+  }
+}

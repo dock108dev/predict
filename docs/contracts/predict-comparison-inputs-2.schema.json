@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:predict:comparison-inputs:2",
+  "title": "Lossless shared calculation inputs v2",
+  "description": "24 MiB registry; each expanded profile and binding at most 32 KiB. Content hashes, acyclic same-kind references, private-field exclusion and original profile reproduction are authoritative runtime checks.",
+  "type": "object",
+  "required": [
+    "version",
+    "templates",
+    "bindings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "comparison-current-dependencies-2"
+    },
+    "templates": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "version",
+          "kind",
+          "payload"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "comparison-input-template-1"
+          },
+          "kind": {
+            "enum": [
+              "identity",
+              "payout",
+              "reference",
+              "fee",
+              "quantity",
+              "buffer",
+              "probability"
+            ]
+          },
+          "payload": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "maxProperties": 112000,
+      "propertyNames": {
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "version",
+          "kind",
+          "payload",
+          "expires_at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "comparison-input-binding-1"
+          },
+          "kind": {
+            "enum": [
+              "identity",
+              "payout",
+              "reference",
+              "fee",
+              "quantity",
+              "buffer",
+              "probability"
+            ]
+          },
+          "payload": {
+            "type": "object"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-"""S05 bounded two-leg modeled portfolios; shared cashflow/cost/depth engines.
+"""Bounded two-leg modeled portfolios; shared cashflow/cost/depth engines.
 
 All search limits are declared before work. Candidate pair orientation is unique;
 sampled/truncated allocation searches never claim a global optimum or execution.
@@ -96,7 +96,7 @@ def _cost_summary(cost):
 
 def evaluate_arb_allocation(inputs, base_costs, conservative_costs, depth_result,
                             native_quantities, *, policy=DEFAULT_POLICY):
-    """Evaluate an exact fixed two-leg allocation supplied by reviewed S01–S03.
+    """Evaluate an exact fixed two-leg allocation supplied by reviewed cashflow/cost/depth inputs.
 
     Prices alone never define complementary payouts. Complete and conditional
     state categories are distinct, with zero and negative diagnostics retained.

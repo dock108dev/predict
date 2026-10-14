@@ -7,6 +7,9 @@ import subprocess
 import sys
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
+from multidict import MultiDict
+from aiohttp import web
 
 from app.collection import current_aggregate, current_policy, current_quota, current_schedule
 from app.collection.current_aggregate_policy import POLICY
@@ -82,3 +85,64 @@ class TransportPolicy(unittest.IsolatedAsyncioTestCase):
                 await transport.request(dict(path='/v4/sports', params={}), 'synthetic-key')
             await transport.close()
         self.assertTrue(client.closed)
+
+
+class CalculationOwnership(unittest.TestCase):
+    def test_saved_engine_binding_includes_shared_settings_adapter(self):
+        from app.storage.current_games import engine_binding
+        original=Path.read_bytes
+        before=engine_binding()
+        def changed(path):
+            data=original(path)
+            return data+b'\n# synthetic settings revision\n' if path.as_posix().endswith('/app/dashboard/query_policy.py') else data
+        with patch.object(Path,'read_bytes',changed):
+            self.assertNotEqual(engine_binding(),before)
+
+    def test_removed_unused_adapters_do_not_return(self):
+        from app.comparison import current_metrics
+        from app.collection import public_contracts
+        self.assertFalse(hasattr(current_metrics, 'apply_group_metrics'))
+        self.assertFalse(hasattr(public_contracts, 'championship_descriptor'))
+
+    def test_shared_settings_are_exact_bounded_and_explicit(self):
+        from app.dashboard.query_policy import calculation_policy
+        from app.dashboard.local_security import PublicRequestError
+        from app.comparison.estimated_policy import DEFAULT_POLICY, LEGACY_POLICY
+        result = calculation_policy(MultiDict(amount='500', ceiling='500.0', buffer='0.01', benchmark_venue='novig'), DEFAULT_POLICY)
+        self.assertEqual(result.capital_ceiling_usd, '500')
+        self.assertEqual(result.buffer_rate, '0.01')
+        self.assertEqual(result.benchmark_venue, 'novig')
+        self.assertEqual(calculation_policy({}, DEFAULT_POLICY.to_dict()), DEFAULT_POLICY)
+        self.assertEqual(calculation_policy({}, LEGACY_POLICY), LEGACY_POLICY)
+        for query in (MultiDict([('amount','500'),('amount','1000')]),
+                      {'amount':'500','ceiling':'1000'}, {'benchmark_venue':'kalshi'},
+                      {'buffer':'1.01'}, {'amount':'1e1000000','ceiling':'1'},
+                      {'amount':'1','ceiling':'1e1000000'}):
+            with self.subTest(query=query), self.assertRaises(PublicRequestError):
+                calculation_policy(query, DEFAULT_POLICY)
+
+
+class SharedPolicyEndpoints(unittest.IsolatedAsyncioTestCase):
+    async def test_saved_endpoints_use_one_settings_adapter_before_sql(self):
+        from app.dashboard import comparison_board_api, stored_games
+        from app.dashboard.query_policy import calculation_policy
+        from app.dashboard.local_security import PublicRequestError
+        from app.comparison.estimated_policy import DEFAULT_POLICY
+        provider=SimpleNamespace(closed=False, closing=False, dispatch=True, database=SimpleNamespace(status=lambda:{}))
+        for module, path, view in ((comparison_board_api,'/api/boards/{view}','odds'),
+                                   (stored_games,'/api/stored/result',None)):
+            app=web.Application();module.mount(app,provider)
+            handler=next(route.handler for route in app.router.routes() if route.method=='GET' and route.resource.canonical==path)
+            req=SimpleNamespace(query=MultiDict(game='synthetic:game',amount='500'),match_info={'view':view})
+            output=({'delivery_state':'complete'},False) if view else {'superseded':False,'state':{'events':[]}}
+            with patch.object(module,'load',return_value=DEFAULT_POLICY), \
+                 patch.object(module,'calculation_policy',wraps=calculation_policy) as settings, \
+                 patch.object(module.asyncio,'to_thread',return_value=output) as sql:
+                result=await handler(req)
+                self.assertEqual(result.status,200)
+                settings.assert_called_once_with(req.query,DEFAULT_POLICY)
+                self.assertEqual(sql.call_args.args[2].capital_ceiling_usd,'500')
+            req.query=MultiDict(game='synthetic:game',amount='500',ceiling='1000')
+            with patch.object(module,'load',return_value=DEFAULT_POLICY), patch.object(module.asyncio,'to_thread') as sql:
+                with self.assertRaises(PublicRequestError):await handler(req)
+                sql.assert_not_called()

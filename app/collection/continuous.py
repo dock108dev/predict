@@ -9,7 +9,6 @@ import asyncio
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
 import fnmatch
-import json
 import resource
 import shutil
 import sys

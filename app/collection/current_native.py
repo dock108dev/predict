@@ -1,7 +1,7 @@
 """Native source owner: bounded rediscovery and one reconciled socket per source.
 
 Reuse complete HTTP admission, reviewed catalog bindings and native stream
-reconstruction. Current operation retains no wire/frame/quote journal.
+reconstruction. CurrentService retains catalogs and admitted book images.
 """
 import asyncio
 from dataclasses import asdict, replace
@@ -22,6 +22,10 @@ from .odds_http import BudgetStop
 
 class CatalogResync(Exception):
     """Local identity enrichment requires a fresh subscription image."""
+
+DISCOVERY_CAPS = frozenset(('native_discovery_wire_byte_cap', 'native_discovery_decoded_byte_cap'))
+HOURLY_CAPS = frozenset(('prediction_session_byte_cap', 'prediction_discovery_request_cap',
+                        'current_snapshot_request_cap', 'current_connection_cap'))
 
 def balanced_markets(markets, cap, families):
     """A large spread ladder cannot consume every common-family subscription."""
@@ -46,6 +50,9 @@ class NativeWorker:
                             source_receipt_ms=None, receipt_projection_ms=None)
         self.budget_started=time.monotonic()
         self.budget_totals=dict(requests=0,bytes=0,connections=0)
+        self.http_totals=dict(wire=0,decoded=0)
+        self.http_active=False
+        self.hourly_pause=False
         self.pages = []
         self.catalog = dict(events=[], markets=[])
         self.markets = {}
@@ -116,22 +123,47 @@ class NativeWorker:
             self.wake_task = asyncio.create_task(self.socket.close())
 
     def guard(self):
+        if self.closed or not self.service.dispatch or self.failed:
+            raise asyncio.CancelledError()
         # Hourly transport bounds with cumulative accounting, independent of tabs.
-        if self.client and time.monotonic()-self.budget_started>=3600:
+        # Never reset a budget underneath an outstanding HTTP byte reservation.
+        if self.client and not self.http_active and time.monotonic()-self.budget_started>=3600:
             self.budget_totals['requests']+=self.client.budget.requests
             self.budget_totals['bytes']+=self.client.budget.bytes
             self.budget_totals['connections']=self.metrics['connections']
             self.client.budget.requests=0;self.client.budget.bytes=0
             self.budget_started=time.monotonic()
-        if self.closed or not self.service.dispatch or self.failed:
-            raise asyncio.CancelledError()
+            self.hourly_pause=False
+        if self.client:
+            self.metrics['budget_window']=dict(seconds_remaining=max(0,3600-(time.monotonic()-self.budget_started)),
+                requests=self.client.budget.requests,bytes=self.client.budget.bytes,
+                connections=self.metrics['connections']-self.budget_totals['connections'],
+                paused=self.hourly_pause)
         if time.monotonic() >= self.service.deadline:
             raise BudgetStop('attended_runtime_deadline')
+
+    def begin_discovery(self):
+        """Six MiB belongs to one scheduled pass, never to the worker lifetime."""
+        self.guard()
+        if self.http_active:raise RuntimeError('discovery_http_in_progress')
+        for name,key in (('http_wire_bytes','wire'),('http_decoded_bytes','decoded')):
+            self.http_totals[key]+=getattr(self.client,name,0)
+            setattr(self.client,name,0)
+        self.metrics['discovery_passes']=self.metrics.get('discovery_passes',0)+1
+
+    async def wait_hourly_budget(self):
+        self.hourly_pause=True
+        self.service.source_state(self.venue,'budget_delayed','Native hourly transport allowance reached; waiting for its next window.')
+        await self.stop_stream()
+        await asyncio.sleep(max(0,3600-(time.monotonic()-self.budget_started)))
+        self.guard()
 
     def receipt(self, row):
         # Complete responses are transient discovery inputs, then discarded.
         self.metrics['requests'] = self.budget_totals['requests']+self.client.budget.requests
         self.metrics['bytes'] = self.budget_totals['bytes']+self.client.budget.bytes
+        self.metrics['http_wire_bytes']=self.http_totals['wire']+getattr(self.client,'http_wire_bytes',0)
+        self.metrics['http_decoded_bytes']=self.http_totals['decoded']+getattr(self.client,'http_decoded_bytes',0)
         self.metrics['last_http'] = dict(path=row['path'],params=row.get('params',{}),status=row['status'],complete=row['complete'],
             reason=row.get('delivery_reason'),body_sha256=row['body_sha256'])
         self.service.observation(self.venue, 'http', dict(status=row['status'], complete=row['complete'],
@@ -154,7 +186,7 @@ class NativeWorker:
             self.backoff_until = time.monotonic()+delay
         if not row['complete'] or not row.get('usable_metadata'):
             query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
-            if row.get('delivery_reason') not in query_caps | {'http_status', None, 'native_http_timeout', 'native_http_transport_error'} and row['status']==200:
+            if row.get('delivery_reason') not in query_caps | DISCOVERY_CAPS | HOURLY_CAPS | {'http_status', None, 'native_http_timeout', 'native_http_transport_error'} and row['status']==200:
                 self.failed = True
             return
         page = dict(row, source=self.venue, native_binding_revision='live-native-binding-2',
@@ -170,6 +202,7 @@ class NativeWorker:
         if self.backoff_until > time.monotonic():
             raise BudgetStop('provider_backoff_pending')
         self._scope = scope
+        self.http_active=True
         try:
             # No invisible per-operation retry: the source runtime owns backoff.
             response = await MockREST.get(self.client, self.client.endpoint+path, params)
@@ -178,7 +211,9 @@ class NativeWorker:
                 self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
                     status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code=str(exc))
             raise
-        finally: self._scope = None
+        finally:
+            self._scope = None
+            self.http_active=False
         if response.status_code != 200:
             if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
                 self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
@@ -471,6 +506,11 @@ class NativeWorker:
                         return
                     self.backoff_until = time.monotonic()+delay
                 if isinstance(exc, BudgetStop):
+                    if str(exc) in HOURLY_CAPS:
+                        self.hourly_pause=True
+                        self.service.issue(self.venue,'resource',str(exc))
+                        self.service.source_state(self.venue,'budget_delayed','Native hourly transport allowance reached; waiting for its next window.')
+                        return
                     self.failed = True
                     self.service.issue(self.venue, 'resource', str(exc))
                     self.service.source_state(self.venue, 'unavailable', 'Native runtime resource allowance reached.')
@@ -530,7 +570,11 @@ class NativeWorker:
             errors = 0
             while not self.closed and not self.failed and self.service.dispatch:
                 self.guard()
+                if self.hourly_pause:
+                    await self.wait_hourly_budget()
+                    continue
                 try:
+                    self.begin_discovery()
                     await self.discover()
                     errors = 0
                 except asyncio.CancelledError: raise
@@ -538,6 +582,18 @@ class NativeWorker:
                     errors += 1
                     code = str(exc) if isinstance(exc,BudgetStop) else type(exc).__name__
                     self.service.issue(self.venue, 'resource' if isinstance(exc,BudgetStop) else 'discovery', code)
+                    if isinstance(exc,BudgetStop) and code in DISCOVERY_CAPS and not self.failed:
+                        # Partial metadata cannot replace the last complete catalog.
+                        # The existing stream may continue within the hourly budget.
+                        self.pages=[]
+                        errors=0
+                        self.metrics['discovery_cap_stops']=self.metrics.get('discovery_cap_stops',0)+1
+                        await asyncio.sleep(max(self.config['rediscovery_seconds'],self.backoff_until-time.monotonic()))
+                        continue
+                    if isinstance(exc,BudgetStop) and code in HOURLY_CAPS and not self.failed:
+                        errors=0
+                        await self.wait_hourly_budget()
+                        continue
                     await self.stop_stream()
                     self.service.source_state(self.venue, 'unavailable' if self.failed else 'resyncing', 'Native discovery is unavailable; healthy sources continue.')
                     retryable=code in ('provider_backoff_pending','native_http_timeout','native_http_transport_error')

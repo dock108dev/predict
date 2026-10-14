@@ -17,6 +17,72 @@ def load(name):
 
 
 class ReportingTests(unittest.TestCase):
+    def test_empty_client_execution_cannot_qualify_as_a_passing_suite(self):
+        module = load("run_checks")
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            source = output / "test_empty.cjs"
+            source.write_text("")
+            record = module.execute(
+                "test_empty", ["node", str(source)], output, timeout=10
+            )
+            self.assertEqual(record["status"], "FAIL")
+            self.assertEqual(record["exit_code"], 0)
+            self.assertIn("no completion result", record["reason"])
+
+    def test_optional_resource_outage_preserves_unavailable_values(self):
+        module = load("health")
+
+        def failed(_path):
+            raise OSError("telemetry unavailable")
+
+        value = module.resource_sample(failed)
+        self.assertIsNone(value["cache_bytes"])
+        self.assertIsNone(value["artifact_sample_bytes"])
+        self.assertEqual(set(value["resource_unavailable"]), {"cache", "artifacts"})
+
+        def partial(path):
+            return (
+                {"active_caches_count": 2, "active_caches_size_in_bytes": 100}
+                if path.endswith("usage")
+                else {"total_count": 40, "artifacts": [{"size_in_bytes": 20}]}
+            )
+
+        value = module.resource_sample(partial)
+        self.assertEqual(value["artifact_sample_bytes"], 20)
+        self.assertEqual(value["artifact_total_count"], 40)
+        self.assertEqual(value["cache_bytes"], 100)
+
+    def test_interrupted_setup_retains_failure_without_invented_counts(self):
+        module = load("interrupted")
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            self.assertFalse(module.ensure_report(output))
+            value = json.loads((output / "metrics.json").read_text())
+            self.assertEqual(value["checks"][0]["status"], "NOT RUN")
+            self.assertIsNone(value["counts"])
+            self.assertFalse(module.ensure_report(output))
+
+    def test_isolation_path_preserves_standard_library_secrets(self):
+        import os
+        import subprocess
+        import sys
+
+        root = Path(__file__).resolve().parents[1]
+        environment = os.environ | {"PYTHONPATH": str(root / "scripts/ci")}
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import secrets; assert len(secrets.token_bytes(16)) == 16",
+            ],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_missing_dependency_findings_cannot_report_zero_vulnerabilities(self):
         module = load("quality_report")
         with tempfile.TemporaryDirectory() as folder:
@@ -446,7 +512,8 @@ class EnforcementTests(unittest.TestCase):
             )
             self.assertTrue(failed)
             self.assertEqual(
-                [r["name"] for r in records][-3:], ["lint", "workflow", "docs"]
+                [r["name"] for r in records][-4:],
+                ["lint", "workflow", "docs", "secrets"],
             )
             self.assertTrue(all(r["status"] == "NOT RUN" for r in records))
 
@@ -483,7 +550,7 @@ class EnforcementTests(unittest.TestCase):
 
         def fetch(path):
             paths.append(path)
-            if path.startswith("/actions/runs?"):
+            if path.startswith("/actions/workflows/ci.yml/runs?"):
                 return dict(
                     workflow_runs=[
                         base,
@@ -505,7 +572,7 @@ class EnforcementTests(unittest.TestCase):
         self.assertEqual(
             paths,
             [
-                "/actions/runs?per_page=30",
+                "/actions/workflows/ci.yml/runs?per_page=30&status=completed&created=%3E%3D2026-09-10",
                 "/actions/runs/1/attempts/2/jobs?per_page=100",
             ],
         )
@@ -581,3 +648,103 @@ class ScheduledAuditTests(unittest.TestCase):
             )
             self.assertTrue(failed)
             self.assertEqual(records[0]["status"], "FAIL")
+
+
+class RequiredGateTests(unittest.TestCase):
+    def test_same_run_failures_skips_cancellation_missing_and_malformed_fail(self):
+        gate = load("gate")
+        passing = {name: {"result": "success"} for name in gate.REQUIRED}
+        self.assertTrue(gate.evaluate(passing)[0])
+        for status in ("failure", "skipped", "cancelled", "NOT RUN"):
+            with self.subTest(status=status):
+                self.assertFalse(
+                    gate.evaluate(dict(passing, browser={"result": status}))[0]
+                )
+        self.assertFalse(gate.evaluate({})[0])
+        self.assertFalse(gate.evaluate(dict(passing, browser=None))[0])
+
+    def test_browser_report_failure_and_missing_cannot_pass(self):
+        report = load("quality_report")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.assertTrue(
+                report.render({"browser": {"outcome": "success"}}, root, browser=True)[
+                    2
+                ]
+            )
+            (root / "browser").mkdir()
+            (root / "browser/junit.xml").write_text(
+                "<testsuite><testcase/></testsuite>"
+            )
+            self.assertFalse(
+                report.render({"browser": {"outcome": "success"}}, root, browser=True)[
+                    2
+                ]
+            )
+            self.assertTrue(
+                report.render({"browser": {"outcome": "skipped"}}, root, browser=True)[
+                    2
+                ]
+            )
+
+    def test_lock_root_drift_and_missing_backend_are_explicit_failures(self):
+        import shutil
+        from unittest.mock import patch
+
+        module = load("validate_lock")
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            temp = Path(folder)
+            for name in (
+                "pyproject.toml",
+                "requirements-ci.in",
+                "requirements-ci.txt",
+                "requirements-browser.in",
+                "requirements-browser.txt",
+            ):
+                shutil.copy2(root / name, temp / name)
+            module.validate(temp)
+            lock = temp / "requirements-ci.txt"
+            lock.write_text(
+                lock.read_text().replace("setuptools==", "missing-backend==")
+            )
+            with self.assertRaisesRegex(ValueError, "setuptools"):
+                module.validate(temp)
+            shutil.copy2(root / "requirements-ci.txt", lock)
+            browser = temp / "requirements-browser.txt"
+            browser.write_text(
+                browser.read_text().replace("playwright==", "missing-browser==")
+            )
+            with self.assertRaisesRegex(ValueError, "playwright"):
+                module.validate(temp)
+
+    def test_project_docs_reject_missing_private_and_escaping_links(self):
+        module = load("docs")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            guide = root / "guide.md"
+            from unittest.mock import patch
+
+            with patch.object(module, "DOCUMENTS", ("guide.md",)):
+                guide.write_text("[source](missing.py)")
+                with self.assertRaisesRegex(ValueError, "Missing/escaping"):
+                    module.validate(root)
+                (root / "missing.py").write_text("")
+                module.validate(root)
+                guide.write_text("[project](.) [source](missing.py)")
+                module.validate(root)
+                (root / "test-results").mkdir()
+                (root / "test-results/old.json").write_text("{}")
+                guide.write_text("[local](test-results/old.json)")
+                with self.assertRaisesRegex(ValueError, "Local-only"):
+                    module.validate(root)
+                guide.write_text("[outside](../README.md)")
+                with self.assertRaisesRegex(ValueError, "Missing/escaping"):
+                    module.validate(root)
+                guide.write_text("Use /Users/someone/Desktop/tool.py")
+                with self.assertRaisesRegex(ValueError, "Personal filesystem"):
+                    module.validate(root)
+                guide.write_text("[guide](notes.md)")
+                (root / "notes.md").write_text("private notes")
+                with self.assertRaisesRegex(ValueError, "Local-only"):
+                    module.validate(root)

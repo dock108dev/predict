@@ -17,6 +17,7 @@ from app.dashboard.current_contract import packed, stamp
 from .current_policy import ROOT
 from .current_aggregate_policy import POLICY
 from .current_clock import continuous, boot_evidence
+from .current_conservative import pending_reason, exposure, covering, validate_audits, import_balance, applicable
 
 SCHEMA = 'predict-shared-odds-quota-1'
 DIRECTORY = ROOT / '.local/predict-odds'
@@ -66,6 +67,8 @@ def load_window():
 
 
 def headers(items, ceiling=CEILING):
+    if not isinstance(items,(list,tuple)) or any(not isinstance(row,(list,tuple)) or len(row)!=2 or not isinstance(row[0],str) for row in items):
+        raise QuotaStop('quota_missing_duplicate_or_malformed')
     result = {}
     for key in ('x-requests-used', 'x-requests-remaining', 'x-requests-last'):
         found = [v for k, v in items if k.lower() == key]
@@ -76,6 +79,57 @@ def headers(items, ceiling=CEILING):
     if used + remaining != ceiling or last > used:
         raise QuotaStop('quota_ceiling_or_headers_contradictory')
     return dict(used=used, remaining=remaining, last=last)
+
+
+def storage_admission_proof(proof, receipt):
+    """Validate the exact candidate replay against durable in-place rollover.
+
+    This supplies only local admission-repair evidence. It cannot grant paid
+    balance, resolve a charge or alter any request's original clocks.
+    """
+    from .current_conservative import digest
+    from .current_journal import CurrentJournal, MANIFEST_BYTE_CAP, MANIFEST_VERSION
+    from .current_storage_policy import (
+        VERSION, JOURNAL_SEGMENT_BYTE_CAP, JOURNAL_BYTE_CAP,
+        JOURNAL_RECORD_BYTE_CAP, SQL_BYTE_CAP, FREE_DISK_BYTE_FLOOR,
+    )
+    from .odds_http import BudgetStop
+    expected_policy = dict(version=VERSION,
+        journal_segment_byte_cap=JOURNAL_SEGMENT_BYTE_CAP,
+        journal_total_byte_cap=JOURNAL_BYTE_CAP,
+        journal_record_byte_cap=JOURNAL_RECORD_BYTE_CAP,
+        sql_byte_cap=SQL_BYTE_CAP, free_disk_byte_floor=FREE_DISK_BYTE_FLOOR)
+    try:
+        if (proof.get('response_receipt_sha256') != digest(receipt)
+                or proof.get('storage_policy') != expected_policy
+                or type(proof.get('ingress_admitted')) is not int
+                or type(proof.get('provider_requests')) is not int):
+            raise ValueError()
+        original = proof['original_journal']; retained = proof['segmented_manifest']
+        if (not isinstance(original,dict) or set(original)!={'path','bytes','sha256'}
+                or type(original['bytes']) is not int or not 0 < original['bytes'] <= JOURNAL_SEGMENT_BYTE_CAP
+                or not isinstance(retained,dict) or set(retained)!={'path','sha256'}):
+            raise ValueError()
+        path=Path(original['path']); manifest_path=Path(retained['path'])
+        if (not path.is_absolute() or path.name!='observations.jsonl'
+                or manifest_path!=path.parent/'observations.manifest.json'
+                or path.is_symlink() or manifest_path.is_symlink()
+                or manifest_path.stat().st_size > MANIFEST_BYTE_CAP):
+            raise ValueError()
+        raw=manifest_path.read_bytes()
+        if sha256(raw).hexdigest()!=retained['sha256']:raise ValueError()
+        manifest=json.loads(raw)
+        if (manifest.get('schema')!=MANIFEST_VERSION
+                or manifest['sealed'][0]!=dict(name=path.name,index=0,
+                    bytes=original['bytes'],sha256=original['sha256'])):
+            raise ValueError()
+        # Use the journal's existing bounded integrity reader. It verifies the
+        # sealed original hash, every segment and the active tail under its lock.
+        paths=CurrentJournal(path.parent).paths()
+        if len(paths)<2 or paths[0]!=path or manifest_path.read_bytes()!=raw:
+            raise ValueError()
+    except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, BudgetStop):
+        raise QuotaStop('admission_repair_evidence_required') from None
 
 
 class QuotaLedger:
@@ -101,7 +155,7 @@ class QuotaLedger:
             if set(envelope)!={'value','sha256'} or sha256(packed(envelope['value'])).hexdigest()!=envelope['sha256']:raise ValueError()
             value=envelope['value']
             required = {'schema','ceiling','engineering_reserve','window','windows','observation','attempts','next_due_at','rotation','bootstrap_due_at','last_clock','clock_anchor','pause'}
-            optional={'clock_recoveries','accounting_epoch','account_transitions','account_id','cycle','sports_inventory','manual_cycle'}
+            optional={'clock_recoveries','accounting_epoch','account_transitions','account_id','cycle','sports_inventory','manual_cycle','conservative_recoveries','recovery_probes','admission_repairs'}
             if required-set(value) or set(value)-required-optional or value['schema'] != SCHEMA or value['ceiling'] not in (CEILING,POLICY.monthly_ceiling) or value['engineering_reserve'] != RESERVE:
                 raise ValueError()
             value.setdefault('clock_recoveries',[])
@@ -111,10 +165,19 @@ class QuotaLedger:
             epoch=value['accounting_epoch']
             if epoch is not None and (not isinstance(epoch,dict) or epoch.get('state') not in ('awaiting_bootstrap','current') or epoch.get('id') not in [r['id'] for r in value['clock_recoveries']]):
                 raise ValueError()
+            validate_audits(value)
+            repairs=value.get('admission_repairs',[])
+            if not isinstance(repairs,list) or len(repairs)>12:raise ValueError()
+            for repair in repairs:
+                from .current_conservative import digest
+                if repair.get('sha256')!=digest({k:x for k,x in repair.items() if k!='sha256'}):raise ValueError()
+            probes=value.get('recovery_probes',[])
+            if not isinstance(probes,list) or len(probes)>64 or any(p.get('state') not in ('observing','activated','failed') for p in probes):raise ValueError()
             window(value['window'])
             if not isinstance(value['attempts'], dict) or len(value['attempts']) > ATTEMPT_CAP or not isinstance(value['windows'], list) or len(value['windows']) > 12:
                 raise ValueError()
             for aid, a in value['attempts'].items():
+                if type(a.get('budget_exposure',0)) is not int or not 0<=a.get('budget_exposure',0)<=a['cost']:raise ValueError()
                 if aid != a['id'] or a['state'] not in ('reserved','uncertain','confirmed','not_dispatched') or type(a['cost']) is not int or not 0 <= a['cost'] <= 30 or a['consumed'] is not True:
                     raise ValueError()
             if type(value['rotation']) is not int or value['rotation'] < 0:
@@ -165,7 +228,7 @@ class QuotaLedger:
                 or account['monthly_credits']!=POLICY.monthly_ceiling):
             raise QuotaStop('paid_account_policy_required')
         def change(v,at):
-            if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+            if exposure(v) or any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
             history=v.setdefault('account_transitions',[])
             if len(history)>=64:raise QuotaStop('account_transition_capacity')
             history.append(dict(at=at,old_account_id=v.get('account_id'),old_ceiling=v['ceiling'],
@@ -176,12 +239,54 @@ class QuotaLedger:
                      bootstrap_due_at=None,pause=None)
         self.transact(change,clock_recovery=True)
 
-    def repair_admission(self,evidence):
-        """Clear only a parser pause after exact retained-response replay evidence."""
+    def repair_admission(self,evidence,*,owner=None,candidate=None):
+        """Clear a proven local ingress/storage pause without changing accounting."""
         if not isinstance(evidence,dict) or not evidence.get('replay_verified') or not evidence.get('path'):raise QuotaStop('admission_repair_evidence_required')
+        kind=evidence.get('repair')
+        storage_repair=kind=='observation_storage_rollover'
         def repair(v,at):
-            if v['pause']!='aggregate_admission_failed':raise QuotaStop('admission_repair_pause_mismatch')
-            if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+            pauses={'aggregate_admission_failed','current_observation_storage_cap'} if storage_repair else {'aggregate_admission_failed'}
+            if v['pause'] not in pauses:raise QuotaStop('admission_repair_pause_mismatch')
+            if storage_repair or exposure(v) or any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):
+                # A proven local ingress repair can preserve already covered
+                # inactive holds. It cannot create coverage or balance authority.
+                from .current_conservative import pending_reason,digest
+                from .current_account_recovery import credential_binding
+                from .current_policy import candidate as current_candidate
+                if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
+                if candidate!=current_candidate()[0]:raise QuotaStop('candidate_changed')
+                if pending_reason(v):raise QuotaStop('ambiguous_dispatch_unresolved')
+                if any(a['state']=='reserved' or a['state']=='uncertain' and
+                    (a['runtime_id']==owner_runtime(owner) or (stamp(at)-stamp(a['dispatch_at'])).total_seconds()<120)
+                    for a in v['attempts'].values()):raise QuotaStop('recovery_active_transport')
+                if not v.get('conservative_recoveries') or credential_binding()!=v['conservative_recoveries'][-1]['evidence']['credential_binding'] or load_window()!=v['window']:
+                    raise QuotaStop('recovery_context_mismatch')
+                aid=evidence.get('attempt_id');attempt=v['attempts'].get(aid)
+                path=Path(evidence['path'])
+                try:
+                    if (kind not in {'database_ingress_wire_bytes','observation_storage_rollover'} or not attempt or attempt['state']!='confirmed'
+                        or (attempt.get('response_receipt') or {}).get('status')!=200 or path.is_symlink() or not path.is_file()
+                        or path.stat().st_size>8192):
+                        raise ValueError()
+                    raw=path.read_bytes()
+                    if sha256(raw).hexdigest()!=evidence.get('sha256'):raise ValueError()
+                    proof=json.loads(raw)
+                except (OSError,ValueError,UnicodeError):
+                    raise QuotaStop('admission_repair_evidence_required') from None
+                if (not isinstance(proof,dict) or proof.get('candidate_digest')!=candidate or proof.get('attempt_id')!=aid
+                    or proof.get('repair')!=kind or proof.get('replay_verified') is not True
+                    or proof.get('ingress_admitted')!=1 or proof.get('provider_requests')!=0
+                    or proof.get('received_at')!=attempt['response_receipt']['received_at']):
+                    raise QuotaStop('admission_repair_evidence_required')
+                if storage_repair:
+                    if not path.is_absolute():raise QuotaStop('admission_repair_evidence_required')
+                    storage_admission_proof(proof,attempt['response_receipt'])
+                repairs=v.setdefault('admission_repairs',[])
+                if len(repairs)>=12:raise QuotaStop('account_transition_capacity')
+                audit=dict(at=at,repair=kind,candidate_digest=candidate,runtime_id=owner_runtime(owner),
+                    evidence=deepcopy(evidence),prior_pause=v['pause'],next_due_at=v['next_due_at'],observation=deepcopy(v['observation']))
+                audit['sha256']=digest(audit);repairs.append(audit);v['pause']=None
+                return
             history=v.setdefault('account_transitions',[])
             if len(history)>=64:raise QuotaStop('account_transition_capacity')
             history.append(dict(at=at,reason='retained_admission_repair',old_pause=v['pause'],evidence=deepcopy(evidence),next_due_at=v['next_due_at'],observation=deepcopy(v['observation'])))
@@ -215,7 +320,7 @@ class QuotaLedger:
         """Rebind same reset dates to fresh owner account evidence, retaining history."""
         evidence=window(evidence)
         def confirm(v,at):
-            if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+            if exposure(v) or any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
             old=v['window']
             if old is None or any(old[k]!=evidence[k] for k in ('starts_at','ends_at')):raise QuotaStop('account_window_dates_require_transition')
             v.setdefault('account_transitions',[]).append(dict(at=at,reason='paid_reset_window_owner_confirmation',old_window=deepcopy(old),window=deepcopy(evidence),account_id=v.get('account_id'),next_due_at=v['next_due_at']))
@@ -229,12 +334,32 @@ class QuotaLedger:
             v['sports_inventory']=dict(active=sorted(available),at=at,account_id=v.get('account_id'))
         self.transact(record)
 
+    def eligibility(self, v, at, *, bootstrap=False, own_reservation=None):
+        if self.failed or v['pause']:return self.failed or v['pause']
+        if not bootstrap and v['accounting_epoch'] and v['accounting_epoch']['state']!='current':return 'restart_accounting_refresh_required'
+        pending=pending_reason(v,own_reservation=own_reservation)
+        if pending:return pending
+        audits=v.get('conservative_recoveries',[])
+        if audits and applicable(v,audits[-1]) and self.directory.resolve()==DIRECTORY.resolve():
+            from .current_account_recovery import credential_binding
+            try:
+                if credential_binding()!=audits[-1]['evidence']['credential_binding']:return 'recovery_credential_changed'
+                metadata=json.loads((ROOT/'.local/predict-odds-account.json').read_text())
+                if metadata['account_id']!=v.get('account_id') or load_window()!=v['window']:return 'recovery_context_mismatch'
+            except (ValueError,OSError,KeyError):return 'recovery_context_mismatch'
+        if not bootstrap:
+            if v['accounting_epoch'] and v['accounting_epoch']['state']!='current':return 'restart_accounting_refresh_required'
+            if v['window'] is None:return 'reset_window_unknown'
+            if not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at']):return 'reset_window_expired'
+            if v['observation'] is None:return 'quota_unknown'
+        return None
+
     def begin_manual_cycle(self, owner, requests, identity):
         if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
         if not isinstance(identity,str) or not 1<=len(identity)<=80:raise QuotaStop('manual_refresh_identity_invalid')
         def begin(v,at):
-            if v['pause']:raise QuotaStop(v['pause'])
-            if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+            reason=self.eligibility(v,at)
+            if reason:raise QuotaStop(reason)
             if any(a.get('cycle_id')==identity for a in v['attempts'].values()):raise QuotaStop('manual_refresh_already_consumed')
             if self.available(v) is None or self.available(v)<POLICY.credits_per_batch*len(requests):raise QuotaStop('quota_reserve_or_exhausted')
             v['manual_cycle']=dict(id=identity,requests=deepcopy(requests),runtime_id=owner_runtime(owner),at=at,authority='Owner clicked on-demand shared Odds API refresh',scheduled_next_due_at=v['next_due_at'])
@@ -249,8 +374,8 @@ class QuotaLedger:
             if not plan['open']:raise QuotaStop('aggregate_outside_window')
             if v.get('cycle',{}).get('slot')==plan['slot']:return None
             if v['next_due_at'] and stamp(at)<stamp(v['next_due_at']):return None
-            if v['pause']:raise QuotaStop(v['pause'])
-            if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+            reason=self.eligibility(v,at)
+            if reason:raise QuotaStop(reason)
             allowance=self.available(v)
             if allowance is None or allowance<POLICY.credits_per_batch*len(requests):raise QuotaStop('quota_reserve_or_exhausted')
             cycle=dict(id=str(uuid4()),slot=plan['slot'],requests=deepcopy(requests),runtime_id=owner_runtime(owner),at=at)
@@ -282,10 +407,11 @@ class QuotaLedger:
     def _restart_reason(self, v, at, mono, boot, evidence):
         if self.failed:return self.failed
         if v['pause'] not in (None,'clock_continuity_unknown'):return v['pause']
-        if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):return 'ambiguous_dispatch_unresolved'
+        if pending_reason(v):return pending_reason(v)
         if evidence is None:return 'reset_window_evidence_unverified'
         if not stamp(evidence['starts_at'])<=stamp(at)<stamp(evidence['ends_at']):return 'reset_window_not_current'
         if v['window']!=evidence and (v['window'] is None or stamp(evidence['starts_at'])<stamp(v['window']['ends_at'])):return 'reset_window_evidence_unverified'
+        if evidence!=v['window'] and exposure(v):return 'reset_transition_unresolved'
         anchor=v['clock_anchor']
         if v['last_clock'] and stamp(at)<stamp(v['last_clock']):return 'clock_regression'
         if not anchor or not boot or mono is None:return 'restart_identity_unknown'
@@ -313,7 +439,8 @@ class QuotaLedger:
             reason=self._clock_reason(v,at,mono,boot)
             if reason is None:
                 if v['pause']:raise QuotaStop(v['pause'])
-                if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):raise QuotaStop('ambiguous_dispatch_unresolved')
+                reason=self.eligibility(v,at,bootstrap=True)
+                if reason:raise QuotaStop(reason)
                 return
             failure=self._restart_reason(v,at,mono,boot,evidence)
             if failure:raise QuotaStop(failure)
@@ -362,12 +489,18 @@ class QuotaLedger:
             return dict(schema=SCHEMA,used=None,remaining=None,reserved=None,available=None,reset=None,next_due_at=None,observation=None,
                 unresolved_attempts=None,engineering_reserve=RESERVE,ceiling=CEILING,ledger_byte_ceiling=32*1024*1024,attempt_ceiling=ATTEMPT_CAP,pause='quota_ledger_unavailable')
         unresolved=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
-        reserved=sum(a['cost'] for a in unresolved)
+        reserved=exposure(v)
         o=v['observation']
         return dict(schema=SCHEMA,used=None if o is None else o['used'],remaining=None if o is None else o['remaining'],
             reserved=reserved,available=None if o is None else max(0,o['remaining']-reserved-RESERVE),
             reset=v['window'],next_due_at=v['next_due_at'],rotation=v['rotation'],
             bootstrap_due_at=v['bootstrap_due_at'],observation=deepcopy(o),pause=self.failed or v['pause'],
+            held_uncertain_credits=sum(a['cost'] for a in unresolved if a['state']=='uncertain'),
+            covered_uncertain_attempts=sum(bool(covering(v,a)) for a in unresolved),
+            blocking_reason=self.eligibility(v,self.clock()),
+            recovery_authority=deepcopy(v.get('conservative_recoveries',[])),
+            independent_balance=deepcopy(v.get('conservative_recoveries',[])[-1]['balance']) if v.get('conservative_recoveries') else None,
+            recovery_probes=deepcopy(v.get('recovery_probes',[])),
             attempts=len(v['attempts']),unresolved_attempts=len(unresolved),engineering_reserve=RESERVE,ceiling=v['ceiling'],account_id=v.get('account_id'),account_transitions=deepcopy(v.get('account_transitions',[])),cycle=deepcopy(v.get('cycle')),sports_inventory=deepcopy(v.get('sports_inventory')),
             observation_age_seconds=None if o is None or stamp(self.clock())<stamp(o['at']) else (stamp(self.clock())-stamp(o['at'])).total_seconds(),
             observation_clock_skew=o is not None and stamp(self.clock())<stamp(o['at']),
@@ -385,8 +518,8 @@ class QuotaLedger:
         clock_reason=self._clock_reason(v,at,mono,boot)
         if clock_reason:
             return self._restart_reason(v,at,mono,boot,evidence)
-        if q.get('pause'):return q['pause']
-        if q.get('unresolved_attempts'):return 'ambiguous_dispatch_unresolved'
+        reason=self.eligibility(v,at)
+        if reason:return reason
         if q.get('observation') is None:return 'quota_unknown'
         if evidence is None or evidence!=q.get('reset'):return 'reset_window_evidence_unverified'
         at=self.clock()
@@ -402,7 +535,7 @@ class QuotaLedger:
             if not stamp(evidence['starts_at'])<=stamp(at)<stamp(evidence['ends_at']):
                 raise QuotaStop('reset_window_not_current')
             if v['window']:
-                if stamp(evidence['starts_at'])<stamp(v['window']['ends_at']) or any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):
+                if exposure(v) or stamp(evidence['starts_at'])<stamp(v['window']['ends_at']) or any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):
                     raise QuotaStop('reset_transition_unresolved')
                 if len(v['windows'])>=12: raise QuotaStop('quota_record_capacity')
                 v['windows'].append(dict(window=v['window'],observation=v['observation']))
@@ -417,7 +550,7 @@ class QuotaLedger:
     @staticmethod
     def available(v):
         o=v['observation']
-        reserved=sum(a['cost'] for a in v['attempts'].values() if a['state'] in ('reserved','uncertain'))
+        reserved=exposure(v)
         return None if o is None else max(0,o['remaining']-reserved-RESERVE)
 
     def reserve(self, owner, candidate, request, cost, *, bootstrap=False, qualification=None, cycle_id=None):
@@ -445,19 +578,16 @@ class QuotaLedger:
             if bootstrap:
                 if not diagnostic and v['bootstrap_due_at'] and stamp(at)<stamp(v['bootstrap_due_at']):
                     raise QuotaStop('bootstrap_budget_delayed')
+                if pending_reason(v):raise QuotaStop(pending_reason(v))
                 v['bootstrap_due_at']=(stamp(at)+timedelta(hours=6)).isoformat()
             else:
-                if v['accounting_epoch'] and v['accounting_epoch']['state']!='current':raise QuotaStop('restart_accounting_refresh_required')
-                if v['window'] is None: raise QuotaStop('reset_window_unknown')
-                if not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at']):
-                    raise QuotaStop('reset_window_expired')
-                if v['observation'] is None: raise QuotaStop('quota_unknown')
-                if any(a['state'] in ('reserved','uncertain') for a in v['attempts'].values()):
-                    raise QuotaStop('ambiguous_dispatch_unresolved')
+                reason=self.eligibility(v,at)
+                if reason:raise QuotaStop(reason)
                 allowance=self.available(v)
                 if allowance < cost: raise QuotaStop('quota_reserve_or_exhausted')
                 cycle=next((v.get(kind,{}) for kind in ('cycle','manual_cycle') if v.get(kind,{}).get('id')==cycle_id),{}) if cycle_id is not None else {}
                 in_cycle=bool(cycle)
+                if in_cycle and cycle['runtime_id']!=owner_runtime(owner):raise QuotaStop('reservation_owner_conflict')
                 if in_cycle and (request not in cycle['requests'] or any(a.get('cycle_id')==cycle_id and a['request']==request for a in v['attempts'].values())):raise QuotaStop('cycle_dispatch_duplicate_or_outside_scope')
                 if not diagnostic and not in_cycle and v['next_due_at'] and stamp(at)<stamp(v['next_due_at']):
                     raise QuotaStop('aggregate_budget_delayed')
@@ -481,6 +611,8 @@ class QuotaLedger:
             a=v['attempts'][aid]
             if a['state']!='reserved' or v['pause']: raise QuotaStop('dispatch_not_reserved')
             if a['runtime_id']!=owner_runtime(owner):raise QuotaStop('reservation_owner_conflict')
+            reason=self.eligibility(v,at,bootstrap=a['bootstrap'],own_reservation=aid)
+            if reason:raise QuotaStop(reason)
             if not a['bootstrap'] and v['accounting_epoch'] and v['accounting_epoch']['state']!='current':raise QuotaStop('restart_accounting_refresh_required')
             if not a['bootstrap'] and (not v['window'] or not stamp(v['window']['starts_at'])<=stamp(at)<stamp(v['window']['ends_at'])):
                 raise QuotaStop('reset_window_expired')
@@ -546,21 +678,36 @@ class QuotaLedger:
         def record(v,at):
             a=v['attempts'][aid]
             if a['state'] not in ('uncertain','confirmed'):raise QuotaStop('response_without_dispatch')
-            a['response_receipt']=deepcopy(safe)
+            if covering(v,a,exact=False):
+                if a.get('late_response_receipt') is not None and a['late_response_receipt']!=safe:raise QuotaStop('response_identity_invalid')
+                a['late_response_receipt']=deepcopy(safe)
+            else:
+                if a.get('response_receipt') is not None and a['response_receipt']!=safe:raise QuotaStop('response_identity_invalid')
+                a['response_receipt']=deepcopy(safe)
             if interruption:a['interruption']=interruption
         self.transact(record)
 
-    def reconcile(self, aid, items):
+    def reconcile(self, aid, items, *, received_at=None):
         def reconcile(v,at):
             a=v['attempts'][aid]
             if a['state']=='confirmed': return # Duplicate response is a no-op.
             if a['state']!='uncertain': raise QuotaStop('response_without_dispatch')
+            audit=covering(v,a,exact=False)
+            receipt_at=received_at or at
+            if audit:
+                receipt=a.get('late_response_receipt')
+                if receipt is None or receipt['headers']!=[list(x) for x in items] or received_at is not None and received_at!=receipt['received_at']:raise QuotaStop('late_receipt_identity_required')
+                receipt_at=receipt['received_at']
+            elif any(aid in r['covered'] for r in v.get('conservative_recoveries',[])):
+                raise QuotaStop('recovery_context_mismatch')
+            stamp(receipt_at)
+            if stamp(receipt_at)>stamp(at) or stamp(receipt_at)<stamp(a['dispatch_at']):raise QuotaStop('response_identity_invalid')
             a['quota_headers']=[[k.lower(),val if isinstance(val,str) and re.fullmatch(r'[0-9]{1,12}',val) else 'invalid'] for k,val in items if k.lower() in ('x-requests-used','x-requests-remaining','x-requests-last')]
             try:
                 q=headers(items,v['ceiling'])
                 previous=v['observation']
                 baseline=a['baseline']
-                if q['last']>a['cost'] or previous and (q['used']<previous['used'] or q['remaining']>previous['remaining']) or baseline and q['used']-baseline['used']<q['last']:
+                if q['last']>a['cost'] or not audit and previous and (q['used']<previous['used'] or q['remaining']>previous['remaining']) or baseline and q['used']-baseline['used']<q['last']:
                     raise QuotaStop('quota_counter_or_charge_contradictory')
                 if a['bootstrap'] and q['last']!=0: raise QuotaStop('bootstrap_unexpected_charge')
             except QuotaStop as exc:
@@ -572,13 +719,32 @@ class QuotaLedger:
                 if 'q' in locals() and (v['observation'] is None or q['used']>=v['observation']['used'] and q['remaining']<=v['observation']['remaining']):
                     v['observation']=dict(q,at=at,attempt_id=aid)
                 return
-            v['observation']=dict(q,at=at,attempt_id=aid)
-            a.update(state='confirmed',charged=q['last'],reconciled_at=at)
+            monotone=previous is None or q['used']>=previous['used'] and q['remaining']<=previous['remaining'] and stamp(receipt_at)>=stamp(previous['at'])
+            if monotone:v['observation']=dict(q,at=receipt_at,attempt_id=aid,kind='request_response_balance')
+            a.update(state='confirmed',charged=q['last'],reconciled_at=at,charge_provenance=dict(at=receipt_at,headers=deepcopy(a['quota_headers']),used=q['used'],window_id=a['window_id']))
+            included=v['observation']['used']>=q['used'] and stamp(v['observation']['at'])>=stamp(receipt_at)
+            if audit or not included:
+                a['budget_exposure']=0 if included else a['cost']
+                a['balance_inclusion']=dict(established=included,observation=deepcopy(v['observation']))
+            for old in v['attempts'].values():
+                proof=old.get('charge_provenance')
+                if old.get('budget_exposure') and proof and proof['window_id']==(v['window'] or {}).get('id') and v['observation']['used']>=proof['used'] and stamp(v['observation']['at'])>=stamp(proof['at']):
+                    old['budget_exposure']=0;old['balance_inclusion']=dict(established=True,observation=deepcopy(v['observation']))
             epoch=v['accounting_epoch']
             if epoch and epoch['state']=='awaiting_bootstrap' and a['bootstrap'] and a['window_id']==epoch['window_id'] and stamp(a['dispatch_at'])>=stamp(v['clock_recoveries'][-1]['at']):
                 epoch.update(state='current',attempt_id=aid,validated_at=at)
             # Unrelated uncertain attempts remain reserved even after bootstrap.
         self.transact(reconcile)
+
+    def activate_conservative(self, owner, candidate, covered, evidence, recovery_id, credential_binding):
+        if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
+        if not isinstance(evidence,dict):raise QuotaStop('recovery_evidence_invalid')
+        if evidence.get('credential_binding')!=credential_binding:raise QuotaStop('recovery_credential_changed')
+        try:
+            return self.transact(lambda v,at:import_balance(v,evidence,at,covered,
+                owner_runtime=owner_runtime(owner),candidate=candidate,recovery_id=recovery_id))
+        except QuotaStop:raise
+        except (ValueError,TypeError,KeyError,AttributeError):raise QuotaStop('recovery_evidence_invalid') from None
 
     def pause(self, reason):
         self.transact(lambda v,at:v.update(pause=reason))

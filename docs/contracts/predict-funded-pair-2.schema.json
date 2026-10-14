@@ -1,0 +1,753 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-funded-pair-2.schema.json",
+  "title": "S01 requested funded pair with distinct metrics, rich or compact",
+  "type": "object",
+  "required": [
+    "version",
+    "revision",
+    "model_available",
+    "ranking_eligible",
+    "policy_revision",
+    "reasons",
+    "buffered_profit_usd",
+    "buffered_return_percent",
+    "financial_metrics",
+    "funding",
+    "benchmark",
+    "classification",
+    "model_versions",
+    "sizing_mode",
+    "requested_amount_usd",
+    "residual_funding_usd",
+    "benchmark_venue",
+    "benchmark_method"
+  ],
+  "properties": {
+    "target_ceiling_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "deployed_capital_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "unused_cash_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "buffer_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "fee_adjusted_expected_profit_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "conditional_decisive_profit_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "buffered_profit_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "unbuffered_return_percent": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "buffered_return_percent": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "decisive_minimum_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "all_state_minimum_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "buffered_decisive_minimum_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "buffered_all_state_minimum_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "model_available": {
+      "type": "boolean"
+    },
+    "expected_value_available": {
+      "type": "boolean"
+    },
+    "ranking_eligible": {
+      "type": "boolean"
+    },
+    "complete_feasible_state_cashflows": {
+      "type": "boolean"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dependency_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policy_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "version": {
+      "const": "predict-funded-pair-2"
+    },
+    "id": {
+      "type": "string"
+    },
+    "objective": {
+      "enum": [
+        "decisive_max_min",
+        "all_modeled_states_max_min",
+        "requested_funded_net_balance"
+      ]
+    },
+    "category": {
+      "enum": [
+        "Estimated hedge",
+        "Positive across modeled outcomes"
+      ]
+    },
+    "conditioning": {
+      "enum": [
+        "modeled_complete",
+        "modeled_conditional",
+        "reference_free_scenarios"
+      ]
+    },
+    "condition": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "percentage_denominator": {
+      "type": "string"
+    },
+    "size_status": {
+      "enum": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ]
+    },
+    "runtime_id": {
+      "type": "string"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cost_breakdown": {
+      "type": "object"
+    },
+    "constraints": {
+      "type": "object"
+    },
+    "search": {
+      "type": "object"
+    },
+    "limiting_states": {
+      "type": "object"
+    },
+    "sensitivity": {
+      "type": "object"
+    },
+    "display": {
+      "type": "object"
+    },
+    "probabilities": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+        "maxLength": 256
+      }
+    },
+    "conditional_probabilities": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+        "maxLength": 256
+      }
+    },
+    "legs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "quote_id",
+          "quote_revision",
+          "group_id",
+          "native_quantity"
+        ],
+        "properties": {
+          "quote_id": {
+            "type": "string"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "quote_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "native_key": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
+          },
+          "native_quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "supported_native_quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "modeled_native_quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "selection": {
+            "type": "object"
+          },
+          "native_unit": {
+            "type": "object"
+          },
+          "grid": {
+            "type": "object"
+          },
+          "source_times": {
+            "type": "object"
+          },
+          "eligibility_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acquisition_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "net_upfront_fee_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "supported_capital_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "venue": {
+            "enum": [
+              "kalshi",
+              "polymarket_us",
+              "novig",
+              "prophetx"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "states": {
+      "type": "object",
+      "minProperties": 4,
+      "maxProperties": 10,
+      "required": [
+        "a_wins",
+        "b_wins",
+        "tie",
+        "terminal_noncompletion"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "profit_usd",
+          "buffered_profit_usd",
+          "settlement_charge_usd",
+          "legs",
+          "cells",
+          "terminal"
+        ],
+        "properties": {
+          "profit_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "buffered_profit_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "settlement_charge_usd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+            "maxLength": 256
+          },
+          "legs": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "receipt_usd",
+                "returned_hold_usd",
+                "fee_refund_usd",
+                "receipt_charge_treatment"
+              ],
+              "properties": {
+                "receipt_usd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                  "maxLength": 256
+                },
+                "returned_hold_usd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                  "maxLength": 256
+                },
+                "fee_refund_usd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                  "maxLength": 256
+                },
+                "receipt_charge_treatment": {
+                  "enum": [
+                    "attached_net_receipt",
+                    "gross_receipt"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "cells": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "enum": [
+                "home_win",
+                "away_win",
+                "tie",
+                "terminal_noncompletion"
+              ]
+            }
+          },
+          "terminal": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object"
+      }
+    },
+    "minimum_spend_solution": {
+      "type": "boolean"
+    },
+    "probability_basis": {
+      "type": "object"
+    },
+    "explanation": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "objective_alternative": {
+      "$ref": "#"
+    },
+    "financial_metrics": {
+      "type": "object",
+      "properties": {
+        "gross_benchmark_ev_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "gross_benchmark_return_percent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "net_modeled_ev_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_ev_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "net_modeled_return_percent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_return_percent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "conditional_net_ev_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "conditional_buffered_ev_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "decisive_opposing_margin_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_decisive_opposing_margin_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_decisive_return_percent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "complete_modeled_minimum_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_complete_modeled_minimum_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "rule_adjustment_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "net_upfront_fee_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "expected_settlement_fee_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "reconciliation_expected_settlement_fee_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffer_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "version": {
+          "const": "predict-financial-metrics-1"
+        },
+        "reconciliation_condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "percentage_denominator": {
+          "const": "actual_deployed_capital"
+        },
+        "rule_adjustment_includes": {
+          "type": "string"
+        },
+        "expected_charge_is_not_maximum": {
+          "const": true
+        },
+        "actual_charges": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "version",
+        "gross_benchmark_ev_usd",
+        "net_modeled_ev_usd",
+        "buffered_ev_usd",
+        "decisive_opposing_margin_usd",
+        "buffered_decisive_opposing_margin_usd",
+        "complete_modeled_minimum_usd",
+        "buffered_complete_modeled_minimum_usd"
+      ],
+      "additionalProperties": false
+    },
+    "funding": {
+      "type": "object"
+    },
+    "benchmark": {
+      "type": "object"
+    },
+    "classification": {
+      "type": "object"
+    },
+    "model_versions": {
+      "type": "object"
+    },
+    "sizing_mode": {
+      "enum": [
+        "requested_trade",
+        "ceiling"
+      ]
+    },
+    "requested_amount_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "residual_funding_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    },
+    "benchmark_venue": {
+      "enum": [
+        "pinnacle",
+        "novig",
+        "prophetx"
+      ]
+    },
+    "benchmark_method": {
+      "const": "proportional_no_vig"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "model_available": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "id",
+      "objective",
+      "category",
+      "legs",
+      "deployed_capital_usd",
+      "unused_cash_usd",
+      "buffer_usd",
+      "conditioning",
+      "search"
+    ]
+  }
+}

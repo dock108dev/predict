@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-board-catalog-1.schema.json",
+  "type": "object",
+  "required": [
+    "version",
+    "games",
+    "limits",
+    "provider_requests"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-board-catalog-1"
+    },
+    "games": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": [
+          "game_key",
+          "input_version",
+          "title",
+          "start_at",
+          "participants",
+          "members",
+          "scope",
+          "matches"
+        ],
+        "properties": {
+          "scope": {
+            "const": "NFL/full_game/winner"
+          },
+          "members": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3
+          }
+        }
+      }
+    },
+    "provider_requests": {
+      "const": 0
+    }
+  }
+}

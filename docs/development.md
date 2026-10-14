@@ -1,43 +1,50 @@
 # Development
 
-Use a source checkout and Python 3.11+; Python 3.14 and Node 22 match the primary
-CI workflow. Run commands from the repository root. Current operation requires
-macOS Keychain access, while portable offline tests also run on Linux.
+Use Python 3.11+ from a source checkout. Python 3.14 and Node 22 match primary
+CI. Run commands from the repository root. Native operation uses macOS Keychain;
+portable offline tests also run on Linux.
 
 ## Install tools
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install --require-hashes -r requirements-ci.txt
+.venv/bin/python scripts/ci/validate_lock.py
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[stream]'
 .venv/bin/python -m pip check
 ```
 
-The hashed lock includes runtime, stream, test and build tools. An ordinary app
-installation can instead use the smaller editable install in the README.
+The hash lock includes runtime, stream, test and build dependencies. For ordinary
+app use, the smaller editable installation in the [README](../README.md) suffices.
 
 ## Focused checks
 
-Select the tests affected by a change rather than discovering every historical
-acquisition harness:
+Choose tests for the changed behavior. Do not discover every test indiscriminately:
+some historical acquisition tools require captured inputs or provider access.
 
 ```sh
 .venv/bin/python -m compileall -q app/dashboard app/collection
-.venv/bin/python -m pytest -q tests/test_current_ssot.py tests/test_current_contract.py tests/test_current_service.py
 .venv/bin/python -m ruff check app tests scripts/ci
-node tests/test_current_client.cjs
+.venv/bin/python scripts/ci/docs.py
+.venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
+node tests/test_stored_views.cjs
 ```
 
-For browser changes, syntax-check the edited module and run its matching client
-regressions. For retained saved-reader changes, use `test_session_projection.py`
-and `test_product_integration.py`; for calculation changes, use the matching math,
-fee or settlement tests. Tests should use disposable state and no provider secrets.
+| Change | Useful existing tests |
+| --- | --- |
+| Saved-board delivery and publication | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
+| Settings, selection and read cancellation | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
+| Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, fee, cashflow and metric tests |
+| Occurrence matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, event-link and domain tests |
+| Journal and retained admission | `test_current_journal_segments.py`, `test_current_retained.py`, `test_ev09_ingress_isolation.py` |
+| Native HTTP framing | `test_native_http_reader.py` |
+| CI support and report failures | `test_ci_reporting.py` |
 
-`sh scripts/check-ci` runs the portable suite manifest in fresh processes and
-writes ignored reports under `test-results/ci`. See [CI](CI.md) for workflow scope
-and separate PostgreSQL assurance. Additional historical tests can require
-local acquisition files or expired specifications; they are not installation
-checks. Do not relax production scope/window checks to make those fixtures pass.
+Python test filenames above are under `tests/`. Run resource-sensitive modules in
+fresh processes: combining them can exceed process caps that each module tests.
+Use authored fixtures and disposable state, not credentials or ordinary storage.
+`sh scripts/check-ci` selects the portable manifest and writes ignored reports
+under `test-results/ci`. [CI](CI.md) describes SQL, browser and scheduled checks.
 
 ## Synthetic preview
 
@@ -45,81 +52,66 @@ checks. Do not relax production scope/window checks to make those fixtures pass.
 .venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797
 ```
 
-Open `http://127.0.0.1:8797/`, `/arbs` or `/admin`. All displayed prices are
-synthetic. The test provider uses production interfaces without credentials or
-provider access. Its `/__test/commit` controls are exclusive to this test server.
-Stop it with Ctrl-C. The ordinary app never falls back to this provider.
+Open its loopback address, `/arbs` or `/admin`; stop with Ctrl-C. The provider is
+explicitly synthetic and does not acquire data. Its `/__test/commit` route is
+exclusive to this test server. `.venv/bin/python -m tests.comparison_preview`
+provides additional comparison fixtures. These previews use the injected current
+state interface, not the ordinary SQL-backed saved-board workflow. Browser tests
+under `browser_tests/` intercept requests to exercise the saved-board interface.
 
-For EV, modeled/net Details and Coverage, use the dedicated comparison harness:
+## Frontend sources
+
+Under `app/dashboard/opportunity_static/current/`:
+
+- `stored-controller.js` owns settings, game/result selection, four cancellable
+  read channels, polling, dialog ownership and Stop.
+- `board-client.js` validates exact settings/response identities and bounded reads.
+- `board-elements.js` provides display primitives and participant labels.
+- `stored-views.js` renders Odds/EV/Arbs with explicit snapshots and callbacks.
+- `stored-details.js` renders saved reconciliation; the controller owns history
+  and original-input reads and guards publication against the held selection.
+- `stored-shell.css`, `stored-boards.css`, `stored-details.css` and
+  `stored-responsive.css` compose styles in cascade order.
+
+Regenerate the required public assets after editing their sources:
 
 ```sh
-.venv/bin/python -m tests.comparison_preview
+python3 scripts/build_stored_frontend.py
+python3 scripts/build_stored_frontend.py --check
+node --check app/dashboard/opportunity_static/current/stored.js
 ```
 
-Follow its printed loopback address. These servers use explicit test providers
-through current interfaces. Fictional sample generation lives in
-`tests/current_sample.py`.
-
-## Source layout
-
-| Location | Responsibility |
-| --- | --- |
-| `app/collection/current_*` | Current configuration, source workers, schedule, quota and lifecycle |
-| `app/dashboard/current_*` | Latest state, leases, serialization and calculations |
-| `app/dashboard/multi_game_server.py` | Shared route registration |
-| `app/dashboard/opportunity_static/` | Packaged browser assets |
-| `app/collection/continuous.py`, `continuous_streams.py` | Explicit finite-session discovery/ownership and stream groups |
-| `app/dashboard/session_*`, `coverage_owner.py` | Retained journals, saved projection and finite-session control |
-| `app/adapters/`, `models/`, `normalization/` | Venue conversion and exact identity |
-| `app/opportunities/`, `fees/`, `settlement.py`, `reference/` | Shared math, fees, settlement and reference research |
-| `app/storage/`, `integration_tests/` | Separate PostgreSQL workflow and disposable integration checks |
-| `tests/`, `app/fixtures/` | Authored offline tests; archived replay tests are explicitly opt-in |
-
-See [architecture](architecture.md#module-ownership) before adding parallel policy
-or calculation implementations. Keep versioned saved formats readable. Reference
-models do not automatically become current-board probability sources.
+The dependency-free generator supports this closed graph and unaliased named
+imports; new client symbols must be added to `CLIENT_NAMES`. Module-local mutable
+state belongs only in the controller. It is not a general JavaScript bundler.
+Keep generated `stored.js` and `stored.css` available to packaging and routes;
+do not edit or ignore them. CI checks generated drift. The fixed public names
+also work with an already loaded asset allowlist. Reload the page after rebuilding
+frontend assets; restart the app after backend or credential changes.
 
 ## Maintenance
 
-Preserve public imports, packaged asset paths and supported fixture readers.
-Ruff checks critical defects; formatting checks apply to CI support code. Prefer
-localized edits consistent with nearby source. Review Python modules above 500
-physical lines and extract or justify above 1,000; JavaScript uses 300/600,
-styles 300/600, markup 250/500 and shell launchers 100/200. Classify extensionless
-scripts by shebang: `scripts/opportunity-board` is Python, `scripts/check-ci` is
-shell. Generated fixtures, lockfiles and required frozen source inputs are not
-mechanically split.
+[Architecture](architecture.md#module-ownership) defines module boundaries. Preserve
+public imports, packaged resource paths and versioned saved readers. Ruff checks
+critical defects; formatting checks cover CI support. Keep localized product
+edits consistent with adjacent source. Review physical Python lines above 500,
+with extraction or justification above 1,000; JavaScript uses 300/600, UI presenters
+250/500, CSS 300/600, markup 250/500 and shell 100/200. Generated files, immutable
+schemas and applied migrations are not mechanically split.
 
-Native HTTP protocol helpers live in `collection/native_http_transport.py`.
-`prediction_producer.py` keeps the request budget, payload admission and observation
-producer, with aliases for existing helper imports. Neither transport helpers nor
-framing code imports its owner. Use `tests/test_native_http_reader.py` for plaintext,
-TLS, surplus, cap and cancellation controls after changing this boundary.
-The E6 failed-start fixture supplies its own temporary ownership lock/output and
-checks lock release; never point fixture tests at the ordinary runtime lock.
+The saved controller keeps one selection/cancellation mutation boundary; splitting
+it among mutable owners would make publication races harder to reason about.
+The view presenter shares one participant/callback context; responsive CSS keeps
+cross-view breakpoints and final overrides together. Discovery, native lifecycle
+and quota owners also keep ordering, budgets and cleanup in cohesive state
+machines. Transport and stream mechanics already have separate modules. Wire
+validators stay beside the types they admit. Revisit these choices when a module
+grows or gains a responsibility.
 
-Retain the continuous discovery/session owner and current native/quota owners as
-cohesive state machines: ordering, ownership, consumed budgets, failure and cleanup
-share one mutation boundary. Stream mechanics already live in `continuous_streams`;
-HTTP framing now has a separate module. Cost/source-input value objects and current
-contract validation implement versioned wire contracts, so their validators stay
-next to the types they admit. Test classes group controls by feature and share
-setup; their size alone does not require fixture duplication. These review decisions
-apply below the 1,000-line Python limit; renew them after material growth or new
-responsibilities. Do not split immutable schemas, applied SQL migrations or frozen
-source archives to meet line counts.
-
-Keep local notes, collected observations and generated reports out of Git. Authored
-schemas and examples live under `docs/contracts`; independent test inputs live in
-`tests/fixtures` and `app/fixtures`. `tests/comparison_oracles.py` resolves original
-research provenance names to required fixture files without reading local notes.
-The `tests/fixtures/retained-retail` inputs preserve public market observations,
-original receipts and evaluation clocks; they do not establish present availability.
-Keep these required inputs visible to Git. Sealed executors require the exact source and
-control files in `scripts/v1_coverage_package` and `scripts/v1_counterpart_package`;
-do not regenerate those inputs as part of documentation cleanup.
-
-Local credentials, state, generated reports and working notes are ignored.
-The [CI contract](CI.md) declares required suites and archival omissions. Merge
-checks cannot read historical evidence or owner state; author independent fixtures
-for maintained behavior instead of adding captures to the gate. Run `git diff --check` after edits.
+Keep credentials, local state, reports and coding notes out of Git. Required
+fixtures live in `tests/fixtures` and `app/fixtures`; schema examples live in
+`docs/contracts`. Sealed executors depend on exact inputs under
+`scripts/v1_coverage_package` and `scripts/v1_counterpart_package`; preserve them.
+The retained fee PDF is a test input, not disposable output. Run
+`git diff --check` after edits. Public docs must stand on repository-owned paths
+and must not depend on local reports, plans or personal trackers.

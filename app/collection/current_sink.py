@@ -16,13 +16,13 @@ def utc():
     return datetime.now(timezone.utc).isoformat()
 
 
-def normalized_records(projection, states, previous):
+def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None):
     from app.comparison.event_links import current_event_key as event_key, provider_key
     from .v1_comparison import predicates
     records = []
     excluded = []
     for venue, cat in sorted(projection.inventory.items()):
-        if venue in ('kalshi','polymarket_us'):
+        if dated_annotations and venue in ('kalshi','polymarket_us'):
             from .current_occurrence import annotate as occurrence
             cat = occurrence(deepcopy(cat), venue)
         events = {e['id']: e for e in cat['events']}
@@ -48,8 +48,9 @@ def normalized_records(projection, states, previous):
                     event_scope=dict(policy='native-event-unverified-2',source=venue,native_event_id=event['id'])
                     key=provider_key(venue,event)
                 ident = binding['identity']
-                if ident['period'] != 'full_game' or ident['family'] not in ('moneyline', 'spread', 'total'):
-                    raise ValueError('Outside common full-game scope')
+                from app.comparison.domain import PERIODS
+                if ident['period'] not in PERIODS or ident['family'] not in ('moneyline', 'spread', 'total'):
+                    raise ValueError('Outside common sporting scope')
                 book = row['book']
                 if book['raw']['ref'] != dict(venue=venue, event_id=event['id'], market_id=market['id']):
                     raise ValueError('Book identity conflict')
@@ -105,7 +106,7 @@ def normalized_records(projection, states, previous):
                         binding_version=binding['version'], native_line=market.get('line'), quote_side='buy')
                     q = dict(id='', revision=1, venue=venue, source=source, original=original,
                         times=dict(source_at=book['raw'].get('exchange_at'), received_at=book['raw']['received_at'],
-                                   projected_at=utc(), source_time_kind='provider_book' if book['raw'].get('exchange_at') else 'unknown'),
+                                   projected_at=clock or utc(), source_time_kind='provider_book' if book['raw'].get('exchange_at') else 'unknown'),
                         state=state if state != 'connecting' else 'resyncing',
                         rule_note='Native predicate reviewed; exceptional settlement and costs remain unqualified.',
                         cost_note='Current applicable costs unavailable',
@@ -126,14 +127,16 @@ def normalized_records(projection, states, previous):
                         orientation_evidence=[binding['version']+':'+binding['sha256']], verified=event_scope is None,
                         outcome_cardinality=2, outcome_selections=list(selections.values()),
                         result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
+                    normalized['comparison_scope']=dict(overtime=(market.get('native_scope_binding') or {}).get('overtime','unknown'))
                     from .current_occurrence import direct, VERSION as DIRECT_VERSION
-                    if event_scope is None and direct(normalized, market, native, selection):
+                    if dated_annotations and event_scope is None and direct(normalized, market, native, selection):
                         if market['direct_win_binding'].get('prospective_only'):
                             # Only the reviewed direct-win instrument shares this
                             # reference basis. An unreviewed Short stays separate.
                             normalized['market_identity']['rules']=DIRECT_VERSION+':prospective-reviewed-direct-win'
                         normalized['result_policy']=DIRECT_VERSION+':normal-full-game-win'
                         normalized['period_boundary']='Full game including applicable overtime; direct win only; exceptional cashflows differ'
+                        normalized['comparison_scope']=dict(overtime='included')
                         normalized['outcome_selections']=[dict(participant=event[role],predicate='win',signed_line=None,label=next(n for n,c in event['participants'].items() if c==event[role])) for role in ('away','home')]
                         normalized['orientation_evidence'].append(DIRECT_VERSION+':'+market['direct_win_binding']['sha256'])
                         q['native_predicate']=dict(version=DIRECT_VERSION,participant=participant,predicate=kind,
@@ -148,6 +151,7 @@ def normalized_records(projection, states, previous):
                     normalized['comparison_source_metadata']=dict(
                         native_key=[venue,source['native_event_id'],source['native_market_id'],source['native_outcome_id'],source['native_side']],
                         material_sha256=stable(material),observed_at=q['times']['received_at'],
+                        original_wording={k:deepcopy(material[k]) for k in ('title','subtitle','yes_sub_title','no_sub_title','description','rules_primary','rules_secondary') if k in material},
                         rules_primary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_primary'),
                         rules_secondary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_secondary'),
                         series_id=event_material.get('series_ticker'),
@@ -186,7 +190,7 @@ def normalized_records(projection, states, previous):
                                 updated_at=material.get('updatedAt'),material_sha256=stable(material),
                                 applicability='separate_metadata_requires_selected_binding')
                     if event_scope is not None:normalized['event_scope']=event_scope
-                    instrument = stable([source, selection, key])
+                    instrument = stable([source, selection])
                     # Metadata changes invalidate the shared input dependency
                     # revision. They do not manufacture a quote/price revision.
                     fingerprint = stable([{k: q[k] for k in ('source', 'original', 'state', 'rule_note', 'cost_note', 'depth', 'freshness_policy')},binding['sha256'],q.get('native_predicate')])
@@ -223,6 +227,8 @@ class LatestStateSink:
         self.aggregate_receipts = {}
         self.aggregate_states = {}
         self.associated_cache = {}
+        from app.comparison.occurrence_matching import OccurrenceResolver
+        self.occurrence_resolver = OccurrenceResolver()
         self.metrics = dict(admitted_observations=0, rejected_observations=0, last_commit_ms=0, max_commit_ms=0, retained_bytes=0, max_transient_encoded_bytes=0)
 
     def commit(self, row, states):
@@ -235,10 +241,15 @@ class LatestStateSink:
         return result
 
     def _commit(self, row, states):
-        if len(packed({k:v.decode() if isinstance(v,bytes) else v for k,v in row.items()})) > self.config['ingress_bytes']:
+        ingress = {k:v.decode() if isinstance(v,bytes) else v for k,v in row.items()}
+        if row['type']=='current_aggregate_batches':
+            if not row['batches'] or len(row['batches'])>6 or len({r['sport'] for r in row['batches']})!=len(row['batches']):
+                raise ValueError('Retained aggregate batch capacity')
+            ingress['batches']=[{k:v.decode() if isinstance(v,bytes) else v for k,v in r.items()} for r in row['batches']]
+        if len(packed(ingress)) > self.config['ingress_bytes']:
             raise ValueError('Current ingress observation capacity')
         tick = perf_counter()
-        if row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate'):
+        if row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate','current_aggregate_batches'):
             # These observations replace book/health values, never inventory or
             # metadata. Detach just their mutable maps for atomic admission.
             candidate=copy(self.reducer)
@@ -251,30 +262,32 @@ class LatestStateSink:
         aggregate_receipts = deepcopy(self.aggregate_receipts)
         aggregate_states = deepcopy(self.aggregate_states)
         associated_cache=dict(self.associated_cache)
-        if row['type']=='current_aggregate':
-            from .current_aggregate_admission import admit_venues, admit
-            sport=row['sport']
-            aggregate_states[sport]=deepcopy(row.get('venue_states',states))
-            if aggregate_receipts.get(sport) and row['received_at']<=aggregate_receipts[sport]:
-                raise ValueError('Stale aggregate response')
-            accepted,rejected=admit_venues(row['body'],sport,row['received_at'])
-            if len(rejected)==2:raise ValueError('Malformed aggregate response')
-            prior=aggregate_records.get(sport,[])
-            aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected]+[r for batch in accepted.values() for r in batch]
-            try:references=admit(row['body'],sport,row['received_at'],venue='pinnacle')
-            except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):references=[]
-            # Reference records need identity, originals and clocks, not venue
-            # presentation fields or duplicated outcome descriptors.
-            for r in references:
-                q=r['quote']
-                aggregate_records[sport].append({
-                    **{k:r[k] for k in ('event','market_identity','selection','verified','orientation_evidence')},
-                    'quote':dict(venue='pinnacle',source=q['source'],rule_note='',
-                        original={'value':q['original']['value']},
-                        times={k:q['times'][k] for k in ('source_at','received_at')},
-                        revision=q['revision'],provider_clocks=deepcopy(q.get('provider_clocks',{})),
-                        provenance=deepcopy(q['provenance']))})
-            aggregate_receipts[sport]=row['received_at']
+        if row['type'] in ('current_aggregate','current_aggregate_batches'):
+            batches = row['batches'] if row['type']=='current_aggregate_batches' else [row]
+            for batch_row in batches:
+                from .current_aggregate_admission import admit_venues, admit
+                sport=batch_row['sport']
+                aggregate_states[sport]=deepcopy(batch_row.get('venue_states',states))
+                if aggregate_receipts.get(sport) and batch_row['received_at']<=aggregate_receipts[sport]:
+                    raise ValueError('Stale aggregate response')
+                accepted,rejected=admit_venues(batch_row['body'],sport,batch_row['received_at'])
+                if len(rejected)==2:raise ValueError('Malformed aggregate response')
+                prior=aggregate_records.get(sport,[])
+                aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected]+[r for batch in accepted.values() for r in batch]
+                try:references=admit(batch_row['body'],sport,batch_row['received_at'],venue='pinnacle')
+                except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):references=[]
+                # Reference records need identity, originals and clocks, not venue
+                # presentation fields or duplicated outcome descriptors.
+                for r in references:
+                    q=r['quote']
+                    aggregate_records[sport].append({
+                        **{k:r[k] for k in ('event','market_identity','selection','verified','orientation_evidence')},
+                        'quote':dict(venue='pinnacle',source=q['source'],rule_note='',
+                            original={'value':q['original']['value']},
+                            times={k:q['times'][k] for k in ('source_at','received_at')},
+                            revision=q['revision'],provider_clocks=deepcopy(q.get('provider_clocks',{})),
+                            provenance=deepcopy(q['provenance']))})
+                aggregate_receipts[sport]=batch_row['received_at']
         observations=row['observations'] if row['type']=='prediction_books' else [row]
         if not observations or len(observations)>self.config['markets_per_source']:
             raise ValueError('Current native batch capacity')
@@ -308,7 +321,16 @@ class LatestStateSink:
                             prices.add(price)
                 candidate.reduce_observation(dict(observation,type='source_health',state='connected',market_ids=[observation['book']['raw']['ref']['market_id']]))
             elif observation['type']=='prediction_book':raise ValueError('Incomplete native image requires resynchronization')
-            if observation['type']!='current_aggregate':candidate.reduce_observation(observation)
+            if observation['type'] not in ('current_aggregate','current_aggregate_batches'):candidate.reduce_observation(observation)
+        if (getattr(self.store,'_stopping',False) is True or getattr(self.store,'_source_stopping',False) is True) and row['type']=='source_health':
+            # Stop health is a separate synchronous admission after financial
+            # publication authority has been revoked. No price/resolver/revision
+            # or accounting candidate is acknowledged through this path.
+            self.store.admit_shutdown_health(states)
+            self.reducer=candidate;self.sequence+=1
+            elapsed=(perf_counter()-tick)*1000
+            self.metrics.update(last_commit_ms=elapsed,max_commit_ms=max(elapsed,self.metrics['max_commit_ms']))
+            return dict(acknowledgment='validated-shutdown-health-commit',service_sequence=self.sequence)
         record_count = len(candidate.books)+len(candidate.metadata)+sum(len(r) for r in aggregate_records.values())+sum(len(c['events'])+len(c['markets']) for c in candidate.inventory.values())
         if record_count > self.config['ingress_records']:
             raise ValueError('Current retained record capacity')
@@ -317,18 +339,17 @@ class LatestStateSink:
         if retained > 16*1024*1024:
             raise ValueError('Current reducer retained capacity')
         records, excluded = normalized_records(candidate, states, self.revisions)
-        from .current_overlap import associate
+        # Exact dated proof readers retain their sealed projection semantics.
+        # The ordinary reusable path below has no dependency on those fixtures.
+        sealed={r['event']['game_id'] for r in records
+                if r['result_policy'].startswith('predict-direct-win-1:')}
         native_records=list(records)
         reference_records=[]
-        native_signature=stable([[r['event'],r['market_identity'],r['orientation_evidence'],r['result_policy'],r['quote']['source']] for r in native_records])
         for sport,batch in aggregate_records.items():
-            signature=stable([native_signature,aggregate_receipts.get(sport),
-                {v:[states[v]['state'],aggregate_states.get(sport,states)[v]['state']] for v in ('novig','prophetx')}])
-            cached=associated_cache.get(sport)
-            if cached and cached[0]==signature:batch=cached[1]
-            else:
-                batch=associate(native_records,batch)
-                associated_cache[sport]=(signature,batch)
+            if sealed:
+                from .current_overlap import associate
+                from app.comparison.event_links import instant
+                batch=associate(native_records,batch,clock=instant(utc()))
             reference_records.extend(r for r in batch if r['quote']['venue']=='pinnacle')
             batch=[r for r in batch if r['quote']['venue']!='pinnacle']
             for record in batch:
@@ -349,14 +370,25 @@ class LatestStateSink:
                     if q['original']==prior['original'] and new_time==old_time:
                         q['times']=deepcopy(prior['times'])
                 records.append(r)
+        resolver=deepcopy(self.occurrence_resolver)
+        from .current_overlap import resolve_current
+        combined=records+reference_records
+        legacy=[r for r in combined if r['event'].get('game_id') in sealed]
+        ordinary=[r for r in combined if r['event'].get('game_id') not in sealed]
+        joined=legacy+resolve_current(ordinary,clock=utc(),resolver=resolver)
+        records=[r for r in joined if r['quote']['venue']!='pinnacle']
+        reference_records=[r for r in joined if r['quote']['venue']=='pinnacle']
         from .current_benchmark import attach
         attach(records,reference_records)
         for r in records:
             prior=self.revisions.get(r['_instrument'])
-            if prior and r['quote'].get('sharp_reference')!=prior.get('sharp_reference'):
+            if prior and (r['quote'].get('sharp_reference')!=prior.get('sharp_reference') or
+                          r['quote'].get('occurrence_link')!=prior.get('occurrence_link') or
+                          r['verified']!=prior.get('binding_verified')):
                 r['quote']['revision']=max(r['quote']['revision'],prior['revision']+1)
         revisions = {r.pop('_instrument'): dict(fingerprint=r.pop('_fingerprint'), revision=r['quote']['revision'], times=deepcopy(r['quote']['times']),
-            original=deepcopy(r['quote']['original']),source=r['quote']['venue'],sharp_reference=deepcopy(r['quote'].get('sharp_reference'))) for r in records}
+            original=deepcopy(r['quote']['original']),source=r['quote']['venue'],sharp_reference=deepcopy(r['quote'].get('sharp_reference')),
+            occurrence_link=deepcopy(r['quote'].get('occurrence_link')),binding_verified=r['verified']) for r in records}
         raw = deepcopy(self.envelope)
         raw.update(state_revision=self.store._state['state_revision']+1, clock_at=utc(), projected_at=utc(),
                    source_status=deepcopy(states), state='available' if records else 'degraded' if any(s['state']=='error' for s in states.values()) else 'empty')
@@ -365,6 +397,7 @@ class LatestStateSink:
         if not self.store.commit(raw):
             raise ValueError('Current commit sequence rejected')
         self.reducer, self.revisions, self.exclusions = candidate, revisions, excluded
+        self.occurrence_resolver=resolver
         self.aggregate_records,self.aggregate_receipts,self.aggregate_states=aggregate_records,aggregate_receipts,aggregate_states
         self.associated_cache=associated_cache
         self.sequence += 1

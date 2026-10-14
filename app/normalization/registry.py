@@ -86,6 +86,10 @@ class Registry:
             self.native[key] = m
         self.entities = MappingProxyType({k: MappingProxyType(v) for k, v in self.entities.items()})
         self.aliases = MappingProxyType({k: MappingProxyType({**v, 'targets': tuple(v['targets'])}) for k, v in self.aliases.items()})
+        names = {}
+        for key, alias in self.aliases.items():
+            names.setdefault((key[0], key[3]), []).append((key, alias))
+        self.alias_names = MappingProxyType({key: tuple(rows) for key, rows in names.items()})
         self.native = MappingProxyType({k: MappingProxyType(v.copy()) for k, v in self.native.items()})
         self.fingerprint = sha256(self.to_json().encode()).hexdigest()
 
@@ -138,6 +142,8 @@ class Registry:
                           candidates, tuple(provenance), self.version, self.fingerprint, name, native_id)
 
     def resolve(self, kind, name=None, *, league=None, venue=None, environment=None, native_id=None):
+        from app.comparison.calculation_control import checkpoint
+        checkpoint()
         if kind not in ('team', 'league'):
             raise ValueError('unsupported entity kind')
         native_id = None if native_id is None else str(native_id)
@@ -149,8 +155,8 @@ class Registry:
             league = lr.canonical_id
         named = set()
         if name is not None:
-            for (k, lg, v, key), a in self.aliases.items():
-                if k == kind and key == name_key(name) and (league is None or lg == league) and (v is None or v == venue):
+            for (k, lg, v, key), a in self.alias_names.get((kind, name_key(name)), ()):
+                if (league is None or lg == league) and (v is None or v == venue):
                     named.update(a['targets'])
                     provenance.append(f"alias:{k}:{lg}:{v}:{a['text']}|{a['source']}")
         if kind == 'team' and league is None and len(named) == 1:

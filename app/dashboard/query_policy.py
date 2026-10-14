@@ -26,6 +26,17 @@ def validate_unique_query(query):
         raise PublicRequestError('Duplicate selection')
 
 
+def calculation_policy(query, base):
+    """One request-settings adapter for saved and current calculation readers."""
+    from app.comparison.effective_policy import effective_policy
+    validate_unique_query(query)
+    fields = ('amount', 'ceiling', 'buffer', 'sizing_mode', 'benchmark_venue', 'benchmark_method')
+    try:
+        return effective_policy(base, **{key: query.get(key) for key in fields})
+    except ValueError as exc:
+        raise PublicRequestError(str(exc)) from None
+
+
 def validate_choices(query):
     validate_unique_query(query)
     for key in CHOICES:

@@ -68,6 +68,8 @@ def profile(kind, payload, *, expires_at=None):
 
 
 def validate_profiles(profiles):
+    from .shared_templates import shared, validate
+    if shared(profiles):return validate(profiles)
     if not isinstance(profiles, dict) or len(profiles) > MAX_PROFILES:
         raise ValueError('Shared comparison profile capacity')
     if len(encoded(profiles)) > MAX_PROFILES_BYTES:
@@ -96,10 +98,16 @@ def references(q, profiles):
     refs = inputs['refs']
     if not isinstance(refs, dict) or set(refs) != set(KINDS):
         raise ValueError('All comparison dependency kinds required; missing values use null')
+    from .shared_templates import keys, resolve
+    available=keys(profiles)
+    values={}
     for kind, key in refs.items():
-        if key is not None and (key not in profiles or profiles[key]['kind'] != kind):
-            raise ValueError('Missing or mismatched shared comparison profile')
-    return {kind: profiles[key] for kind, key in refs.items() if key is not None}
+        if key is not None:
+            if key not in available:raise ValueError('Missing or mismatched shared comparison profile')
+            value=resolve(profiles,key)
+            if value['kind']!=kind:raise ValueError('Missing or mismatched shared comparison profile')
+            values[kind]=value
+    return values
 
 
 def link_reasons(q, at):
@@ -108,7 +116,9 @@ def link_reasons(q, at):
         return []
     if not isinstance(link, dict) or set(link) != {'version','edges','effective_from','effective_until'}:
         raise ValueError('Exact occurrence link interval required')
-    if link['version'] != 'comparison-evidenced-overlap-2' or not isinstance(link['edges'], list) or len(link['edges']) != 2:
+    legacy=link['version']=='comparison-evidenced-overlap-2'
+    current=link['version']=='predict-occurrence-match-1'
+    if not (legacy or current) or not isinstance(link['edges'], list) or (len(link['edges'])!=2 if legacy else not 1<=len(link['edges'])<=32):
         raise ValueError('Bounded occurrence edge identities required')
     if any(not isinstance(e, str) or len(e) != 64 or any(c not in '0123456789abcdef' for c in e) for e in link['edges']):
         raise ValueError('Exact occurrence edge digests required')
@@ -130,6 +140,8 @@ def input_status(q):
         if item.get('status') not in allowed or not isinstance(item.get('reason'),str) or len(item['reason'])>160:
             raise ValueError('Sanitized comparison input reason required')
         public_tree(item)
+    from .estimated_content import validate_attached
+    validate_attached(q)
     return values
 
 
@@ -209,7 +221,8 @@ def group_dependencies(group, profiles):
         for q in [*outcome['quotes'].values(), *(q for qs in outcome.get('alternatives', {}).values() for q in qs)]:
             references(q, profiles)
             refs.update(k for k in q.get('comparison_input_refs', {}).get('refs', {}).values() if k is not None)
-    return {key: profiles[key] for key in sorted(refs)}
+    from .shared_templates import resolve
+    return {key: resolve(profiles,key) for key in sorted(refs)}
 
 
 def temporal_revision(q,profiles,at):
@@ -221,6 +234,9 @@ def temporal_revision(q,profiles,at):
         for change in metadata.get(kind,[]):
             if change.get('scheduled_ts') is not None and instant(change['scheduled_ts'])<=at:
                 active.append(change['scheduled_ts'])
+    from .estimated_content import temporal
+    successor=temporal(q,at)
+    if successor:active.append(digest(successor))
     event=q.get('comparison_input_status',{}).get('identity',{}).get('public_event')
     if event is not None:
         valid=instant(event['effective_from'])<=at<instant(event['effective_until'])

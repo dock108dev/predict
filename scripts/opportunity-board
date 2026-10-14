@@ -31,6 +31,8 @@ while port<65536:
         try: probe.bind(('127.0.0.1',port));break
         except OSError: port+=1
 else: raise SystemExit('No free loopback port')
+postgres=subprocess.run([str(root/'scripts/project-postgres'),'start'],cwd=root,capture_output=True,text=True)
+if postgres.returncode:raise SystemExit('Project database unavailable: '+postgres.stderr[:300])
 cmd=[str(root/'.venv/bin/python'),'-m','app.dashboard.opportunity_board','--port',str(port)]
 with (runtime/'server.log').open('a') as log:
     proc=subprocess.Popen(cmd,cwd=root,env={'PATH':'/usr/bin:/bin','PYTHONUNBUFFERED':'1','PYTHONDONTWRITEBYTECODE':'1'},stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)

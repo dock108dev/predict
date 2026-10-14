@@ -1,0 +1,583 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "runtime_id",
+    "generation_id",
+    "settings_generation",
+    "estimate_policy",
+    "status",
+    "input_clock_at",
+    "validation_at",
+    "input_epoch",
+    "state_revision",
+    "error",
+    "progress",
+    "rows",
+    "pagination",
+    "mode"
+  ],
+  "properties": {
+    "schema": {
+      "const": "predict-retained-prices-1"
+    },
+    "runtime_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "settings_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "estimate_policy": {
+      "$ref": "predict-estimate-1.schema.json#/$defs/policy"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "ready",
+        "rejected",
+        "superseded",
+        "stopped"
+      ]
+    },
+    "input_clock_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "validation_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "input_epoch": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state_revision": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 160
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovery_status",
+        "discovered_prices",
+        "validated_prices",
+        "total_prices",
+        "discovered_singles",
+        "ready_singles",
+        "refused_singles",
+        "pending_singles",
+        "total_singles",
+        "discovered_pairs",
+        "ready_pairs",
+        "refused_pairs",
+        "pending_pairs",
+        "total_pairs"
+      ],
+      "properties": {
+        "discovery_status": {
+          "enum": [
+            "validating_prices",
+            "prices_complete",
+            "evaluating",
+            "complete"
+          ]
+        },
+        "discovered_prices": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16000
+        },
+        "validated_prices": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16000
+        },
+        "total_prices": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "discovered_singles": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "ready_singles": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "refused_singles": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "pending_singles": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 160000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_singles": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 160000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "discovered_pairs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "ready_pairs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "refused_pairs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160000
+        },
+        "pending_pairs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 160000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_pairs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 160000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "revision",
+          "venue",
+          "native",
+          "original",
+          "times",
+          "event",
+          "market",
+          "period",
+          "selection"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "venue": {
+            "enum": [
+              "kalshi",
+              "polymarket_us",
+              "novig",
+              "prophetx"
+            ]
+          },
+          "native": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "event_id",
+              "market_id",
+              "outcome_id",
+              "side",
+              "quote_side"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "event_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "market_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "outcome_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "side": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "quote_side": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            }
+          },
+          "original": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "units",
+              "payout",
+              "payout_units",
+              "quantity_units",
+              "role"
+            ],
+            "properties": {
+              "value": {
+                "type": "string",
+                "maxLength": 600
+              },
+              "units": {
+                "enum": [
+                  "decimal_odds",
+                  "cents_per_contract",
+                  "usd_per_contract"
+                ]
+              },
+              "payout": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 600
+              },
+              "payout_units": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quantity_units": {
+                "type": "string"
+              },
+              "role": {
+                "const": "comparison"
+              },
+              "native_value": {
+                "type": "string"
+              },
+              "native_units": {
+                "type": "string"
+              },
+              "transformation": {
+                "enum": [
+                  "identity",
+                  "one_minus_native_bid"
+                ]
+              }
+            }
+          },
+          "times": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_at",
+              "received_at",
+              "projected_at",
+              "source_time_kind"
+            ],
+            "properties": {
+              "source_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "received_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "projected_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_time_kind": {
+                "enum": [
+                  "provider_quote",
+                  "provider_book",
+                  "unknown",
+                  "synthetic"
+                ]
+              }
+            }
+          },
+          "event": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title",
+              "league",
+              "start_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "league": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "start_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "market": {
+            "enum": [
+              "winner",
+              "spread",
+              "total"
+            ]
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "selection": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "page_size",
+        "total_rows",
+        "has_more"
+      ],
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15999
+        },
+        "page_size": {
+          "const": 1
+        },
+        "total_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16000
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mode": {
+      "enum": [
+        "current",
+        "synthetic"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-retained-prices-1",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ready"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "input_epoch": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "progress": {
+            "properties": {
+              "discovery_status": {
+                "const": "complete"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "input_epoch": {
+            "type": "null"
+          },
+          "state_revision": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "rejected",
+              "superseded",
+              "stopped"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rows": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

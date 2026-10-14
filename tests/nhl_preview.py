@@ -23,7 +23,7 @@ class Session:
         self.persistence_error=None;self.cleanup_errors=[];self.segmented_history=False;self.projection_error=None
     async def start(self):
         self.journal=ObservationJournal(self.output/(self.sid+'.jsonl'));self.state='running'
-        rows=fixture();now=datetime.now(timezone.utc).isoformat()
+        rows=fixture();now=rows[0]['observed_at']  # Fixed authored pregame clock; never wall-clock freshness.
         for row in rows:
             row.update(session_id=self.sid,observed_at=now)
             if row['type']=='session_started':row['spec']=self.spec

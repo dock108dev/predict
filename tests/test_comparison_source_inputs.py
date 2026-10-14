@@ -102,12 +102,20 @@ class SourceInputs(unittest.TestCase):
         refs=authored_opposition(record);ctx=context(record,reference_records=refs)
         result=produce(record,ctx,at=AT)
         q=deepcopy(ctx['quote']);q['comparison_input_refs']=result['comparison_input_refs'];q['comparison_input_status']=result['gaps']
-        out,stress=calculate_quote(q,result['profiles'],AT,event=ctx['event'],group=ctx['group'],outcome=ctx['outcome'])
+        out,stress=calculate_quote(q,result['profiles'],AT,ceiling='100',legacy=True,event=ctx['event'],group=ctx['group'],outcome=ctx['outcome'])
         self.assertTrue(out['eligible'],out['reason'])
         # $100 ceiling, reviewed US one-order .0695 model; .50 price,
         # conservative movement .01 limits base to189 contracts. $94.50
         # acquisition +$3.28 cent-half-even fee =97.78 capital; expected
         # payout .6*189=113.4, profit15.62. Exact percent=78100/4889.
+        ordinary,_=calculate_quote(q,result['profiles'],AT,event=ctx['event'],group=ctx['group'],outcome=ctx['outcome'])
+        # At $1000: 1932*.50 + round_half_even(1932*.0695*.50*.50, .01)
+        # = 966+33.57=999.57. Next contract requires 1000.09.
+        self.assertEqual(ordinary['details']['native_quantity'],'1932')
+        self.assertEqual(ordinary['estimate_policy']['version'],'predict-estimate-policy-3')
+        self.assertEqual(Fraction(ordinary['details']['entry_fee_usd']),Fraction('33.57'))
+        self.assertEqual(Fraction(ordinary['basis']['capital_denominator']),Fraction('999.57'))
+        self.assertEqual(Fraction(ordinary['details']['expected_profit_usd']),Fraction('159.63'))
         self.assertEqual(Fraction(out['basis']['capital_denominator']),Fraction('97.78'))
         self.assertEqual(Fraction(int(out['exact']['numerator']),int(out['exact']['denominator'])),Fraction(78100,4889))
         self.assertEqual(out['basis']['conditioning'],'completed_decisive_results_only')
@@ -335,7 +343,7 @@ class SelectedApplicability(unittest.TestCase):
         ctx['selected_applicability']=self.selected(record,facets)
         result=produce(record,ctx,at=AT);q=deepcopy(ctx['quote'])
         q['comparison_input_refs']=result['comparison_input_refs'];q['comparison_input_status']=result['gaps']
-        out,stress=calculate_quote(q,result['profiles'],AT,event=ctx['event'],group=ctx['group'],outcome=ctx['outcome'])
+        out,stress=calculate_quote(q,result['profiles'],AT,ceiling='100',legacy=True,event=ctx['event'],group=ctx['group'],outcome=ctx['outcome'])
         self.assertTrue(out['eligible'],out['reason'])
         # Independent literal:189*$0.50=$94.50; half-even one-order fee=$3.28;
         # actual deployed=$97.78; .6*189-$97.78=$15.62; percent=78100/4889.

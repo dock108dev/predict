@@ -77,7 +77,10 @@ def analyze(runs, now):
 
 
 def collect(fetch, now):
-    runs = fetch("/actions/runs?per_page=30")["workflow_runs"][:30]
+    window = (now - timedelta(days=30)).date().isoformat()
+    runs = fetch(
+        f"/actions/workflows/ci.yml/runs?per_page=30&status=completed&created=%3E%3D{window}"
+    )["workflow_runs"][:30]
     failure_steps = {}
     runner_seconds = 0
     observed_jobs = 0
@@ -115,6 +118,46 @@ def collect(fetch, now):
     return metrics, runs
 
 
+def resource_sample(fetch):
+    """Two bounded optional metadata reads; outages do not erase run evidence."""
+    result = {
+        "cache_bytes": None,
+        "cache_entries": None,
+        "artifact_sample_bytes": None,
+        "artifact_sample_count": None,
+        "artifact_total_count": None,
+        "resource_unavailable": {},
+    }
+
+    def integer(value):
+        if type(value) is not int or value < 0:
+            raise ValueError("Invalid resource measurement")
+        return value
+
+    try:
+        cache = fetch("/actions/cache/usage")
+        size = integer(cache["active_caches_size_in_bytes"])
+        count = integer(cache["active_caches_count"])
+        result.update(cache_bytes=size, cache_entries=count)
+    except Exception as error:
+        result["resource_unavailable"]["cache"] = type(error).__name__
+    try:
+        artifacts = fetch("/actions/artifacts?per_page=30")
+        rows = artifacts["artifacts"]
+        total = integer(artifacts["total_count"])
+        if not isinstance(rows, list) or len(rows) > 30 or total < len(rows):
+            raise ValueError("Invalid bounded artifact sample")
+        sizes = [integer(row["size_in_bytes"]) for row in rows]
+        result.update(
+            artifact_sample_bytes=sum(sizes),
+            artifact_sample_count=len(rows),
+            artifact_total_count=total,
+        )
+    except Exception as error:
+        result["resource_unavailable"]["artifacts"] = type(error).__name__
+    return result
+
+
 def main():
     now = datetime.now(timezone.utc)
     runs = []
@@ -141,6 +184,7 @@ def main():
                 return json.load(response)
 
         metrics, runs = collect(fetch, now)
+        metrics.update(resource_sample(fetch))
         metrics["status"] = "PASS"
     except Exception as error:
         metrics = analyze([], now)
@@ -186,7 +230,7 @@ def main():
         + "\n"
     )
     summary = (
-        "## CI health (advisory)\n\nLatest 30 repository runs, filtered to completed CI runs from 30 days; separate events. No comparable performance baseline, no flake claim. Elapsed uses last completed job minus workflow start; p95 requires 20 durations. Queue/critical path/quota unavailable; runner minutes are observed job time, not a bill. Reruns without first-attempt evidence are excluded from pass rate.\n\n```json\n"
+        "## CI health (advisory)\n\nUp to 30 completed CI workflow runs from 30 days; separate events. No comparable performance baseline, no flake claim. Elapsed uses last completed job minus workflow start; p95 requires 20 durations. Queue/critical path/quota unavailable; runner minutes are observed job time, not a bill. Reruns without first-attempt evidence are excluded from pass rate.\n\n```json\n"
         + json.dumps(metrics, indent=2).replace("`", "\\u0060").replace("<", "\\u003c")
         + "\n```\n"
     )

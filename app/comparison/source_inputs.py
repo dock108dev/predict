@@ -193,7 +193,7 @@ def _selection(record, context, scope):
     event=record['event']
     if e['league']!=event['competition'] or roles != {'home':event['home'],'away':event['away']}:
         raise ValueError('ordinary_current_participant_role_conflict')
-    if g['period']!=scope.period or {'winner':'moneyline','spread':'spread','total':'total'}.get(g['market'])!=record['market_identity']['family']:
+    if g['period']!=scope.period or record['market_identity']['family'] not in {'winner':('moneyline','team_binary'),'spread':('spread',),'total':('total',)}.get(g['market'],()):
         raise ValueError('ordinary_current_scope_attachment_conflict')
     sha=q['provenance']['sha256']
     ev=_evidence('admitted:'+s['provider']+':'+s['native_event_id']+':'+s['native_market_id'], sha,
@@ -201,12 +201,12 @@ def _selection(record, context, scope):
     # Preserve reviewed occurrence identity when admission provides it. Otherwise
     # namespace the durable provider ID; schedule is deliberately absent.
     occurrence='comparison-source-occurrence-1:'+digest([s['provider'],s['native_event_id'],e['league'],roles])
-    if record['market_identity']['event'][0]=='comparison-reviewed-occurrence-1':
+    if record['market_identity']['event'][0] in ('comparison-reviewed-occurrence-1','predict-occurrence-1'):
         occurrence=event['game_id']
     ref=EventReference(occurrence,e['league'],roles['home'],roles['away'],(ev,))
     family=record['market_identity']['family'];participant=r['participant']
     signed=None;line=record['market_identity']['line']
-    if family=='moneyline':
+    if family in ('moneyline','team_binary'):
         op={'win':'gt' if participant==ref.home_id else 'lt',
             'not_win':'le' if participant==ref.home_id else 'ge','draw':'eq'}.get(r['predicate'])
         if op is None:raise ValueError('ordinary_winner_predicate_unsupported')
@@ -510,7 +510,8 @@ def produce(record, context, *, at):
     result=dict(version=VERSION,profiles={},comparison_input_refs=dict(version=REFS_VERSION,
         refs={kind:None for kind in KINDS},phase='unknown'),gaps={kind:gap('absent',kind+'_source_inputs_absent') for kind in KINDS})
     def add(kind,payload,expires=None,evidence=()):
-        key,value=profile(kind,payload,expires_at=expires)
+        factory=context.get('profile_factory',profile)
+        key,value=factory(kind,payload,expires_at=expires)
         result['profiles'][key]=value;result['comparison_input_refs']['refs'][kind]=key
         result['gaps'][kind]=gap('available_and_bound',kind+'_source_inputs_bound',evidence)
     if not isinstance(record,dict) or not isinstance(context,dict):raise ValueError('source_input_objects_required')
@@ -562,6 +563,8 @@ def produce(record, context, *, at):
             result['gaps']['quantity']['missing_fields']=[field for field in fields if field not in refdata.get('values',{})]
         from .public_event import apply as apply_event
         apply_event(result,record,context,at)
+        from .estimated_content import attach as attach_estimates
+        attach_estimates(result,record,context,at=at)
         return result
     if rule is not None:
         try:
@@ -610,4 +613,22 @@ def produce(record, context, *, at):
         result['gaps']['quantity']['missing_fields']=[field for field in fields if field not in refdata.get('values',{})]
     from .public_event import apply as apply_event
     apply_event(result,record,context,at)
+    from .estimated_content import attach as attach_estimates
+    attach_estimates(result,record,context,at=at)
     return result
+
+
+def produce_two_way_benchmark(outcomes, *, venue, receipt_sha256, source_revision, method='proportional_no_vig'):
+    """Validate explicitly supplied original typed sportsbook outcomes.
+
+    The combined-input adapter supplies occurrence-qualified CanonicalSelections and original prices,
+    clocks, native IDs and evidence. No discovery, relabeling or fallback here.
+    """
+    from .benchmark import TwoWayBenchmark, SportsbookOutcome
+    if not isinstance(outcomes,(list,tuple)) or len(outcomes)!=2:
+        raise ValueError('benchmark_two_originals_required')
+    rows=tuple(SportsbookOutcome(CanonicalSelection.from_dict(row['selection']),
+        ExactNumber.parse(row['decimal_odds']),row['book_at'],row['market_at'],
+        row['received_at'],row['revision']) for row in outcomes)
+    return TwoWayBenchmark(rows,receipt_sha256,'decisive_win_loss',None,
+        venue,method,source_revision).to_dict()

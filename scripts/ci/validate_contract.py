@@ -2,6 +2,8 @@
 
 import ast
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -53,3 +55,8 @@ def validate(root):
 
 if __name__ == "__main__":
     validate(ROOT)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/build_stored_frontend.py"), "--check"],
+        check=True,
+        timeout=10,
+    )

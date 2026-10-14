@@ -105,7 +105,10 @@ from types import SimpleNamespace
 async def smoke():
     async def close(): pass
     owner=SimpleNamespace(close=close, session=None)
-    app=app_module.create_app(owner=owner, sessions={})
+    from app.dashboard.current_state import CurrentStateProvider
+    provider=CurrentStateProvider()
+    provider.database_games=[]  # Serve ordinary SQL-mode assets without starting SQL or sources.
+    app=app_module.create_app(owner=owner, sessions={},current_provider=provider)
     runner=web.AppRunner(app)
     await runner.setup()
     try:
@@ -115,10 +118,13 @@ async def smoke():
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
             for path in ('/','/ev','/arbs','/current/coverage','/admin',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
+                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
                          '/api/comparison','/api/coverage'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     await response.read()
+            async with client.get(url+'/') as response:
+                assert '/current/assets/stored.js' in await response.text()
             async with client.get(url+'/api/current') as response:
                 state=await response.json()
                 assert state['mode']=='current' and not state['events']

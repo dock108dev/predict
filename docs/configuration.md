@@ -1,86 +1,143 @@
 # Configuration and operation
 
-## Current operation
+Use the [README](../README.md) to install the app. The supported runtime is a local
+macOS source checkout, Python 3.11+ with `stream` dependencies and a dedicated
+socket-only PostgreSQL cluster. Keep the listener on loopback.
 
-The ordinary launcher owns native Kalshi/Polymarket US streams and, when enabled,
-one shared Novig/ProphetX/Pinnacle aggregate scheduler. Native and aggregate access
-are independent; missing access leaves that source unavailable.
+## Source configuration
 
-Start with `config/current.example.json`, a complete native-only template. Copy it
-to `.local/predict-current-config.json` for launcher use, or pass its path with
-`--current-config` to the foreground CLI. It enables native acquisition and disables
-aggregate requests. Set `enabled` to `false` for idle startup. Both `enabled` and
-`aggregate_enabled` must be explicit booleans; an incomplete or missing explicit
-configuration fails before ownership or credential access.
+Copy [the sample](../config/current.example.json) to
+`.local/predict-current-config.json`. The launcher reads that file; foreground
+operation accepts `--current-config PATH`. Both `enabled` and `aggregate_enabled`
+must be explicit booleans. The sample enables native acquisition and disables
+aggregate requests. Set `enabled=false` for saved-data inspection without acquisition.
+A missing explicit path fails. If the default file is absent, validated internal
+defaults enable both native and aggregate acquisition, so create the file deliberately.
 
-If the default local file is absent, `current_policy.load()` uses validated
-`DEFAULT`, which enables native and aggregate acquisition with NFL scope.
-`sports` scopes native discovery. `aggregate_sports` independently scopes the
-aggregate scheduler, inheriting `sports` when omitted or empty. Supported values
-are NFL, NCAAF, NBA, NCAAB, MLB and NHL; select the scope appropriate to your access.
-Native-only operation remains aggregate-disabled through recovery.
+`sports` scopes native discovery. Supported values are NFL, NCAAF, NBA, NCAAB, MLB
+and NHL; actual listings vary. `aggregate_sports` independently scopes aggregate
+requests and inherits `sports` when absent or empty. Families are `moneyline`,
+`spread` and `total`. Resource bounds cannot exceed `current_policy.DEFAULT`;
+rediscovery must be at least 60 seconds. The one-year `duration_seconds` default
+is the process-lifetime sentinel; smaller valid values select finite operation.
 
-The aggregate policy is implemented in `current_aggregate_policy.POLICY`: a
-100,000-credit monthly ceiling, 50-credit reserve and automatic 15-minute slots
-between 09:00 inclusive and 23:00 exclusive in America/New_York while the app runs.
-Missed slots are skipped. This configured ceiling is not proof of a provider plan
-or balance. The scheduler checks selected sports even when odds are empty, retires
-old sport quotes after empty responses, reserves the worst case before dispatch
-and reconciles actual provider headers. Admin refresh chooses its own scope without
-changing automatic scope or due times.
+The shared aggregate scheduler requests Novig, ProphetX and Pinnacle through
+The Odds API. `current_aggregate_policy.POLICY` supplies a 100,000-credit monthly
+ceiling, 50-credit reserve and 15-minute slots from 09:00 inclusive to 23:00
+exclusive in America/New_York. Missed slots are skipped. These configured limits
+are not proof of an account plan or balance. Explicit Admin refresh uses the same
+ledger without changing automatic sports or due times. Native-only configuration
+stays aggregate-disabled during recovery.
 
-The board, Arbs and live Details require no stake entry. EV keeps the gross
-Pinnacle benchmark and modeled/net estimates separate; see
-[calculation basis](benchmark-ev.md) for formulas and limits.
+## Start and stop
 
-Startup can make read-only network requests within the configured resource limits. Aggregate requests consume account credits. Stop the app before changing credentials; preserve ledger reservations and uncertain charges when investigating failures.
+```sh
+scripts/opportunity-board start
+scripts/opportunity-board status
+scripts/opportunity-board stop
+```
 
-## Dashboard controls
+`start` starts the project database, reuses a verified existing app or selects a
+free loopback port. `--port` selects the first port to try. `--instance beta`
+(default) and `--instance poc` use separate process records and logs, but share
+ordinary data and service ownership; they are not independent collection accounts.
+Runtime files live under `.local/opportunity-board-beta` or `.local/opportunity-board`.
+Start does not reload an existing process. Stop, then Start after backend or
+credential changes. There is no operating-system service or automatic restart.
 
-Use the [README](../README.md) for installation. The supported ordinary workflow is a local macOS source checkout with Python 3.11+ and the `stream` dependencies; current validation uses Python 3.14. PostgreSQL is not required.
+For foreground operation, start PostgreSQL first:
 
-| Control | Implemented behavior |
+```sh
+scripts/project-postgres start
+.venv/bin/python -m app.dashboard --port 8783
+```
+
+Ctrl-C stops the foreground app. App Stop does not stop the PostgreSQL cluster;
+`scripts/project-postgres stop` stops that dedicated cluster when no app needs it.
+Do not remove `.local` to troubleshoot: it includes data, ledgers and process state.
+
+| Surface | Behavior |
 | --- | --- |
-| Launcher | `scripts/opportunity-board start\|status\|stop`, normally at loopback port 8783; start reuses a verified existing process or finds a free port |
-| Instance | `beta` (default) and `poc` separate process records/logs; both use the same ordinary application |
-| Current provider | `CurrentService` uses validated `current_policy.load()` configuration and starts native workers plus the shared aggregate scheduler when enabled |
-| Current configuration | `.local/predict-current-config.json`, or `--current-config`; default scope is NFL winner/spread/total; aggregate scope inherits native scope unless configured separately; reduced durations are finite |
-| Board / Details | `/` reads latest state and Details follows current revisions; `/arbs` names opposing legs; filters and Details do not dispatch paid requests |
-| Admin | `/admin` exposes source status, quota, Stop/Pause and guarded fresh-runtime recovery |
-| Retained inspection | `/admin/retained` keeps finite/saved-session readers; it does not populate the ordinary live board |
+| `/`, `/ev`, `/arbs` | Saved per-game Odds, EV and opposing allocations |
+| Details and history | Exact saved inputs/results; inspection does not acquire prices |
+| `/admin` | Source, quota, storage and issue status; pause, Stop and guarded recovery |
+| `/admin/retained` | Separate finite-session and saved-capture readers |
 
-The launcher uses `.venv/bin/python` with a minimal environment. It does not load `.env` or forward shell credentials. The aggregate worker itself reads the ignored/untracked repository `.env` through the guarded credential loader. `process.json` and `server.log` live in the selected `.local/opportunity-board*` directory. Start does not reload an existing worker; restart through verified owned-process controls after application or credential changes.
+Source workers run while the owned app runs, independently of browser attendance.
+Startup restores valid retained observations with their original clocks before
+acquisition. Loading saved data requires no credential or quota mutation. Stale
+results remain inspectable but lose current positive-list eligibility. Database
+failure is visible; there is no in-memory financial fallback.
 
-Current startup acquires lifecycle ownership and records fresh consumed authority before source dispatch. It does not load saved or synthetic quotes. Native source/resource limits remain bounded by `current_policy.DEFAULT`; the process-lifetime sentinel is declared as `APP_RUNNING_DURATION`. Aggregate envelopes are declared once by `current_aggregate_policy.POLICY` and copied into each consumed attempt. Keep Stop and accounting intact.
+## Credentials
 
-## External access
+The launcher uses a minimal environment and does not forward shell keys or load
+`.env` itself. Source-specific guarded loaders retrieve credentials when needed.
 
-`app/collection/venue_access.py` fixes native provider destinations:
+| Native venue | Keychain service / account | JSON fields |
+| --- | --- | --- |
+| Kalshi | `prediction-arb.kalshi.production` / `market-data` | `key_id`, `private_key` |
+| Polymarket US | `prediction-arb.polymarket-us` / `retail-api` | `key_id`, `secret_key` |
 
-| Venue | REST | WebSocket | macOS Keychain service / account |
-| --- | --- | --- | --- |
-| Kalshi | `https://external-api.kalshi.com` | `wss://external-api-ws.kalshi.com/trade-api/ws/v2` | `prediction-arb.kalshi.production` / `market-data` |
-| Polymarket US | `https://gateway.polymarket.us` | `wss://api.polymarket.us/v1/ws/markets` | `prediction-arb.polymarket-us` / `retail-api` |
+Provision native records using local Keychain tooling; there is no native setup
+CLI. Destinations are fixed in `app/collection/venue_access.py`. Do not put native
+secrets into sample configuration, command arguments or logs.
 
-Native loaders expect JSON credential records in the Keychain services above: `key_id`/`private_key` for Kalshi and `key_id`/`secret_key` for Polymarket US. There is no native credential setup CLI; provision those records using your local Keychain tooling. Do not put native secrets in an environment template. Ordinary current startup resolves native credentials through the guarded path; aggregate credentials load at a permitted dispatch. Never include values in documentation, commands, logs or evidence. Saved-data inspection needs no credentials.
+[`.env.example`](../.env.example) names `ODDS_API_KEY` without a value. A real `.env`
+must be untracked, a regular user-owned file and mode 0600. Stop the app before
+credential changes. `.venv/bin/python scripts/predict-paid-key` provides hidden
+aggregate key entry and a paid-account ledger transition without a provider call.
+A worker caches its selected key until closed. Paid selection requires the guarded
+`.env` and never falls back to another account. Without paid metadata, explicit
+pre-paid readers can use a supplied key, guarded `.env`, then a validated legacy
+Keychain record. Saved inspection needs no credentials.
 
-When paid-account metadata is present, aggregate credential selection requires the guarded ignored repository `.env`; failure is explicit and never falls back to another account. Without paid selection, the supported retained/pre-paid path accepts a supplied `ODDS_API_KEY`, then guarded `.env`, then the validated legacy Keychain record. The ordinary launcher strips inherited keys. `.env.example` documents the aggregate variable only; it is not a credential or a required startup file. A manually provisioned `.env` must be untracked, a regular file owned by the current user, and private (mode 0600). After stopping the app, `.venv/bin/python scripts/predict-paid-key` performs hidden local key entry and a paid-account ledger transition; it does not make a provider request. A worker caches its key until closure. Do not run this account-changing command as a test. Configured plan allowance is distinct from provider-observed usage and remaining credits.
+## Calculation settings
 
-The shared aggregate scheduler calls fixed The Odds API endpoints for `novig,prophetx,pinnacle` in a sport-wide request. Existing native Novig/ProphetX collectors and the separate ProphetX verifier retain their own scoped credentials and attempt policies. Public Novig GraphQL is display-only. Optional references are not comparison legs.
+Source controls and calculation settings are independent. Ordinary defaults are
+`predict-estimate-policy-3`: requested funding `1000`, buffer rate `0.005`, benchmark
+`pinnacle`, method `proportional_no_vig`. `novig` and `prophetx` are also supported
+benchmarks. The wire field `capital_ceiling_usd` carries the requested amount;
+`sizing_mode=ceiling` remains an explicit sensitivity mode. Older v2 policies keep
+their original ceiling meaning.
 
-## Operation and deployment limits
+Optional `.local/estimate-policy.json` overrides exact string fields from
+`RequestedTradePolicy`: `version`, `capital_ceiling_usd`, `buffer_rate`, `tie`,
+`terminal_noncompletion`, `sizing_mode`, `benchmark_venue`, `benchmark_method`.
+Omitted fields use defaults. For example:
 
-Current operation has native streaming workers and one shared aggregate scheduler. There is no configured operating-system service, automatic process restart or cloud deployment. Daytime 15-minute dispatch is implemented through the shared policy and durable cycle ledger. Multiple tabs must share acquisition; a filter or Details click must not create a paid call. Stop revokes dispatch and closes owned workers while preserving accounting and calculation-lease expiry.
+```json
+{"capital_ceiling_usd":"1000","buffer_rate":"0.005","tie":"0.005","terminal_noncompletion":"0.001"}
+```
 
-Keep the listener on loopback. Remote, shared-host and reverse-proxy deployment are outside current personal use. See [security](security.md) and [failure handling](error-handling.md). There is no configured installer or cloud deployment.
+Policy changes invalidate dependent results on the next read/projection. Malformed
+configuration refuses the affected operation. Browser amount/buffer/benchmark
+settings select a saved policy variant without writing global configuration or
+requesting source data. See [calculation basis](benchmark-ev.md).
 
-## Saved review and live collection
+## Storage and recovery
 
-Retained finite/saved-session tools use `CoverageOwner`, `ContinuousSession`, acknowledged journals and exact saved cutoffs. Explicit real collection needs its applicable run specification and fresh consumed authority; isolated tests use mock sources. Their older Start/Stop, duration and Saved scan controls do not apply to the ordinary current board. Do not reuse historical acquisition packages or consumed attempts as fresh authority. Historical `plan_evidence` strings in saved specifications identify original access assertions; they are compatibility labels, not current setup-document links.
+Observations enter an append-only journal before SQL import. Journal limits are
+256 MiB per segment, 8 GiB total, 8 MiB per record and at least 1 GiB free disk after
+an append. An existing `observations.jsonl` remains an original segment; numbered
+`observations-000001.jsonl` files follow the manifest order. Rotation precedes the
+segment cap. There is no automatic deletion, truncation or pruning.
 
-Preserve saved packages, references, replay readers and separate research timing. Retained finalization publishes completion only after journal/replay checks; failed packages remain incomplete. Historical source ages describe their saved cutoff, not today's freshness. See [module ownership](architecture.md#module-ownership), [architecture](architecture.md) and [development](development.md).
+SQL keeps immutable envelopes, snapshots/results and guarded latest pointers.
+The 2 GiB soft ceiling counts public `current_*` table heap, index and TOAST bytes
+before bounded batches; a batch may cross it before the next refusal. The app's
+RSS guard is 768 MiB. Admin shows usage, backlog and persistence errors. Migrations
+are ordered, transactional and hash-checked; never edit an applied migration.
 
-The older PostgreSQL workflow remains separate. `scripts/project-postgres` manages its local cluster/socket and `.venv/bin/python -m app.storage migrate` applies its migrations. Neither is an ordinary dashboard startup prerequisite. See [storage CLI](../app/storage/__main__.py) and [schema migrations](../app/storage/migrations/001_capture.sql) before explicitly scoped database work. Live verifiers are not installation checks.
+Quota availability subtracts unresolved/reserved exposure and the 50-credit
+reserve from the latest authenticated remaining balance. Confirmed spending is
+not deducted twice. Missing receipts remain unknown; reopening does not clear a
+hold or authorize another dispatch.
 
-
-Current delivery retains one latest catalog. `/api/current/changes` accepts `runtime_id` and `state_revision`, returning latest changed events and removals; a cursor reset returns a full current snapshot. `/api/arbs` accepts the same optional cursor for unchanged filter scope. Clients must merge changes only against the stated base revision and rebase displayed ages from the server clock. No price history or delta backlog is retained.
+`recover_accounting` is an explicit audited operation for an eligible inactive
+aggregate worker and exact expired pending set. It binds current runtime/account,
+attempt hashes and independent balance evidence; one bounded no-retry observation
+can establish conservative budget authority without attributing the old charge.
+See [Admin API](contracts/predict-admin-1.md) and
+[failure recovery](error-handling.md). Do not trigger recovery as a routine test or
+reuse a completed request. Recovery preserves reservations, uncertainty and due times.

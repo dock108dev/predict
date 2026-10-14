@@ -1,7 +1,7 @@
-"""D04 scenario inputs adapted to the existing settlement portfolio engine.
+"""Scenario inputs adapted to the existing settlement portfolio engine.
 
 The only arithmetic here is unit conversion and exact wire scaling. Partition
-construction remains in D04, and portfolio aggregation remains in settlement.
+construction remains in the payout-profile owner, and portfolio aggregation remains in settlement.
 Rules need not be identical: each state retains each leg's own payout.
 """
 from copy import deepcopy
@@ -128,7 +128,7 @@ def cashflow_inputs(legs: tuple[BoundLeg, ...], quantities: tuple[str | ExactNum
 
     Bare exact strings follow the evidenced profile unit: contracts or USD stake.
     Typed Quantity must explicitly use contracts or usd_risk, respectively. A
-    caller-supplied table must equal the current D04 table, including its clock.
+    caller-supplied table must equal the current terminal-state table, including its clock.
     """
     reviewed = joint_states(legs, at=at, include_exceptions=include_exceptions)
     if table is not None and (not isinstance(table, JointTable) or table != reviewed):
@@ -192,7 +192,7 @@ def _shared_result(cash, receipts, states, *, complete, reserve):
 
 def evaluate_portfolio(inputs: ScenarioCashflows, *, cash: tuple | None = None, receipts: tuple | None = None,
                        reserve: str = "0", fee_basis: str = "gross_excludes_fees") -> dict:
-    """Evaluate gross or S02-provided costs/receipts through shared settlement.
+    """Evaluate gross or supplied costs/receipts through shared settlement.
 
     Overrides are explicit ordered tuples, one entry per leg. They must cover
     exactly the reviewed states. Unknown amounts remain None, including a state

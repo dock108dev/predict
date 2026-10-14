@@ -129,7 +129,7 @@ cancellation. Missing failure-report persistence never refunds reserved credits.
 
 The dedicated authenticated sample tools temporarily suppress standard logging
 to prevent credential-bearing URLs from third-party HTTP logs. The Pinnacle
-sample now restores the previous logging threshold in `finally`, including on
+sample restores the previous logging threshold in `finally`, including on
 cancellation, matching the aggregate acquisition tools. Sanitized result files
 remain the operating diagnostic while suppression is active. These executables
 are separate from the dashboard and require their existing exact authorization.

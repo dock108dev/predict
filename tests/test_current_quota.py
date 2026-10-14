@@ -132,7 +132,8 @@ class DurableQuota(unittest.TestCase):
         with self.assertRaises(QuotaStop):self.paid()
     def test_ambiguity_blocks_restart_and_reset_preserves_records(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)
-        self.at='2026-10-04T12:00:00+00:00';self.bootstrap(23)
+        self.at='2026-10-04T12:00:00+00:00'
+        with self.assertRaisesRegex(QuotaStop,'ambiguous'):self.bootstrap(23)
         self.assertEqual(self.q.snapshot()['reserved'],3)
         with self.assertRaisesRegex(QuotaStop,'ambiguous'):self.paid()
         next_window=dict(WINDOW,id='CONTROLLED-November',starts_at='2026-11-01T00:00:00+00:00',ends_at='2026-12-01T00:00:00+00:00')
@@ -141,7 +142,7 @@ class DurableQuota(unittest.TestCase):
         self.q.reconcile(aid,quota(23,3))
         # Confirmed exact receipt can release once; bootstrap spend isn't added twice.
         self.q.bind_window(next_window);self.assertIsNone(self.q.snapshot()['remaining'])
-        self.assertEqual(self.q.snapshot()['attempts'],3)
+        self.assertEqual(self.q.snapshot()['attempts'],2)
     def test_reset_requires_new_evidence_and_fresh_observation(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner);self.q.reconcile(aid,quota(23,3))
         self.at='2026-11-02T12:00:00+00:00'

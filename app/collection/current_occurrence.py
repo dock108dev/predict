@@ -12,6 +12,12 @@ HISTORICAL_PATH=PATH
 CURRENT_PATH=PATH.with_name('current-buccaneers-cowboys-20261006.json')
 SELECTED_PATH=PATH.with_name('current-eagles-jaguars-20261009.json')
 
+
+def resolve(records, *, clock, resolver=None):
+    """Ordinary reusable resolution; dated annotation APIs remain readers."""
+    from app.comparison.occurrence_matching import OccurrenceResolver
+    return (resolver or OccurrenceResolver()).resolve(records, clock=clock)
+
 def material(venue,native):
     if venue=='kalshi':
         return {k:deepcopy(native.get(k)) for k in ('ticker','event_ticker','rules_primary','rules_secondary','custom_strike','strike_type')}

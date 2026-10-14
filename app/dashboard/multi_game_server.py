@@ -92,6 +92,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if snapshot is None:raise PublicRequestError('Older segmented cutoff available after Stop')
             return snapshot
         return session_history.load(d['folder'],cutoff)
+    from .current_state import SelectionError
+
     @web.middleware
     async def guard(request,handler):
         try:
@@ -108,6 +110,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if exc.status == 408:r.force_close()
             for header in ('Allow','Retry-After'):
                 if header in exc.headers:r.headers[header]=exc.headers[header]
+        except SelectionError as exc:
+            r=web.json_response(exc.body,status=exc.status,headers={'Retry-After':'1'} if exc.status==503 else None)
         except PublicRequestError as exc:
             r=web.json_response({'error':str(exc)},status=422)
         except ValueError as exc:
@@ -529,15 +533,16 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/api/updates',updates)
     from pathlib import Path
     static_root=Path(__file__).parent
-    async def page(req):return web.FileResponse(static_root/'opportunity_static/current/index.html')
+    database_mode=getattr(current_provider,'database_games',None) is not None
+    async def page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/index.html'))
     async def admin(req):return web.FileResponse(static_root/'opportunity_static/current/admin.html')
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
     app.router.add_get('/admin',admin)
-    async def arbs_page(req):return web.FileResponse(static_root/'opportunity_static/current/arbs.html')
+    async def arbs_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/arbs.html'))
     async def arbs_data(req):
         from .current_state import CURRENT_KEY
         from .current_contract import arbitrage_pairs
-        store=app[CURRENT_KEY];store.refresh_age()
+        store=app[CURRENT_KEY];store.refresh_age();store.require_economic()
         changed=None;revision=None
         if 'runtime_id' in req.query or 'state_revision' in req.query:
             try:
@@ -556,33 +561,66 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/arbs',arbs_page)
     app.router.add_get('/api/arbs',arbs_data)
     async def comparison_data(req):
+        from .current_response import CurrentResponse
         from .current_state import CURRENT_KEY
-        from .current_contract import stamp, packed
+        from .current_contract import stamp
         from app.comparison.metrics import snapshot_metrics
-        from app.comparison.current_metrics import apply_group_metrics
-        allowed={'view','venue','league','market','basis','results','search','ceiling'}
+        allowed={'view','venue','league','market','basis','results','search','ceiling','buffer',
+            'runtime_id','state_revision','request_generation'}
         if set(req.query)-allowed:raise PublicRequestError('Unsupported comparison filter')
         if req.query.get('view','ev') not in ('ev','arbs','odds'):raise PublicRequestError('Unsupported comparison view')
-        store=app[CURRENT_KEY];store.refresh_age();state=store._state
-        if 'ceiling' in req.query:
-            from fractions import Fraction
-            from copy import deepcopy
-            from .u0_display import bounded_decimal
-            ceiling=req.query['ceiling'];bounded_decimal(ceiling)
-            if not 0<Fraction(ceiling)<=100000:raise PublicRequestError('Comparison ceiling outside bounds')
-            state=deepcopy(state)
-            for event in state['events']:
-                for group in event['groups']:
-                    apply_group_metrics(group,state.get('comparison_profiles',{}),
-                        stamp(state['clock_at']),ceiling=ceiling,event=event)
-        return web.Response(body=packed(snapshot_metrics(state,venue=req.query.get('venue') or None,
-            league=req.query.get('league') or None,market=req.query.get('market') or None,
-            basis=req.query.get('basis') or None,results=req.query.get('results','all'),search=req.query.get('search','')[:200])),content_type='application/json')
+        store=app[CURRENT_KEY];store.refresh_age();store.require_economic();state=store._state
+        from app.comparison.effective_policy import request_binding
+        from .query_policy import calculation_policy
+        from .current_state import SelectionError
+        try:
+            generation=request_binding(req.query,state)
+            policy=calculation_policy(req.query,state['estimate_policy'])
+        except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
+        except ValueError as exc:raise PublicRequestError(str(exc)) from None
+        owner_policy=state['estimate_policy']
+        if policy.revision!=owner_policy['revision']:
+            from .comparison_jobs import body_steps,Superseded
+            from .current_encoded import EncodedDelivery
+            filters=dict(venue=req.query.get('venue') or None,league=req.query.get('league') or None,
+                market=req.query.get('market') or None,basis=req.query.get('basis') or None,
+                results=req.query.get('results','all'),search=req.query.get('search','')[:200])
+            # Query/delivery identity never enters the reusable economic result.
+            # The epoch binds the full admitted inputs; age-only ticks preserve
+            # that epoch, while every true temporal or policy transition revokes it.
+            epoch=store._calculation_epoch
+            key=(epoch,state['runtime_id'],state['state_revision'],policy.revision,tuple(sorted(filters.items())))
+            def valid():
+                return store.economic_valid(epoch)
+            try:
+                transport=req.transport
+                calculated=await store.comparison_jobs.read(key,lambda:body_steps(state,policy,filters,store.encoded_bodies),valid,
+                    alive=lambda:transport is not None and not transport.is_closing())
+                if not valid():
+                    calculated.body.release()
+                    raise Superseded('Calculation inputs changed before delivery')
+            except Superseded as exc:
+                return web.json_response(dict(error='selection_changed',reason=str(exc),**store.notice()),status=409)
+            envelope=dict(owner_estimate_policy=owner_policy,request_generation=generation,
+                delivery=dict(version='comparison-delivery-1',validated_clock_at=store.validation_clock().isoformat(),
+                    calculation_clock_at=calculated.clock_at,runtime_id=state['runtime_id'],state_revision=state['state_revision']))
+            return CurrentResponse(body=EncodedDelivery(calculated.body,envelope,req,**store.delivery_guards(epoch)))
+        def encoded():
+            value=snapshot_metrics(state,venue=req.query.get('venue') or None,
+                league=req.query.get('league') or None,market=req.query.get('market') or None,
+                basis=req.query.get('basis') or None,results=req.query.get('results','all'),search=req.query.get('search','')[:200],copy_graph=False)
+            value.update(owner_estimate_policy=owner_policy,request_generation=generation)
+            return store.encoded_bodies.encode(value)
+        key=(policy.revision,tuple(sorted(req.query.items())))
+        epoch=store._calculation_epoch
+        owner=store.comparison_body(key,encoded)
+        store.require_economic()
+        return CurrentResponse(body=store.encoded_bodies.payload(owner,req,**store.delivery_guards(epoch)),content_type='application/json')
     async def comparison_coverage(req):
         from .current_state import CURRENT_KEY
         from app.comparison.coverage import CoverageLedger,current_rows
         if set(req.query)-{'league','venue','market'}:raise PublicRequestError('Unsupported coverage filter')
-        store=app[CURRENT_KEY];store.refresh_age()
+        store=app[CURRENT_KEY];store.refresh_age();store.require_economic()
         ledger=getattr(store.provider,'coverage',None) or CoverageLedger({})
         market=req.query.get('market');family={'winner':'moneyline','spread':'spread','total':'total'}.get(market)
         if market and family is None:raise PublicRequestError('Unsupported coverage market')
@@ -594,7 +632,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         value.update(runtime_id=store._state['runtime_id'],state_revision=store._state['state_revision'],
             clock_at=store._state['clock_at'],mode=store._state['mode'],acquisition_requests=0)
         return web.json_response(value)
-    async def ev_page(req):return web.FileResponse(static_root/'opportunity_static/current/ev.html')
+    async def ev_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/ev.html'))
     async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
     app.router.add_get('/api/comparison',comparison_data)
     app.router.add_get('/api/coverage',comparison_coverage)
@@ -605,6 +643,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/admin/retained',retained_page)
     from .current_state import mount as mount_current
     mount_current(app,current_provider)
+    if database_mode:
+        from .stored_games import mount as mount_stored
+        mount_stored(app,current_provider)
     async def current_admin(req):
         from .current_state import CURRENT_KEY, SelectionError
         provider=app[CURRENT_KEY].provider
@@ -622,6 +663,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
             await provider.pause(body['source'])
+        elif set(body)=={'action','runtime_id','candidate_digest','recovery_id','covered_attempts'} and body['action']=='recover_accounting' and hasattr(provider,'recover_accounting'):
+            try:await provider.recover_accounting(body['runtime_id'],body['candidate_digest'],body['recovery_id'],body['covered_attempts'])
+            except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','runtime_id','candidate_digest'} and body['action']=='recover' and hasattr(provider,'recover'):
             try:await provider.recover(body['runtime_id'],body['candidate_digest'])
             except SelectionError as exc:
@@ -636,8 +680,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_post('/api/admin/current',current_admin)
     async def current_asset(req):
         name=req.match_info['name']
-        allowed={'arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
-        for filename in ('comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js'):
+        allowed={'stored.css':static_root/'opportunity_static/current/stored.css','stored.js':static_root/'opportunity_static/current/stored.js','arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        for filename in ('board-client.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js'):
             allowed[filename]=static_root/'opportunity_static/current'/filename
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])

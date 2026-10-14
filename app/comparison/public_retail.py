@@ -95,12 +95,15 @@ def direct_site_case(q, at):
     return deepcopy(value)
 
 
-def direct_site_estimate(q, profiles, at, ceiling='100'):
+def direct_site_estimate(q, profiles, at, ceiling=None, *, estimate_policy=None):
     """Conditional completed win/loss estimate; shared entry arithmetic once.
 
     This is deliberately separate from actual net EV and executable ranking.
     A cent-rounded single fill is a model, not an observed fill partition.
     """
+    from .estimated_policy import load
+    estimate_policy = (estimate_policy or load()).with_ceiling(ceiling)
+    ceiling = estimate_policy.capital_ceiling_usd
     from .current_dependencies import references, eligibility
     from .net_costs import wire
     from app.dashboard.current_contract import exact_wire, display_decimal
@@ -149,6 +152,7 @@ def direct_site_estimate(q, profiles, at, ceiling='100'):
         conditioning='completed_decisive_win_loss', probability=wire(probability),
         quantity=wire(quantity), price=q['original']['value'], acquisition_usd=wire(quantity * price),
         entry_fee_usd=entry['entry_fee_usd'], deployed_usd=wire(deployed), ceiling_usd=ceiling,
+        unused_cash_usd=wire(size-deployed), estimate_policy=estimate_policy.reference(), buffer_applied=False,
         expected_payout_usd=wire(expected), expected_profit_usd=wire(expected - deployed),
         modeled_settlement_fee_usd=value['modeled_settlement_fee_usd'],
         modeled_other_mandatory_costs_usd=value['modeled_other_mandatory_costs_usd'],

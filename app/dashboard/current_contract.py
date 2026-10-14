@@ -18,19 +18,49 @@ STATES = ('connecting','available','not_offered','unavailable','budget_delayed',
 MAX_BYTES = 64 * 1024 * 1024
 
 
-def packed(value):
-    # Count first, then fill one exact staging buffer. Retaining many 64 KiB
-    # blocks caused allocator high-water growth over repeated large snapshots.
-    # Input is synchronous; no await or mutable external callback separates passes.
+def _canonical_chunks(node, encoder, depth=0):
+    # Module recursion has no self-referencing closure to await collection.
+    if depth>=3 or not isinstance(node,(dict,list,tuple)) or not node:
+        content=encoder.encode(node)
+        if len(content)<=1024*1024 or not isinstance(node,(dict,list,tuple)):
+            yield content
+            return
+        del content
+    if isinstance(node,dict) and all(isinstance(k,str) for k in node):
+        yield '{'
+        for index,key in enumerate(sorted(node)):
+            if index:yield ','
+            yield encoder.encode(key);yield ':'
+            yield from _canonical_chunks(node[key],encoder,depth+1)
+        yield '}'
+    elif isinstance(node,(list,tuple)):
+        yield '['
+        for index,item in enumerate(node):
+            if index:yield ','
+            yield from _canonical_chunks(item,encoder,depth+1)
+        yield ']'
+    else:yield encoder.encode(node)
+
+
+def canonical_chunks(value):
+    # Exact canonical chunks shared by synchronous and sealed HTTP consumers.
     encoder=json.JSONEncoder(sort_keys=True,separators=(',', ':'),ensure_ascii=False,allow_nan=False)
-    size=sum(len(chunk.encode()) for chunk in encoder.iterencode(value))
-    output=bytearray(size);offset=0
-    for chunk in encoder.iterencode(value):
+    yield from _canonical_chunks(value,encoder)
+
+
+def packed(value):
+    size=sum(len(chunk.encode()) for chunk in canonical_chunks(value))
+    # Stable staging sizes avoid allocating a new large region for every
+    # harmless age-digit change. At most one MiB of staging slack; the returned
+    # body and all input/output limits still use the exact counted size.
+    allocation=((size+1024*1024-1)//(1024*1024))*(1024*1024) if size>1024*1024 else size
+    output=bytearray(allocation);offset=0
+    for chunk in canonical_chunks(value):
         encoded=chunk.encode();end=offset+len(encoded)
         if end>size:raise ValueError('Encoding input changed between passes')
         output[offset:end]=encoded;offset=end
     if offset!=size:raise ValueError('Encoding input changed between passes')
-    return bytes(output)
+    return bytes(memoryview(output)[:size])
 
 
 def identity(kind, value):
@@ -242,25 +272,53 @@ def binding_context(e,g,o):
 
 def event_identity(e):
     """Versioned current occurrence IDs omit scheduled-time metadata."""
-    values=[e[k] for k in ('sport','league','season','stage','event_discriminator')]
-    if not e['event_discriminator'].startswith('comparison-occurrence-1:'):
+    current=e['event_discriminator'].startswith('predict-occurrence-1:')
+    values=[e[k] for k in (('sport','league','event_discriminator') if current else ('sport','league','season','stage','event_discriminator'))]
+    if not current and not e['event_discriminator'].startswith('comparison-occurrence-1:'):
         values.append(stamp(e['start_at']).isoformat())
     values.append(sorted((p['role'],p['id']) for p in e['participants']))
     return identity('event',values)
 
 
-def serialize(raw, *, allow_synthetic=False):
+def serialize(raw, *, allow_synthetic=False, estimate_policy=None, legacy=False, details=False, funded=True, paired=True, supported=True):
     """Reject malformed/conflicting catalogs atomically. Financial floats forbidden."""
     try:
-        return _serialize(raw, allow_synthetic=allow_synthetic)
+        from app.comparison.estimated_policy import load, DEFAULT_POLICY
+        return _serialize(raw, allow_synthetic=allow_synthetic, estimate_policy=estimate_policy or (DEFAULT_POLICY if legacy else load()), legacy=legacy, details=details, funded=funded, paired=paired, supported=supported)
     except (KeyError, TypeError, ArithmeticError, OverflowError, RecursionError):
         raise ValueError('Invalid normalized current catalog') from None
 
 
-def _serialize(raw, *, allow_synthetic):
-    if len(packed(raw))>MAX_BYTES:
-        raise ValueError('Current state byte capacity exceeded')
-    r=deepcopy(raw)
+def _serialize(raw, **kwargs):
+    return drain(serialize_steps(raw, **kwargs))
+
+
+def drain(steps):
+    """Synchronous financial consumers drain the identical owned iterator."""
+    try:
+        while True:next(steps)
+    except StopIteration as done:return done.value
+    finally:steps.close()
+
+
+def byte_count_steps(value):
+    total=0;unit=0
+    for block in canonical_chunks(value):
+        count=len(block.encode('utf-8'));total+=count;unit+=count
+        if total>MAX_BYTES:raise ValueError('Serialized current state byte capacity exceeded')
+        if unit>=65536:
+            yield ('byte_bound',unit);unit=0
+    return total
+
+
+def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=False, details=False, funded=True, paired=True, supported=True, prices_only=False, prices_progress=None):
+    from app.comparison.estimated_policy import load, DEFAULT_POLICY
+    estimate_policy=estimate_policy or (DEFAULT_POLICY if legacy else load())
+    # Price bootstrap validates original catalog identity independently of the
+    # financial registry. Complete admission below still validates and owns it.
+    view={k:v for k,v in raw.items() if k!='comparison_profiles'} if prices_only else raw
+    yield from byte_count_steps(view)
+    r=deepcopy(view)
     from app.comparison.current_dependencies import validate_profiles, references, eligibility
     profiles=validate_profiles(r.get('comparison_profiles', {}))
     if r.get('schema')!=VERSION or r.get('mode') not in (('current','synthetic') if allow_synthetic else ('current',)):
@@ -295,7 +353,7 @@ def _serialize(raw, *, allow_synthetic):
         eid=event_identity(e)
         e['id']=eid; groups={}
         for g in e['groups']:
-            fields(g,{'id','market','period','period_boundary','outcome_cardinality','line','anchor_participant','outcomes'},{'result_policy'})
+            fields(g,{'id','market','period','period_boundary','outcome_cardinality','line','anchor_participant','outcomes'},{'result_policy','display_group'})
             if g['market'] not in ('winner','spread','total'):raise ValueError('Unsupported market')
             text(g['period']);text(g['period_boundary']);integer(g['outcome_cardinality'],2)
             g['line']=line(g['line']); anchor=g['anchor_participant']
@@ -305,6 +363,15 @@ def _serialize(raw, *, allow_synthetic):
             if g['market']=='total' and anchor is not None:raise ValueError('Total has no anchor')
             if g.get('result_policy') is not None:text(g['result_policy'])
             g['id']=identity('group',[eid,*[g[k] for k in ('market','period','period_boundary','line','anchor_participant','outcome_cardinality')],g.get('result_policy','unspecified')])
+            if 'display_group' in g:
+                from app.comparison.domain import display_group_key
+                d=g['display_group']
+                fields(d,{'version','id','occurrence_id','market','period','overtime','line'})
+                if (d['version'],d['occurrence_id'],d['market'],d['period'],d['line'])!=('predict-display-group-1',eid,g['market'],g['period'],g['line']):
+                    raise ValueError('Display group context conflict')
+                family={'winner':'moneyline','spread':'spread','total':'total'}[g['market']]
+                if d['id']!=identity('display-group',display_group_key(eid,family,g['period'],d['overtime'],g['line'])):
+                    raise ValueError('Display group identity conflict')
             outcomes={}
             for o in g['outcomes']:
                 fields(o,{'id','participant','predicate','signed_line','label','quotes'},{'alternatives','result_interpretation'})
@@ -323,10 +390,26 @@ def _serialize(raw, *, allow_synthetic):
                 candidates=[*o['quotes'].values(),*(q for qs in o.get('alternatives',{}).values() for q in qs)]; unique={}
                 if len(candidates)>64:raise ValueError('Exact-selection instrument capacity exceeded')
                 for q in candidates:
-                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation','sharp_reference','provider_clocks','comparison_input_refs','comparison_input_status','occurrence_link'})
-                    references(q, profiles)
+                    fields(q,{'id','revision','venue','source','original','times','state','rule_note','provenance','binding'},{'freshness_policy','rules_differ','cost_note','engine_inputs','depth','observation_time_evidence','native_predicate','book_confirmation','sharp_reference','provider_clocks','comparison_input_refs','comparison_input_status','occurrence_link','occurrence_match','native_contract'})
+                    if 'native_contract' in q:
+                        from app.comparison.event_links import digest
+                        c=q['native_contract']
+                        fields(c,{'version','id','source','predicate','wording','result_policy','scope','material_sha256'})
+                        if c['version']!='predict-native-contract-1' or c['source']!=q['source'] or c['id']!='native-contract:'+digest({k:v for k,v in c.items() if k!='id'}) or len(packed(c))>65536:
+                            raise ValueError('Native contract provenance conflict')
+                        fields(c['scope'],{'period','overtime'})
+                        if c['scope']['period']!=g['period'] or c['scope']['overtime'] not in ('included','excluded','unknown'):
+                            raise ValueError('Native contract scoring scope conflict')
+                        if 'display_group' in g and c['scope']['overtime']!=g['display_group']['overtime']:
+                            raise ValueError('Native contract display scope conflict')
+                        if c['predicate']!=q.get('occurrence_match',{}).get('original_selection'):
+                            raise ValueError('Native contract original predicate conflict')
+                    if 'occurrence_match' in q:
+                        from app.comparison.occurrence_matching import validate_match
+                        validate_match(q['occurrence_match'],q['source'])
+                    if not prices_only:references(q, profiles)
                     from app.comparison.current_dependencies import input_status
-                    input_status(q)
+                    if not prices_only:input_status(q)
                     if 'provider_clocks' in q:
                         clocks=q['provider_clocks'];fields(clocks,{'book','market','selected_basis'})
                         if clocks['selected_basis'] not in ('book','market','unknown'):raise ValueError('Explicit original provider clock basis required')
@@ -427,6 +510,7 @@ def _serialize(raw, *, allow_synthetic):
                     if q.get('engine_inputs') is not None:q['calculation_inputs']=deepcopy(q['engine_inputs'])
                     if q['id'] in unique and packed(unique[q['id']])!=packed(q):raise ValueError('Conflicting duplicate instrument')
                     unique[q['id']]=q
+                    if prices_only:yield ('validated_original',q['id'])
                 o['quotes']={};o['alternatives']={}
                 for v in VENUES:
                     qs=sorted((q for q in unique.values() if q['venue']==v),key=lambda q:(q['source']['native_side'] not in ('yes','long'),q['id']))
@@ -435,11 +519,14 @@ def _serialize(raw, *, allow_synthetic):
                 count_quotes+=len(unique)
                 if o['id'] in outcomes:raise ValueError('Duplicate outcome identity')
                 outcomes[o['id']]=o
-                comparisons(o)
+                if not prices_only:comparisons(o)
             if len(outcomes)!=g['outcome_cardinality']:raise ValueError('Outcome cardinality conflict')
             g['outcomes']=list(outcomes.values())
             if g['id'] in groups:raise ValueError('Duplicate exact group; merge normalized inputs before commit')
             groups[g['id']]=g;count_groups+=1
+            if prices_only and prices_progress is not None:
+                prices_progress(dict(r,events=[dict(e,groups=[g])]))
+                yield ('validated_price_group',g['id'])
         e['groups']=list(groups.values())
         if eid in events:raise ValueError('Duplicate exact event')
         events[eid]=e
@@ -448,7 +535,14 @@ def _serialize(raw, *, allow_synthetic):
     r['selection_policy']=dict(ttl_seconds=300,maximum_per_client=1,restart_expires=True)
     r['admin_href']='/admin'
     # Reject arbitrary top-level transport/provider material.
-    if set(r)-{'schema','mode','runtime_id','state_revision','projected_at','clock_at','state','source_status','events','selection_policy','admin_href','comparison_profiles'}:raise ValueError('Unexpected current fields')
+    if set(r)-{'schema','mode','runtime_id','state_revision','projected_at','clock_at','state','source_status','events','selection_policy','admin_href','comparison_profiles','estimate_policy'}:raise ValueError('Unexpected current fields')
+    if not legacy:r['estimate_policy'] = estimate_policy.to_dict()
+    else:r.pop('estimate_policy',None)
+    if prices_only:
+        # Same strict native/price/clock admission, without financial discovery.
+        # This graph is private bootstrap input, never complete Current.
+        yield from byte_count_steps(r)
+        return r
     all_quotes=[q for e in r['events'] for g in e['groups'] for o in g['outcomes'] for q in quotes_of(o)]
     for q in all_quotes:
         from app.comparison.current_dependencies import refresh_metadata_status
@@ -463,13 +557,23 @@ def _serialize(raw, *, allow_synthetic):
             from app.collection.current_benchmark import calculate
             q['calculations']['ev']=calculate(q,clock)
         q.pop('engine_inputs',None)
-    for e in r['events']:
-        for g in e['groups']:
+        yield ('normalized_quote',q['id'])
+    from app.comparison.projection_batches import groups as fair_groups
+    for batch in fair_groups(r['events']):
+        for e,g in batch:
             for o in g['outcomes']:comparisons(o)
             percentage_comparisons(g)
-            from app.comparison.current_metrics import apply_group_metrics
-            apply_group_metrics(g,profiles,clock,event=e)
-    if len(packed(r))>MAX_BYTES:raise ValueError('Serialized current state byte capacity exceeded')
+            from app.comparison.current_metrics import group_metric_steps
+            yield from group_metric_steps(g,profiles,clock,event=e,estimate_policy=estimate_policy,legacy=legacy,details=details,funded=funded,supported=supported)
+            from app.comparison.shared_templates import shared
+            if shared(profiles) and not details:
+                from app.comparison.current_details import compact_group
+                compact_group(g)
+    if not legacy and paired:
+        from app.comparison.estimated_pair import assembly_steps
+        for event in r['events']:
+            event['funded_pairs'],event['funded_pair_search']=yield from assembly_steps(event,profiles,clock,policy=estimate_policy)
+    yield from byte_count_steps(r)
     return r
 
 
@@ -606,22 +710,25 @@ def manual_scenario(review, assumptions):
     return out
 
 
-def snapshot_inputs(payload):
+def snapshot_inputs(payload, *, copy_graph=True):
     """Recover exact normalized inputs without retaining derived calculation results."""
     # Strip derived graphs before copying; they can be much larger than inputs.
-    derived={'display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations','calculation_inputs','comparison_dependency_reasons','comparison_temporal_revision'}
+    derived={'display','age_seconds','confirmation_age_seconds','comparison_age_seconds','stale','comparison','calculations','calculation_inputs','comparison_dependency_reasons','comparison_temporal_revision','comparison_details'}
+    # Only an internal synchronous projection may borrow immutable nested input
+    # graphs. Public readers and historical validation retain defensive copying.
+    owned=deepcopy if copy_graph else lambda value: value
     def original(q):
-        value=deepcopy({k:v for k,v in q.items() if k not in derived})
-        if q.get('calculation_inputs') is not None:value['engine_inputs']=deepcopy(q['calculation_inputs'])
+        value=owned({k:v for k,v in q.items() if k not in derived})
+        if q.get('calculation_inputs') is not None:value['engine_inputs']=owned(q['calculation_inputs'])
         return value
-    raw=deepcopy({k:v for k,v in payload.items() if k!='events'})
+    raw=owned({k:v for k,v in payload.items() if k not in ('events','estimate_policy')})
     raw['events']=[]
     for event in payload['events']:
-        e=deepcopy({k:v for k,v in event.items() if k!='groups'});e['groups']=[];raw['events'].append(e)
+        e=owned({k:v for k,v in event.items() if k not in ('groups','funded_pairs','funded_pair_search')});e['groups']=[];raw['events'].append(e)
         for group in event['groups']:
-            g=deepcopy({k:v for k,v in group.items() if k not in ('outcomes','comparison_pairs','comparison_search')});g['outcomes']=[];e['groups'].append(g)
+            g=owned({k:v for k,v in group.items() if k not in ('outcomes','comparison_pairs','comparison_search')});g['outcomes']=[];e['groups'].append(g)
             for outcome in group['outcomes']:
-                o=deepcopy({k:v for k,v in outcome.items() if k not in ('quotes','alternatives')})
+                o=owned({k:v for k,v in outcome.items() if k not in ('quotes','alternatives')})
                 o['quotes']={v:original(q) for v,q in outcome['quotes'].items()}
                 if 'alternatives' in outcome:o['alternatives']={v:[original(q) for q in qs] for v,qs in outcome['alternatives'].items()}
                 g['outcomes'].append(o)
@@ -630,6 +737,11 @@ def snapshot_inputs(payload):
 
 def validate_snapshot(payload, *, allow_synthetic=False):
     """Reproduce every derived value, ID, eligibility and cue from exact inputs."""
-    expected=serialize(snapshot_inputs(payload),allow_synthetic=allow_synthetic)
+    from app.comparison.estimated_policy import EstimatePolicy
+    policy = EstimatePolicy.from_dict(payload['estimate_policy']) if 'estimate_policy' in payload else None
+    funded=any('funded_estimate' in q.get('calculations',{}) for e in payload['events'] for g in e['groups'] for o in g['outcomes'] for q in quotes_of(o))
+    paired=any('funded_pairs' in e for e in payload['events'])
+    supported=any('supported_size_evaluation' in q.get('calculations',{}).get('funded_estimate',{}) for e in payload['events'] for g in e['groups'] for o in g['outcomes'] for q in quotes_of(o))
+    expected=serialize(snapshot_inputs(payload),allow_synthetic=allow_synthetic,estimate_policy=policy,legacy=policy is None,funded=funded,paired=paired,supported=supported)
     if packed(expected)!=packed(payload):raise ValueError('Current snapshot does not reproduce from exact normalized inputs')
     return payload

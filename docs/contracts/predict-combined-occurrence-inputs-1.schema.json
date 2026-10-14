@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-combined-occurrence-inputs-1",
+  "type": "object",
+  "required": ["version", "adapter_version", "as_of", "members", "records", "state_inputs", "envelope_ids", "envelopes", "benchmark_venue", "benchmark", "benchmark_reason", "benchmark_originals", "excluded", "representation", "input_version", "game_key"],
+  "properties": {
+    "version": {"const": "predict-combined-occurrence-inputs-1"},
+    "adapter_version": {"const": "predict-combined-native-1"},
+    "as_of": {"type": "string", "format": "date-time"},
+    "input_version": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "game_key": {"type": "string", "pattern": "^combined:event:"},
+    "members": {"type": "array", "minItems": 1, "maxItems": 800, "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}}},
+    "records": {"type": "array", "minItems": 1, "maxItems": 16000, "items": {"type": "object"}},
+    "state_inputs": {"type": "object", "required": ["events", "comparison_profiles", "clock_at"]},
+    "envelope_ids": {"type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": {"type": "string"}},
+    "envelopes": {"type": "array", "minItems": 1, "maxItems": 256, "items": {"type": "object", "required": ["id", "payload_sha256", "record"], "properties": {"id": {"type": "string"}, "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "record": {"type": "object", "required": ["source", "kind", "retained_at", "value"]}}, "additionalProperties": false}},
+    "benchmark_venue": {"enum": ["pinnacle", "novig", "prophetx"]},
+    "benchmark": {"type": ["object", "null"]},
+    "benchmark_reason": {"type": ["string", "null"]},
+    "benchmark_originals": {"type": ["object", "null"]},
+    "excluded": {"type": "array", "items": {"type": "object"}},
+    "representation": {"type": "string"}
+  },
+  "additionalProperties": false
+}

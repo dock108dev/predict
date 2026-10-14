@@ -10,7 +10,22 @@
       "tests/test_current_occurrence_october8.py",
       "tests/test_current_quota.py",
       "tests/test_current_clock_recovery.py",
-      "tests/test_current_odds_transport.py"
+      "tests/test_current_odds_transport.py",
+      "tests/test_ev02_occurrence.py",
+      "tests/test_ev03_templates.py",
+      "tests/test_estimated_templates.py",
+      "tests/test_ev04_content.py",
+      "tests/test_ev05_funded.py",
+      "tests/test_ev06_pairs.py",
+      "tests/test_ev07_integration.py",
+      "tests/test_ev08_runtime.py",
+      "tests/test_ev08_jobs.py",
+      "tests/test_ev08_encoded.py",
+      "tests/test_ev08_deadlines.py",
+      "tests/test_ev08_temporal.py",
+      "tests/test_ev09_delivery.py",
+      "tests/test_ev09_n01.py",
+      "tests/test_ev09_b01.py"
     ]
   },
   {
@@ -380,7 +395,8 @@
       "tests/test_comparison_net_ev.py",
       "tests/test_comparison_net_arbs.py",
       "tests/test_comparison_dependencies.py",
-      "tests/test_comparison_metrics.py"
+      "tests/test_comparison_metrics.py",
+      "tests/test_estimated_policy.py"
     ]
   },
   {
@@ -395,6 +411,47 @@
       "tests/test_comparison_public_event.py",
       "tests/test_comparison_reference_gap.py",
       "tests/test_comparison_occurrence_continuation.py"
+    ]
+  },
+  {
+    "name": "ev08-retained-admission",
+    "tests": [
+      "tests/test_ev08_admission.py"
+    ]
+  },
+  {
+    "name": "current-storage-rollover",
+    "tests": [
+      "tests/test_current_storage_policy.py",
+      "tests/test_current_database_segments.py",
+      "tests/test_current_journal_segments.py",
+      "tests/test_storage_admission_repair.py"
+    ]
+  },
+  {
+    "name": "current-accounting-and-retained-delivery",
+    "tests": [
+      "tests/test_aggregate_storage_refusal.py",
+      "tests/test_current_budget_lifecycle.py",
+      "tests/test_current_conservative_recovery.py",
+      "tests/test_current_retained.py",
+      "tests/test_database_ingress_repair.py",
+      "tests/test_recovery_diagnostics.py"
+    ]
+  },
+  {
+    "name": "python-ev09-s01",
+    "tests": [
+      "tests/test_ev09_s01.py"
+    ]
+  },
+  {
+    "name": "ordinary-delivery-boundaries",
+    "tests": [
+      "tests/test_ev09_asset_delivery.py",
+      "tests/test_ev09_calculation_stop.py",
+      "tests/test_ev09_ingress_isolation.py",
+      "tests/test_ev09_registry_index.py"
     ]
   }
 ]

@@ -1,0 +1,244 @@
+{
+  "title": "S01 requested policy; predecessor v2 remains immutable",
+  "type": "object",
+  "required": [
+    "version",
+    "capital_ceiling_usd",
+    "buffer_rate",
+    "tie",
+    "terminal_noncompletion",
+    "revision",
+    "execution_role",
+    "execution_channel",
+    "portfolio_basis",
+    "funding_basis",
+    "holding_period",
+    "denominator",
+    "funding_components",
+    "buffer",
+    "probability_defaults",
+    "size_statuses",
+    "input_bases",
+    "input_version",
+    "result_version",
+    "legacy_sensitivity",
+    "buffer_applied_to_existing_metrics",
+    "sizing_mode",
+    "benchmark_venue",
+    "benchmark_method",
+    "requested_amount_usd"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-estimate-policy-3"
+    },
+    "capital_ceiling_usd": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+    },
+    "buffer_rate": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+    },
+    "tie": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+    },
+    "terminal_noncompletion": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "execution_role": {
+      "const": "taker"
+    },
+    "execution_channel": {
+      "const": "direct_site"
+    },
+    "portfolio_basis": {
+      "const": "standalone"
+    },
+    "funding_basis": {
+      "const": "already_funded"
+    },
+    "holding_period": {
+      "const": "to_settlement"
+    },
+    "denominator": {
+      "const": "actual_deployed_capital"
+    },
+    "funding_components": {
+      "const": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ]
+    },
+    "buffer": {
+      "type": "object",
+      "required": [
+        "rate",
+        "basis",
+        "treatment",
+        "applications_per_opportunity",
+        "consumes_funding"
+      ],
+      "properties": {
+        "rate": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+        },
+        "basis": {
+          "const": "actual_deployed_capital"
+        },
+        "treatment": {
+          "const": "model_haircut"
+        },
+        "applications_per_opportunity": {
+          "const": 1
+        },
+        "consumes_funding": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "probability_defaults": {
+      "type": "object",
+      "required": [
+        "scope",
+        "basis",
+        "measured_rate",
+        "states",
+        "tie",
+        "terminal_noncompletion"
+      ],
+      "properties": {
+        "scope": {
+          "const": [
+            "NFL",
+            "regular_season",
+            "pregame",
+            "full_game",
+            "winner",
+            "including_overtime"
+          ]
+        },
+        "basis": {
+          "const": "provisional_prior"
+        },
+        "measured_rate": {
+          "const": false
+        },
+        "states": {
+          "const": [
+            "a_wins",
+            "b_wins",
+            "tie",
+            "terminal_noncompletion"
+          ]
+        },
+        "tie": {
+          "type": "object",
+          "required": [
+            "central",
+            "low",
+            "high"
+          ],
+          "properties": {
+            "central": {
+              "type": "string",
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+            },
+            "low": {
+              "const": "0"
+            },
+            "high": {
+              "const": "0.01"
+            }
+          },
+          "additionalProperties": false
+        },
+        "terminal_noncompletion": {
+          "type": "object",
+          "required": [
+            "central",
+            "low",
+            "high"
+          ],
+          "properties": {
+            "central": {
+              "type": "string",
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$"
+            },
+            "low": {
+              "const": "0"
+            },
+            "high": {
+              "const": "0.005"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "size_statuses": {
+      "const": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ]
+    },
+    "input_bases": {
+      "const": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ]
+    },
+    "input_version": {
+      "const": "predict-estimate-input-1"
+    },
+    "result_version": {
+      "const": "predict-estimate-result-2"
+    },
+    "legacy_sensitivity": {
+      "const": "adverse_price_stress"
+    },
+    "buffer_applied_to_existing_metrics": {
+      "const": false
+    },
+    "sizing_mode": {
+      "enum": [
+        "requested_trade",
+        "ceiling"
+      ]
+    },
+    "benchmark_venue": {
+      "enum": [
+        "pinnacle",
+        "novig",
+        "prophetx"
+      ]
+    },
+    "benchmark_method": {
+      "const": "proportional_no_vig"
+    },
+    "requested_amount_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+      "maxLength": 256
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-estimate-policy-3.schema.json"
+}

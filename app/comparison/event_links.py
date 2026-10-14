@@ -167,3 +167,14 @@ def semantic_market(record):
     market = deepcopy(record['market_identity'])
     market.pop('scheduled_start', None)
     return market
+
+
+def ordinary_event_key(event):
+    """Successor occurrence key; historical season/schedule readers stay sealed."""
+    provider_key('occurrence', event)
+    for field in ('game_id', 'sport', 'season', 'stage'):
+        if not isinstance(event.get(field), str) or not event[field]:
+            raise ValueError('Explicit ordinary occurrence context required')
+    instant(event['scheduled_start'])
+    return ['predict-occurrence-1', event['competition'], event['game_id'],
+            event['home'], event['away'], event.get('game_number')]

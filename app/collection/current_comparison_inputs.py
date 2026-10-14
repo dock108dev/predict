@@ -8,8 +8,7 @@ from copy import deepcopy
 from dataclasses import asdict
 from fractions import Fraction
 
-from app.comparison.current_dependencies import (KINDS, VERSION, MAX_PROFILES,
-    MAX_PROFILES_BYTES, encoded, profile, references)
+from app.comparison.current_dependencies import (KINDS, VERSION, profile, references)
 from app.comparison.costs import DEFAULT_POLICY
 from app.comparison.domain import CanonicalSelection
 from app.dashboard.current_contract import quotes_of, binding_context
@@ -156,7 +155,8 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
         from app.comparison.public_retail import registry
         selected_applicability=registry(selected_applicability)
     existing=snapshot.get('comparison_profiles',{})
-    profiles={}
+    from app.comparison.shared_templates import ProfilePool, keys
+    pool=ProfilePool()
     buffer_key,buffer=profile('buffer',asdict(DEFAULT_POLICY))
     quotes=[(e,g,o,q) for e in snapshot['events'] for g in e['groups']
             for o in g['outcomes'] for q in quotes_of(o)]
@@ -175,14 +175,16 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
     for _,_,_,q in quotes:
         references(q,existing)
         for key in q.get('comparison_input_refs',{}).get('refs',{}).values():
-            if key is not None:profiles[key]=existing[key]
+            if key is not None:
+                from app.comparison.shared_templates import resolve
+                if not pool.add(key,resolve(existing,key)):
+                    raise ValueError('Existing profile preservation capacity')
     def bind(kind,payload,refs,states):
         key,value=profile(kind,payload)
-        if key not in profiles and (len(profiles)>=MAX_PROFILES or
-                len(encoded(dict(profiles,**{key:value})))>MAX_PROFILES_BYTES):
-            states[kind]=status('available_but_unbound','comparison_profile_capacity_deferred')
+        if not pool.add(key,value):
+            states[kind]=status('available_but_unbound','comparison_representation_capacity_deferred')
             return
-        profiles[key]=value;refs[kind]=key
+        refs[kind]=key
     for e,g,o,q in quotes:
         if q['provenance']['mode']=='synthetic':continue
         old=deepcopy(q.get('comparison_input_refs'))
@@ -207,11 +209,11 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
             for kind,key in upgrade['comparison_input_refs']['refs'].items():
                 if key is None:continue
                 item=upgrade['profiles'][key]
-                if key in profiles or len(profiles)<MAX_PROFILES and len(encoded(dict(profiles,**{key:item})))<=MAX_PROFILES_BYTES:
-                    profiles[key]=item;refs[kind]=key
+                if pool.add(key,item):
+                    refs[kind]=key
                     states[kind]=upgrade['gaps'][kind]
                 else:
-                    states[kind]=status('available_but_unbound','comparison_profile_capacity_deferred')
+                    states[kind]=status('available_but_unbound','comparison_representation_capacity_deferred')
             for kind,item in upgrade['gaps'].items():
                 if upgrade['comparison_input_refs']['refs'].get(kind) is None:states[kind]=item
         selected_states,selected_audit=selected_status(q,selected_applicability,instant(snapshot['clock_at']))
@@ -221,7 +223,7 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
         # retained partial facts without promoting them into numeric rule authority.
         for kind,item in selected_states.items():
             if item.get('status')=='expired' or states.get(kind,{}).get('status')!='available_and_bound':states[kind]=item
-        if upgrade is not None and refs['fee'] is not None and profiles[refs['fee']]['payload'].get('version')=='comparison-direct-site-retail-case-1':
+        if upgrade is not None and refs['fee'] is not None and pool.get(refs['fee'])['payload'].get('version')=='comparison-direct-site-retail-case-1':
             if upgrade['comparison_input_refs']['refs']['fee']==refs['fee']:
                 states['fee']=deepcopy(upgrade['gaps']['fee'])
         if retail_audit is not None:
@@ -255,6 +257,7 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
                     orientation_evidence=deepcopy(q['binding']['evidence']),
                     occurrence_qualification='source_local' if q['binding']['verified'] else 'unverified_source_local',
                     rule_revision=None,completion_context=None)
+                if q.get('occurrence_match') is not None:payload['occurrence_match']=deepcopy(q['occurrence_match'])
                 if selected_audit is not None:payload['selected_binding']=selected_audit
                 states['identity']=status('available_and_bound','source_native_selection_bound')
                 bind('identity',payload,refs,states)
@@ -271,13 +274,13 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
         if event_facts is not None:
             states['identity']['public_event']=event_facts
             if refs['identity'] is not None:
-                previous=profiles[refs['identity']]
+                previous=pool.get(refs['identity'])
                 payload=deepcopy(previous['payload']);payload['public_event']=event_facts
                 key,item=profile('identity',payload,expires_at=previous['expires_at'])
-                if key==refs['identity'] or len(profiles)<MAX_PROFILES and len(encoded(dict(profiles,**{key:item})))<=MAX_PROFILES_BYTES:
-                    profiles[key]=item;refs['identity']=key
+                if pool.add(key,item):
+                    refs['identity']=key
                 else:
-                    states['identity']=status('available_but_unbound','comparison_profile_capacity_deferred',public_event=event_facts)
+                    states['identity']=status('available_but_unbound','comparison_representation_capacity_deferred',public_event=event_facts)
         sharp=q.get('sharp_reference')
         candidates=reference_records
         if sharp and q['source']['provider']=='the_odds_api':
@@ -290,7 +293,7 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
                 states['reference']=status('applicability_unresolved',
                     'retained_pinnacle_candidate_occurrence_edge_unqualified',
                     retained_candidate=retained_gap)
-        previous_reference=profiles.get(refs['reference'],{}).get('payload',{})
+        previous_reference=pool.get(refs['reference'],{}).get('payload',{})
         # A first retained projection may know both prices/clocks but lack the
         # original opposition IDs. A later replay can attach those originals
         # without replacing any fully qualified core reference or its history.
@@ -316,14 +319,23 @@ def attach(snapshot, *, reference_records=(), selected_applicability=None):
         review=prospective_reference_review(q) if refs['reference'] is not None else None
         if review is not None:states['reference']['prospective_review']=review
         states['fee']['trading_scope']='standard_direct_site_retail'
+        # Fact upgrades may replace legacy status dictionaries. Preserve the
+        # independently versioned successor recipe when its original ref agrees.
+        for kind in ('fee','payout'):
+            recipe=q.get('comparison_input_status',{}).get(kind,{}).get('estimate_content')
+            if recipe is not None and recipe['original_profile_ref']==refs[kind]:
+                states[kind]['estimate_content']=deepcopy(recipe)
         q['comparison_input_status']=states
     reachable={key for _,_,_,q in quotes
         for key in q.get('comparison_input_refs',{}).get('refs',{}).values() if key is not None}
-    result={key:value for key,value in profiles.items() if key in reachable}
-    # A selected modeled successor retains the dated prior cost refusal/profile.
-    # Ordinary snapshots continue to use the existing bounded history policy.
-    if any(v['payload'].get('version')=='comparison-direct-site-retail-case-1' for v in result.values()):
-        for key,value in existing.items():
-            if key not in result and len(result)<MAX_PROFILES and len(encoded(dict(result,**{key:value})))<=MAX_PROFILES_BYTES:
-                result[key]=value
+    result=pool.finish(reachable)
+    # Small legacy retail readers retain their dated refusal history. Large
+    # successor state prunes unreachable data; frozen leases hold their graph.
+    from app.comparison.shared_templates import shared, resolve
+    if not shared(result) and any(v['payload'].get('version')=='comparison-direct-site-retail-case-1' for v in result.values()):
+        history=ProfilePool(result)
+        for key in keys(existing):
+            if len(result)>=128:break
+            value=resolve(existing,key)
+            if key not in result and history.add(key,value):result[key]=value
     return result

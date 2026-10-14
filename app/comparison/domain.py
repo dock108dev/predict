@@ -9,6 +9,23 @@ import re
 from typing import Any, Mapping
 
 VERSION = "comparison-domain-1"
+
+
+def display_group_key(occurrence_id, family, period, overtime, line=None):
+    """Display identity omits fees, completion, equality and native predicates.
+
+    Economic semantic_key/cashflow_key retain their stricter original contracts.
+    Unknown scoring scope is explicit and cannot qualify an economic match.
+    """
+    _text(occurrence_id, 'Display occurrence')
+    _choice(family, FAMILIES, 'display family')
+    _choice(period, PERIODS, 'display period')
+    _choice(overtime, frozenset({'included','excluded','unknown'}), 'display overtime')
+    if period != 'full_game' and overtime == 'included':
+        raise ValueError('Partial display period cannot include later overtime')
+    return ('predict-display-group-1', occurrence_id,
+            'moneyline' if family == 'team_binary' else family, period, overtime,
+            None if line is None else ExactNumber.parse(line).key)
 LEAGUES = frozenset({"NFL", "NCAAF", "NBA", "NCAAB", "MLB", "NHL"})
 VENUES = frozenset({"kalshi", "polymarket_us", "novig", "prophetx", "pinnacle"})
 FAMILIES = frozenset({"moneyline", "team_binary", "spread", "total", "team_total"})

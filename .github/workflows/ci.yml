@@ -4,9 +4,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  merge_group:
   workflow_dispatch:
 
 env:
+  MERGE_QUEUE_SHA: ${{ github.event.merge_group.head_sha }}
   PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
   CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -30,6 +32,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        id: setup
         with:
           python: '3.14'
       - name: Syntax and offline regressions
@@ -38,11 +41,7 @@ jobs:
         if: always()
         env:
           CHECK_OUTCOMES: ${{ toJSON(steps) }}
-        run: |
-          if [ ! -f test-results/ci/summary.md ]; then
-            printf 'Offline report unavailable: setup failed or execution did not start. Tested SHA: %s; event: %s. Inspect step logs.\n' "$GITHUB_SHA" "$GITHUB_EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
+        run: python3 scripts/ci/interrupted.py
       - name: Retain offline diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -54,45 +53,51 @@ jobs:
   quality:
     name: Source, security and package
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        id: setup
         with:
           python: '3.14'
       - name: Install checksum-pinned validators
+        id: tools
         run: python scripts/ci/install_tools.py
       - name: Source lint and support formatting
         id: lint
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
-          python -m ruff check app tests scripts/ci
-          python -m ruff format --check scripts/ci tests/test_ci_reporting.py
+          python -m ruff check app tests scripts/ci browser_tests
+          python -m ruff format --check scripts/ci browser_tests tests/test_ci_reporting.py
+      - name: Redacted publishable-tree secret scan
+        id: secrets
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.tools.outcome == 'success' }}
+        run: python scripts/ci/secret_scan.py
       - name: Actions and shell syntax
         id: workflow
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           .local/ci-tools/actionlint -shellcheck=''
           sh -n scripts/check-ci
       - name: Maintained documentation references
         id: docs
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: python scripts/ci/docs.py
       - name: Reporting failure and missing-data regressions
         id: source
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           mkdir -p test-results/quality
           python -m pytest -q tests/test_ci_reporting.py --junitxml=test-results/quality/junit.xml
       - name: Audit locked dependencies
         id: audit
-        if: ${{ !cancelled() }}
-        run: python -m pip_audit -r requirements-ci.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/audit.json
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: python -m pip_audit -r requirements-ci.txt -r requirements-browser.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/audit.json
       - name: Build and install package
         id: package
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: python scripts/ci/package_smoke.py
       - name: Summarize outcomes
         if: always()
@@ -109,3 +114,56 @@ jobs:
             test-results/package/metrics.json
           if-no-files-found: error
           retention-days: 14
+  postgres:
+    name: PostgreSQL storage
+    uses: ./.github/workflows/storage.yml
+    with:
+      python: '3.14'
+  browser:
+    name: Ordinary browser journey
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        id: setup
+        with:
+          python: '3.14'
+      - name: Install locked browser tooling and matching Chromium
+        run: |
+          python -m pip install --require-hashes -r requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Offline ordinary journey and keyboard checks
+        id: browser
+        run: |
+          mkdir -p test-results/browser
+          python -m pytest -q browser_tests --junitxml=test-results/browser/junit.xml
+      - name: Browser summary
+        if: always()
+        env:
+          CHECK_OUTCOMES: ${{ toJSON(steps) }}
+        run: python scripts/ci/quality_report.py --browser
+      - name: Retain browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/browser/
+          if-no-files-found: error
+          retention-days: 14
+  readiness:
+    name: CI readiness
+    needs: [offline, quality, postgres, browser]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require every same-run gate
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/gate.py

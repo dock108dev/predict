@@ -6,6 +6,12 @@ from app.comparison.event_links import reviewed_links
 VERSION='comparison-evidenced-overlap-2'
 
 
+def resolve_current(records, *, clock, resolver):
+    """Reusable ordinary join; associate below is the retained sealed reader."""
+    from .current_occurrence import resolve
+    return resolve(records, clock=clock, resolver=resolver)
+
+
 def associate(native,aggregate,*,links=None,clock=None):
     links=reviewed_links() if links is None else links
     clock=datetime.now(timezone.utc) if clock is None else clock

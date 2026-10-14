@@ -18,9 +18,19 @@ def read(path, expected):
     return value
 
 
-def render(outcomes, root, postgres=False, package=False, expanded=False, audit=False):
+def render(
+    outcomes,
+    root,
+    postgres=False,
+    package=False,
+    expanded=False,
+    audit=False,
+    browser=False,
+):
     required = (
-        {"audit": root / "quality/audit.json"}
+        {"browser": root / "browser/junit.xml"}
+        if browser
+        else {"audit": root / "quality/audit.json"}
         if audit
         else {"package": root / "package/metrics.json"}
         if package
@@ -33,7 +43,12 @@ def render(outcomes, root, postgres=False, package=False, expanded=False, audit=
         }
     )
     if expanded:
-        required.update(lint=None, workflow=None, docs=None)
+        required.update(
+            lint=None,
+            workflow=None,
+            docs=None,
+            secrets=root / "quality/secret-metrics.json",
+        )
     records = []
     errors = []
     for name, path in required.items():
@@ -88,6 +103,15 @@ def render(outcomes, root, postgres=False, package=False, expanded=False, audit=
                 }
                 if findings or unavailable:
                     raise ValueError("vulnerabilities or unavailable dependencies")
+            elif name == "secrets":
+                data = read(path, dict)
+                if (
+                    data.get("status") != "PASS"
+                    or type(data.get("findings")) is not int
+                    or data["findings"] != 0
+                ):
+                    raise ValueError("Secret findings or unavailable scan evidence")
+                record["measurements"] = data
             else:
                 data = read(path, dict)
                 if data["status"] != "PASS" or data["wheel_bytes"] <= 0:
@@ -110,9 +134,29 @@ def render(outcomes, root, postgres=False, package=False, expanded=False, audit=
             .replace("\n", " ")
         )
 
-    text = f"## {'Package' if package else 'Storage' if postgres else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
+    def display_measurement(record):
+        value = record.get("measurements")
+        if record["name"] != "package" or not isinstance(value, dict):
+            return value
+        inventory = value.get("installed_dependencies")
+        return {
+            **{
+                k: value.get(k) for k in ("wheel_bytes", "files", "seconds", "baseline")
+            },
+            "dependencies": len(inventory) if isinstance(inventory, list) else None,
+            "unknown_license_expressions": sum(
+                not d.get("license_expression")
+                for d in inventory
+                if isinstance(d, dict)
+            )
+            if isinstance(inventory, list)
+            else None,
+            "inventory": "full package artifact metrics.json",
+        }
+
+    text = f"## {'Package' if package else 'Storage' if postgres else 'Browser' if browser else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
     text += "\n".join(
-        f"| {r['name']} | {r['status']} | {safe(r.get('measurements'))}; {safe(r.get('reason', ''))} |"
+        f"| {r['name']} | {r['status']} | {safe(display_measurement(r))}; {safe(r.get('reason', ''))} |"
         for r in records
     )
     text += "\n\nMissing data remains unavailable. Inspect the corresponding artifact/log for the first FAIL; a SKIPPED/NOT RUN check needs its earlier setup blocker resolved.\n"
@@ -120,6 +164,7 @@ def render(outcomes, root, postgres=False, package=False, expanded=False, audit=
         text += "Dependency findings use the current live database queried by pip-audit, with no comparable baseline.\n"
     identity = f"\nPR head: `{safe(os.environ.get('PR_HEAD_SHA'))}`; ref: `{safe(os.environ.get('GITHUB_REF'))}`; run: {safe(os.environ.get('CI_RUN_URL'))}.\n"
     text += identity
+    text += f"Merge queue candidate: `{safe(os.environ.get('MERGE_QUEUE_SHA'))}`.\n"
     return text, records, bool(errors)
 
 
@@ -133,9 +178,12 @@ def main():
         "--package" in sys.argv,
         "--expanded" in sys.argv,
         "--audit" in sys.argv,
+        "--browser" in sys.argv,
     )
     name = (
-        "package-summary"
+        "browser"
+        if "--browser" in sys.argv
+        else "package-summary"
         if "--package" in sys.argv
         else "postgres"
         if "--postgres" in sys.argv
@@ -154,6 +202,9 @@ def main():
         json.dumps(
             {
                 "tested_sha": os.environ.get("GITHUB_SHA"),
+                "merge_queue_sha": os.environ.get("MERGE_QUEUE_SHA"),
+                "platform": platform.platform(),
+                "python": platform.python_version(),
                 "overall": "FAIL" if failed else "PASS",
                 "pr_head": os.environ.get("PR_HEAD_SHA"),
                 "ref": os.environ.get("GITHUB_REF"),
@@ -163,7 +214,8 @@ def main():
                 "baseline": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "tools": {
-                    name: version(name) for name in ("ruff", "pip-audit", "build")
+                    name: version(name)
+                    for name in ("ruff", "pip-audit", "build", "pytest", "playwright")
                 },
             },
             indent=2,

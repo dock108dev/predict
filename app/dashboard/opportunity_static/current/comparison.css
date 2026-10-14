@@ -76,7 +76,7 @@ summary{cursor:pointer;min-height:44px;align-content:center;font-size:.875rem;fo
 .scenario-table th,.scenario-table td{padding:8px 4px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .notice{color:var(--amber);font-size:.875rem;border-left:3px solid var(--amber);padding-left:10px}
 .ranking-basis{font-size:.875rem;color:var(--muted);margin:12px 0 16px;max-width:90ch}
-.ranking-row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:12px}
+.ranking-row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:12px;content-visibility:auto;contain-intrinsic-size:auto 200px}
 .ranking-row>button{display:grid;grid-template-columns:minmax(180px,2fr) minmax(85px,.6fr) minmax(85px,.6fr) minmax(170px,1.3fr);align-items:center;gap:16px;width:100%;border:0;background:transparent;text-align:left;padding:12px;color:var(--ink)}
 .ranking-row h3{font-size:1.0625rem;margin:0;overflow-wrap:anywhere}
 .ranking-row p{font-size:.875rem;color:var(--muted);margin:4px 0;overflow-wrap:anywhere}
@@ -108,3 +108,28 @@ main{padding:16px 16px 32px}.page-heading{gap:8px;margin-bottom:12px;display:gri
 .coverage-grid{grid-template-columns:1fr}.ranking-row>button,.arb-card>button{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px}.ranking-row>button>:first-child{grid-column:1/-1}.ranking-row>button>:last-child{grid-column:1/-1;border-top:1px solid var(--line);padding-top:12px}.ranking-row{padding:4px}.ranking-result{font-size:1.625rem}.arb-card .arb-legs{grid-column:1/-1}.details{padding:16px}.size-form input{max-width:none}.empty{padding:20px}
 }
 @media(prefers-reduced-transparency:reduce){.app-header,.empty{background:#fff}body.current-app{background:var(--paper)}}
+
+/* EV07 funded result and shared policy controls. */
+.current-app .quote-estimate{display:block;color:var(--accent);font-size:.75rem;margin-top:4px;font-weight:600;overflow-wrap:anywhere}
+.current-app .raw-label{display:block;font-size:.75rem;font-weight:600;color:var(--muted)}
+.current-app #settings{border:1px solid var(--line);border-radius:10px;padding:0 16px;background:rgba(255,255,255,.65);margin:12px 0 18px}
+.current-app #settings .size-form{margin:12px 0}.current-app .size-form label{flex:0 1 220px}
+.current-app .rank-group{font-size:1rem;margin:20px 0 10px;color:var(--muted)}
+.current-app .scenario-table{table-layout:fixed}.current-app .scenario-table td,.current-app .scenario-table th{font-variant-numeric:tabular-nums;word-break:break-word}
+.current-app .details .ranking-result{display:block;font-size:1.55rem;margin:14px 0 6px}
+.current-app .details details>p{font-size:.875rem;overflow-wrap:anywhere}.current-app .details details>a{overflow-wrap:anywhere;font-size:.8125rem}
+@media(max-width:680px){.current-app .filters label:has(#freshness),.current-app .filters label:has(#sort){grid-column:auto;grid-row:auto}.current-app .size-form label{flex:1 1 150px}.current-app .size-form button{flex:1 1 120px}.current-app .scenario-table{font-size:.75rem}.current-app .comparison-table td:last-child{grid-column:1/-1}}
+
+/* Narrow controls start collapsed; summaries retain keyboard access. */
+.retained-prices{margin:8px 0 16px;padding:12px 16px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere}
+.retained-heading{font-weight:600;color:var(--muted);margin:0 0 8px;font-size:.875rem}
+.retained-price{border-top:1px solid var(--line);padding:10px 0;content-visibility:auto;contain-intrinsic-size:auto 180px}
+.retained-price h2{font-size:1rem;margin:0 0 2px}.retained-price p{font-size:.8125rem;margin:2px 0;color:var(--muted)}
+.retained-number{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.retained-clock{display:block;font-size:.75rem;color:var(--muted)}
+.retained-progress,.retained-disclosure{font-size:.75rem;color:var(--muted);margin:6px 0}
+.retained-prices button{margin:6px 8px 0 0;font-size:.8125rem}
+@media(max-width:680px){.retained-prices{padding:10px 12px}.retained-price:first-of-type{content-visibility:visible}.retained-price summary{min-height:36px}}
+.current-app .board-controls>summary{cursor:pointer;padding:10px 0;font-weight:600;color:var(--muted)}
+@media(min-width:681px){.current-app .board-controls>summary{font-size:.8125rem;padding:4px 0}}
+@media(max-width:680px){.current-app .board-controls{border-bottom:1px solid var(--line)}.current-app .board-meta{font-size:.75rem;gap:6px}.current-app .ranking-basis{font-size:.75rem;margin:8px 0}.current-app .page-heading{margin-bottom:8px}.current-app #settings{margin:4px 0 8px}}

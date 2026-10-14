@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import replace
 from decimal import Decimal
 import json
+from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
@@ -45,8 +46,13 @@ class PostgreSQLTests(unittest.TestCase):
         self.tx.__exit__(RuntimeError,RuntimeError('test rollback'),None)
 
     def test_migrations_idempotent(self):
+        from app.storage import store
+        expected = {p.name:sha256(p.read_bytes()).hexdigest() for p in (Path(store.__file__).parent/'migrations').glob('*.sql')}
+        before = self.db.execute('SELECT version,sha256 FROM schema_migration ORDER BY version').fetchall()
         self.s.migrate(); self.s.migrate()
-        self.assertEqual(self.db.execute('select count(*) n from schema_migration').fetchone()['n'],6)
+        after = self.db.execute('SELECT version,sha256 FROM schema_migration ORDER BY version').fetchall()
+        self.assertEqual(after,before)
+        self.assertEqual({r['version']:r['sha256'] for r in after},expected)
 
     def test_raw_decimal_timestamp_precision(self):
         self.p['raw']=b'{ "decimal":0.123456789012345678901234567890, "x": 1 }\n'

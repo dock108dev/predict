@@ -17,18 +17,33 @@ from app.dashboard.current_contract import packed
 class CurrentService:
     allow_synthetic = False
 
-    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None):
+    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, observation_directory=None, database_games=None):
         self.config = load() if config is None else validate(config)
         from app.comparison.coverage import CoverageLedger
         self.coverage = CoverageLedger({v: self.config['sports'] if v in ('kalshi','polymarket_us') else
             aggregate_scope(self.config) if self.config['aggregate_enabled'] else []
             for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}, self.config['families'])
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
+        from .current_journal import CurrentJournal
+        self.journal=CurrentJournal(observation_directory) if observation_directory is not None else None
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
         self.evidence = evidence
         self.aggregate_factory = aggregate_factory
         self.config_loader = config_loader
+        self.retained_directory = retained_directory
+        self.retained_quota = None
+        if retained_directory is not None:
+            from .current_quota import QuotaLedger
+            self.retained_quota = QuotaLedger(Path(retained_directory).parent)
+        self.database = None
+        if database_games is not None and (not isinstance(database_games,list) or not 1<=len(database_games)<=4 or any(not isinstance(k,str) or len(k)>256 or k.split(':',1)[0] not in ('the_odds_api','kalshi','polymarket_us') for k in database_games)):raise ValueError('Bounded source-local game selection required')
+        self.database_games = database_games
+        self.retained_bootstrap = retained_directory is not None and database_games is None
+        self._retained_initial = None
+        self._retained_sink = None
+        self._retained_rejected = []
+        self.bootstrap_task = None
         self.runtime_id = str(uuid4())
         self.store = self.sink = None
         self.workers = {}
@@ -55,26 +70,59 @@ class CurrentService:
         self.states = self.initial_state()['source_status']
 
     def initial_state(self):
+        if self._retained_initial is not None:
+            return self._retained_initial
         raw = unavailable()
         raw.update(runtime_id=self.runtime_id, state='connecting')
         for venue in ('kalshi','polymarket_us'):
             raw['source_status'][venue] = dict(state='connecting', reason_code='native_connecting', reason='Connecting to the native feed.', next_due_at=None)
         for venue in ('novig','prophetx'):
             raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(aggregate_scope(self.config)) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
+        if self.retained_directory is not None and self.database_games is None:
+            from .current_retained import prepare
+            raw, self._retained_sink, self._retained_rejected = prepare(raw, self.config, self.retained_directory)
+            self._retained_initial = raw
         return raw
 
     async def start(self, store):
         if self.started: return
         self.started = True
         self.store = store
-        self.sink = LatestStateSink(store, self.initial_state(), self.config)
+        if self.database_games is not None:
+            from .current_database import DatabasePipeline, DatabaseIngressSink
+            self.sink = DatabaseIngressSink(store,self.initial_state(),self.config)
+            self.database = DatabasePipeline(self,self.database_games)
+            await self.database.start()
+        else:
+            self.sink = self._retained_sink or LatestStateSink(store, self.initial_state(), self.config)
+        self.sink.store = store
+        if self.retained_bootstrap:
+            store.start_retained()
+            self.digest, _ = candidate()
+            self.bootstrap_task = asyncio.create_task(self._start_after_retained(), name='predict-retained-startup')
+            return
+        await self._start_sources()
+
+    async def _start_after_retained(self):
+        outcome = await self.store.admission.latest['future']
+        if outcome.status != 'success' or self.closing or self.closed:
+            return
+        for sport in self._retained_rejected:
+            self.issue('the_odds_api','malformed_source','aggregate_retained_admission_failed')
+        # The input graph is now owned by the store and reducer; release the
+        # extra bootstrap graph. Native workers cannot race retained admission.
+        self._retained_initial = None
+        await self._start_sources()
+
+    async def _start_sources(self):
         if not self.issues:
             from .current_admin import retained_issues
             try:self.issues=retained_issues(self)
             except (ValueError,OSError,TypeError,RecursionError):
                 self.issue('service','local_defect','issue_retention_invalid')
         if not self.config['enabled']:
-            for venue in ('kalshi','polymarket_us','novig','prophetx'): self.source_state(venue,'stopped','Native service is disabled in operational configuration.')
+            # Retained prices remain inspectable while all dispatch is disabled.
+            for venue in ('kalshi','polymarket_us'): self.source_state(venue,'unavailable','Acquisition is disabled in operational configuration; retained observations remain historical.')
             return
         try:
             self.ownership.acquire(self.runtime_id)
@@ -112,6 +160,12 @@ class CurrentService:
     def observation(self, venue, kind, value):
         if self.evidence:
             self.evidence(dict(source=venue, kind=kind, at=utc(), value=value))
+
+    def retain(self, venue, kind, value):
+        if self.journal is None:return
+        if not self.dispatch or self.closed or self.closing:raise asyncio.CancelledError()
+        self.journal.append(dict(schema='predict-current-observation-1',runtime_id=self.runtime_id,
+            candidate_digest=self.digest,source=venue,kind=kind,retained_at=utc(),value=value))
 
     def issue(self, venue, category, code):
         from .current_admin import issue
@@ -198,6 +252,7 @@ class CurrentService:
             annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2')
         generation=(self.sink.reducer.generation or 0)+1
         prior_books=set(self.sink.reducer.books)
+        self.retain(venue,'catalog',dict(inventory=cats[venue],generation=generation))
         self.sink.commit(self.row('coverage_inventory',venue,inventory=cats,generation=generation,
                                  previous_generation=self.sink.reducer.generation),self.states)
         affected={key[0] for key in prior_books-set(self.sink.reducer.books)}
@@ -220,6 +275,7 @@ class CurrentService:
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
         try:
             observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
+            self.retain(venue,'admitted_books',dict(observations=observations))
             self.sink.commit(self.row('prediction_books',venue,observations=observations),states)
             self.states=states
         except Exception as exc:
@@ -298,16 +354,20 @@ class CurrentService:
         async with self._close_lock:
             if self.closed or (self.cleanup_errors and not self.dispatch): return
             self.dispatch=False;self.closing=True
+            if self.database:self.database.closed=True
             # Revocation precedes task cancellation and client/socket cleanup.
             for worker in self.workers.values():
                 worker.closed=True
                 if hasattr(worker,'lifecycle'):worker.lifecycle.revoke()
+            if self.store:await self.store.revoke_source_publication()
             current=asyncio.current_task()
             tasks=[t for t in self.tasks.values() if t is not current]
+            if self.bootstrap_task and self.bootstrap_task is not current:tasks.append(self.bootstrap_task)
             if self.watchdog and self.watchdog is not current:tasks.append(self.watchdog)
             for task in tasks:task.cancel()
             done,pending=await asyncio.wait(tasks,timeout=self.config['cleanup_seconds']) if tasks else (set(),set())
             await self.cleanup_clients(list(self.workers))
+            if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
             if pending:self.cleanup_errors.append('worker_cleanup_timeout')
             self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
             for venue in ('kalshi','polymarket_us','novig','prophetx'):
@@ -330,17 +390,26 @@ class CurrentService:
             ownership_held=self.ownership.file is not None,cleanup_complete=self.cleanup_complete,
             cleanup_errors=list(self.cleanup_errors),config=self.config,source_status=self.states,
             metrics={v:deepcopy(w.metrics) for v,w in self.workers.items()},peak_rss_bytes=self.peak_rss,
+            observation_retention=self.journal.snapshot() if self.journal else None,
             sink=None if self.sink is None else dict(sequence=self.sink.sequence,**self.sink.metrics),
             exclusions=[] if self.sink is None else self.sink.exclusions,issues=deepcopy(self.issues),
             odds_api_requests=self.workers['the_odds_api'].metrics['requests'] if 'the_odds_api' in self.workers else 0,
-            quota=self.workers['the_odds_api'].ledger.snapshot() if 'the_odds_api' in self.workers else None)
+            quota=self.workers['the_odds_api'].ledger.snapshot() if 'the_odds_api' in self.workers else
+                self.retained_quota.snapshot() if self.retained_quota is not None else None)
 
-        return project(self, raw)
+        result=project(self, raw)
+        if self.database:result['database']=self.database.status()
+        return result
 
     def recovery_reason(self):
         if self.closing:return 'cleanup_in_progress'
         if self.cleanup_errors:return 'cleanup_safety_unresolved'
         if self.store is None or self.store.closed:return 'store_closed'
+        if self.retained_quota is not None:
+            from .current_conservative import pending_reason
+            try:reason=pending_reason(self.retained_quota._read())
+            except (ValueError,OSError):return 'quota_ledger_unavailable'
+            if reason:return reason
         if not self.config['enabled']:return 'configuration_disabled'
         if self.config_loader:
             try:
@@ -386,10 +455,44 @@ class CurrentService:
             if reason:raise SelectionError(409,reason,'Recovery blocked after cleanup: '+reason.replace('_',' ')+'.')
             if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Application changed during cleanup; reopen with the current candidate.')
             self.runtime_id=str(uuid4());self.started=False;self.closed=False
+            self._retained_initial=None;self._retained_sink=None
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
             self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None;self.stop_reason=None
             self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
             self.store.commit(self.initial_state())
             await self.start(self.store)
             if not self.dispatch:raise SelectionError(409,'ownership_or_authority_unavailable','Fresh runtime could not obtain exclusive ownership or authority.')
+            return self.status()
+
+    async def recover_accounting(self, runtime, digest, recovery_id, covered_attempts):
+        """Explicit owned accounting control; native workers keep running."""
+        from app.dashboard.current_state import SelectionError
+        from .current_quota import QuotaStop
+        from .current_account_recovery import observe_and_activate
+        async with self._control_lock:
+            if runtime!=self.runtime_id or digest!=self.digest:
+                raise SelectionError(409,'runtime_conflict','Inspect the current runtime before accounting recovery.')
+            if candidate()[0]!=digest:raise SelectionError(409,'candidate_changed','Reopen the current application revision.')
+            if self.closing or self.closed or self.cleanup_errors or not self.dispatch or self.ownership.file is None:
+                raise SelectionError(409,'cleanup_safety_unresolved','Accounting recovery requires a running owned service with safe cleanup.')
+            if self.sampled_rss is not None and self.sampled_rss>=self.config['rss_bytes']:
+                raise SelectionError(409,'rss_cap','The service reached its memory limit.')
+            if self.config_loader and self.config_loader()!=self.config:
+                raise SelectionError(409,'configuration_changed','Source configuration changed.')
+            worker=self.workers.get('the_odds_api')
+            task=self.tasks.get('the_odds_api')
+            if worker is None or worker.closed or worker.acquisition_lock.locked() or task and not task.done():
+                raise SelectionError(409,'recovery_active_transport','Wait for affected aggregate transport cleanup.')
+            if self.states['novig'].get('reason_code')=='aggregate_paused':
+                raise SelectionError(409,'aggregate_explicitly_paused','The owner paused this source.')
+            if abs((time.time()-self.clock_wall)-(__import__('app.collection.current_clock',fromlist=['continuous']).continuous()-self.clock_mono))>120:
+                raise SelectionError(409,'clock_continuity_unknown','Inspect the clock discontinuity.')
+            async with worker.acquisition_lock:
+                try:
+                    await observe_and_activate(worker.ledger,self.ownership,digest,covered_attempts,recovery_id,
+                                               window_loader=worker.window_loader)
+                except QuotaStop as exc:
+                    raise SelectionError(409,str(exc),'Accounting recovery blocked: '+str(exc).replace('_',' ')+'.') from None
+                worker.prepared=False;worker.bootstrapped=False
+            self.tasks['the_odds_api']=asyncio.create_task(worker.run(),name='predict-aggregate-recovered')
             return self.status()

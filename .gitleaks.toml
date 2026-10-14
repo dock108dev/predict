@@ -1,0 +1,36 @@
+# Reviewed October 14, 2026. Review after: 2027-01-14.
+# No credential rules or whole directories are disabled.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public Odds API event identifier, not an API credential; exact value in named source/fixture locations"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)(?:app/dashboard/opportunity_board\.py|integration_tests/test_current_games\.py|tests/test_comparison_occurrence_continuation\.py|tests/test_ev09_n01\.py|tests/fixtures/stored-game-arrival\.json|tests/fixtures/ev09-u01-responses\.json)$''']
+regexTarget = "match"
+regexes = ['''(?:the_odds_)?api(?::|\\?["']\s*,\s*\\?["'])855f58fad5f0f14b239f4f63df27998b''']
+
+[[allowlists]]
+description = "Immutable source-file digest map in the two sealed executor manifests; not credential values"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)scripts/v1_(?:coverage|counterpart)_package/SOURCE-MANIFEST\.json$''']
+regexTarget = "match"
+regexes = ['''(?:credential_handoff|native_credentials|venue_access|odds_credentials)\.py"\s*:\s*"[0-9a-f]{64}"''']
+
+[[allowlists]]
+description = "Retained empty-resolution fixture's named account-limits document SHA256; no account secret"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)app/fixtures/retained-empty-resolution-index-v1\.json$''']
+regexTarget = "match"
+regexes = ['''account-api-limits\.json"\s*:\s*"[0-9a-f]{64}"''']
+
+[[allowlists]]
+description = "Exact public Odds API event ID in the retained review-edge regression; no credential"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)tests/test_comparison_occurrence_continuation\.py$''']
+regexTarget = "match"
+regexes = ['''(?:the_odds_)?api\\?["']\s*,\s*\\?["']21b26266f3d78af02eb672e606275d95''']

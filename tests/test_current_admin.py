@@ -140,6 +140,40 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(status['quota']['used']);self.assertEqual(status['quota']['ceiling'],500)
         self.assertEqual(self.service.recovery_reason(),'quota_ledger_unavailable');self.assertEqual(path.read_text(),'corrupt')
 
+    async def test_owned_accounting_action_and_honest_acquisition_free_admin(self):
+        from app.collection.current_conservative import digest, POLICY
+        from unittest.mock import AsyncMock
+        task=self.service.tasks['the_odds_api'];task.cancel();await asyncio.gather(task,return_exceptions=True)
+        self.q.transact(lambda v,at:v.update(account_id='CONTROLLED-account'))
+        aid=self.q.reserve(self.service.ownership,self.service.digest,{},3);self.q.dispatched(aid,self.service.ownership)
+        v=self.q._read();a=v['attempts'][aid];old_at=(datetime.now(timezone.utc)-timedelta(minutes=3)).isoformat()
+        a.update(runtime_id='CONTROLLED-old',dispatch_at=old_at,at=old_at,interruption='aggregate_cancelled_after_dispatch',response_receipt=None)
+        self.q._write(v);original=deepcopy(a);covered={aid:digest(a)}
+        async def activate(ledger,ownership,candidate,coverage,identity,**kwargs):
+            e=dict(schema='predict-independent-balance-1',id='CONTROLLED-observation',purpose=POLICY,recovery_id=identity,
+                runtime_id=self.service.runtime_id,candidate_digest=candidate,account_id='CONTROLLED-account',window=self.window,
+                endpoint='https://api.the-odds-api.com/v4/sports',method='GET',params={},status=200,headers=quota(251),
+                received_at=datetime.now(timezone.utc).isoformat(),retries=0,documented_cost=0,credential_reference='.env',
+                credential_binding={'CONTROLLED':'file'},credential_unchanged_since_snapshot=True)
+            ledger.activate_conservative(ownership,candidate,coverage,e,identity,e['credential_binding'])
+        operation=AsyncMock(side_effect=activate)
+        async with TestClient(TestServer(create_app(owner=owner(),sessions={},current_provider=self.service))) as c:
+            origin=str(c.make_url('/')).rstrip('/')
+            body=dict(action='recover_accounting',runtime_id=self.service.runtime_id,candidate_digest=self.service.digest,
+                      recovery_id='CONTROLLED-recovery',covered_attempts=covered)
+            with patch('app.collection.current_account_recovery.observe_and_activate',operation):
+                r=await c.post('/api/admin/current',headers={'Origin':origin},json=body)
+                self.assertEqual(r.status,200);status=await r.json()
+                self.assertEqual(status['quota']['held_uncertain_credits'],3)
+                self.assertEqual(status['quota']['covered_uncertain_attempts'],1)
+                self.assertEqual(status['quota']['independent_balance']['remaining'],249)
+                self.assertEqual(self.q._read()['attempts'][aid],original)
+                self.assertFalse(self.service.workers['kalshi'].closed)
+                before=(self.q.directory/'quota.json').read_bytes()
+                for _ in range(3):self.assertEqual((await c.get('/api/admin/status')).status,200)
+                self.assertEqual((self.q.directory/'quota.json').read_bytes(),before)
+                operation.assert_awaited_once();self.assertEqual(self.service.status()['odds_api_requests'],0)
+
     async def test_routes_assets_security_status_and_conflict(self):
         # App starts the already-started service without a duplicate worker.
         async with TestClient(TestServer(create_app(owner=owner(),sessions={},current_provider=self.service))) as c:

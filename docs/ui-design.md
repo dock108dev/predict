@@ -1,47 +1,47 @@
 # Interface design
 
-The working flow is **Odds board → EV → Arbs → Coverage → Admin**. Keep comparisons prominent and
-source operation in the separate Admin page.
+The ordinary SQL-backed interface presents saved server calculations. Browser
+code validates context and renders values; it does not calculate fees, allocation
+or settlement. See [saved-board API](comparison-board-api-contract.md).
 
-## Comparisons and Details
+## Views and financial meaning
 
-Group exact outcomes by game, market, period and signed line. Align venue columns
-on desktop and label prices on narrow screens. The Odds board compares the same
-selection; Arbs names both opposing outcomes and venues. Primary percentages
-require no stake entry. Preserve supported positive, zero and negative results;
-missing information is never displayed as zero.
+**Odds** groups available winner prices by game and participant, with a separate
+named fair benchmark. Original native alternatives remain inspectable; missing
+prices do not become synthetic offers.
 
-A price selection opens Details. Details follows current quote revisions and
-exposes originals, conversion basis, clocks and material rules. At narrow widths
-it becomes a modal and returns focus when closed. Manual dollar What-if is
-secondary and uses a temporary immutable server lease for its calculation.
+**EV** shows single-trade expected value after modeled costs, rule effects and one
+buffer. Complete-state EV and conditional decisive-outcome EV have different
+labels. Negative and unavailable results remain available through All comparisons.
 
-Source state, receipt age and browser connection have distinct meanings. Keep
-unavailable, stale, delayed and unknown states near affected results. Expanded
-status holds longer source explanations. Never replace unavailable current prices
-with saved or synthetic observations.
+**Arbs** shows opposing legs and their shared funding, decisive margin and minimum
+over modeled outcomes. Rule-sensitive hedges are separate from pairs positive
+across every modeled state. No positive opportunity is a normal result.
 
-## Controls and rendering
+The policy line names requested dollars, fees and buffer. A pair shares the amount
+across both legs. Reduced size or residual funding has a stated reason. Details
+starts with the result and quantities, then reconciles gross value, rule adjustment,
+fees, net estimate and one buffer. It discloses exceptional states, provisional
+probabilities and modeled liquidity; original evidence sits in expandable sections.
 
-Use restrained cool surfaces, system typography, blue actions/selection, visible
-focus and controls of at least 44px. The shared stylesheet scopes ordinary app
-styles with `.current-app`; retained inspection selectors keep their separate roles.
-There is no dependency on an external template gallery.
+## Interaction and accessibility
 
-Use content-sized fields, readable prices and wrapping long names. Details should
-not reserve empty space when closed. Material uncertainty must remain visible,
-and color must not be the only state indicator. Keyed updates preserve disclosure
-identity, open state and keyboard focus. Respect reduced-motion preferences.
+Apply and Enter submit the same settings; Restore returns to defaults. Navigation
+preserves settings and selected game. Changing settings withholds mismatched old
+results. Saved Details stays pinned to exact result and quote/pair identities;
+new arrivals cannot silently replace the selection. Reads do not acquire data.
 
-Admin presents refresh, Stop/recovery, source health, quota and current issues.
-Explain costs and recovery consequences beside actions; keep encoded state and
-extended measurements secondary. Visual edits must preserve accounting, due
-times, source clocks and original-input calculation policy.
+Use light surfaces, slate text, restrained blue actions, 16px body text and controls
+at least 44px high. Preserve visible focus, wrap long names and financial strings,
+and respect reduced motion. Do not rely on color alone. Desktop venue columns
+align; narrow layouts label values. Dialogs support a focus loop, Escape/Close
+and focus return to the opening control.
 
-Use the [synthetic preview](development.md#synthetic-preview) and existing browser
-regressions for UI development. Screen appearance alone does not prove price
-freshness, live coverage or calculation eligibility.
+First use offers the Admin source screen when no game is available. Positive-only
+empty states offer All comparisons. Failed reads offer Retry with a useful reason;
+pending calculations remain explicit. Normal boards keep source/as-of labels
+simple; detailed quota, journal and recovery information belongs in Admin. A
+connection heartbeat or saved-calculation timestamp never renews an old quote.
 
-Keep default filters light, show Clear filters when needed, and put source status
-beside the board count. Details leads with the result and size control; validation
-belongs beside its field. Collapsed content must not enter the modal keyboard loop.
+[Development](development.md#frontend-sources) explains readable frontend modules,
+generated public assets and the tests for these boundaries.

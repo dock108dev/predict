@@ -8,11 +8,14 @@ from copy import deepcopy
 from .current_contract import identity, stamp, line, binding_context, fields, event_identity
 
 
-def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None):
+def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None):
     from app.resolution.core import event_key
-    from app.comparison.event_links import provider_key, current_event_key
+    from app.comparison.event_links import provider_key, current_event_key, ordinary_event_key
+    if occurrence_resolver is not None:
+        records=occurrence_resolver.resolve(records,clock=envelope['clock_at'])
     result=deepcopy(envelope);result['events']=[];events={};groups={};outcomes={}
-    from app.comparison.current_dependencies import encoded,MAX_PROFILES,MAX_PROFILES_BYTES
+    from app.comparison.current_dependencies import encoded
+    from app.comparison.shared_templates import ProfilePool, ProfileFactory
     from app.comparison.source_inputs import produce
     import json
     from pathlib import Path
@@ -25,10 +28,12 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
     reference_groups={}
     for item in reference_records:
         reference_groups.setdefault(encoded(item['market_identity']),[]).append(item)
-    result['comparison_profiles']={}
+    pool=ProfilePool();profile_factory=ProfileFactory()
     if not isinstance(records,list) or len(records)>16000:raise ValueError('Bounded normalized quote records required')
-    for record in records:
-        fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata'})
+    from app.comparison.projection_batches import batches
+    ordered=(record for batch in batches(records,lambda r:encoded(r['market_identity']['event'])) for record in batch)
+    for record in ordered:
+        fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata','comparison_scope'})
         event=record['event'];market=record['market_identity'];selection=record['selection'];q=deepcopy(record['quote'])
         if record.get('event_scope') is not None:
             scope=record['event_scope']
@@ -37,21 +42,27 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
                 if record['verified'] is not True or scope['source']!='the_odds_api' or q['source']['provider']!='the_odds_api' or scope['native_event_id']!=event['id']:
                     raise ValueError('Exact aggregate source-local event required')
                 key=provider_key(scope['source'],event) if scope['policy'].endswith('-2') else ['aggregate-provider-event-1',event['competition'],event['id'],event['scheduled_start'],event['home'],event['away']]
+            elif scope['policy']=='native-provider-event-1':
+                if record['verified'] is not True or scope['source']!=q['venue'] or q['source']['provider']!=scope['source'] or scope['native_event_id']!=event['id']:
+                    raise ValueError('Exact native source-local verified event required')
+                key=provider_key(scope['source'],event)
             elif scope['policy'] not in ('native-event-unverified-1','native-event-unverified-2') or record['verified'] is not False or scope['source']!=q['venue'] or scope['native_event_id']!=event['id']:
                 raise ValueError('Exact source-scoped unverified event required')
             else:
                 key=provider_key(scope['source'],event) if scope['policy'].endswith('-2') else ['native-event-unverified-1',scope['source'],scope['native_event_id'],event['scheduled_start'],sorted(event['participants'].values())]
         else:
-            key=current_event_key(event) if market['event'][0]=='comparison-reviewed-occurrence-1' else event_key(event)
+            key=(ordinary_event_key(event) if market['event'][0]=='predict-occurrence-1' else
+                 current_event_key(event) if market['event'][0]=='comparison-reviewed-occurrence-1' else event_key(event))
         if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition'),('season','season'),('stage','stage')]):
             raise ValueError('Normalized market/event binding conflict')
         if stamp(market['scheduled_start'])!=stamp(event['scheduled_start']):raise ValueError('Normalized schedule conflict')
-        family={'moneyline':'winner','spread':'spread','total':'total'}.get(market['family'])
+        family={'moneyline':'winner','team_binary':'winner','spread':'spread','total':'total'}.get(market['family'])
         if family is None:raise ValueError('Current common market adapter unsupported for this family')
         participants=[dict(id=event[role],name=next(n for n,cid in event['participants'].items() if cid==event[role]),role=role) for role in ('away','home')]
         discriminator=identity('reviewed-event',key)
-        if key[0] in ('comparison-provider-occurrence-1','comparison-reviewed-occurrence-1'):
+        if key[0] in ('comparison-provider-occurrence-1','comparison-reviewed-occurrence-1','predict-occurrence-1'):
             discriminator='comparison-occurrence-1:'+discriminator
+        if key[0]=='predict-occurrence-1':discriminator='predict-occurrence-1:'+identity('occurrence',key)
         e=dict(id='',sport=event['sport'],league=event['competition'],season=event['season'],stage=event['stage'],event_discriminator=discriminator,
                participants=participants,title=event['title'],start_at=stamp(event['scheduled_start']).isoformat(),groups=[])
         e['id']=event_identity(e)
@@ -67,7 +78,26 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         # Keep exact normalized predicate policy in the period boundary as well;
         # this prevents same-line draw/push policies sharing a comparison group.
         g['period_boundary']+=' | '+policy
+        matched=q.get('occurrence_match',{}).get('status')=='matched'
+        overtime=(record.get('comparison_scope') or dict(overtime='unknown'))['overtime']
+        if matched:g['period_boundary']+=' | Scoring overtime: '+overtime
         g['id']=identity('group',[e['id'],*[g[k] for k in ('market','period','period_boundary','line','anchor_participant','outcome_cardinality')],g.get('result_policy','unspecified')])
+        if matched and family=='winner':
+            from app.comparison.domain import display_group_key
+            display_key=display_group_key(e['id'],market['family'],market['period'],overtime,market['line'])
+            g['display_group']=dict(version='predict-display-group-1',id=identity('display-group',display_key),
+                occurrence_id=e['id'],market=family,period=market['period'],overtime=overtime,line=line(market['line']))
+        if 'occurrence_match' in q:
+            from app.comparison.event_links import digest
+            metadata=record.get('comparison_source_metadata',{})
+            contract=dict(version='predict-native-contract-1',source=deepcopy(q['source']),
+                predicate=deepcopy(q['occurrence_match']['original_selection']),
+                wording=deepcopy(metadata.get('original_wording',{'selection':selection['label'],'rule_note':q['rule_note']})),
+                result_policy=q.get('native_predicate',{}).get('original_result_policy',policy),
+                scope=dict(period=market['period'],overtime=overtime),
+                material_sha256=metadata.get('material_sha256',q['provenance'].get('sha256')))
+            contract['id']='native-contract:'+digest(contract)
+            q['native_contract']=contract
         if g['id'] not in groups:groups[g['id']]=g;e['groups'].append(g)
         g=groups[g['id']]
         if 'outcome_selections' in record:
@@ -84,21 +114,22 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         o=outcomes[o['id']]
         q['binding']=dict(verified=record['verified'],evidence=deepcopy(record['orientation_evidence']),selection=binding_context(e,g,o))
         if q.get('sharp_reference') is not None:q['sharp_reference']['selection_digest']=identity('binding',q['binding']['selection'])
-        proposal=produce(record,dict(event=e,group=g,outcome=o,quote=q,source_rules=source_rules,
+        proposal=produce(record,dict(event=e,group=g,outcome=o,quote=q,source_rules=source_rules,profile_factory=profile_factory,
             selected_applicability=selected_applicability,
             reference_records=reference_groups.get(encoded(record['market_identity']),[])),at=stamp(result['clock_at']))
-        combined=dict(result['comparison_profiles'],**proposal['profiles'])
-        if len(combined)<=MAX_PROFILES and len(encoded(combined))<=MAX_PROFILES_BYTES:
-            result['comparison_profiles']=combined
-            q['comparison_input_refs']=proposal['comparison_input_refs']
-        else:
-            q['comparison_input_refs']=dict(proposal['comparison_input_refs'],refs={k:None for k in proposal['comparison_input_refs']['refs']})
-            for status in proposal['gaps'].values():
-                if status['status']=='available_and_bound':status.update(status='available_but_unbound',reason='comparison_profile_capacity')
+        q['comparison_input_refs']=proposal['comparison_input_refs']
+        # Admission is facet-local: one exhausted/absent facet cannot erase
+        # independently bound policy, fee, payout or original price observations.
+        for kind,key in q['comparison_input_refs']['refs'].items():
+            if key is not None and not pool.add(key,proposal['profiles'][key]):
+                q['comparison_input_refs']['refs'][kind]=None
+                proposal['gaps'][kind].update(status='available_but_unbound',
+                    reason='comparison_representation_capacity_deferred')
         q['comparison_input_status']=proposal['gaps']
         v=q['venue']
         if v in o['quotes']:o['alternatives'].setdefault(v,[]).append(q)
         else:o['quotes'][v]=q
+    result['comparison_profiles']=pool.finish()
     from app.collection.current_comparison_inputs import attach
     result['comparison_profiles']=attach(result,reference_records=reference_records,selected_applicability=selected_applicability)
     return result

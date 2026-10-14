@@ -6,7 +6,12 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/" # Location of package manifests
+    directory: "/" # Runtime manifests; combined CI locks require reviewed regeneration
+    exclude-paths:
+      - "requirements-ci.txt"
+      - "requirements-ci.in"
+      - "requirements-browser.txt"
+      - "requirements-browser.in"
     schedule:
       interval: "weekly"
   - package-ecosystem: "github-actions"

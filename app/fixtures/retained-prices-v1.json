@@ -1,0 +1,527 @@
+[
+  {
+    "schema": "predict-retained-prices-1",
+    "runtime_id": "synthetic:compatibility",
+    "generation_id": "retained:compatibility",
+    "settings_generation": 0,
+    "estimate_policy": {
+      "version": "predict-estimate-policy-2",
+      "capital_ceiling_usd": "1000",
+      "buffer_rate": "0.005",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001",
+      "revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+      "execution_role": "taker",
+      "execution_channel": "direct_site",
+      "portfolio_basis": "standalone",
+      "funding_basis": "already_funded",
+      "holding_period": "to_settlement",
+      "denominator": "actual_deployed_capital",
+      "funding_components": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ],
+      "buffer": {
+        "rate": "0.005",
+        "basis": "actual_deployed_capital",
+        "treatment": "model_haircut",
+        "applications_per_opportunity": 1,
+        "consumes_funding": false
+      },
+      "probability_defaults": {
+        "scope": [
+          "NFL",
+          "regular_season",
+          "pregame",
+          "full_game",
+          "winner",
+          "including_overtime"
+        ],
+        "basis": "provisional_prior",
+        "measured_rate": false,
+        "states": [
+          "a_wins",
+          "b_wins",
+          "tie",
+          "terminal_noncompletion"
+        ],
+        "tie": {
+          "central": "0.005",
+          "low": "0",
+          "high": "0.01"
+        },
+        "terminal_noncompletion": {
+          "central": "0.001",
+          "low": "0",
+          "high": "0.005"
+        }
+      },
+      "size_statuses": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ],
+      "input_bases": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ],
+      "input_version": "predict-estimate-input-1",
+      "result_version": "predict-estimate-result-1",
+      "legacy_sensitivity": "adverse_price_stress",
+      "buffer_applied_to_existing_metrics": false
+    },
+    "status": "pending",
+    "input_clock_at": "2026-10-12T00:00:00Z",
+    "validation_at": "2026-10-12T00:00:00Z",
+    "input_epoch": null,
+    "state_revision": null,
+    "error": null,
+    "progress": {
+      "discovery_status": "validating_prices",
+      "discovered_prices": 0,
+      "validated_prices": 0,
+      "total_prices": null,
+      "discovered_singles": 0,
+      "ready_singles": 0,
+      "refused_singles": 0,
+      "pending_singles": null,
+      "total_singles": null,
+      "discovered_pairs": 0,
+      "ready_pairs": 0,
+      "refused_pairs": 0,
+      "pending_pairs": null,
+      "total_pairs": null
+    },
+    "rows": [],
+    "pagination": {
+      "page": 0,
+      "page_size": 1,
+      "total_rows": 0,
+      "has_more": false
+    },
+    "mode": "synthetic"
+  },
+  {
+    "schema": "predict-retained-prices-1",
+    "runtime_id": "synthetic:compatibility",
+    "generation_id": "retained:compatibility",
+    "settings_generation": 0,
+    "estimate_policy": {
+      "version": "predict-estimate-policy-2",
+      "capital_ceiling_usd": "1000",
+      "buffer_rate": "0.005",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001",
+      "revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+      "execution_role": "taker",
+      "execution_channel": "direct_site",
+      "portfolio_basis": "standalone",
+      "funding_basis": "already_funded",
+      "holding_period": "to_settlement",
+      "denominator": "actual_deployed_capital",
+      "funding_components": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ],
+      "buffer": {
+        "rate": "0.005",
+        "basis": "actual_deployed_capital",
+        "treatment": "model_haircut",
+        "applications_per_opportunity": 1,
+        "consumes_funding": false
+      },
+      "probability_defaults": {
+        "scope": [
+          "NFL",
+          "regular_season",
+          "pregame",
+          "full_game",
+          "winner",
+          "including_overtime"
+        ],
+        "basis": "provisional_prior",
+        "measured_rate": false,
+        "states": [
+          "a_wins",
+          "b_wins",
+          "tie",
+          "terminal_noncompletion"
+        ],
+        "tie": {
+          "central": "0.005",
+          "low": "0",
+          "high": "0.01"
+        },
+        "terminal_noncompletion": {
+          "central": "0.001",
+          "low": "0",
+          "high": "0.005"
+        }
+      },
+      "size_statuses": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ],
+      "input_bases": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ],
+      "input_version": "predict-estimate-input-1",
+      "result_version": "predict-estimate-result-1",
+      "legacy_sensitivity": "adverse_price_stress",
+      "buffer_applied_to_existing_metrics": false
+    },
+    "status": "ready",
+    "input_clock_at": "2026-10-12T00:00:00Z",
+    "validation_at": "2026-10-12T00:00:00Z",
+    "input_epoch": 1,
+    "state_revision": 2,
+    "error": null,
+    "progress": {
+      "discovery_status": "complete",
+      "discovered_prices": 0,
+      "validated_prices": 0,
+      "total_prices": 0,
+      "discovered_singles": 0,
+      "ready_singles": 0,
+      "refused_singles": 0,
+      "pending_singles": 0,
+      "total_singles": 0,
+      "discovered_pairs": 0,
+      "ready_pairs": 0,
+      "refused_pairs": 0,
+      "pending_pairs": 0,
+      "total_pairs": 0
+    },
+    "rows": [],
+    "pagination": {
+      "page": 0,
+      "page_size": 1,
+      "total_rows": 0,
+      "has_more": false
+    },
+    "mode": "synthetic"
+  },
+  {
+    "schema": "predict-retained-prices-1",
+    "runtime_id": "synthetic:compatibility",
+    "generation_id": "retained:compatibility",
+    "settings_generation": 0,
+    "estimate_policy": {
+      "version": "predict-estimate-policy-2",
+      "capital_ceiling_usd": "1000",
+      "buffer_rate": "0.005",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001",
+      "revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+      "execution_role": "taker",
+      "execution_channel": "direct_site",
+      "portfolio_basis": "standalone",
+      "funding_basis": "already_funded",
+      "holding_period": "to_settlement",
+      "denominator": "actual_deployed_capital",
+      "funding_components": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ],
+      "buffer": {
+        "rate": "0.005",
+        "basis": "actual_deployed_capital",
+        "treatment": "model_haircut",
+        "applications_per_opportunity": 1,
+        "consumes_funding": false
+      },
+      "probability_defaults": {
+        "scope": [
+          "NFL",
+          "regular_season",
+          "pregame",
+          "full_game",
+          "winner",
+          "including_overtime"
+        ],
+        "basis": "provisional_prior",
+        "measured_rate": false,
+        "states": [
+          "a_wins",
+          "b_wins",
+          "tie",
+          "terminal_noncompletion"
+        ],
+        "tie": {
+          "central": "0.005",
+          "low": "0",
+          "high": "0.01"
+        },
+        "terminal_noncompletion": {
+          "central": "0.001",
+          "low": "0",
+          "high": "0.005"
+        }
+      },
+      "size_statuses": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ],
+      "input_bases": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ],
+      "input_version": "predict-estimate-input-1",
+      "result_version": "predict-estimate-result-1",
+      "legacy_sensitivity": "adverse_price_stress",
+      "buffer_applied_to_existing_metrics": false
+    },
+    "status": "rejected",
+    "input_clock_at": "2026-10-12T00:00:00Z",
+    "validation_at": "2026-10-12T00:00:00Z",
+    "input_epoch": null,
+    "state_revision": null,
+    "error": "rejected",
+    "progress": {
+      "discovery_status": "validating_prices",
+      "discovered_prices": 0,
+      "validated_prices": 0,
+      "total_prices": null,
+      "discovered_singles": 0,
+      "ready_singles": 0,
+      "refused_singles": 0,
+      "pending_singles": null,
+      "total_singles": null,
+      "discovered_pairs": 0,
+      "ready_pairs": 0,
+      "refused_pairs": 0,
+      "pending_pairs": null,
+      "total_pairs": null
+    },
+    "rows": [],
+    "pagination": {
+      "page": 0,
+      "page_size": 1,
+      "total_rows": 0,
+      "has_more": false
+    },
+    "mode": "synthetic"
+  },
+  {
+    "schema": "predict-retained-prices-1",
+    "runtime_id": "synthetic:compatibility",
+    "generation_id": "retained:compatibility",
+    "settings_generation": 0,
+    "estimate_policy": {
+      "version": "predict-estimate-policy-2",
+      "capital_ceiling_usd": "1000",
+      "buffer_rate": "0.005",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001",
+      "revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+      "execution_role": "taker",
+      "execution_channel": "direct_site",
+      "portfolio_basis": "standalone",
+      "funding_basis": "already_funded",
+      "holding_period": "to_settlement",
+      "denominator": "actual_deployed_capital",
+      "funding_components": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ],
+      "buffer": {
+        "rate": "0.005",
+        "basis": "actual_deployed_capital",
+        "treatment": "model_haircut",
+        "applications_per_opportunity": 1,
+        "consumes_funding": false
+      },
+      "probability_defaults": {
+        "scope": [
+          "NFL",
+          "regular_season",
+          "pregame",
+          "full_game",
+          "winner",
+          "including_overtime"
+        ],
+        "basis": "provisional_prior",
+        "measured_rate": false,
+        "states": [
+          "a_wins",
+          "b_wins",
+          "tie",
+          "terminal_noncompletion"
+        ],
+        "tie": {
+          "central": "0.005",
+          "low": "0",
+          "high": "0.01"
+        },
+        "terminal_noncompletion": {
+          "central": "0.001",
+          "low": "0",
+          "high": "0.005"
+        }
+      },
+      "size_statuses": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ],
+      "input_bases": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ],
+      "input_version": "predict-estimate-input-1",
+      "result_version": "predict-estimate-result-1",
+      "legacy_sensitivity": "adverse_price_stress",
+      "buffer_applied_to_existing_metrics": false
+    },
+    "status": "superseded",
+    "input_clock_at": "2026-10-12T00:00:00Z",
+    "validation_at": "2026-10-12T00:00:00Z",
+    "input_epoch": null,
+    "state_revision": null,
+    "error": "superseded",
+    "progress": {
+      "discovery_status": "validating_prices",
+      "discovered_prices": 0,
+      "validated_prices": 0,
+      "total_prices": null,
+      "discovered_singles": 0,
+      "ready_singles": 0,
+      "refused_singles": 0,
+      "pending_singles": null,
+      "total_singles": null,
+      "discovered_pairs": 0,
+      "ready_pairs": 0,
+      "refused_pairs": 0,
+      "pending_pairs": null,
+      "total_pairs": null
+    },
+    "rows": [],
+    "pagination": {
+      "page": 0,
+      "page_size": 1,
+      "total_rows": 0,
+      "has_more": false
+    },
+    "mode": "synthetic"
+  },
+  {
+    "schema": "predict-retained-prices-1",
+    "runtime_id": "synthetic:compatibility",
+    "generation_id": "retained:compatibility",
+    "settings_generation": 0,
+    "estimate_policy": {
+      "version": "predict-estimate-policy-2",
+      "capital_ceiling_usd": "1000",
+      "buffer_rate": "0.005",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001",
+      "revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+      "execution_role": "taker",
+      "execution_channel": "direct_site",
+      "portfolio_basis": "standalone",
+      "funding_basis": "already_funded",
+      "holding_period": "to_settlement",
+      "denominator": "actual_deployed_capital",
+      "funding_components": [
+        "acquisition_or_stake",
+        "unavoidable_upfront_fees",
+        "independent_funded_collateral"
+      ],
+      "buffer": {
+        "rate": "0.005",
+        "basis": "actual_deployed_capital",
+        "treatment": "model_haircut",
+        "applications_per_opportunity": 1,
+        "consumes_funding": false
+      },
+      "probability_defaults": {
+        "scope": [
+          "NFL",
+          "regular_season",
+          "pregame",
+          "full_game",
+          "winner",
+          "including_overtime"
+        ],
+        "basis": "provisional_prior",
+        "measured_rate": false,
+        "states": [
+          "a_wins",
+          "b_wins",
+          "tie",
+          "terminal_noncompletion"
+        ],
+        "tie": {
+          "central": "0.005",
+          "low": "0",
+          "high": "0.01"
+        },
+        "terminal_noncompletion": {
+          "central": "0.001",
+          "low": "0",
+          "high": "0.005"
+        }
+      },
+      "size_statuses": [
+        "supported_size",
+        "modeled_size",
+        "size_unverified"
+      ],
+      "input_bases": [
+        "observed_fact",
+        "published_template",
+        "provisional_assumption",
+        "unknown_actual"
+      ],
+      "input_version": "predict-estimate-input-1",
+      "result_version": "predict-estimate-result-1",
+      "legacy_sensitivity": "adverse_price_stress",
+      "buffer_applied_to_existing_metrics": false
+    },
+    "status": "stopped",
+    "input_clock_at": "2026-10-12T00:00:00Z",
+    "validation_at": "2026-10-12T00:00:00Z",
+    "input_epoch": null,
+    "state_revision": null,
+    "error": "stopped",
+    "progress": {
+      "discovery_status": "validating_prices",
+      "discovered_prices": 0,
+      "validated_prices": 0,
+      "total_prices": null,
+      "discovered_singles": 0,
+      "ready_singles": 0,
+      "refused_singles": 0,
+      "pending_singles": null,
+      "total_singles": null,
+      "discovered_pairs": 0,
+      "ready_pairs": 0,
+      "refused_pairs": 0,
+      "pending_pairs": null,
+      "total_pairs": null
+    },
+    "rows": [],
+    "pagination": {
+      "page": 0,
+      "page_size": 1,
+      "total_rows": 0,
+      "has_more": false
+    },
+    "mode": "synthetic"
+  }
+]

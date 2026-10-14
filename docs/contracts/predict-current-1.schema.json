@@ -76,6 +76,151 @@
       "items": {
         "$ref": "#/$defs/event"
       }
+    },
+    "estimate_policy": {
+      "$ref": "predict-estimate-1.schema.json#/$defs/policy"
+    },
+    "comparison_profiles": {
+      "oneOf": [
+        {
+          "type": "object",
+          "maxProperties": 128,
+          "propertyNames": {
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "version",
+              "kind",
+              "payload",
+              "expires_at"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "version": {
+                "const": "comparison-current-dependencies-1"
+              },
+              "kind": {
+                "enum": [
+                  "identity",
+                  "payout",
+                  "reference",
+                  "fee",
+                  "quantity",
+                  "buffer",
+                  "probability"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              },
+              "expires_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "version",
+            "templates",
+            "bindings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "version": {
+              "const": "comparison-current-dependencies-2"
+            },
+            "templates": {
+              "type": "object",
+              "maxProperties": 128,
+              "propertyNames": {
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "version",
+                  "kind",
+                  "payload"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "version": {
+                    "const": "comparison-input-template-1"
+                  },
+                  "kind": {
+                    "enum": [
+                      "identity",
+                      "payout",
+                      "reference",
+                      "fee",
+                      "quantity",
+                      "buffer",
+                      "probability"
+                    ]
+                  },
+                  "payload": {
+                    "type": [
+                      "object",
+                      "array"
+                    ]
+                  }
+                }
+              }
+            },
+            "bindings": {
+              "type": "object",
+              "maxProperties": 112000,
+              "propertyNames": {
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "version",
+                  "kind",
+                  "payload",
+                  "expires_at"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "version": {
+                    "const": "comparison-input-binding-1"
+                  },
+                  "kind": {
+                    "enum": [
+                      "identity",
+                      "payout",
+                      "reference",
+                      "fee",
+                      "quantity",
+                      "buffer",
+                      "probability"
+                    ]
+                  },
+                  "payload": {
+                    "type": "object"
+                  },
+                  "expires_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "$defs": {
@@ -247,6 +392,16 @@
           "items": {
             "$ref": "#/$defs/group"
           }
+        },
+        "funded_pairs": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "predict-funded-pair-1.schema.json"
+          }
+        },
+        "funded_pair_search": {
+          "type": "object"
         }
       }
     },
@@ -308,6 +463,9 @@
         },
         "result_policy": {
           "type": "string"
+        },
+        "display_group": {
+          "$ref": "#/$defs/display_group"
         }
       }
     },
@@ -616,6 +774,23 @@
           ],
           "additionalProperties": {
             "$ref": "#/$defs/eligibility"
+          },
+          "properties": {
+            "net_ev": {
+              "$ref": "#/$defs/estimatedMetric"
+            },
+            "conservative": {
+              "$ref": "#/$defs/estimatedMetric"
+            },
+            "direct_site_estimate": {
+              "$ref": "#/$defs/directSiteMetric"
+            },
+            "ev": {
+              "$ref": "#/$defs/benchmarkEligibility"
+            },
+            "funded_estimate": {
+              "$ref": "predict-funded-single-1.schema.json"
+            }
           }
         },
         "rule_note": {
@@ -863,6 +1038,32 @@
             "null"
           ],
           "minimum": 0
+        },
+        "occurrence_match": {
+          "$ref": "#/$defs/occurrence_match"
+        },
+        "native_contract": {
+          "$ref": "#/$defs/native_contract"
+        },
+        "comparison_details": {
+          "type": "object",
+          "required": [
+            "version",
+            "quote_id",
+            "group_id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "version": {
+              "const": "comparison-selected-details-1"
+            },
+            "quote_id": {
+              "type": "string"
+            },
+            "group_id": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -997,7 +1198,474 @@
           "minProperties": 15,
           "maxProperties": 15,
           "additionalProperties": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/context"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 14
+              }
+            ]
+          }
+        },
+        "context_values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 15,
+          "items": {
             "$ref": "#/$defs/context"
+          }
+        }
+      }
+    },
+    "display_group": {
+      "type": "object",
+      "required": [
+        "version",
+        "id",
+        "occurrence_id",
+        "market",
+        "period",
+        "overtime",
+        "line"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-display-group-1"
+        },
+        "id": {
+          "type": "string"
+        },
+        "occurrence_id": {
+          "type": "string"
+        },
+        "market": {
+          "enum": [
+            "winner",
+            "spread",
+            "total"
+          ]
+        },
+        "period": {
+          "type": "string"
+        },
+        "overtime": {
+          "enum": [
+            "included",
+            "excluded",
+            "unknown"
+          ]
+        },
+        "line": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "occurrence_match": {
+      "type": "object",
+      "required": [
+        "version",
+        "occurrence_id",
+        "method",
+        "estimated",
+        "status",
+        "members",
+        "conflicts",
+        "candidate_members",
+        "original_event",
+        "original_market_identity",
+        "original_selection",
+        "revision"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-occurrence-match-1"
+        },
+        "occurrence_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "method": {
+          "enum": [
+            "shared_provider_id",
+            "shared_provider_event",
+            "reviewed_source_id",
+            "unique_metadata",
+            "local_reviewed_override",
+            "source_local"
+          ]
+        },
+        "estimated": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "matched",
+            "unresolved"
+          ]
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 800,
+          "items": {
+            "type": "object",
+            "required": [
+              "provider",
+              "native_event_id",
+              "provider_version",
+              "evidence_sha256"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "native_event_id": {
+                "type": "string"
+              },
+              "provider_version": {
+                "type": "string"
+              },
+              "evidence_sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "candidate_members": {
+          "type": "array",
+          "maxItems": 800
+        },
+        "original_event": {
+          "type": "object"
+        },
+        "original_market_identity": {
+          "type": "object"
+        },
+        "original_selection": {
+          "type": "object"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "native_contract": {
+      "type": "object",
+      "required": [
+        "version",
+        "id",
+        "source",
+        "predicate",
+        "wording",
+        "result_policy",
+        "scope",
+        "material_sha256"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-native-contract-1"
+        },
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/quote/properties/source"
+        },
+        "predicate": {
+          "type": "object"
+        },
+        "wording": {
+          "type": "object"
+        },
+        "result_policy": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "object",
+          "required": [
+            "period",
+            "overtime"
+          ],
+          "properties": {
+            "period": {
+              "type": "string"
+            },
+            "overtime": {
+              "enum": [
+                "included",
+                "excluded",
+                "unknown"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "material_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "estimatedMetric": {
+      "type": "object",
+      "required": [
+        "eligible"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ]
+          }
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/exact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "type": "object",
+          "required": [
+            "conditioning",
+            "probability_basis",
+            "size_basis",
+            "fee_basis",
+            "capital_denominator",
+            "dependency_revisions"
+          ],
+          "properties": {
+            "conditioning": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "probability_basis": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "size_basis": {
+              "type": "object"
+            },
+            "fee_basis": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "capital_denominator": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "dependency_revisions": {
+              "type": "object",
+              "required": [
+                "quote"
+              ],
+              "properties": {
+                "quote": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "directSiteMetric": {
+      "type": "object",
+      "required": [
+        "eligible"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ]
+          }
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/exact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "benchmarkEligibility": {
+      "type": "object",
+      "required": [
+        "eligible"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ]
+          }
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_value": {
+          "type": "string"
+        },
+        "exact": {
+          "$ref": "#/$defs/exact"
+        },
+        "basis": {
+          "type": "object",
+          "required": [
+            "version",
+            "inputs"
+          ],
+          "properties": {
+            "version": {
+              "enum": [
+                "predict-current-1",
+                "pinnacle-proportional-no-vig-1"
+              ]
+            },
+            "inputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "quote_id",
+                  "quote_revision"
+                ],
+                "properties": {
+                  "quote_id": {
+                    "type": "string"
+                  },
+                  "quote_revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
           }
         }
       }

@@ -244,11 +244,12 @@ class FreshRetailBinding(unittest.TestCase):
         raw=self.projected();q=self.long(serialize(raw));at=instant(raw['clock_at'])
         result=q['calculations']['direct_site_estimate']
         self.assertTrue(result['eligible']);self.assertFalse(result['actual_net_qualified'])
-        self.assertEqual(result['quantity'],'404.04');self.assertEqual(result['entry_fee_usd'],'5.05')
-        self.assertEqual(Fraction(result['deployed_usd']),Fraction('99.9994'))
-        p=Fraction(32,131);cost=Fraction('99.9994')
+        self.assertEqual(result['quantity'],'4040.51');self.assertEqual(result['entry_fee_usd'],'50.48')
+        self.assertEqual(Fraction(result['deployed_usd']),Fraction('999.99985'))
+        self.assertEqual(Fraction(result['unused_cash_usd']),Fraction('0.00015'))
+        p=Fraction(32,131);cost=Fraction('999.99985')
         self.assertEqual(Fraction(int(result['exact']['numerator']),int(result['exact']['denominator'])),
-            (Fraction('404.04')*p-cost)/cost*100)
+            (Fraction('4040.51')*p-cost)/cost*100)
         small=direct_site_estimate(q,raw['comparison_profiles'],at,'20')
         self.assertTrue(small['eligible']);self.assertLessEqual(Fraction(small['deployed_usd']),20)
         for change in ('revision','price','clock','side'):

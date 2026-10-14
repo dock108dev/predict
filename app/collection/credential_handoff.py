@@ -105,7 +105,7 @@ def paid_prompt():
     from .current_aggregate_policy import POLICY
     ledger=QuotaLedger()
     # Refuse migration before changing a credential if consumption is uncertain.
-    if ledger.snapshot().get('unresolved_attempts') != 0:
+    if ledger.snapshot().get('unresolved_attempts') != 0 or ledger.snapshot().get('reserved') != 0:
         raise SystemExit('Unresolved accounting: key unchanged. Resolve the retained attempt first.')
     handoff(root,key)
     metadata=root/'.local/predict-odds-account.json'

@@ -1,0 +1,50 @@
+name: Shared disposable storage assurance
+on:
+  workflow_call:
+    inputs:
+      python:
+        type: string
+        default: '3.14'
+        description: Supported Python minor
+    outputs:
+      storage_result:
+        description: Storage command outcome; workflow failure remains authoritative
+        value: ${{ jobs.storage.outputs.result }}
+permissions:
+  contents: read
+env:
+  MERGE_QUEUE_SHA: ${{ github.event.merge_group.head_sha }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+jobs:
+  storage:
+    name: SQL migrations and boards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      result: ${{ steps.postgres.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          python: ${{ inputs.python }}
+      - name: Use runner PostgreSQL 16 binaries
+        run: echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
+      - name: Disposable migrations and transaction tests
+        id: postgres
+        run: python scripts/ci/postgres.py
+      - name: Storage summary
+        if: always()
+        env:
+          CHECK_OUTCOMES: ${{ toJSON(steps) }}
+        run: python scripts/ci/quality_report.py --postgres
+      - name: Retain storage diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: storage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/postgres/
+          if-no-files-found: error
+          retention-days: 14

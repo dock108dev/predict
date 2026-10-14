@@ -10,7 +10,8 @@ import unittest
 from app.collection.current_aggregate_admission import admit
 from app.collection.current_benchmark import attach as attach_benchmark
 from app.collection.current_comparison_inputs import attach
-from app.comparison.current_dependencies import references, eligibility, MAX_PROFILES, validate_profiles, profile
+from app.comparison.current_dependencies import references, eligibility, validate_profiles, profile
+from app.comparison.shared_templates import keys
 from app.dashboard.current_contract import stamp
 from app.dashboard.current_normalized import catalog_from_normalized
 from tests.current_fixture import fixture
@@ -111,7 +112,7 @@ class OrdinarySourceInputs(unittest.TestCase):
         self.assertIsNotNone(healthy['comparison_input_refs']['refs']['identity'])
         self.assertIn('buffer',references(bad,profiles))
 
-    def test_bounded_latest_registry_defers_profiles_without_dropping_prices(self):
+    def test_bounded_latest_registry_shares_templates_without_dropping_facets(self):
         raw,sharp=raw_replay();event=raw['events'][0];copies=[]
         for index in range(20):
             e=deepcopy(event);e['id']+=':'+str(index)
@@ -123,14 +124,17 @@ class OrdinarySourceInputs(unittest.TestCase):
             copies.append(e)
         raw['events']=copies;count=sum(len(o['quotes']) for e in copies for g in e['groups'] for o in g['outcomes'])
         profiles=attach(raw,reference_records=sharp)
-        self.assertLessEqual(len(profiles),MAX_PROFILES)
+        from app.comparison.shared_templates import shared, keys, MAX_TEMPLATES
+        self.assertTrue(shared(profiles))
+        self.assertLessEqual(len(profiles['templates']),MAX_TEMPLATES)
         self.assertEqual(sum(len(o['quotes']) for e in raw['events'] for g in e['groups'] for o in g['outcomes']),count)
-        self.assertTrue(any(s['reason']=='comparison_profile_capacity_deferred'
+        self.assertFalse(any('capacity' in s['reason']
             for e in copies for g in e['groups'] for o in g['outcomes'] for q in o['quotes'].values()
             for s in q['comparison_input_status'].values()))
         reachable={ref for e in copies for g in e['groups'] for o in g['outcomes']
             for q in o['quotes'].values() for ref in q['comparison_input_refs']['refs'].values() if ref is not None}
-        self.assertEqual(set(profiles),reachable)
+        self.assertEqual(set(keys(profiles)),reachable)
+        validate_profiles(profiles)
         self.assertEqual(attach({'events':[]}),{})
 
     def test_existing_core_profiles_and_statuses_are_preserved_partial_facets_merge(self):
@@ -164,7 +168,8 @@ class OrdinarySourceInputs(unittest.TestCase):
         reachable={ref for e in raw['events'] for g in e['groups'] for o in g['outcomes']
             for quote in o['quotes'].values() for ref in quote['comparison_input_refs']['refs'].values()
             if ref is not None}
-        self.assertEqual(set(profiles),reachable)
+        self.assertEqual(set(keys(profiles)),reachable)
+        validate_profiles(profiles)
 
     def test_retained_native_units_orientation_depth_and_clocks_survive(self):
         native=Path(__file__).parents[1]/'app/fixtures/comparison-retained-native-v1.json'

@@ -12,6 +12,9 @@ SITES = {'kalshi':'https://docs.kalshi.com','polymarket_us':'https://docs.polyma
 CODES = {'issue_retention_invalid','native_identity_exclusion'} | set('''sanitized_failure ValueError OSError RuntimeError TimeoutError ConnectionError ClientError InvalidStatus KeyError TypeError BudgetStop rss_cap ownership_or_authority_unavailable worker_cleanup_timeout source_cleanup_unresolved cleanup_safety_unresolved attended_runtime_deadline retry_after_outside_operational_envelope current_discovery_retained_cap provider_backoff_pending native_source_inventory_cap current_connection_cap websocket_retry_after_outside_envelope dedicated_credential_missing_or_invalid aggregate_offering_unobserved aggregate_credentials_unavailable aggregate_transport_closed aggregate_response_byte_cap aggregate_encoding_unsupported aggregate_secret_echo_suppressed aggregate_dispatch_revoked aggregate_idle clock_jump aggregate_runtime_envelope_consumed aggregate_transport_uncertain aggregate_rate_limit aggregate_authentication aggregate_http_failure aggregate_bootstrap_schema reset_window_unknown aggregate_common_sport_unobserved aggregate_admission_failed bootstrap_budget_delayed aggregate_budget_delayed reset_window_evidence_invalid reset_window_evidence_unverified quota_missing_duplicate_or_malformed quota_ceiling_or_headers_contradictory quota_ledger_missing quota_ledger_corrupt_or_oversize quota_record_capacity clock_continuity_unknown clock_regression quota_persistence_failed quota_ledger_unavailable reset_window_not_current reset_transition_unresolved acquisition_ownership_required invalid_reservation qualification_envelope_invalid qualification_envelope_expired qualification_envelope_consumed qualification_scope_invalid reset_window_expired quota_unknown ambiguous_dispatch_unresolved quota_reserve_or_exhausted dispatch_not_reserved response_without_dispatch quota_counter_or_charge_contradictory bootstrap_unexpected_charge'''.split())
 CATEGORIES = set('authentication entitlement offering_unobserved malformed_source connection local_defect cleanup resource discovery ownership rate_limit quota_or_source identity_exclusion'.split())
 CODES.update('restart_identity_unknown restart_clock_evidence_contradictory restart_not_established restart_accounting_refresh_required reservation_owner_conflict'.split())
+CODES.update('native_discovery_wire_byte_cap native_discovery_decoded_byte_cap prediction_session_byte_cap prediction_discovery_request_cap current_snapshot_request_cap native_http_timeout native_http_transport_error current_observation_record_cap current_observation_storage_cap current_observation_incomplete_tail'.split())
+CODES.update('recovery_active_transport recovery_context_mismatch recovery_credential_changed recovery_evidence_invalid recovery_evidence_expired recovery_coverage_mismatch recovery_identity_invalid recovery_already_activated recovery_observation_failed recovery_observation_consumed late_receipt_identity_required response_identity_invalid'.split())
+CODES.update('current_observation_manifest_corrupt current_observation_integrity_failed current_observation_disk_free_floor current_observation_segment_cap current_database_storage_cap'.split())
 
 def code(value):
     value=str(value)
@@ -107,7 +110,9 @@ def project(service, raw):
         service_state='running' if service.dispatch else 'stopped' if service.cleanup_complete else 'blocked',
         deadline_remaining_seconds=None if service.deadline is None or service.deadline==float('inf') else max(0,service.deadline-time.monotonic()),
         attendance=bool(store and store.subscribers),
-        resources=dict(projection=None if store is None else deepcopy(store.projection_metrics),state_encoded_bytes=None if state is None else len(packed(state)),state_ceiling_bytes=64*1024*1024,
+        resources=dict(projection=None if store is None else deepcopy(store.projection_metrics),state_encoded_bytes=None if state is None else encoded_size(state),state_ceiling_bytes=64*1024*1024,
+            delivery=None if store is None else dict(owners=len(store.encoded_bodies.owners),readers=len(store.encoded_bodies.readers),
+                file_bytes=sum(body.size for body in store.encoded_bodies.owners),**store.encoded_bodies.metrics),
             sampled_rss_bytes=service.sampled_rss,sampled_highwater_rss_bytes=service.peak_rss,rss_ceiling_bytes=service.config['rss_bytes'],
             subscribers=0 if store is None else len(store.subscribers),pending_notices=0 if store is None else sum(q.qsize() for q in store.subscribers),notice_ceiling_per_stream=1,stream_ceiling=8,
             transport_queue_ceiling=1,transport_queue_sample=None,
@@ -121,6 +126,12 @@ def project(service, raw):
             attempt_id='08bb72c1-9396-4eb5-a177-6d25a3b3f72a',provenance='/api/admin/u4-issue',
             next_action='Investigate at a normally due affordable slot. No universal non-support conclusion.')])
     return raw
+
+
+def encoded_size(state):
+    """Count canonical wire bytes without allocating two whole response bodies."""
+    from app.dashboard.current_contract import byte_count_steps,drain
+    return drain(byte_count_steps(state))
 
 
 def retained_issues(service):

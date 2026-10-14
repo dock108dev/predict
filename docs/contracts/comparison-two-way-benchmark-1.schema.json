@@ -1,0 +1,71 @@
+{
+  "title": "Explicit two-way original sportsbook benchmark",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "comparison-two-way-benchmark-1"
+    },
+    "venue": {
+      "enum": [
+        "pinnacle",
+        "novig",
+        "prophetx"
+      ]
+    },
+    "method": {
+      "const": "proportional_no_vig"
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object"
+      }
+    },
+    "receipt_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "conditioning": {
+      "const": "decisive_win_loss"
+    },
+    "partition_evidence_sha256": {
+      "type": "null"
+    },
+    "source_at": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "venue",
+    "method",
+    "source_revision",
+    "outcomes",
+    "receipt_sha256",
+    "conditioning",
+    "partition_evidence_sha256",
+    "source_at",
+    "revision"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparison-two-way-benchmark-1.schema.json"
+}

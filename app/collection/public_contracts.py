@@ -418,26 +418,6 @@ def award_identity(native,binding):
         collection_authorized=False)
 
 
-def championship_descriptor(event,binding,participant,*,scenario_allocations=None):
-    """Feed source-specific state payouts into the existing futures engine."""
-    from app.normalization import futures
-    row,doc=contract(binding);futures.event_key(event)
-    if row['family']!='futures' or row['sport']!=event['competition'] or row['category']!=event['category'] or row.get('conference_id')!=event.get('conference_id'):
-        raise ValueError('Championship category/competition conflict')
-    payouts={'yes':{},'no':{}}
-    for state in event['states']:
-        options=(scenario_allocations or {}).get(state['id'],{})
-        p=championship_payout(binding,participant=participant,field=event['field'],winners=state['winners'],**options)
-        for side in payouts:payouts[side][state['id']]=p[side]
-    d=dict(version='score-lines-1',public_binding_version=VERSION,source='kalshi',family='futures',period='season',
-        participant=participant,line=None,category=event['category'],horizon=event['horizon'],state_space='explicit_exhaustive',
-        contract_document=doc['url'],contract_provenance=doc,settlement_model='explicit_source_state_table',
-        outcomes=[dict(native_id=side,native_label=side.title(),role='achievement' if side=='yes' else 'not_achievement',
-                       payouts=payouts[side]) for side in payouts])
-    futures.descriptor(event,d)
-    return d
-
-
 def novig_h1_descriptor(*,participant,yes_id,no_id,association=None):
     """Documented NFL-004 template; listing association is a separate gate."""
     doc=load()['sources']['novig-nfl004']

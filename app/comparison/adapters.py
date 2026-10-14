@@ -26,11 +26,11 @@ def definition_digest(definition: dict) -> str:
 
 
 def adapt(fact: dict, *, links: EventLinks, at: datetime) -> CanonicalSelection:
-    """Map a reviewed original-side definition, after its D02 occurrence gate.
+    """Map a reviewed original-side definition, after its occurrence-link gate.
 
     A caller supplies structured participant/score facts and original source
     evidence. LONG/SHORT, title text and prices are never used to infer a team.
-    Payout applicability remains a separate D04 binding.
+    Payout applicability remains a separate payout-profile binding.
     """
     if not isinstance(fact, dict) or set(fact) != _FIELDS or fact["schema_version"] != VERSION:
         raise ValueError("Exact versioned native outcome fact required")

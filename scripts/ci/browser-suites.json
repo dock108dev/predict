@@ -25,6 +25,15 @@
     "test_session_controls.cjs",
     "test_source_details.cjs",
     "test_source_settings.cjs",
-    "test_u0_comparison.cjs"
+    "test_u0_comparison.cjs",
+    "test_selected_details.cjs",
+    "test_ev07_ui.cjs",
+    "test_ev08_ui.cjs",
+    "test_retained_prices_ui.cjs",
+    "test_ev09_ui.cjs",
+    "test_ev09_u01.cjs",
+    "test_ev09_game_continuity.cjs",
+    "test_ev09_read_polling.cjs",
+    "test_stored_views.cjs"
   ]
 }

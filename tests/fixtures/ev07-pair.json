@@ -1,0 +1,2566 @@
+{
+  "evidence_class": "authored fixed-quantity EV06 example for portable UI regression; no provider capture",
+  "pair": {
+    "version": "predict-funded-pair-1",
+    "model_available": true,
+    "expected_value_available": true,
+    "ranking_eligible": true,
+    "reasons": [],
+    "conditioning": "modeled_complete",
+    "condition": null,
+    "probability_basis": {
+      "version": "ev06-pair-reference-basis-1",
+      "revision": "158feca35f03534344e892ba8269d5da88956860654515973caac70fe630e926"
+    },
+    "policy_revision": "e8a4dcc266b18fbae4360b526980c08901b43c5f72853108698fe1d153e31d16",
+    "objective": "decisive_max_min",
+    "category": "Estimated hedge",
+    "minimum_spend_solution": false,
+    "target_ceiling_usd": "1000",
+    "deployed_capital_usd": "999.8",
+    "unused_cash_usd": "0.2",
+    "buffer_usd": "4.999",
+    "fee_adjusted_expected_profit_usd": "8.8668",
+    "conditional_decisive_profit_usd": "10.2",
+    "buffered_profit_usd": "3.8678",
+    "unbuffered_return_percent": "22167/24995",
+    "buffered_return_percent": "19339/49990",
+    "decisive_minimum_usd": "10.2",
+    "all_state_minimum_usd": "-252.4",
+    "buffered_decisive_minimum_usd": "5.201",
+    "buffered_all_state_minimum_usd": "-257.399",
+    "limiting_states": {
+      "decisive": [
+        "a_wins",
+        "b_wins"
+      ],
+      "all_states": [
+        "tie"
+      ]
+    },
+    "complete_feasible_state_cashflows": true,
+    "percentage_denominator": "actual modeled deployed capital including refundable holds; conditional EV is labeled",
+    "states": {
+      "a_wins": {
+        "profit_usd": "10.2",
+        "settlement_charge_usd": "0",
+        "legs": [
+          {
+            "receipt_usd": "0",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          },
+          {
+            "receipt_usd": "1010",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          }
+        ],
+        "cells": [
+          "home_win",
+          "home_win"
+        ],
+        "terminal": false,
+        "buffered_profit_usd": "5.201"
+      },
+      "b_wins": {
+        "profit_usd": "10.2",
+        "settlement_charge_usd": "0",
+        "legs": [
+          {
+            "receipt_usd": "1010",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          },
+          {
+            "receipt_usd": "0",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          }
+        ],
+        "cells": [
+          "away_win",
+          "away_win"
+        ],
+        "terminal": false,
+        "buffered_profit_usd": "5.201"
+      },
+      "tie": {
+        "profit_usd": "-252.4",
+        "settlement_charge_usd": "0",
+        "legs": [
+          {
+            "receipt_usd": "0",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          },
+          {
+            "receipt_usd": "747.4",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          }
+        ],
+        "cells": [
+          "tie",
+          "tie"
+        ],
+        "terminal": false,
+        "buffered_profit_usd": "-257.399"
+      },
+      "terminal_noncompletion": {
+        "profit_usd": "-10",
+        "settlement_charge_usd": "0",
+        "legs": [
+          {
+            "receipt_usd": "242.4",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          },
+          {
+            "receipt_usd": "747.4",
+            "returned_hold_usd": "0",
+            "fee_refund_usd": "0",
+            "receipt_charge_treatment": "gross_receipt"
+          }
+        ],
+        "cells": [
+          "terminal_noncompletion",
+          "terminal_noncompletion"
+        ],
+        "terminal": true,
+        "buffered_profit_usd": "-14.999"
+      }
+    },
+    "probabilities": {
+      "a_wins": "0.497",
+      "b_wins": "0.497",
+      "tie": "0.005",
+      "terminal_noncompletion": "0.001"
+    },
+    "conditional_probabilities": {
+      "a_wins": "0.5",
+      "b_wins": "0.5"
+    },
+    "constraints": {
+      "version": "ev06-meaningful-exposure-1",
+      "minimum_decisive_exposure_usd": "25",
+      "minimum_exposure_share": "0.2",
+      "rationale": "material $25 payout per leg and no leg below 20% of combined decisive payout exposure; unequal native stakes permitted"
+    },
+    "search": {
+      "maximum_points_per_leg": 16,
+      "maximum_evaluations": 256,
+      "evaluations": 1,
+      "global_optimality_proven": false,
+      "limitation": "explicit fixed allocation",
+      "objective_allocations": {
+        "decisive_max_min": {
+          "minimum_usd": "10.2",
+          "deployed_capital_usd": "999.8",
+          "quantities": [
+            "1010",
+            "1010"
+          ]
+        },
+        "all_modeled_states_max_min": {
+          "minimum_usd": "-252.4",
+          "deployed_capital_usd": "999.8",
+          "quantities": [
+            "1010",
+            "1010"
+          ]
+        }
+      }
+    },
+    "legs": [
+      {
+        "quote_id": "authored:ev06:0",
+        "quote_revision": 1,
+        "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+        "native_key": [
+          "kalshi",
+          "124724",
+          "1030131",
+          "2059746",
+          "YES"
+        ],
+        "selection": {
+          "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+          "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+          "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+          "participant": "NFL:TB",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "native_quantity": "1010",
+        "native_unit": {
+          "unit": "dollar_face_contracts",
+          "face_usd_per_native": "1",
+          "quantity_scale": null,
+          "price_scale": null
+        },
+        "supported_native_quantity": "0",
+        "modeled_native_quantity": "1010",
+        "acquisition_usd": "242.4",
+        "net_upfront_fee_usd": "5",
+        "supported_capital_usd": null,
+        "grid": {
+          "minimum_native": "1",
+          "increment_native": "1",
+          "legal_price_tick": "0.01",
+          "qualification": "authored"
+        },
+        "source_times": {
+          "source_at": "2026-10-11T12:00:00+00:00",
+          "received_at": "2026-10-11T12:00:00+00:00",
+          "projected_at": "2026-10-08T12:00:00+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "eligibility_reasons": []
+      },
+      {
+        "quote_id": "authored:ev06:1",
+        "quote_revision": 1,
+        "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+        "native_key": [
+          "polymarket_us",
+          "124724",
+          "1030131",
+          "2059746",
+          "YES"
+        ],
+        "selection": {
+          "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+          "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+          "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+          "participant": "NFL:TB",
+          "predicate": "not_win",
+          "signed_line": null,
+          "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "native_quantity": "1010",
+        "native_unit": {
+          "unit": "dollar_face_contracts",
+          "face_usd_per_native": "1",
+          "quantity_scale": null,
+          "price_scale": null
+        },
+        "supported_native_quantity": "0",
+        "modeled_native_quantity": "1010",
+        "acquisition_usd": "747.4",
+        "net_upfront_fee_usd": "5",
+        "supported_capital_usd": null,
+        "grid": {
+          "minimum_native": "1",
+          "increment_native": "1",
+          "legal_price_tick": "0.01",
+          "qualification": "authored"
+        },
+        "source_times": {
+          "source_at": "2026-10-11T12:00:00+00:00",
+          "received_at": "2026-10-11T12:00:00+00:00",
+          "projected_at": "2026-10-08T12:00:00+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "eligibility_reasons": []
+      }
+    ],
+    "cost_breakdown": {
+      "acquisition_usd": "989.8",
+      "net_upfront_fee_usd": "10",
+      "extra_funding_usd": "0",
+      "withholding": "inside attached net receipts; never charged twice"
+    },
+    "assumptions": [
+      "EV01 provisional NFL priors; actual probabilities, charges and execution unknown",
+      "unknown commission-market identity modeled as independent standalone pools",
+      "unknown/different completion windows retain asymmetric terminal grading states; subcase weights unknown",
+      "observed levels consumed before modeled residual at last visible price"
+    ],
+    "size_status": "size_unverified",
+    "sensitivity": {
+      "allocation": "fixed_selected_quantities_and_fills",
+      "buffer": [
+        {
+          "rate": "0",
+          "buffered_expected_profit_usd": "8.8668",
+          "buffered_all_state_minimum_usd": "-252.4"
+        },
+        {
+          "rate": "0.0025",
+          "buffered_expected_profit_usd": "6.3673",
+          "buffered_all_state_minimum_usd": "-254.8995"
+        },
+        {
+          "rate": "0.005",
+          "buffered_expected_profit_usd": "3.8678",
+          "buffered_all_state_minimum_usd": "-257.399"
+        },
+        {
+          "rate": "0.01",
+          "buffered_expected_profit_usd": "-1.1312",
+          "buffered_all_state_minimum_usd": "-262.398"
+        }
+      ],
+      "prior": [
+        {
+          "tie": "0",
+          "terminal_noncompletion": "0",
+          "buffered_expected_profit_usd": "5.201"
+        },
+        {
+          "tie": "0",
+          "terminal_noncompletion": "0.005",
+          "buffered_expected_profit_usd": "5.1"
+        },
+        {
+          "tie": "0.01",
+          "terminal_noncompletion": "0",
+          "buffered_expected_profit_usd": "2.575"
+        },
+        {
+          "tie": "0.01",
+          "terminal_noncompletion": "0.005",
+          "buffered_expected_profit_usd": "2.474"
+        }
+      ],
+      "tie_break_even": "3238/164125",
+      "terminal_payout": [
+        {
+          "leg": 0,
+          "receipt_usd": "0",
+          "buffered_expected_profit_usd": "3.6254"
+        },
+        {
+          "leg": 0,
+          "receipt_usd": "1010",
+          "buffered_expected_profit_usd": "4.6354"
+        },
+        {
+          "leg": 1,
+          "receipt_usd": "0",
+          "buffered_expected_profit_usd": "3.1204"
+        },
+        {
+          "leg": 1,
+          "receipt_usd": "1010",
+          "buffered_expected_profit_usd": "4.1304"
+        }
+      ],
+      "repriced_residual": [
+        {
+          "leg": 0,
+          "kind": "repriced_fixed_quantity; no resizing",
+          "deployed_capital_usd": "1009.9",
+          "fits_ceiling": false,
+          "buffered_expected_profit_usd": "-6.2827"
+        },
+        {
+          "leg": 1,
+          "kind": "repriced_fixed_quantity; no resizing",
+          "deployed_capital_usd": "1009.9",
+          "fits_ceiling": false,
+          "buffered_expected_profit_usd": "-6.2827"
+        }
+      ],
+      "legacy_adverse_price_stress": "separate predecessor metric; no deduction"
+    },
+    "dependency_revision": "c59efda9cc3f7e80d74ae7632d947bbbd8badcdcf41dd554a20a1c000455ae2b",
+    "id": "pair:b1789aad089c294cb619be5cc5c36ae6b6fb43ec8382869c56a8efaa91202be5",
+    "display": {
+      "buffered_profit_usd": "+3.87",
+      "buffered_return_percent": "+0.39"
+    },
+    "revision": "4a93a8cab24e6de9f8f23a77de0530b76263a1be55f61a224b2d1392d692fde3",
+    "components": [
+      {
+        "version": "predict-estimate-components-1",
+        "components": {
+          "fee": {
+            "entry_fee_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:114ab39b2db96680c2acf945606941f67bffba5c33d3b69ee5215dcc31c2fb1a",
+              "actual_value": null,
+              "modeled_value": "5",
+              "version": "predict-estimate-input-1"
+            },
+            "rounding_refund_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:2c0be9b03a1afe09a2041fc22463bae0b6410a9ecc2fbe00b4d9ed934c2df3d3",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "net_entry_fee_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:ef10c7f5322e3aea622e749398ff80229f402d708a6443e27777fbf009393623",
+              "actual_value": null,
+              "modeled_value": "5",
+              "version": "predict-estimate-input-1"
+            },
+            "additional_mandatory_charges_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:5542b5b25056e75b4d2081eed380376e9af6f8a87f3ddd4c780a73d6816798d9",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:home_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:fce64a8db803c04f3ae1d6775f2fca00ad3c0399d7c2cbdc238f996c8ca400fe",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:home_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:086b98cb23ec34e88d8c8ffa0aa2ca00d3faec702bea1aeec18f5b56446e7921",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:away_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:95efba6c3d924772e191b3996e6d7ccb60dc80f8ec1b9c96ce35488508f289a7",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:away_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:a9af57aa0d41eb3e9189242d94cacd1f846662805d019659a1ea417204200f61",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:tie": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:53d262072c975c6333ae803ba173a9767d9bd06347e21c3114e13fd65d0084b3",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:tie": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:a51e33ff2ed279d580844062d2e284479ea9b89ee467d0c25b914765caa2c827",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:terminal_noncompletion": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:ec8d0618b8e9cbc698c0a0006e564b616d6230c8c4292e340eafec3c395793b3",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:terminal_noncompletion": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:bc701b31b521f65683587ef7d37c4731be5d5b3f4bc6d47fd46dce145400f8d5",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            }
+          },
+          "payout": {
+            "receipt_usd:home_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:8ede7bf025bf341d32bf5733722e29a9c9e511b61823baf35ef6d3e45f0670b6",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:away_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:92b804e334fe392d2789e834f39ac206252189d6c57ebb4a6339f5a965349f83",
+              "actual_value": null,
+              "modeled_value": "1010",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:tie": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:3c4517ec65f3696bcb62fbe51b31a78612a40cdd89ae9060b66e84b42757a585",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:terminal_noncompletion": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:04371c3695fc368534fc394e104b47e33cf77f8def6fdaf0694e3be4af28af11",
+              "actual_value": null,
+              "modeled_value": "242.4",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:home_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:d9c286a2b7c755de7ce92979bf621f5c557ba8c9fc33542e2dfa4566fbcdf0eb",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:away_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:648192458e8d1bfd109c9197d053ac3f9df8b16eeeb57968f8796314e3c282c9",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:tie": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:bb9b5919dc37cd5086f1b8db26b81c8cc45192a5fd19c151817f91759034226c",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:terminal_noncompletion": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:ba9ac598c83762e4cc9f03cebe19d8c67410a267d4a5ea6535e704ce8bc99e12",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            }
+          }
+        },
+        "profile_refs": {
+          "fee": "07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571",
+          "payout": "02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84"
+        },
+        "profiles": {
+          "version": "comparison-current-dependencies-2",
+          "bindings": {
+            "07366c28d9b7237bddaf0e803c03cf5bbf33f1d71f48b093f536095536c5b571": {
+              "version": "comparison-input-binding-1",
+              "kind": "fee",
+              "payload": {
+                "actual_qualified": false,
+                "actual_value": null,
+                "component_metadata": {
+                  "additional_mandatory_charges_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "entry_fee_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:away_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:home_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:tie": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "net_entry_fee_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "rounding_refund_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:away_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:home_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:tie": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  }
+                },
+                "consumer_version": "predict-estimate-components-1",
+                "content": {
+                  "actual_qualified": false,
+                  "available": true,
+                  "observation": {
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.24"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_profile": {
+                    "expires_at": null,
+                    "kind": "fee",
+                    "payload": {
+                      "flat_entry_fee_usd": "5",
+                      "rule": {
+                        "$comparison_template": "a606d82cdcd80f2bd5f61eae1253758c1195265cbc7d5ac49ef31de9ac85d184"
+                      }
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "original_status": {
+                    "reason": "fee_actual_unknown",
+                    "status": "available_and_bound"
+                  },
+                  "reasons": [],
+                  "recipe": {
+                    "actual_qualified": false,
+                    "actual_value": null,
+                    "applicability": "named_direct_site_standalone_taker_model",
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "home_id": "NFL:DAL",
+                    "id": "53f5a7a75675ae8efd3eb00539e1fe8499637c08bcd8f740f86735e180f7639a",
+                    "kind": "fee",
+                    "metadata": {},
+                    "native_contract_id": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b",
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original_profile_ref": "799ef01655273fbbc9c3ab04ff2b7e66b6fe75ae07e74142761f88aad79630d5",
+                    "overtime": "included",
+                    "phase": "pregame",
+                    "reasons": [],
+                    "selected": null,
+                    "selected_binding_version": null,
+                    "selection": {
+                      "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+                      "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+                      "outcome_cardinality": 2,
+                      "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+                      "participant": "NFL:TB",
+                      "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+                      "predicate": "win",
+                      "result_interpretation": "normal_win",
+                      "signed_line": null
+                    },
+                    "template_ref": "129af3ce194e8bc313059a4172cc540dc74955fd515db30811e912a5842bf353",
+                    "template_version": "ev04-kalshi-nfl-winner-20261011-1",
+                    "version": "predict-estimate-content-1"
+                  },
+                  "template": {
+                    "actual_value": null,
+                    "assumptions": [
+                      "July7 date-only schedule; direct precision and multiplier1 are assumptions absent selected terms",
+                      "Tie strike existence unknown defaults to disclosed no-Tie branch"
+                    ],
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "expiry_basis": "local_review_horizon_not_provider_expiry",
+                    "fee": {
+                      "balance_precision": "0.0001",
+                      "coefficient": "0.07",
+                      "fee_refund": "retained",
+                      "product": "event_contract",
+                      "rounding": "six_decimal_ceiling_balance_floor_order_accumulator",
+                      "settlement": "binary_zero"
+                    },
+                    "id": "129af3ce194e8bc313059a4172cc540dc74955fd515db30811e912a5842bf353",
+                    "model_effective_from": "2026-10-11T00:00:00Z",
+                    "payout": {
+                      "range": [
+                        "0",
+                        "1"
+                      ],
+                      "terminal": "entry_mark_proxy",
+                      "tie": "half_without_tie_strike"
+                    },
+                    "scope": {
+                      "$comparison_template": "acb6e03388fd9b50940fc9467cd7697bf070b59e10dd3cfaa82a330476302e35"
+                    },
+                    "sources": [
+                      {
+                        "evidence_class": "manual_review",
+                        "path": "docs/comparison-net-sources/reviewed-extracts.json",
+                        "retrieved_at": "2026-10-09T15:59:13.595665+00:00",
+                        "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+                        "url": null
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-net-sources/kalshi-rounding.md",
+                        "retrieved_at": "2026-10-09T15:55:47.140572+00:00",
+                        "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+                        "url": "https://docs.kalshi.com/getting_started/fee_rounding.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-net-sources/kalshi-settlement.md",
+                        "retrieved_at": "2026-10-09T15:55:47.155088+00:00",
+                        "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+                        "url": "https://docs.kalshi.com/getting_started/market_settlement.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "evidence/public-contract-bindings-20260930-v1/public/kalshi-football-win.pdf",
+                        "retrieved_at": "2026-10-01T03:32:12.817264+00:00",
+                        "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+                        "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf"
+                      }
+                    ],
+                    "venue": "kalshi",
+                    "version": "ev04-kalshi-nfl-winner-20261011-1"
+                  },
+                  "version": "predict-estimate-content-1"
+                },
+                "dependencies": {
+                  "allocation_algebra": "ev05-refund-aware-1",
+                  "consumer": "predict-estimate-components-1",
+                  "content": {
+                    "fee": "53f5a7a75675ae8efd3eb00539e1fe8499637c08bcd8f740f86735e180f7639a",
+                    "payout": "ca5898de92aff4f9d54cb4045eb6d02e2ba75296daa53fae82993a282048a5ae"
+                  },
+                  "evaluated_at": "2026-10-11T12:00:00+00:00",
+                  "extra_funding": [],
+                  "fills": {
+                    "$comparison_template": "9226067a0335e64c7041542d247c5c402978c7ac9b5af5ac6ed8c316823a891f"
+                  },
+                  "hold_returns": {
+                    "away_win": "0",
+                    "home_win": "0",
+                    "terminal_noncompletion": "0",
+                    "tie": "0"
+                  },
+                  "native_contract": {
+                    "fee": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b",
+                    "payout": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b"
+                  },
+                  "native_quantity": "1010",
+                  "observation": {
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.24"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_refs": {
+                    "phase": "pregame",
+                    "refs": {
+                      "buffer": null,
+                      "fee": "799ef01655273fbbc9c3ab04ff2b7e66b6fe75ae07e74142761f88aad79630d5",
+                      "identity": "713c29bd3f2d3053c02f55904feb78ee8c60cceaf7f41b594bbfce1736f60a2d",
+                      "payout": null,
+                      "probability": null,
+                      "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+                      "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8"
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "quote_revision": 1,
+                  "settlement_charge_already_withheld": false,
+                  "stake_fills": null,
+                  "state_cashflows": {
+                    "away_win": "1010",
+                    "home_win": "0",
+                    "terminal_noncompletion": "242.4",
+                    "tie": "0"
+                  },
+                  "unit": {
+                    "face_usd_per_native": "1",
+                    "price_scale": null,
+                    "quantity_scale": null,
+                    "unit": "dollar_face_contracts"
+                  }
+                },
+                "details": {
+                  "authored_flat_entry_fee_usd": "5",
+                  "engine": "generic-fees-1",
+                  "rule": {
+                    "$comparison_template": "a606d82cdcd80f2bd5f61eae1253758c1195265cbc7d5ac49ef31de9ac85d184"
+                  }
+                },
+                "resolved_components": {
+                  "additional_mandatory_charges_usd": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "entry_fee_usd": [
+                    "5",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "net_entry_fee_usd": [
+                    "5",
+                    "provisional_assumption"
+                  ],
+                  "rounding_refund_usd": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ]
+                },
+                "scalar_unit": "USD",
+                "settlement_already_withheld": false,
+                "unresolved_reasons": []
+              },
+              "expires_at": "2026-10-16T04:00:00Z"
+            },
+            "02e8e83e9ec5e242f5999476e32d818636b1f94f0858cbaf497fead0b4eb1b84": {
+              "version": "comparison-input-binding-1",
+              "kind": "payout",
+              "payload": {
+                "actual_qualified": false,
+                "actual_value": null,
+                "component_metadata": {
+                  "hold_return_usd:away_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:home_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:tie": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:away_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:home_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:tie": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  }
+                },
+                "consumer_version": "predict-estimate-components-1",
+                "content": {
+                  "actual_qualified": false,
+                  "available": true,
+                  "observation": {
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.24"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_profile": null,
+                  "original_status": {
+                    "reason": "payout_actual_unknown",
+                    "status": "absent"
+                  },
+                  "reasons": [],
+                  "recipe": {
+                    "actual_qualified": false,
+                    "actual_value": null,
+                    "applicability": "named_direct_site_standalone_taker_model",
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "home_id": "NFL:DAL",
+                    "id": "ca5898de92aff4f9d54cb4045eb6d02e2ba75296daa53fae82993a282048a5ae",
+                    "kind": "payout",
+                    "metadata": {},
+                    "native_contract_id": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b",
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original_profile_ref": null,
+                    "overtime": "included",
+                    "phase": "pregame",
+                    "reasons": [],
+                    "selected": null,
+                    "selected_binding_version": null,
+                    "selection": {
+                      "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+                      "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+                      "outcome_cardinality": 2,
+                      "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+                      "participant": "NFL:TB",
+                      "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+                      "predicate": "win",
+                      "result_interpretation": "normal_win",
+                      "signed_line": null
+                    },
+                    "template_ref": "129af3ce194e8bc313059a4172cc540dc74955fd515db30811e912a5842bf353",
+                    "template_version": "ev04-kalshi-nfl-winner-20261011-1",
+                    "version": "predict-estimate-content-1"
+                  },
+                  "template": {
+                    "actual_value": null,
+                    "assumptions": [
+                      "July7 date-only schedule; direct precision and multiplier1 are assumptions absent selected terms",
+                      "Tie strike existence unknown defaults to disclosed no-Tie branch"
+                    ],
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "expiry_basis": "local_review_horizon_not_provider_expiry",
+                    "fee": {
+                      "balance_precision": "0.0001",
+                      "coefficient": "0.07",
+                      "fee_refund": "retained",
+                      "product": "event_contract",
+                      "rounding": "six_decimal_ceiling_balance_floor_order_accumulator",
+                      "settlement": "binary_zero"
+                    },
+                    "id": "129af3ce194e8bc313059a4172cc540dc74955fd515db30811e912a5842bf353",
+                    "model_effective_from": "2026-10-11T00:00:00Z",
+                    "payout": {
+                      "range": [
+                        "0",
+                        "1"
+                      ],
+                      "terminal": "entry_mark_proxy",
+                      "tie": "half_without_tie_strike"
+                    },
+                    "scope": {
+                      "$comparison_template": "28ecdd315d21d5e500fc5c64d4f76a7a70b8574b2ad594dbb2136327b67affcc"
+                    },
+                    "sources": [
+                      {
+                        "evidence_class": "manual_review",
+                        "path": "docs/comparison-net-sources/reviewed-extracts.json",
+                        "retrieved_at": "2026-10-09T15:59:13.595665+00:00",
+                        "sha256": "b03e717f16306cb88cfcabe90cbfeade82a46e556c9b15ec184a9e3300ef0d4f",
+                        "url": null
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-net-sources/kalshi-rounding.md",
+                        "retrieved_at": "2026-10-09T15:55:47.140572+00:00",
+                        "sha256": "0e75e087de5e90897e59a19a13ccb5d554a417177a28fc3a9a05fee18152f669",
+                        "url": "https://docs.kalshi.com/getting_started/fee_rounding.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-net-sources/kalshi-settlement.md",
+                        "retrieved_at": "2026-10-09T15:55:47.155088+00:00",
+                        "sha256": "ae5b054f4489952276cfdfb4f5144eef861e231118b58c1124a7a1e0a4d773f7",
+                        "url": "https://docs.kalshi.com/getting_started/market_settlement.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "evidence/public-contract-bindings-20260930-v1/public/kalshi-football-win.pdf",
+                        "retrieved_at": "2026-10-01T03:32:12.817264+00:00",
+                        "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+                        "url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf"
+                      }
+                    ],
+                    "venue": "kalshi",
+                    "version": "ev04-kalshi-nfl-winner-20261011-1"
+                  },
+                  "version": "predict-estimate-content-1"
+                },
+                "dependencies": {
+                  "allocation_algebra": "ev05-refund-aware-1",
+                  "consumer": "predict-estimate-components-1",
+                  "content": {
+                    "fee": "53f5a7a75675ae8efd3eb00539e1fe8499637c08bcd8f740f86735e180f7639a",
+                    "payout": "ca5898de92aff4f9d54cb4045eb6d02e2ba75296daa53fae82993a282048a5ae"
+                  },
+                  "evaluated_at": "2026-10-11T12:00:00+00:00",
+                  "extra_funding": [],
+                  "fills": {
+                    "$comparison_template": "07ccba8280ac72ea679a3d7bf7ae2588525c2974b88a4977770e6c33e37c6e5d"
+                  },
+                  "hold_returns": {
+                    "away_win": "0",
+                    "home_win": "0",
+                    "terminal_noncompletion": "0",
+                    "tie": "0"
+                  },
+                  "native_contract": {
+                    "fee": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b",
+                    "payout": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b"
+                  },
+                  "native_quantity": "1010",
+                  "observation": {
+                    "native_key": [
+                      "kalshi",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.24"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_refs": {
+                    "phase": "pregame",
+                    "refs": {
+                      "buffer": null,
+                      "fee": "799ef01655273fbbc9c3ab04ff2b7e66b6fe75ae07e74142761f88aad79630d5",
+                      "identity": "713c29bd3f2d3053c02f55904feb78ee8c60cceaf7f41b594bbfce1736f60a2d",
+                      "payout": null,
+                      "probability": null,
+                      "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+                      "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8"
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "quote_revision": 1,
+                  "settlement_charge_already_withheld": false,
+                  "stake_fills": null,
+                  "state_cashflows": {
+                    "away_win": "1010",
+                    "home_win": "0",
+                    "terminal_noncompletion": "242.4",
+                    "tie": "0"
+                  },
+                  "unit": {
+                    "face_usd_per_native": "1",
+                    "price_scale": null,
+                    "quantity_scale": null,
+                    "unit": "dollar_face_contracts"
+                  }
+                },
+                "details": {
+                  "branch": "no_tie_strike_assumption",
+                  "collateral_refund_states": [],
+                  "proxy": "entry_mark_neutral",
+                  "refund_fees": "retained",
+                  "state_override": "explicit_modeled_USD_cashflows",
+                  "terminal_range_usd": [
+                    "0",
+                    "1010"
+                  ],
+                  "terminal_scope": "all terminal exceptions after selected normal grading; cancellation/abandonment are aliases, not extra states"
+                },
+                "resolved_components": {
+                  "hold_return_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:away_win": [
+                    "1010",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:terminal_noncompletion": [
+                    "242.4",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ]
+                },
+                "scalar_unit": "USD",
+                "settlement_already_withheld": null,
+                "unresolved_reasons": []
+              },
+              "expires_at": "2026-10-16T04:00:00Z"
+            }
+          },
+          "templates": {
+            "07ccba8280ac72ea679a3d7bf7ae2588525c2974b88a4977770e6c33e37c6e5d": {
+              "version": "comparison-input-template-1",
+              "kind": "payout",
+              "payload": [
+                {
+                  "event_status_at_match": "OPEN_PREGAME",
+                  "fill_id": "ev05:0",
+                  "order_id": "model:ev05:single-order",
+                  "price": "0.24",
+                  "quantity": "1010",
+                  "role": "taker",
+                  "unit": "contracts"
+                }
+              ]
+            },
+            "28ecdd315d21d5e500fc5c64d4f76a7a70b8574b2ad594dbb2136327b67affcc": {
+              "version": "comparison-input-template-1",
+              "kind": "payout",
+              "payload": {
+                "league": "NFL",
+                "overtime": "included",
+                "period": "full_game",
+                "phase": "pregame"
+              }
+            },
+            "9226067a0335e64c7041542d247c5c402978c7ac9b5af5ac6ed8c316823a891f": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": [
+                {
+                  "event_status_at_match": "OPEN_PREGAME",
+                  "fill_id": "ev05:0",
+                  "order_id": "model:ev05:single-order",
+                  "price": "0.24",
+                  "quantity": "1010",
+                  "role": "taker",
+                  "unit": "contracts"
+                }
+              ]
+            },
+            "a606d82cdcd80f2bd5f61eae1253758c1195265cbc7d5ac49ef31de9ac85d184": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": {
+                "account_ref": null,
+                "channel": "controlled",
+                "effective_from": "2026-10-08T10:00:00Z",
+                "effective_to": null,
+                "event_id": null,
+                "evidence": [
+                  {
+                    "evidence_class": "authored",
+                    "ref": "app/fixtures/comparison-net-costs-v1.json",
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ],
+                "expires_at": null,
+                "mandatory_charges_known": true,
+                "market_id": null,
+                "predecessor_version": null,
+                "product": "event_contract",
+                "proposal_ref": null,
+                "series_id": null,
+                "settlement_status": "declared_zero",
+                "settlement_terms": null,
+                "settlement_treatment": "separate_charge",
+                "source_kind": "controlled_scenario",
+                "source_url": null,
+                "terms": {
+                  "aggregation": "order",
+                  "allow_fee_adjustment": false,
+                  "basis": "notional",
+                  "grid_usd": "0.01",
+                  "rate": "0",
+                  "role": "taker",
+                  "rounding": "half_even"
+                },
+                "unit": {
+                  "face_usd_per_native": "1",
+                  "price_scale": null,
+                  "quantity_scale": null,
+                  "unit": "dollar_face_contracts"
+                },
+                "venue": "kalshi",
+                "version": "authored-s02-kalshi"
+              }
+            },
+            "acb6e03388fd9b50940fc9467cd7697bf070b59e10dd3cfaa82a330476302e35": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": {
+                "league": "NFL",
+                "overtime": "included",
+                "period": "full_game",
+                "phase": "pregame"
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "consumer": "predict-estimate-components-1",
+          "allocation_algebra": "ev05-refund-aware-1",
+          "content": {
+            "fee": "53f5a7a75675ae8efd3eb00539e1fe8499637c08bcd8f740f86735e180f7639a",
+            "payout": "ca5898de92aff4f9d54cb4045eb6d02e2ba75296daa53fae82993a282048a5ae"
+          },
+          "original_refs": {
+            "version": "comparison-current-dependencies-1",
+            "refs": {
+              "identity": "713c29bd3f2d3053c02f55904feb78ee8c60cceaf7f41b594bbfce1736f60a2d",
+              "payout": null,
+              "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8",
+              "fee": "799ef01655273fbbc9c3ab04ff2b7e66b6fe75ae07e74142761f88aad79630d5",
+              "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+              "buffer": null,
+              "probability": null
+            },
+            "phase": "pregame"
+          },
+          "native_contract": {
+            "fee": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b",
+            "payout": "native-contract:6c6d4ae3bec71af3dd0f80995c3b15612d015c70f65bf1b170a821a92576dc6b"
+          },
+          "observation": {
+            "native_key": [
+              "kalshi",
+              "124724",
+              "1030131",
+              "2059746",
+              "YES"
+            ],
+            "original": {
+              "value": "0.24",
+              "units": "usd_per_contract",
+              "payout": "1",
+              "payout_units": "USD",
+              "quantity_units": "contracts",
+              "role": "comparison"
+            },
+            "source_at": "2026-10-11T12:00:00+00:00",
+            "received_at": "2026-10-11T12:00:00+00:00",
+            "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38"
+          },
+          "quote_revision": 1,
+          "native_quantity": "1010",
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1",
+            "quantity_scale": null,
+            "price_scale": null
+          },
+          "fills": [
+            {
+              "fill_id": "ev05:0",
+              "order_id": "model:ev05:single-order",
+              "role": "taker",
+              "unit": "contracts",
+              "price": "0.24",
+              "quantity": "1010",
+              "event_status_at_match": "OPEN_PREGAME"
+            }
+          ],
+          "stake_fills": null,
+          "state_cashflows": {
+            "home_win": "0",
+            "away_win": "1010",
+            "tie": "0",
+            "terminal_noncompletion": "242.4"
+          },
+          "extra_funding": [],
+          "hold_returns": {
+            "home_win": "0",
+            "away_win": "0",
+            "tie": "0",
+            "terminal_noncompletion": "0"
+          },
+          "settlement_charge_already_withheld": false,
+          "evaluated_at": "2026-10-11T12:00:00+00:00"
+        },
+        "dependency_revision": "0054a1a96843eb77178ff6c22a3c40147cd75cc35c806296c7d585382f828062",
+        "reasons": {
+          "fee": [],
+          "payout": []
+        },
+        "acquisition_usd": "242.4",
+        "deployed_capital_usd": "247.4",
+        "settlement_already_withheld": false,
+        "actual_qualified": false,
+        "settlement_terms": [],
+        "payout_details": {
+          "refund_fees": "retained",
+          "proxy": "entry_mark_neutral",
+          "terminal_scope": "all terminal exceptions after selected normal grading; cancellation/abandonment are aliases, not extra states",
+          "terminal_range_usd": [
+            "0",
+            "1010"
+          ],
+          "collateral_refund_states": [],
+          "branch": "no_tie_strike_assumption",
+          "state_override": "explicit_modeled_USD_cashflows"
+        },
+        "assumed_additional_charges": "zero_under_funded_direct_site_model; no_evidenced_exemption",
+        "grid_qualification": "original_quantity_profile_if_bound; otherwise_declared_continuous_hypothesis_not_execution",
+        "fill_basis": "explicit_supplied_fills",
+        "revision": "49da1d211200abaf1e1be68f9d368cd409097460f3bbced931a79c671697d180",
+        "pair_support": "0"
+      },
+      {
+        "version": "predict-estimate-components-1",
+        "components": {
+          "fee": {
+            "entry_fee_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:f412cce7f3524103767163e20ec84534e587343e7da7b2c9be27da3614827635",
+              "actual_value": null,
+              "modeled_value": "5",
+              "version": "predict-estimate-input-1"
+            },
+            "rounding_refund_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:f8729c0cb2f37f7bc18e7665cfb64e495b15d41c80779ecdd3948df9a4f91891",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "net_entry_fee_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:dffe6caf2b88231239f2d1cfaa0f238e8b4ced756b06b559e6941507e6170897",
+              "actual_value": null,
+              "modeled_value": "5",
+              "version": "predict-estimate-input-1"
+            },
+            "additional_mandatory_charges_usd": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:b7b1d91319fba2ebf1e1e4007e26e5b2e1224e234825614f72f757f5f9888f31",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:home_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:86a4a3eff47a4bde589f9dbc9a8aba701d6b4427662f8eae86e062d09ab50441",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:home_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:77584af329923d72eb51739e624a5b79abef800fbae9128b8b9e782196724bad",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:away_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:36f3faf31cc10c37f16cc56e116da5a70a9cb9a18b9f4417d78c3420040eb0eb",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:away_win": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:7ec25aae7126fad14b6a2cb765cbd757f65ac0308aaaceb3642dacdfaeaab314",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:tie": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:d88f9b55b2bc1247c75dc113236c383b177cd82d6058198cc7a372d4eacaf4e5",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:tie": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:9cdddd3e9e95ae4161a96935ba74c454946ff24df831214f460a32dc1cadfc0d",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "settlement_fee_usd:terminal_noncompletion": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:7e202c0c2cc7cb0a7b9b4b4fa3141f57a4f3bb1b134d922e34d4dfb0dc6d7fb1",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "fee_refund_usd:terminal_noncompletion": {
+              "provider_kind": "fee",
+              "provider_version": "predict-estimate-template-provider-1:b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:9276b2fa94bd537f1f581d0634dee8cf69839df705165da3f07cbe8cb63b278a",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            }
+          },
+          "payout": {
+            "receipt_usd:home_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:b5fee03f4cdc695fd374005034b0d4b26d25b4d1087098c2c7835dc4340b55b1",
+              "actual_value": null,
+              "modeled_value": "1010",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:away_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:3c1befb0b6587d0b63e0932700980bd6c4ae57b1bc9d39184c59152bad8b974c",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:tie": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:9e0479a34801c52fe32e20c7e94d98b1c80585c8918daf4028de3641fbdce910",
+              "actual_value": null,
+              "modeled_value": "747.4",
+              "version": "predict-estimate-input-1"
+            },
+            "receipt_usd:terminal_noncompletion": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:dc4dc9432b3c29a3bea1fbf912a88c8de3fab90364cb94fe7717804a21b5c55b",
+              "actual_value": null,
+              "modeled_value": "747.4",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:home_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:144b1b0d0edf04641c877caeb8ecf938b1dae21008b7e740ed025f943a810e08",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:away_win": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:b9e3d10321aa002b7a1c2cd3e5f900ada65cf1783ca3c108503975d2751106aa",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:tie": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:278621793dc37c5fef8ca5bfc216ac4e622c72a61ed0f5e888078d53192d6c27",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            },
+            "hold_return_usd:terminal_noncompletion": {
+              "provider_kind": "payout",
+              "provider_version": "predict-estimate-template-provider-1:9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d",
+              "basis": "provisional_assumption",
+              "scope_id": "estimate-template:e4edf21e16ceb4e2cefa2833b04eef99323f6075343346e876618eb95734dded",
+              "actual_value": null,
+              "modeled_value": "0",
+              "version": "predict-estimate-input-1"
+            }
+          }
+        },
+        "profile_refs": {
+          "fee": "b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985",
+          "payout": "9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d"
+        },
+        "profiles": {
+          "version": "comparison-current-dependencies-2",
+          "bindings": {
+            "b69fa25bcb445b4838391a9e6e6c045ca549890a28f4a8ee8c9c3a3c2b2b2985": {
+              "version": "comparison-input-binding-1",
+              "kind": "fee",
+              "payload": {
+                "actual_qualified": false,
+                "actual_value": null,
+                "component_metadata": {
+                  "additional_mandatory_charges_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "entry_fee_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:away_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:home_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "fee_refund_usd:tie": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "net_entry_fee_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "rounding_refund_usd": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:away_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:home_win": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "settlement_fee_usd:tie": {
+                    "actual_reason": "actual_charge_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  }
+                },
+                "consumer_version": "predict-estimate-components-1",
+                "content": {
+                  "actual_qualified": false,
+                  "available": true,
+                  "observation": {
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.74"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_profile": {
+                    "expires_at": null,
+                    "kind": "fee",
+                    "payload": {
+                      "flat_entry_fee_usd": "5",
+                      "rule": {
+                        "$comparison_template": "451fdddde52bf900c176eec95a82c9cfbbc6253e0cc1a0e693d43705c3202187"
+                      }
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "original_status": {
+                    "reason": "fee_actual_unknown",
+                    "status": "available_and_bound"
+                  },
+                  "reasons": [],
+                  "recipe": {
+                    "actual_qualified": false,
+                    "actual_value": null,
+                    "applicability": "named_direct_site_standalone_taker_model",
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "home_id": "NFL:DAL",
+                    "id": "c88f5e9c60b78a3cd1db893e89b3616e7ee2d339ee04555f0ceb835ee3048f65",
+                    "kind": "fee",
+                    "metadata": {},
+                    "native_contract_id": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a",
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original_profile_ref": "45a53105308472e79b7a761e32808c770a8d978523cbd04047959ce208609454",
+                    "overtime": "included",
+                    "phase": "pregame",
+                    "reasons": [],
+                    "selected": null,
+                    "selected_binding_version": null,
+                    "selection": {
+                      "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+                      "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+                      "outcome_cardinality": 2,
+                      "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+                      "participant": "NFL:TB",
+                      "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+                      "predicate": "not_win",
+                      "result_interpretation": "normal_win",
+                      "signed_line": null
+                    },
+                    "template_ref": "1f1c6feb0c018a5ee1b0b112e631d4b34f2ce82fa5bf7eee970b26ba35056271",
+                    "template_version": "ev04-polymarket_us-nfl-winner-20261011-1",
+                    "version": "predict-estimate-content-1"
+                  },
+                  "template": {
+                    "actual_value": null,
+                    "assumptions": [
+                      "Standard NFL single only; combo and Table Tennis excluded",
+                      "Selected single membership/scales and total participant charges remain unknown"
+                    ],
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "expiry_basis": "local_review_horizon_not_provider_expiry",
+                    "fee": {
+                      "coefficient": "0.0695",
+                      "effective_from": "2026-10-07T14:00:00Z",
+                      "fee_refund": "retained",
+                      "maker_coefficient": "0.0125",
+                      "product": "event_contract",
+                      "rounding": "half_even_cents_cumulative_order_cap",
+                      "settlement": "assumed_zero"
+                    },
+                    "id": "1f1c6feb0c018a5ee1b0b112e631d4b34f2ce82fa5bf7eee970b26ba35056271",
+                    "model_effective_from": "2026-10-11T00:00:00Z",
+                    "payout": {
+                      "range": [
+                        "0",
+                        "1"
+                      ],
+                      "terminal": "entry_mark_proxy",
+                      "tie": "half_without_tie_outcome"
+                    },
+                    "scope": {
+                      "$comparison_template": "acb6e03388fd9b50940fc9467cd7697bf070b59e10dd3cfaa82a330476302e35"
+                    },
+                    "sources": [
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-public-retail-evidence/research-fees/fees.md",
+                        "retrieved_at": "2026-10-09T19:53:58.693899+00:00",
+                        "sha256": "d2a8ae16181ebe8c08e9a4d3dc3f19cf0f99dce5a005c035c1ba159027fcff35",
+                        "url": "https://docs.polymarket.us/fees.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-public-retail-evidence/research-fees/sports-faqs.md",
+                        "retrieved_at": "2026-10-09T19:53:59.192799+00:00",
+                        "sha256": "9aae0cfe089256db6efc5f501d20ee4b7ea2ef24556e1d0e2131b79eb0ddb77d",
+                        "url": "https://docs.polymarket.us/faqs/sports-faqs.md"
+                      }
+                    ],
+                    "venue": "polymarket_us",
+                    "version": "ev04-polymarket_us-nfl-winner-20261011-1"
+                  },
+                  "version": "predict-estimate-content-1"
+                },
+                "dependencies": {
+                  "allocation_algebra": "ev05-refund-aware-1",
+                  "consumer": "predict-estimate-components-1",
+                  "content": {
+                    "fee": "c88f5e9c60b78a3cd1db893e89b3616e7ee2d339ee04555f0ceb835ee3048f65",
+                    "payout": "efb4c972e25817551ce5d2bc9f5f2c092f8f1ae167e5998b3d5bb29bf5373a3c"
+                  },
+                  "evaluated_at": "2026-10-11T12:00:00+00:00",
+                  "extra_funding": [],
+                  "fills": {
+                    "$comparison_template": "8ab893e9b1f8f23d3aa3022fc383eb5f4c932590f570e110d4cfdfe4aed0035b"
+                  },
+                  "hold_returns": {
+                    "away_win": "0",
+                    "home_win": "0",
+                    "terminal_noncompletion": "0",
+                    "tie": "0"
+                  },
+                  "native_contract": {
+                    "fee": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a",
+                    "payout": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a"
+                  },
+                  "native_quantity": "1010",
+                  "observation": {
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.74"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_refs": {
+                    "phase": "pregame",
+                    "refs": {
+                      "buffer": null,
+                      "fee": "45a53105308472e79b7a761e32808c770a8d978523cbd04047959ce208609454",
+                      "identity": "4182147d95afd8501df12052edd9b671cac7816c384459e9eae6c9c685647fc3",
+                      "payout": null,
+                      "probability": null,
+                      "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+                      "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8"
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "quote_revision": 1,
+                  "settlement_charge_already_withheld": false,
+                  "stake_fills": null,
+                  "state_cashflows": {
+                    "away_win": "0",
+                    "home_win": "1010",
+                    "terminal_noncompletion": "747.4",
+                    "tie": "747.4"
+                  },
+                  "unit": {
+                    "face_usd_per_native": "1",
+                    "price_scale": null,
+                    "quantity_scale": null,
+                    "unit": "dollar_face_contracts"
+                  }
+                },
+                "details": {
+                  "authored_flat_entry_fee_usd": "5",
+                  "engine": "generic-fees-1",
+                  "rule": {
+                    "$comparison_template": "451fdddde52bf900c176eec95a82c9cfbbc6253e0cc1a0e693d43705c3202187"
+                  }
+                },
+                "resolved_components": {
+                  "additional_mandatory_charges_usd": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "entry_fee_usd": [
+                    "5",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "fee_refund_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "net_entry_fee_usd": [
+                    "5",
+                    "provisional_assumption"
+                  ],
+                  "rounding_refund_usd": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "settlement_fee_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ]
+                },
+                "scalar_unit": "USD",
+                "settlement_already_withheld": false,
+                "unresolved_reasons": []
+              },
+              "expires_at": "2026-10-16T04:00:00Z"
+            },
+            "9d9a20187a9d51d020578494e07dd4fa7337ab222651c7b2e20692b0b1ef8d2d": {
+              "version": "comparison-input-binding-1",
+              "kind": "payout",
+              "payload": {
+                "actual_qualified": false,
+                "actual_value": null,
+                "component_metadata": {
+                  "hold_return_usd:away_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:home_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "hold_return_usd:tie": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:away_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:home_win": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:terminal_noncompletion": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  },
+                  "receipt_usd:tie": {
+                    "actual_reason": "actual_settlement_unknown",
+                    "actual_value": null,
+                    "basis": "provisional_assumption",
+                    "model_reason": null,
+                    "unit": "USD"
+                  }
+                },
+                "consumer_version": "predict-estimate-components-1",
+                "content": {
+                  "actual_qualified": false,
+                  "available": true,
+                  "observation": {
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.74"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_profile": null,
+                  "original_status": {
+                    "reason": "payout_actual_unknown",
+                    "status": "absent"
+                  },
+                  "reasons": [],
+                  "recipe": {
+                    "actual_qualified": false,
+                    "actual_value": null,
+                    "applicability": "named_direct_site_standalone_taker_model",
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "home_id": "NFL:DAL",
+                    "id": "efb4c972e25817551ce5d2bc9f5f2c092f8f1ae167e5998b3d5bb29bf5373a3c",
+                    "kind": "payout",
+                    "metadata": {},
+                    "native_contract_id": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a",
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original_profile_ref": null,
+                    "overtime": "included",
+                    "phase": "pregame",
+                    "reasons": [],
+                    "selected": null,
+                    "selected_binding_version": null,
+                    "selection": {
+                      "event_id": "event:ec67f440b0f3b0e70cb577fb9eef2a71",
+                      "group_id": "group:8005dac86cc3eb25ad12dd68152186aa",
+                      "outcome_cardinality": 2,
+                      "outcome_id": "outcome:d1f282d72a8768fd70c5ba067784dc0b",
+                      "participant": "NFL:TB",
+                      "period_boundary": "Full game including applicable overtime; direct win only; exceptional cashflows differ | predict-direct-win-1:normal-full-game-win",
+                      "predicate": "not_win",
+                      "result_interpretation": "normal_win",
+                      "signed_line": null
+                    },
+                    "template_ref": "1f1c6feb0c018a5ee1b0b112e631d4b34f2ce82fa5bf7eee970b26ba35056271",
+                    "template_version": "ev04-polymarket_us-nfl-winner-20261011-1",
+                    "version": "predict-estimate-content-1"
+                  },
+                  "template": {
+                    "actual_value": null,
+                    "assumptions": [
+                      "Standard NFL single only; combo and Table Tennis excluded",
+                      "Selected single membership/scales and total participant charges remain unknown"
+                    ],
+                    "expires_at": "2026-10-16T04:00:00Z",
+                    "expiry_basis": "local_review_horizon_not_provider_expiry",
+                    "fee": {
+                      "coefficient": "0.0695",
+                      "effective_from": "2026-10-07T14:00:00Z",
+                      "fee_refund": "retained",
+                      "maker_coefficient": "0.0125",
+                      "product": "event_contract",
+                      "rounding": "half_even_cents_cumulative_order_cap",
+                      "settlement": "assumed_zero"
+                    },
+                    "id": "1f1c6feb0c018a5ee1b0b112e631d4b34f2ce82fa5bf7eee970b26ba35056271",
+                    "model_effective_from": "2026-10-11T00:00:00Z",
+                    "payout": {
+                      "range": [
+                        "0",
+                        "1"
+                      ],
+                      "terminal": "entry_mark_proxy",
+                      "tie": "half_without_tie_outcome"
+                    },
+                    "scope": {
+                      "$comparison_template": "28ecdd315d21d5e500fc5c64d4f76a7a70b8574b2ad594dbb2136327b67affcc"
+                    },
+                    "sources": [
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-public-retail-evidence/research-fees/fees.md",
+                        "retrieved_at": "2026-10-09T19:53:58.693899+00:00",
+                        "sha256": "d2a8ae16181ebe8c08e9a4d3dc3f19cf0f99dce5a005c035c1ba159027fcff35",
+                        "url": "https://docs.polymarket.us/fees.md"
+                      },
+                      {
+                        "evidence_class": "primary_source",
+                        "path": "docs/comparison-public-retail-evidence/research-fees/sports-faqs.md",
+                        "retrieved_at": "2026-10-09T19:53:59.192799+00:00",
+                        "sha256": "9aae0cfe089256db6efc5f501d20ee4b7ea2ef24556e1d0e2131b79eb0ddb77d",
+                        "url": "https://docs.polymarket.us/faqs/sports-faqs.md"
+                      }
+                    ],
+                    "venue": "polymarket_us",
+                    "version": "ev04-polymarket_us-nfl-winner-20261011-1"
+                  },
+                  "version": "predict-estimate-content-1"
+                },
+                "dependencies": {
+                  "allocation_algebra": "ev05-refund-aware-1",
+                  "consumer": "predict-estimate-components-1",
+                  "content": {
+                    "fee": "c88f5e9c60b78a3cd1db893e89b3616e7ee2d339ee04555f0ceb835ee3048f65",
+                    "payout": "efb4c972e25817551ce5d2bc9f5f2c092f8f1ae167e5998b3d5bb29bf5373a3c"
+                  },
+                  "evaluated_at": "2026-10-11T12:00:00+00:00",
+                  "extra_funding": [],
+                  "fills": {
+                    "$comparison_template": "8fb23dc2405282a35ac4c149a4a3f248cc3054e1cb70737803d9947e2d7cf774"
+                  },
+                  "hold_returns": {
+                    "away_win": "0",
+                    "home_win": "0",
+                    "terminal_noncompletion": "0",
+                    "tie": "0"
+                  },
+                  "native_contract": {
+                    "fee": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a",
+                    "payout": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a"
+                  },
+                  "native_quantity": "1010",
+                  "observation": {
+                    "native_key": [
+                      "polymarket_us",
+                      "124724",
+                      "1030131",
+                      "2059746",
+                      "YES"
+                    ],
+                    "original": {
+                      "payout": "1",
+                      "payout_units": "USD",
+                      "quantity_units": "contracts",
+                      "role": "comparison",
+                      "units": "usd_per_contract",
+                      "value": "0.74"
+                    },
+                    "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38",
+                    "received_at": "2026-10-11T12:00:00+00:00",
+                    "source_at": "2026-10-11T12:00:00+00:00"
+                  },
+                  "original_refs": {
+                    "phase": "pregame",
+                    "refs": {
+                      "buffer": null,
+                      "fee": "45a53105308472e79b7a761e32808c770a8d978523cbd04047959ce208609454",
+                      "identity": "4182147d95afd8501df12052edd9b671cac7816c384459e9eae6c9c685647fc3",
+                      "payout": null,
+                      "probability": null,
+                      "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+                      "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8"
+                    },
+                    "version": "comparison-current-dependencies-1"
+                  },
+                  "quote_revision": 1,
+                  "settlement_charge_already_withheld": false,
+                  "stake_fills": null,
+                  "state_cashflows": {
+                    "away_win": "0",
+                    "home_win": "1010",
+                    "terminal_noncompletion": "747.4",
+                    "tie": "747.4"
+                  },
+                  "unit": {
+                    "face_usd_per_native": "1",
+                    "price_scale": null,
+                    "quantity_scale": null,
+                    "unit": "dollar_face_contracts"
+                  }
+                },
+                "details": {
+                  "branch": "half_without_tie_outcome",
+                  "collateral_refund_states": [],
+                  "proxy": "entry_mark_neutral",
+                  "refund_fees": "retained",
+                  "state_override": "explicit_modeled_USD_cashflows",
+                  "terminal_range_usd": [
+                    "0",
+                    "1010"
+                  ],
+                  "terminal_scope": "all terminal exceptions after selected normal grading; cancellation/abandonment are aliases, not extra states"
+                },
+                "resolved_components": {
+                  "hold_return_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:home_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:terminal_noncompletion": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "hold_return_usd:tie": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:away_win": [
+                    "0",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:home_win": [
+                    "1010",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:terminal_noncompletion": [
+                    "747.4",
+                    "provisional_assumption"
+                  ],
+                  "receipt_usd:tie": [
+                    "747.4",
+                    "provisional_assumption"
+                  ]
+                },
+                "scalar_unit": "USD",
+                "settlement_already_withheld": null,
+                "unresolved_reasons": []
+              },
+              "expires_at": "2026-10-16T04:00:00Z"
+            }
+          },
+          "templates": {
+            "28ecdd315d21d5e500fc5c64d4f76a7a70b8574b2ad594dbb2136327b67affcc": {
+              "version": "comparison-input-template-1",
+              "kind": "payout",
+              "payload": {
+                "league": "NFL",
+                "overtime": "included",
+                "period": "full_game",
+                "phase": "pregame"
+              }
+            },
+            "451fdddde52bf900c176eec95a82c9cfbbc6253e0cc1a0e693d43705c3202187": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": {
+                "account_ref": null,
+                "channel": "controlled",
+                "effective_from": "2026-10-08T10:00:00Z",
+                "effective_to": null,
+                "event_id": null,
+                "evidence": [
+                  {
+                    "evidence_class": "authored",
+                    "ref": "app/fixtures/comparison-net-costs-v1.json",
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ],
+                "expires_at": null,
+                "mandatory_charges_known": true,
+                "market_id": null,
+                "predecessor_version": null,
+                "product": "event_contract",
+                "proposal_ref": null,
+                "series_id": null,
+                "settlement_status": "declared_zero",
+                "settlement_terms": null,
+                "settlement_treatment": "separate_charge",
+                "source_kind": "controlled_scenario",
+                "source_url": null,
+                "terms": {
+                  "aggregation": "order",
+                  "allow_fee_adjustment": false,
+                  "basis": "notional",
+                  "grid_usd": "0.01",
+                  "rate": "0",
+                  "role": "taker",
+                  "rounding": "half_even"
+                },
+                "unit": {
+                  "face_usd_per_native": "1",
+                  "price_scale": null,
+                  "quantity_scale": null,
+                  "unit": "dollar_face_contracts"
+                },
+                "venue": "polymarket_us",
+                "version": "authored-s02-polymarket_us"
+              }
+            },
+            "8ab893e9b1f8f23d3aa3022fc383eb5f4c932590f570e110d4cfdfe4aed0035b": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": [
+                {
+                  "event_status_at_match": "OPEN_PREGAME",
+                  "fill_id": "ev05:0",
+                  "order_id": "model:ev05:single-order",
+                  "price": "0.74",
+                  "quantity": "1010",
+                  "role": "taker",
+                  "unit": "contracts"
+                }
+              ]
+            },
+            "8fb23dc2405282a35ac4c149a4a3f248cc3054e1cb70737803d9947e2d7cf774": {
+              "version": "comparison-input-template-1",
+              "kind": "payout",
+              "payload": [
+                {
+                  "event_status_at_match": "OPEN_PREGAME",
+                  "fill_id": "ev05:0",
+                  "order_id": "model:ev05:single-order",
+                  "price": "0.74",
+                  "quantity": "1010",
+                  "role": "taker",
+                  "unit": "contracts"
+                }
+              ]
+            },
+            "acb6e03388fd9b50940fc9467cd7697bf070b59e10dd3cfaa82a330476302e35": {
+              "version": "comparison-input-template-1",
+              "kind": "fee",
+              "payload": {
+                "league": "NFL",
+                "overtime": "included",
+                "period": "full_game",
+                "phase": "pregame"
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "consumer": "predict-estimate-components-1",
+          "allocation_algebra": "ev05-refund-aware-1",
+          "content": {
+            "fee": "c88f5e9c60b78a3cd1db893e89b3616e7ee2d339ee04555f0ceb835ee3048f65",
+            "payout": "efb4c972e25817551ce5d2bc9f5f2c092f8f1ae167e5998b3d5bb29bf5373a3c"
+          },
+          "original_refs": {
+            "version": "comparison-current-dependencies-1",
+            "refs": {
+              "identity": "4182147d95afd8501df12052edd9b671cac7816c384459e9eae6c9c685647fc3",
+              "payout": null,
+              "reference": "e37c83f065ea75baa019625bff8a486c390e1c9a66e01783e16ddd14bd5a75e8",
+              "fee": "45a53105308472e79b7a761e32808c770a8d978523cbd04047959ce208609454",
+              "quantity": "6183b04849119afc0ee256181b164c3498e55bfeabb988aaf4a779334238e686",
+              "buffer": null,
+              "probability": null
+            },
+            "phase": "pregame"
+          },
+          "native_contract": {
+            "fee": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a",
+            "payout": "native-contract:d3ffeec5838de0406af1b0ccce1fa34c6065703cf50fdcba7bec4fe765e9889a"
+          },
+          "observation": {
+            "native_key": [
+              "polymarket_us",
+              "124724",
+              "1030131",
+              "2059746",
+              "YES"
+            ],
+            "original": {
+              "value": "0.74",
+              "units": "usd_per_contract",
+              "payout": "1",
+              "payout_units": "USD",
+              "quantity_units": "contracts",
+              "role": "comparison"
+            },
+            "source_at": "2026-10-11T12:00:00+00:00",
+            "received_at": "2026-10-11T12:00:00+00:00",
+            "provenance_sha256": "5ae8cf1dec2d028823289bcee0bd5272912b0152f509eb154c2f29baf740ab38"
+          },
+          "quote_revision": 1,
+          "native_quantity": "1010",
+          "unit": {
+            "unit": "dollar_face_contracts",
+            "face_usd_per_native": "1",
+            "quantity_scale": null,
+            "price_scale": null
+          },
+          "fills": [
+            {
+              "fill_id": "ev05:0",
+              "order_id": "model:ev05:single-order",
+              "role": "taker",
+              "unit": "contracts",
+              "price": "0.74",
+              "quantity": "1010",
+              "event_status_at_match": "OPEN_PREGAME"
+            }
+          ],
+          "stake_fills": null,
+          "state_cashflows": {
+            "home_win": "1010",
+            "away_win": "0",
+            "tie": "747.4",
+            "terminal_noncompletion": "747.4"
+          },
+          "extra_funding": [],
+          "hold_returns": {
+            "home_win": "0",
+            "away_win": "0",
+            "tie": "0",
+            "terminal_noncompletion": "0"
+          },
+          "settlement_charge_already_withheld": false,
+          "evaluated_at": "2026-10-11T12:00:00+00:00"
+        },
+        "dependency_revision": "2cae2d4b49df0d09bc3d7e721229a79569b537385f3c141ff9f315f6d2e29454",
+        "reasons": {
+          "fee": [],
+          "payout": []
+        },
+        "acquisition_usd": "747.4",
+        "deployed_capital_usd": "752.4",
+        "settlement_already_withheld": false,
+        "actual_qualified": false,
+        "settlement_terms": [],
+        "payout_details": {
+          "refund_fees": "retained",
+          "proxy": "entry_mark_neutral",
+          "terminal_scope": "all terminal exceptions after selected normal grading; cancellation/abandonment are aliases, not extra states",
+          "terminal_range_usd": [
+            "0",
+            "1010"
+          ],
+          "collateral_refund_states": [],
+          "branch": "half_without_tie_outcome",
+          "state_override": "explicit_modeled_USD_cashflows"
+        },
+        "assumed_additional_charges": "zero_under_funded_direct_site_model; no_evidenced_exemption",
+        "grid_qualification": "original_quantity_profile_if_bound; otherwise_declared_continuous_hypothesis_not_execution",
+        "fill_basis": "explicit_supplied_fills",
+        "revision": "42cbb58d4a5c6dfe77cc28a3295b403223496f2c41d5bedda2ba697513c49212",
+        "pair_support": "0"
+      }
+    ],
+    "explanation": {
+      "basis": "complete modeled states",
+      "gross_decisive_value_usd": "20.2",
+      "settlement_adjustment_usd": "-1.3332",
+      "net_upfront_fee_usd": "10",
+      "expected_payable_charge_usd": "0",
+      "expected_fee_refund_usd": "0",
+      "expected_total_deduction_usd": "10",
+      "fee_adjusted_expected_profit_usd": "8.8668",
+      "buffer_usd": "4.999",
+      "buffered_profit_usd": "3.8678",
+      "gross_value_basis": "gross receipts before payable fees",
+      "withholding": "Charges already withheld remain inside attached net receipts and are not deducted again.",
+      "returned_holds": "Funding includes refundable holds; state receipts return each hold separately.",
+      "commission_pools": []
+    }
+  }
+}

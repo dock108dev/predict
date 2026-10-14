@@ -8,6 +8,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -52,7 +53,14 @@ def junit_counts(path):
     }
 
 
-def execute(name, command, output, timeout=900, junit=False):
+def require_client_report(path):
+    if not re.search(r"\bpass(?:ed)?\b", path.read_text(), re.I):
+        raise ValueError(
+            "Required client suite has no completion result; empty execution cannot pass"
+        )
+
+
+def execute(name, command, output, timeout=300, junit=False):
     started = time.monotonic()
     record = {"name": name, "command": command, "status": "NOT RUN", "tests": None}
     print(f"::group::{name}", flush=True)
@@ -86,6 +94,12 @@ def execute(name, command, output, timeout=900, junit=False):
                 or record["tests"]["skipped"] == record["tests"]["tests"]
             ):
                 record["status"] = "FAIL"
+        if (
+            record["status"] == "PASS"
+            and command[0] == "node"
+            and command[1].endswith(".cjs")
+        ):
+            require_client_report(output / f"{name}.log")
         if record["status"] == "PASS" and name == "coverage-json":
             coverage_totals(output / "coverage.json")
         if record["status"] == "PASS" and name == "coverage-xml":
@@ -148,6 +162,7 @@ def write_report(output, records, started):
         },
         "tested_sha": os.environ.get("GITHUB_SHA"),
         "pr_head": os.environ.get("PR_HEAD_SHA"),
+        "merge_queue_sha": os.environ.get("MERGE_QUEUE_SHA"),
         "event": os.environ.get("GITHUB_EVENT_NAME", "local"),
         "ref": os.environ.get("GITHUB_REF"),
         "run_url": os.environ.get("CI_RUN_URL"),
@@ -175,7 +190,7 @@ def write_report(output, records, started):
         f"## Offline contract — {overall}",
         f"Candidate: `{safe(report['tested_sha'])}`; PR head: `{safe(report['pr_head'])}`; event: {safe(report['event'])}",
         f"{safe(report['platform'])}; Python {safe(platform.python_version())}; tools: {safe(report['tools'])}",
-        f"Ref: `{safe(report['ref'])}`; run: {safe(report['run_url'])}",
+        f"Ref: `{safe(report['ref'])}`; run: {safe(report['run_url'])}; merge queue candidate: `{safe(report['merge_queue_sha'])}`",
         f"Tests: {totals['tests']}; passed: {totals['passed']}; failed: {totals['failed']}; skipped: {totals['skipped']}. Elapsed: {report['seconds']} s.",
         "| Check | Outcome | Seconds | Reason |",
         "|---|---|---:|---|",
@@ -237,31 +252,34 @@ def main():
     # or inherit a prior measurement from the checkout.
     os.environ["COVERAGE_FILE"] = str(output / ".coverage")
     for group in groups:
-        name = group["name"]
-        commands.append(
-            (
-                name,
-                [
-                    sys.executable,
-                    "-m",
-                    "pytest",
-                    "-q",
-                    "--tb=short",
-                    "--cov=app",
-                    "--cov-branch",
-                    "--cov-append",
-                    "--cov-report=",
-                    f"--junitxml={output / (name + '.xml')}",
-                    *[
-                        "--deselect=" + node
-                        for node in policy["archival_nodes"]
-                        if node.split("::")[0] in group["tests"]
+        for source in group["tests"]:
+            name = group["name"] + "__" + Path(source).stem
+            commands.append(
+                (
+                    name,
+                    [
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                        "-q",
+                        "--tb=short",
+                        "-o",
+                        "faulthandler_timeout=30",
+                        "--cov=app",
+                        "--cov-branch",
+                        "--cov-append",
+                        "--cov-report=",
+                        f"--junitxml={output / (name + '.xml')}",
+                        *[
+                            "--deselect=" + node
+                            for node in policy["archival_nodes"]
+                            if node.split("::")[0] == source
+                        ],
+                        source,
                     ],
-                    *group["tests"],
-                ],
-                True,
+                    True,
+                )
             )
-        )
     deferred = json.loads((ROOT / "scripts/ci/browser-suites.json").read_text())[
         "deferred"
     ]

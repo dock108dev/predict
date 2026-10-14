@@ -1,4 +1,4 @@
-"""D09 versioned, offline cost inputs; no venue acquisition or UI net binding.
+"""Versioned, offline cost inputs; no venue acquisition or UI net binding.
 
 Research proposals cannot become numeric runtime schedules through selection.
 Controlled examples use the existing shared fee algebra, never provider labels.
@@ -26,7 +26,7 @@ def _number(value, *, minimum=None):
     ExactNumber.parse(value)
     # The shared engine's native-input bound keeps every conversion and bounded
     # 10,000-component sum exact under the 100-digit arithmetic context. Wider
-    # D01 rational/derived numbers must not be rounded into monetary inputs.
+    # Rational/derived numbers must not be rounded into monetary inputs.
     result = number(value)
     if minimum is not None and result < minimum:
         raise ValueError("cost number below supported minimum")
@@ -614,7 +614,7 @@ class PositionInputs:
 
 
 def authored_fee(terms: FeeTerms, fills, *, positions=None, outcomes=None):
-    """Shared algebra seam for controlled portable examples only (not S02 UI)."""
+    """Shared algebra seam for controlled portable examples only (not current net-cost presentation)."""
     if not isinstance(terms, FeeTerms) or not isinstance(fills, list) or len(fills) > 10000:
         raise ValueError("typed terms and bounded authored fill list required")
     for fill in fills:
