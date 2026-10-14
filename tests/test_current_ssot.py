@@ -6,10 +6,11 @@ import tempfile
 import subprocess
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from types import SimpleNamespace
 from multidict import MultiDict
 from aiohttp import web
+from aiohttp.test_utils import TestClient, TestServer
 
 from app.collection import current_aggregate, current_policy, current_quota, current_schedule
 from app.collection.current_aggregate_policy import POLICY
@@ -123,6 +124,51 @@ class CalculationOwnership(unittest.TestCase):
 
 
 class SharedPolicyEndpoints(unittest.IsolatedAsyncioTestCase):
+    async def test_closed_sql_pipeline_keeps_pending_prices_and_saved_results_readable(self):
+        from app.dashboard import comparison_board_api
+        from app.comparison.estimated_policy import DEFAULT_POLICY
+        database=SimpleNamespace(closed=True,request=Mock(side_effect=ValueError('saved_updates_stopped')))
+        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=database,
+                                 refresh_aggregate=Mock(),recover=Mock())
+        app=web.Application();comparison_board_api.mount(app,provider)
+        async with TestClient(TestServer(app)) as client:
+            for view in ('odds','ev','arbs'):
+                with self.subTest(view=view):
+                    saved=view!='odds'
+                    output=dict(version='predict-comparison-board-1',view=view,game_key='synthetic:game',
+                        delivery_state='pending',status='historical' if saved else 'prices_only',
+                        result_id='saved-result' if saved else None,snapshot_id='saved-snapshot' if saved else None,
+                        prices=[dict(quote_id='original-quote',original=dict(value='0.48',units='probability'))],
+                        rows=[dict(net_profit_usd='-30.4869')] if saved else [],provider_requests=0)
+                    with patch.object(comparison_board_api,'load',return_value=DEFAULT_POLICY), \
+                         patch.object(comparison_board_api.asyncio,'to_thread',return_value=(output,True)) as sql:
+                        response=await client.get('/api/boards/'+view,params={'game':'synthetic:game'})
+                        self.assertEqual(response.status,202)
+                        self.assertEqual(await response.json(),output)
+                        sql.assert_awaited_once()
+        database.request.assert_not_called()
+        provider.refresh_aggregate.assert_not_called()
+        provider.recover.assert_not_called()
+
+    async def test_active_sql_pipeline_still_queues_pending_calculation(self):
+        from app.dashboard import comparison_board_api
+        from app.comparison.estimated_policy import DEFAULT_POLICY
+        database=SimpleNamespace(closed=False,request=Mock())
+        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=database,
+                                 refresh_aggregate=Mock(),recover=Mock())
+        app=web.Application();comparison_board_api.mount(app,provider)
+        output=dict(game_key='synthetic:game',delivery_state='pending',prices=[],rows=[],provider_requests=0)
+        with patch.object(comparison_board_api,'load',return_value=DEFAULT_POLICY), \
+             patch.object(comparison_board_api.asyncio,'to_thread',return_value=(output,True)) as sql:
+            async with TestClient(TestServer(app)) as client:
+                response=await client.get('/api/boards/odds',params={'game':'synthetic:game'})
+                self.assertEqual(response.status,202)
+                self.assertEqual(await response.json(),output)
+                sql.assert_awaited_once()
+        database.request.assert_called_once_with('synthetic:game',DEFAULT_POLICY)
+        provider.refresh_aggregate.assert_not_called()
+        provider.recover.assert_not_called()
+
     async def test_saved_endpoints_use_one_settings_adapter_before_sql(self):
         from app.dashboard import comparison_board_api, stored_games
         from app.dashboard.query_policy import calculation_policy

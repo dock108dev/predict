@@ -61,7 +61,7 @@ def mount(app, provider):
             output=await asyncio.to_thread(read,req,p)
             if view=='games':return web.json_response(dict(output,stopped=stopped()))
             out,pending=output
-            if pending and not stopped() and not req.query.get('result_id') and req.query.get('history')!='true':
+            if pending and not stopped() and not getattr(provider.database,'closed',False) and not req.query.get('result_id') and req.query.get('history')!='true':
                 provider.database.request(out['game_key'],p)
             return web.json_response(out,status=202 if out.get('delivery_state')=='pending' else 200)
         except ValueError as exc:return web.json_response(dict(error='board_unavailable',reason=str(exc),provider_requests=0),status=409)
