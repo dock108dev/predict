@@ -52,8 +52,8 @@ class DurableGames(unittest.TestCase):
         with self.db.transaction(),self.assertRaisesRegex(ValueError,'conflicting immutable'):self.store.envelope(crossed,eid)
     def test_exact_out_of_order_source_clock(self):
         eid=self.store.envelope(self.record);k=uuid4().hex
-        self.store.source('test','quote',k,'2026-10-13T20:00:00.000000002+00:00',eid,{'price':'2.30'})
-        self.store.source('test','quote',k,'2026-10-13T20:00:00.000000001+00:00',eid,{'price':'9.99'})
+        self.store.source('test','quote',k,'2026-10-13T20:00:00.000000002+00:00',eid,{'price':'2.30'},received_at='2026-10-13T20:00:00.000000002+00:00')
+        self.store.source('test','quote',k,'2026-10-13T20:00:00.000000001+00:00',eid,{'price':'9.99'},received_at='2026-10-13T20:00:00.000000001+00:00')
         r=self.db.execute('SELECT payload FROM current_source_projection WHERE native_id=%s',(k,)).fetchone()
         self.assertEqual(json.loads(r['payload'])['price'],'2.30')
     def test_journal_restart_duplicate_and_incomplete_tail(self):
@@ -89,24 +89,16 @@ class DurableGames(unittest.TestCase):
         from aiohttp.test_utils import TestClient,TestServer
         from types import SimpleNamespace
         from app.dashboard.stored_games import mount
-        def connection():return connect(self.name)
         async def check():
             provider=SimpleNamespace(database=SimpleNamespace(selected=[KEY],error=None,failures=0,status=lambda:dict(state='available'),request=lambda *a:None),dispatch=True,closed=False,closing=False)
             app=web.Application();mount(app,provider)
             async with TestClient(TestServer(app)) as client:
-                with patch('app.dashboard.stored_games.connect',side_effect=connection),patch('app.collection.current_account_recovery.observe_and_activate',side_effect=AssertionError('reads cannot acquire')):
-                    response=await client.get('/api/stored/result',params={'game':KEY})
-                    captured=await response.read();self.assertEqual(response.status,200);self.assertLess(len(captured),150000)
-                    result=json.loads(captured);self.assertEqual(result['snapshot_id'],self.snapshot['id'])
-                    quote=result['state']['events'][0]['groups'][0]['outcomes'][0]['quotes']['novig']
-                    detail=await client.get('/api/stored/result',params={'game':KEY,'result_id':result['result_id'],'quote':quote['id']})
-                    self.assertEqual(detail.status,200);self.assertEqual((await detail.json())['quote']['original'],quote['original'])
-                    provider.dispatch=False;provider.closed=True
-                    stopped=await (await client.get('/api/stored/result',params={'game':KEY})).json()
-                    self.assertEqual(stopped['status'],'historical')
-                with patch('app.dashboard.stored_games.connect',side_effect=OSError('DB unavailable')):
-                    failed=await client.get('/api/stored/result',params={'game':KEY})
-                    self.assertEqual(failed.status,503);self.assertEqual((await failed.json())['error'],'database_unavailable')
+                with patch('app.dashboard.comparison_board_api.connect',side_effect=AssertionError('retired reads cannot use SQL')),patch('app.collection.current_account_recovery.observe_and_activate',side_effect=AssertionError('reads cannot acquire')):
+                    for path in ('/api/stored/result','/api/stored/games'):
+                        response=await client.get(path,params={'game':KEY})
+                        captured=await response.read();self.assertEqual(response.status,410);self.assertLess(len(captured),1000)
+                        result=json.loads(captured);self.assertEqual(result['error'],'sports_history_unavailable')
+                        self.assertEqual(result['provider_requests'],0)
         asyncio.run(check())
 
     def quote(self):
@@ -151,25 +143,25 @@ class PipelineBounds(unittest.IsolatedAsyncioTestCase):
     def service(self):
         from types import SimpleNamespace
         from app.collection.current_database import DatabasePipeline
-        svc=SimpleNamespace(config={'cleanup_seconds':1},journal=SimpleNamespace(byte_cap=268435456))
-        return DatabasePipeline(svc,[KEY])
+        svc=SimpleNamespace(config={'cleanup_seconds':1,'sports':['NFL'],'families':['moneyline']},sink=SimpleNamespace(error=None))
+        return DatabasePipeline(svc)
     async def test_failure_is_visible_and_finite(self):
         pipe=self.service()
         async def timeout(awaitable,timeout):
             awaitable.close();raise TimeoutError
-        with patch.object(pipe,'tick',side_effect=OSError('database unavailable')),patch('app.collection.current_database.asyncio.wait_for',side_effect=timeout):
-            await pipe.run()
-        self.assertEqual(pipe.failures,5);self.assertEqual(pipe.status()['state'],'unavailable')
-        self.assertIn('database unavailable',pipe.status()['error'])
-    async def test_calculation_queue_is_bounded(self):
+        with patch.object(pipe,'tick',side_effect=OSError('database unavailable')),patch('app.collection.current_database.asyncio.wait_for',side_effect=timeout) as wait:
+            await pipe.run_maintenance()
+        self.assertEqual(wait.call_count,3)
+        self.assertIn('database unavailable',pipe.error)
+    async def test_archive_calculation_queue_is_absent(self):
         pipe=self.service()
-        for n in range(pipe.MAX_PENDING):pipe.request('test:'+str(n),DEFAULT_POLICY)
-        with self.assertRaisesRegex(ValueError,'capacity'):pipe.request('overflow',DEFAULT_POLICY)
+        self.assertFalse(hasattr(pipe,'request'));self.assertFalse(hasattr(pipe,'pending'))
     async def test_stop_revokes_and_finishes_owned_worker(self):
+        import asyncio
         pipe=self.service()
-        with patch.object(pipe,'tick',return_value=0):
-            await pipe.start();await __import__('asyncio').sleep(.01)
-            self.assertTrue(await pipe.close());self.assertTrue(pipe.closed);self.assertTrue(pipe.task.done())
+        pipe.task=asyncio.create_task(pipe.run_maintenance())
+        await asyncio.sleep(0)
+        self.assertTrue(await pipe.close());self.assertTrue(pipe.closed);self.assertTrue(pipe.task.done())
 
 
 class RequestedGames(DurableGames):

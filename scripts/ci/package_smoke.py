@@ -116,18 +116,21 @@ async def smoke():
         await site.start()
         url='http://127.0.0.1:'+str(site._server.sockets[0].getsockname()[1])
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
-            for path in ('/','/ev','/arbs','/current/coverage','/admin',
+            for path in ('/','/ev','/arbs','/admin',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
-                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
-                         '/api/comparison','/api/coverage'):
+                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     await response.read()
+            for path in ('/current/coverage', '/api/current', '/api/current/details',
+                         '/api/comparison', '/api/coverage',
+                         '/api/stored/games', '/api/stored/result', '/api/boards/history'):
+                async with client.get(url+path) as response:
+                    assert response.status==410,(path,response.status)
+                    state=await response.json()
+                    assert state['provider_requests']==0,(path,state)
             async with client.get(url+'/') as response:
                 assert '/current/assets/stored.js' in await response.text()
-            async with client.get(url+'/api/current') as response:
-                state=await response.json()
-                assert state['mode']=='current' and not state['events']
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

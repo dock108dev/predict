@@ -16,6 +16,7 @@ from psycopg import sql
 from app.storage import store as storage
 from app.storage.store import connect, Store, encoded
 from app.storage.current_games import GameStore
+from app.storage.domain_history import FRAME_PREFIX, decode as decode_domain
 from app.storage.payload_codec import PREFIX, LEGACY_PREFIX, decode, encode, logical_size_sql
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -54,7 +55,7 @@ class EncodedHistory(unittest.TestCase):
     def test_new_saved_payload_is_compact_but_every_reader_gets_original_bytes(self):
         for table,original in (('current_game_snapshot',self.snapshot),('current_game_result',self.result)):
             physical=self.db.execute(sql.SQL('SELECT payload AS stored_payload FROM {} WHERE id=%s').format(sql.Identifier(table)),(original['id'],)).fetchone()['stored_payload']
-            self.assertTrue(physical.startswith(PREFIX));self.assertLess(len(physical),len(original['payload'])//10)
+            self.assertTrue(physical.startswith(FRAME_PREFIX));self.assertLess(len(physical),len(original['payload'])//10)
             logical=self.db.execute(sql.SQL('SELECT * FROM {} WHERE id=%s').format(sql.Identifier(table)),(original['id'],)).fetchone()
             self.assertEqual(logical['payload'].encode(),original['payload'].encode())
             self.assertEqual(logical['payload_sha256'],original['payload_sha256'])
@@ -89,8 +90,8 @@ class EncodedHistory(unittest.TestCase):
         original=dict(source='synthetic',kind='catalog',retained_at='2026-10-14T00:00:00+00:00',value={'facts':['original']*2048})
         eid=self.store.envelope(original)
         row=self.db.execute('SELECT payload AS stored_payload FROM current_envelope WHERE id=%s',(eid,)).fetchone()
-        self.assertTrue(row['stored_payload'].startswith(PREFIX))
-        self.assertEqual(decode(row['stored_payload']),encoded(original).decode())
+        self.assertTrue(row['stored_payload'].startswith(FRAME_PREFIX))
+        self.assertEqual(decode_domain(row['stored_payload'],self.db),encoded(original).decode())
         self.assertEqual(self.db.execute('SELECT payload FROM current_envelope WHERE id=%s',(eid,)).fetchone()['payload'],encoded(original).decode())
         for table in ('current_game_snapshot','current_game_result','current_envelope'):
             with self.assertRaises(psycopg.Error):self.db.execute(sql.SQL("UPDATE {} SET payload=payload||'tamper'").format(sql.Identifier(table)))
@@ -107,7 +108,7 @@ class EncodedHistory(unittest.TestCase):
                     self.db.execute('ALTER TABLE current_envelope DISABLE TRIGGER immutable_current_envelope')
                     self.db.execute('UPDATE current_envelope SET payload=%s WHERE id=%s',(legacy_encoded(encoded(original).decode()),eid))
                     self.db.execute('ALTER TABLE current_envelope ENABLE TRIGGER immutable_current_envelope')
-                self.store.source('kalshi','catalog',str(i),original['retained_at'],eid,{})
+                self.store.source('kalshi','catalog',str(i),original['retained_at'],eid,{},received_at=original['retained_at'])
                 size=self.db.execute(sql.SQL('SELECT {} AS logical_bytes FROM current_envelope WHERE id=%s').format(logical_size_sql()),(eid,)).fetchone()['logical_bytes']
                 self.assertEqual(size,len(encoded(original)));total+=size
             self.assertGreater(total,24*1024*1024)
@@ -119,7 +120,7 @@ class EncodedHistory(unittest.TestCase):
     def test_malformed_codec_header_is_refused_in_sql_before_decode(self):
         with self.db.transaction(force_rollback=True):
             original=dict(source='kalshi',kind='catalog',retained_at='2026-10-14T00:00:00+00:00',value={'evidence':['original']*2048})
-            eid=self.store.envelope(original);self.store.source('kalshi','catalog','bad-header',original['retained_at'],eid,{})
+            eid=self.store.envelope(original);self.store.source('kalshi','catalog','bad-header',original['retained_at'],eid,{},received_at=original['retained_at'])
             for prefix in (PREFIX,LEGACY_PREFIX):
                 self.db.execute('ALTER TABLE current_envelope DISABLE TRIGGER immutable_current_envelope')
                 self.db.execute('UPDATE current_envelope SET payload=%s WHERE id=%s',(prefix+'bad-header',eid))

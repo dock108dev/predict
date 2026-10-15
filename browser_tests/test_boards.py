@@ -12,9 +12,51 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def current_fixture():
+    """Bind retained financial examples to authored current transport identities."""
+    fixture = json.loads((ROOT / "tests/fixtures/ev09-u01-responses.json").read_text())
+    game = fixture["ev"]["game_key"]
+    identity = dict(
+        context_id="authored-context:" + game,
+        epoch="authored-reset-1",
+        dependency_revision=fixture["ev"]["input_version"],
+        policy_revision=fixture["ev"]["policy"]["revision"],
+        engine_binding="authored-engine-1",
+    )
+    for view in ("odds", "ev", "arbs"):
+        value = fixture[view]
+        value["version"] = "predict-comparison-board-2"
+        value["calculation_context"] = dict(
+            identity, dependency_revision=value["input_version"]
+        )
+        for key in ("result_id", "snapshot_id"):
+            value.pop(key, None)
+        for quote in value["prices"]:
+            quote["inputs_identity"].update(
+                context_id=identity["context_id"], game_key=game
+            )
+        for row in value["rows"]:
+            if "details" in row:
+                for key in ("result_id", "snapshot_id"):
+                    row["details"].pop(key, None)
+                row["details"]["context_id"] = identity["context_id"]
+    for kind in ("single", "pair"):
+        value = fixture[kind]
+        value.update(
+            version="predict-board-details-2",
+            game_key=game,
+            calculation_context=identity,
+        )
+        for key in ("result_id", "snapshot_id"):
+            value.pop(key, None)
+            value["original_inputs_identity"].pop(key, None)
+        value["original_inputs_identity"]["context_id"] = identity["context_id"]
+    return fixture
+
+
 @pytest.mark.parametrize("width", [1280, 390])
 def test_saved_board_journey(width):
-    fixture = json.loads((ROOT / "tests/fixtures/ev09-u01-responses.json").read_text())
+    fixture = current_fixture()
     state = {"mode": "normal", "stopped": False}
     errors = []
     assets = ROOT / "app/dashboard/opportunity_static/current"
@@ -65,6 +107,10 @@ def test_saved_board_journey(width):
                 return
             if view == "details":
                 value = fixture["pair" if "pair" in query else "single"]
+                assert (
+                    query["context_id"][0] == value["calculation_context"]["context_id"]
+                )
+                assert "result_id" not in query
             else:
                 assert view == "slate"
                 view = query["view"][0]
@@ -88,7 +134,9 @@ def test_saved_board_journey(width):
                 if state["stopped"]:
                     value["delivery_state"] = "stopped"
                 value = dict(
-                    version="predict-comparison-slate-1",
+                    version="predict-comparison-slate-2",
+                    epoch="authored-reset-1",
+                    read_revision="authored-read-1",
                     view=view,
                     filter=query["filter"][0],
                     policy=value["policy"],
@@ -98,7 +146,21 @@ def test_saved_board_journey(width):
                     boards=[] if state["mode"] == "empty" else [value],
                     stopped=state["stopped"],
                     as_of=value["read_at"],
-                    bounds=dict(maximum_games=200, maximum_bytes=8388608),
+                    bounds=dict(
+                        maximum_games=500, maximum_page_games=50, maximum_bytes=8388608
+                    ),
+                    coverage=dict(
+                        total_games=0
+                        if state["mode"] == "empty"
+                        else len(fixture["catalog"]["games"]),
+                        offset=0,
+                        limit=50,
+                        returned_games=0
+                        if state["mode"] == "empty"
+                        else len(fixture["catalog"]["games"]),
+                        next_offset=None,
+                        complete=True,
+                    ),
                 )
             request.fulfill(json=value)
 

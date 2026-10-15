@@ -80,6 +80,17 @@ inputs and non-loopback connections. They are regression guards, not an OS sandb
 SQL creates and stops its own temporary cluster. Browser requests are intercepted.
 Package smoke installs a fresh distribution with acquisition disabled.
 
+The ordinary SQL regression contract follows the current-row implementation:
+comparison reads calculate transiently, bind Details to the current epoch and
+selected dependencies, and leave sports archive tables empty. Restart tests retain
+current prices and clocks, rotate the epoch, join the expiry worker on Stop and
+prove that old journals are not imported. Financial and occurrence SQL roundtrips
+remain required. Separately maintained legacy storage/codec tests exercise retained
+read compatibility; their old saved-result routes must return 410 without SQL or
+acquisition. Package smoke checks those retirements explicitly, and the intercepted
+browser fixtures use version 2 contexts and page coverage around unchanged financial
+examples. These checks replace retired queue/snapshot expectations, with no new skips.
+
 `.venv/bin/python scripts/ci/export.py EMPTY_DESTINATION` exports tracked/nonignored
 source and rejects private
 paths and escaping symlinks. Tests requiring Git metadata need a disposable checkout

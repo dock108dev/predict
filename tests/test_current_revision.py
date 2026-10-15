@@ -119,20 +119,28 @@ class Cycles(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(QuotaStop,'revoked'):
             await self.scheduler.refresh(['NFL'],'controlled-stopped')
         self.assertEqual(len(self.calls),count+1)
-    async def test_reference_manual_pull_retains_baseline_without_duplicate_or_due_reset(self):
+    async def test_reference_manual_pull_admits_without_archive_duplicate_or_due_reset(self):
         await self.scheduler.step()
         due=self.q.snapshot()['next_due_at'];count=len(self.calls)
         self.at+=timedelta(seconds=1)
         root=Path(self.temp.name)
-        with patch('app.collection.current_aggregate.ROOT',root):
+        with patch('app.collection.current_aggregate.ROOT',root),patch.object(self.service.sink,'commit',wraps=self.service.sink.commit) as admitted:
             await self.scheduler.refresh(['NFL'],'controlled-reference',reference=True)
+        self.assertEqual(admitted.call_count,1)
+        observation=admitted.call_args.args[0]
+        self.assertEqual(observation['sport'],'NFL')
+        self.assertEqual(observation['received_at'],self.clock())
         self.assertEqual(len(self.calls),count+1)
         self.assertEqual(self.calls[-1]['params']['bookmakers'],'novig,prophetx,pinnacle')
         paths=list((root/'.local/predict-odds/baselines').glob('*/NFL.json'))
-        self.assertEqual(len(paths),1)
-        retained=json.loads(paths[0].read_text())
-        self.assertNotIn('CONTROLLED-only',json.dumps(retained))
-        self.assertEqual(retained['received_at'],self.clock())
+        self.assertEqual(paths,[])
+        self.assertFalse((root/'.local/predict-odds/diagnostics').exists())
+        state=self.store.snapshot()
+        self.assertNotIn('CONTROLLED-only',json.dumps(state))
+        quotes=[q for e in state['events'] for g in e['groups'] for o in g['outcomes'] for q in o['quotes'].values() if q['source']['native_event_id'].endswith('-NFL')]
+        self.assertTrue(quotes)
+        self.assertEqual({q['times']['received_at'] for q in quotes},{'2026-10-03T14:00:00+00:00'})
+        self.assertEqual({q['times']['source_at'] for q in quotes},{'2026-10-03T00:00:00Z'})
         self.assertEqual(self.q.snapshot()['next_due_at'],due)
         with self.assertRaisesRegex(QuotaStop,'already_consumed'):
             await self.scheduler.refresh(['NFL'],'controlled-reference',reference=True)

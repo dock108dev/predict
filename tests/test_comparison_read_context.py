@@ -1,198 +1,171 @@
-"""Read-only batching preserves exact originals, membership and financial IDs."""
+"""One coherent typed current frame; selected guards and financial inputs stay exact."""
 import base64
-import json
 from copy import deepcopy
+from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
 
 from app.collection.current_aggregate_admission import admit
-from app.comparison.combined_inputs import build, _ADMITTED_CACHE
-from app.dashboard.current_normalized import catalog_from_normalized
-from app.storage.comparison_board import ReadContext, catalog, discover, source_guard
-from app.storage.store import encoded, hashed
-from tests.test_ev09_n01 import envelopes, AT, SELECTED
-
-
-def frame():
-    originals=envelopes();projections={}
-    for item in sorted(originals,key=lambda e:e['record']['retained_at']):
-        r=item['record'];v=r['value'];source=r['source'];kind=r['kind'];values=[]
-        if kind=='aggregate_batch':
-            body=base64.b64decode(v['body_b64'])
-            for venue in ('novig','prophetx','pinnacle'):
-                for value in admit(body,v['sport'],v['received_at'],venue=venue):
-                    q=value['quote'];s=q['source']
-                    values.append(('quote',hashed([q['venue'],s['native_event_id'],s['native_market_id'],s['native_outcome_id']]),value))
-        elif kind=='catalog':values=[('catalog',source,v['inventory'])]
-        elif kind=='admitted_books':
-            for value in v['observations']:
-                ref=value['book']['raw']['ref'];values.append(('book',ref['event_id']+':'+ref['market_id'],value))
-        for projected_kind,native,value in values:
-            projections[(source,projected_kind,native)]=dict(source=source,kind=projected_kind,native_id=native,
-                envelope_id=item['id'],payload=encoded(value).decode())
-    rows=[projections[k] for k in sorted(projections)]
-    used={r['envelope_id'] for r in rows}
-    return [e for e in originals if e['id'] in used],{k:r['envelope_id'] for k,r in projections.items()},rows
-
-
-class RetainedStore:
-    def __init__(self):self.frame=frame();self.reads=0
-    def combined_read_capture(self):
-        self.reads+=1
-        return deepcopy(self.frame)
+from app.comparison.combined_inputs import build
+from app.storage.comparison_board import ReadContext, discover, source_guard
+from tests.test_current_board_reads import frame
+from tests.test_ev09_n01 import retained, envelopes, AT, SELECTED
 
 
 class ComparisonReadContext(TestCase):
     def setUp(self):
-        _ADMITTED_CACHE.clear();self.store=RetainedStore()
+        self.frame = frame()
+        self.store = SimpleNamespace(db=None)
+        self.capture = patch('app.storage.current_rows.CurrentRowStore.capture',
+                             side_effect=lambda **kwargs: deepcopy(self.frame)).start()
+        self.addCleanup(patch.stopall)
 
-    def test_bound_inner_winner_remains_a_guard_dependency_despite_outer_disagreement(self):
-        row=next(r for r in self.store.frame[2] if r['source']=='kalshi' and r['kind']=='catalog')
-        value=json.loads(row['payload'])
-        market=next(m for m in value['markets'] if m['market_type']=='moneyline')
-        self.assertEqual(market['v1_raw_binding']['identity']['family'],'moneyline')
-        market['market_type']='spread';row['payload']=encoded(value).decode()
-        context=ReadContext(self.store,at=AT)
-        members=next(b['members'] for b in context.catalog_bundles() if list(SELECTED) in b['members'])
-        guard=context.guard(members)
-        book=next(r for r in self.store.frame[2] if r['source']=='kalshi' and r['kind']=='book')
-        changed=json.loads(book['payload']);changed['book']['raw']['exchange_at']='2026-10-14T01:15:10+00:00'
-        book['payload']=encoded(changed).decode()
-        self.assertNotEqual(ReadContext(self.store,at=AT).guard(members),guard)
+    def context(self):
+        return ReadContext(self.store, at=AT)
 
-    def legacy(self):
-        originals,associations,_=self.store.frame
-        return build(originals,at=AT,associations=associations)
+    def selected(self, context):
+        return discover(self.store, context=context, selected=SELECTED)[0]
+
+    def members(self, context):
+        return next(b['members'] for b in context.catalog_bundles() if list(SELECTED) in b['members'])
 
     def test_slim_catalog_keeps_exact_occurrences_and_native_alternatives(self):
-        expected=catalog(self.legacy());context=ReadContext(self.store,at=AT)
-        with patch('app.comparison.source_inputs.produce',side_effect=AssertionError('Catalog must not price/profile')):
-            actual=context.catalog()
-        for games in (actual['games'],expected['games']):
-            for game in games:game.pop('input_version')
-            games.sort(key=lambda game:game['game_key'])
-        self.assertEqual(actual,expected)
-        self.assertEqual(self.store.reads,1)
+        context = self.context()
+        with patch('app.comparison.source_inputs.produce', side_effect=AssertionError('catalog must not price')):
+            actual = context.catalog()
+        expected = self.selected(context)['state_inputs']['events'][0]
+        game = next(g for g in actual['games'] if list(SELECTED) in g['members'])
+        for key in ('title', 'start_at', 'participants'):
+            self.assertEqual(game[key], expected[key])
+        alternatives=sum(len(qs) for group in expected['groups'] for outcome in group['outcomes'] for qs in outcome.get('alternatives',{}).values())
+        self.assertEqual(game['native_alternatives'], alternatives)
+        self.assertEqual(self.capture.call_count, 1)
+        self.capture.assert_called_once_with(include_depth=False)
 
-    def test_selected_hydration_equals_legacy_full_original_and_financial_inputs(self):
-        expected=next(b for b in self.legacy() if list(SELECTED) in b['members'])
-        context=ReadContext(self.store,at=AT);context.catalog()
-        with patch('app.comparison.combined_inputs.catalog_from_normalized',wraps=catalog_from_normalized) as hydration:
-            actual=discover(self.store,context=context,game=expected['game_key'])
-            again=discover(self.store,context=context,selected=SELECTED)
-        self.assertEqual(actual,[expected]);self.assertEqual(again,actual)
-        self.assertEqual(hydration.call_count,1)
-        self.assertEqual(self.store.reads,1)
+    def test_selected_hydration_keeps_original_financial_inputs(self):
+        context = self.context()
+        context.catalog()
+        selected = self.selected(context)
+        again = discover(self.store, context=context, game=selected['game_key'])[0]
+        self.assertEqual(selected, again)
+        original = retained()[0]
+        # Representation revisions change when archive locators are retired;
+        # benchmark prices, native selection meaning and clocks remain exact.
+        def meaning(value):
+            if isinstance(value,dict):return {k:meaning(v) for k,v in value.items() if k!='revision'}
+            if isinstance(value,list):return [meaning(v) for v in value]
+            return value
+        self.assertEqual(meaning(selected['benchmark']), meaning(original['benchmark']))
+        originals = {tuple(sorted(r['quote']['source'].items())): r['quote']['original'] for r in original['records']}
+        for record in selected['records']:
+            self.assertEqual(record['quote']['original'], originals[tuple(sorted(record['quote']['source'].items()))])
+        self.assertEqual(self.capture.call_count, 1)
 
-    def test_selected_no_cache_hydration_keeps_exact_inputs_and_releases_full_bundles(self):
-        expected=next(b for b in self.legacy() if list(SELECTED) in b['members'])
-        context=ReadContext(self.store,at=AT);context.catalog()
-        with patch('app.comparison.combined_inputs.catalog_from_normalized',wraps=catalog_from_normalized) as hydration:
-            first=discover(self.store,context=context,game=expected['game_key'],cache=False)
-            second=discover(self.store,context=context,game=expected['game_key'],cache=False)
-        self.assertEqual(first,[expected]);self.assertEqual(second,first)
-        self.assertEqual(context._bundles,{})
-        self.assertEqual(hydration.call_count,2)
-        self.assertEqual(self.store.reads,1)
+    def test_uncached_selected_hydration_does_not_reread_sql(self):
+        context = self.context()
+        first = discover(self.store, context=context, selected=SELECTED, cache=False)
+        second = discover(self.store, context=context, selected=SELECTED, cache=False)
+        self.assertEqual(first, second)
+        self.assertEqual(self.capture.call_count, 1)
+        self.assertFalse(hasattr(context, '_bundles'))
 
     def test_one_context_resolves_once_and_guard_never_rediscovers(self):
         from app.comparison.occurrence_matching import OccurrenceResolver
-        original=OccurrenceResolver.resolve
-        calls=[]
-        def resolve(instance,records,**kwargs):
-            calls.append(len(records));return original(instance,records,**kwargs)
-        with patch.object(OccurrenceResolver,'resolve',resolve):
-            context=ReadContext(self.store,at=AT);bundles=discover(self.store,context=context)
-            for b in bundles:
-                with patch('app.storage.comparison_board.discover',side_effect=AssertionError('Guard must not rediscover')):
-                    first=source_guard(self.store,b['members'],context=context)
-                    self.assertEqual(first,source_guard(self.store,b['members'],context=context))
-        self.assertEqual(len(calls),1);self.assertEqual(self.store.reads,1)
+        original = OccurrenceResolver.resolve
+        calls = []
+        def resolve(instance, records, **kwargs):
+            calls.append(len(records))
+            return original(instance, records, **kwargs)
+        with patch.object(OccurrenceResolver, 'resolve', resolve):
+            context = self.context()
+            bundles = discover(self.store, context=context)
+            for bundle in bundles:
+                with patch('app.storage.comparison_board.discover', side_effect=AssertionError('no rediscovery')):
+                    guard = source_guard(self.store, bundle['members'], context=context)
+                    self.assertEqual(guard, source_guard(self.store, bundle['members'], context=context))
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.capture.call_count, 1)
 
-    def test_current_association_change_gets_a_fresh_guard_despite_immutable_cache(self):
-        before=ReadContext(self.store,at=AT)
-        members=next(b['members'] for b in before.catalog_bundles() if list(SELECTED) in b['members'])
-        guard=before.guard(members)
-        originals,associations,rows=self.store.frame
-        removed=next(r for r in rows if r['source']=='kalshi' and r['kind']=='book')
-        rows.remove(removed);associations.pop((removed['source'],removed['kind'],removed['native_id']))
-        after=ReadContext(self.store,at=AT)
-        self.assertNotEqual(after.guard(members),guard)
-        self.assertEqual(before.guard(members),guard)
+    def test_removed_member_revokes_new_context_keeps_captured_frame(self):
+        before = self.context()
+        members = self.members(before)
+        guard = before.guard(members)
+        self.frame['records'] = [r for r in self.frame['records'] if r['quote']['venue'] != 'kalshi']
+        self.assertNotEqual(self.context().guard(members), guard)
+        self.assertEqual(before.guard(members), guard)
 
-    def test_missing_book_is_not_reintroduced_from_a_full_original_receipt(self):
-        originals,associations,rows=self.store.frame
-        rows[:]=[r for r in rows if not (r['source']=='the_odds_api' and
-            json.loads(r['payload'])['quote']['venue']=='pinnacle')]
-        associations.clear();associations.update({(r['source'],r['kind'],r['native_id']):r['envelope_id'] for r in rows})
-        context=ReadContext(self.store,at=AT);bundle=discover(self.store,context=context,selected=SELECTED)[0]
+    def test_missing_reference_never_returns_from_original_envelopes(self):
+        self.frame['records'] = [r for r in self.frame['records'] if r['quote']['venue'] != 'pinnacle']
+        with patch('app.storage.current_games.GameStore.combined_read_capture', side_effect=AssertionError('no archive')):
+            bundle = self.selected(self.context())
         self.assertIsNone(bundle['benchmark'])
-        self.assertEqual(bundle['benchmark_reason'],'selected_benchmark_two_originals_absent')
-        self.assertNotIn('pinnacle',{r['quote']['venue'] for r in bundle['records']})
+        self.assertEqual(bundle['benchmark_reason'], 'selected_benchmark_two_originals_absent')
+        self.assertNotIn('pinnacle', {r['quote']['venue'] for r in bundle['records']})
 
-    def test_projection_price_tampering_refuses_even_with_a_warm_receipt_cache(self):
-        ReadContext(self.store,at=AT)
-        row=next(r for r in self.store.frame[2] if r['source']=='the_odds_api' and r['kind']=='quote'
-            and json.loads(r['payload'])['event']['competition']=='NFL'
-            and json.loads(r['payload'])['market_identity']['family']=='moneyline')
-        value=json.loads(row['payload']);value['quote']['original']['value']='9.99';row['payload']=encoded(value).decode()
-        with self.assertRaisesRegex(ValueError,'projection_original_conflict'):ReadContext(self.store,at=AT)
+    def test_current_price_change_revokes_selected_guard(self):
+        before = self.context()
+        members = self.members(before)
+        guard = before.guard(members)
+        row = next(r for r in self.frame['records'] if r['quote']['venue'] == 'novig')
+        row['quote']['original']['value'] = '9.99'
+        self.assertNotEqual(self.context().guard(members), guard)
+        self.assertEqual(before.guard(members), guard)
 
-    def test_bad_receipt_hash_cannot_use_a_cached_normalization(self):
-        ReadContext(self.store,at=AT)
-        original=next(e for e in self.store.frame[0] if e['record']['kind']=='aggregate_batch')
-        original['record']['value']['body_sha256']='0'*64
-        with self.assertRaisesRegex(ValueError,'envelope_hash_conflict'):ReadContext(self.store,at=AT)
+    def test_epoch_replacement_revokes_captured_identity(self):
+        before = self.context()
+        members = self.members(before)
+        self.frame['epoch'] = 'authored-successor-epoch'
+        self.assertNotEqual(before.guard(members), self.context().guard(members))
+
+    def test_source_unavailable_changes_read_revision(self):
+        before = self.context()
+        self.frame['source_status'] = {'novig': {'state': 'unavailable'}}
+        after = self.context()
+        self.assertNotEqual(before.read_revision, after.read_revision)
+        self.assertTrue(any(r['quote']['state'] == 'unavailable' for group in after.prepared['groups']
+                            for r in group if r['quote']['venue'] == 'novig'))
+
+    def test_legacy_bad_receipt_hash_is_still_refused(self):
+        originals = deepcopy(envelopes())
+        original = next(e for e in originals if e['record']['kind'] == 'aggregate_batch')
+        original['record']['value']['body_sha256'] = '0' * 64
+        with self.assertRaisesRegex(ValueError, 'envelope_hash_conflict'):
+            build(originals, at=AT)
 
     def test_event_filter_preserves_full_original_receipt_and_clocks(self):
-        original=next(e for e in envelopes() if e['record']['kind']=='aggregate_batch')['record']['value']
-        body=base64.b64decode(original['body_b64']);rows=admit(body,'NFL',original['received_at'],venue='novig')
-        expected=[r for r in rows if r['quote']['source']['native_event_id']==SELECTED[1]]
-        self.assertEqual(admit(body,'NFL',original['received_at'],venue='novig',event_ids=[SELECTED[1]]),expected)
+        original = next(e for e in envelopes() if e['record']['kind'] == 'aggregate_batch')['record']['value']
+        body = base64.b64decode(original['body_b64'])
+        rows = admit(body, 'NFL', original['received_at'], venue='novig')
+        expected = [r for r in rows if r['quote']['source']['native_event_id'] == SELECTED[1]]
+        self.assertEqual(admit(body, 'NFL', original['received_at'], venue='novig', event_ids=[SELECTED[1]]), expected)
 
-    def test_cache_objects_cannot_mutate_later_read_financial_inputs(self):
-        first=ReadContext(self.store,at=AT);a=discover(self.store,context=first,selected=SELECTED)[0]
-        expected=deepcopy(a);a['records'][0]['quote']['original']['value']='changed by caller'
-        second=ReadContext(self.store,at=AT)
-        self.assertEqual(discover(self.store,context=second,selected=SELECTED)[0],expected)
+    def test_caller_mutation_cannot_change_a_later_read(self):
+        first = self.context()
+        bundle = self.selected(first)
+        expected = deepcopy(bundle)
+        bundle['records'][0]['quote']['original']['value'] = 'changed by caller'
+        self.assertEqual(self.selected(self.context()), expected)
 
-    def test_spread_total_changes_do_not_revoke_a_winner_guard(self):
-        context=ReadContext(self.store,at=AT)
-        members=next(b['members'] for b in context.catalog_bundles() if list(SELECTED) in b['members'])
-        expected=context.guard(members)
-        rows=self.store.frame[2];changed=0
-        for row in rows:
-            if row['source']!='the_odds_api' or row['kind']!='quote':continue
-            value=json.loads(row['payload'])
-            if value['quote']['source']['native_event_id']==SELECTED[1] and value['market_identity']['family'] in ('spread','total'):
-                value['quote']['original']['value']='9.99';row['payload']=encoded(value).decode();changed+=1
-        self.assertGreater(changed,0)
-        self.assertEqual(ReadContext(self.store,at=AT).guard(members),expected)
+    def test_nonwinner_changes_do_not_revoke_winner_guard(self):
+        before = self.context()
+        members = self.members(before)
+        guard = before.guard(members)
+        row = deepcopy(self.frame['records'][0])
+        row['market_identity']['family'] = 'spread'
+        self.frame['records'].append(row)
+        row['quote']['original']['value'] = '9.99'
+        self.assertEqual(self.context().guard(members), guard)
 
-    def test_native_unknown_or_nonwinner_book_does_not_revoke_winners(self):
-        context=ReadContext(self.store,at=AT)
-        members=next(b['members'] for b in context.catalog_bundles() if list(SELECTED) in b['members'])
-        expected=context.guard(members)
-        originals,associations,rows=self.store.frame
-        row=deepcopy(next(r for r in rows if r['source']=='kalshi' and r['kind']=='book'))
-        value=json.loads(row['payload']);ref=value['book']['raw']['ref'];ref['market_id']='nonwinner-market'
-        row['native_id']=ref['event_id']+':'+ref['market_id'];row['payload']=encoded(value).decode()
-        rows.append(row);rows.sort(key=lambda r:(r['source'],r['kind'],r['native_id']))
-        associations[(row['source'],row['kind'],row['native_id'])]=row['envelope_id']
-        self.assertEqual(ReadContext(self.store,at=AT).guard(members),expected)
-
-    def test_native_winner_clock_and_predicate_changes_still_revoke(self):
-        context=ReadContext(self.store,at=AT)
-        members=next(b['members'] for b in context.catalog_bundles() if list(SELECTED) in b['members'])
-        expected=context.guard(members)
-        for kind in ('book','catalog'):
-            original=deepcopy(self.store.frame)
-            row=next(r for r in self.store.frame[2] if r['source']=='kalshi' and r['kind']==kind)
-            value=json.loads(row['payload'])
-            if kind=='book':value['book']['raw']['exchange_at']='2026-10-14T01:15:10+00:00'
+    def test_native_clock_and_predicate_changes_revoke_selected_guard(self):
+        before = self.context()
+        members = self.members(before)
+        guard = before.guard(members)
+        original = deepcopy(self.frame)
+        for field in ('clock', 'predicate'):
+            self.frame = deepcopy(original)
+            row = next(r for r in self.frame['records'] if r['quote']['venue'] == 'kalshi')
+            if field == 'clock':
+                row['quote']['times']['source_at'] = '2026-10-14T01:15:10Z'
             else:
-                market=next(m for m in value['markets'] if m['market_type']=='moneyline')
-                market['terms']['description']='Authored different exceptional settlement predicate'
-            row['payload']=encoded(value).decode()
-            self.assertNotEqual(ReadContext(self.store,at=AT).guard(members),expected)
-            self.store.frame=original
+                row['selection']['predicate'] = 'lose'
+            self.assertNotEqual(self.context().guard(members), guard)
