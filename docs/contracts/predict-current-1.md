@@ -2,7 +2,7 @@
 
 This is the validated current-state interface used by compatibility readers and
 explicit injected providers. The ordinary SQL-backed browser uses the separate
-[saved-board API](../comparison-board-api-contract.md). Shared admission retains
+[current-board API](../comparison-board-api-contract.md). Shared admission retains
 original native observations and rejects silent synthetic or retained substitution.
 
 ## Routes and context

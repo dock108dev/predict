@@ -44,6 +44,9 @@ app/reviews/*
 
 # Local planning, reviews and superseded documentation
 /PLAN.md
+/docs/all-games-operating-instructions.md
+/docs/practical-use-requirements.md
+/docs/predict-estimated-value-plan-20261011.md
 /docs/history/
 /docs/*-handoff.md
 /docs/*-report.md

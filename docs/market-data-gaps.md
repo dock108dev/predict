@@ -27,7 +27,8 @@ Native and aggregate sources have independent access, timing and availability.
 - The aggregate ledger preserves unresolved exposure. Missing account evidence can
   block dispatch instead of implying a usable balance.
 
-The app has no order execution, cloud deployment, automatic retention pruning or
-universal sport/market model. See [calculations](benchmark-ev.md),
+The app has no order execution, cloud deployment or universal sport/market model.
+Current sports rows expire automatically; separately retained research packages
+have no automatic pruning. See [calculations](benchmark-ev.md),
 [sport handlers](sports-integration.md), [architecture](architecture.md) and
 [operation](configuration.md).

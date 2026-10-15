@@ -1,47 +1,89 @@
 # Interface design
 
-The ordinary SQL-backed interface presents saved server calculations. Browser
-code validates context and renders values; it does not calculate fees, allocation
-or settlement. See [saved-board API](comparison-board-api-contract.md).
+Predict presents current NFL pregame, full-game winner odds, EV and cross-venue
+comparisons. Server financial owners calculate values; the browser validates
+context and renders them. Ordinary reads calculate from current SQL rows. See
+[architecture](architecture.md) and the [board API contract](comparison-board-api-contract.md)
+for storage and transport boundaries.
 
-## Views and financial meaning
+Sports/test history is disposable. Ordinary use does not require old results,
+snapshots or full provider responses to survive reset or restart. Current inputs
+support the comparison loop; calculation reports are not persisted.
 
-**Odds** groups available winner prices by game and participant, with a separate
-named fair benchmark. Original native alternatives remain inspectable; missing
-prices do not become synthetic offers.
+## Compact views and financial meaning
 
-**EV** shows single-trade expected value after modeled costs, rule effects and one
-buffer. Complete-state EV and conditional decisive-outcome EV have different
-labels. Negative and unavailable results remain available through All comparisons.
+**Odds** opens on All games, grouping covered upcoming NFL winner games into
+compact game/team rows with venue columns. Search and game selection are optional.
+Observed Polymarket US Long and Short appear inline with their actual participant,
+side and predicate. Keep NO/Short distinct from opponent YES/Long and bookmaker
+wins, including material tie/refund differences. Missing offers remain unavailable.
 
-**Arbs** shows opposing legs and their shared funding, decisive margin and minimum
-over modeled outcomes. Rule-sensitive hedges are separate from pairs positive
-across every modeled state. No positive opportunity is a normal result.
+Distinguish **Pinnacle raw American** from **Pinnacle fair American** after the named
+no-vig treatment. Fair odds are a derived reference, not an executable offer.
+Exact originals, probabilities, method, conditioning and clocks are inspectable
+in Details. A missing selected reference is not replaced implicitly.
 
-The policy line names requested dollars, fees and buffer. A pair shares the amount
-across both legs. Reduced size or residual funding has a stated reason. Details
-starts with the result and quantities, then reconciles gross value, rule adjustment,
-fees, net estimate and one buffer. It discloses exceptional states, provisional
-probabilities and modeled liquidity; original evidence sits in expandable sections.
+**EV** uses dense rows grouped by game and team/instrument, placing each venue's
+price and after-cost, after-buffer dollars/return together. Complete-state EV and
+conditional decisive EV have separate labels. Positive is the default; All
+comparisons includes concise signed current results and explicit unavailable states.
 
-## Interaction and accessibility
+**Arbs** groups opposing legs with their shared funding and named buffered margin
+or return. Every ordinary filter requires distinct venues. Rule-sensitive hedges
+stay separate from pairs positive across every modeled state. One short material
+status/risk note remains visible; full fee and scenario reports belong in Details.
+No positive opportunity is a normal result.
 
-Apply and Enter submit the same settings; Restore returns to defaults. Navigation
-preserves settings and selected game. Changing settings withholds mismatched old
-results. Saved Details stays pinned to exact result and quote/pair identities;
-new arrivals cannot silently replace the selection. Reads do not acquire data.
+Defaults are **$1,000 requested funding, one 0.5% buffer on actual deployed capital
+and Pinnacle reference**. A pair shares funding across both legs, modeled upfront
+fees and required collateral. Reduced deployment and residual funding have stated
+reasons. Actual fills, charges and grades remain unknown unless observed; fee,
+liquidity and probability models retain their labels. See the
+[financial contract](requested-trade-financial-contract.md) and
+[benchmark meaning](benchmark-ev.md).
 
-Use light surfaces, slate text, restrained blue actions, 16px body text and controls
-at least 44px high. Preserve visible focus, wrap long names and financial strings,
-and respect reduced motion. Do not rely on color alone. Desktop venue columns
-align; narrow layouts label values. Dialogs support a focus loop, Escape/Close
-and focus return to the opening control.
+## Current Details and updates
 
-First use offers the Admin source screen when no game is available. Positive-only
-empty states offer All comparisons. Failed reads offer Retry with a useful reason;
-pending calculations remain explicit. Normal boards keep source/as-of labels
-simple; detailed quota, journal and recovery information belongs in Admin. A
-connection heartbeat or saved-calculation timestamp never renews an old quote.
+Details binds the selected game and instrument or pair to its input-dependency,
+policy and engine revisions. It begins with requested/deployed/residual funding
+and quantities, then reconciles gross value, rule adjustment, modeled fees, net
+estimate and one buffer. Native terms, exceptional outcomes, assumptions and
+selected current original inputs follow in expandable sections.
 
-[Development](development.md#frontend-sources) explains readable frontend modules,
-generated public assets and the tests for these boundaries.
+Use a bounded transient context or explicitly report that the comparison changed,
+was removed or expired. Never silently replace the clicked selection or show new
+source ages beside old financial values. Refuse crossed/delayed responses. Ordinary
+Details uses current contexts, with no legacy history/envelope controls or
+permanent result IDs.
+
+Apply and Enter submit the same settings; Restore returns to calculation defaults.
+Navigation and updates preserve useful filters, settings, scroll, focus and
+disclosures. Withhold results from mismatched dependencies or policy. A source
+clock remains distinct from receipt, calculation and read time; none of those
+later clocks makes an old quote fresh.
+
+Keep bounded reads with one request in flight and no request per game. The roughly
+500-game bound uses pages of at most 50 games with a shared revision; changed
+revisions discard the partial collection. All games labels and counts describe
+the complete covered in-scope set.
+Reads and Details never acquire data or restart collection; Stop remains reachable.
+
+## Accessibility and states
+
+Use light surfaces, slate text, restrained blue actions, readable body text and
+comfortable controls at least 44px high. Preserve visible focus, wrap long names
+and financial strings, respect reduced motion and supplement color with text.
+Desktop venue columns align; 390px layouts label values without page-level clipping
+and support increased text size. Dialogs support a focus loop, Escape/Close and
+focus return to the opening row or a useful fallback. Collapsed sections do not
+leave hidden controls in the tab sequence.
+
+First use offers Admin source status when no game is available. Positive empty
+states offer All comparisons. Failed reads offer Retry with a useful reason;
+pending, stopped and unavailable-saving states remain distinct. Source clocks and
+one concise material note stay on ordinary boards; quota, recovery and storage
+diagnostics belong in Admin. Sports reset is separate from protected configuration,
+credentials and provider account/quota/audit/attempt/hold records.
+
+[Development](development.md#frontend-sources) describes the readable frontend
+modules, generated public assets and verification boundaries.

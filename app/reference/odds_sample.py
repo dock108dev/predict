@@ -24,10 +24,10 @@ LIMIT = 2 * 1024 * 1024
 OUTPUT = Path(__file__).resolve().parents[2] / 'evidence/odds-api-five-books-20260929/live'
 
 
-def normalize(body, sport, received_at, *, _event_object=False):
+def normalize(body, sport, received_at, *, _event_object=False, _parsed_events=None, _receipt_sha256=None):
     """Preserve source identity/lines; implied probabilities are NOT fair value/EV."""
     time(received_at)
-    events = json.loads(body, parse_float=str)
+    events = json.loads(body, parse_float=str) if _parsed_events is None else _parsed_events
     if _event_object:
         events = [events]
     if not isinstance(events, list):
@@ -78,7 +78,7 @@ def normalize(body, sport, received_at, *, _event_object=False):
                                            book={k:v for k,v in book.items() if k != 'markets'},
                                            market={k:v for k,v in market.items() if k != 'outcomes'},
                                            outcome=outcome),
-                        receipt_sha256=sha256(body).hexdigest(),
+                        receipt_sha256=_receipt_sha256 or sha256(body).hexdigest(),
                         executable=False, settlement=None, fees=None, purchasable_depth=None,
                         source_delay_seconds=None, fair_probability=None, ev=None))
                     if binding:

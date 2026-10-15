@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-board-inputs-2.schema.json",
+  "type": "object",
+  "required": [
+    "version",
+    "game_key",
+    "quote_id",
+    "calculation_context",
+    "evidence",
+    "provider_requests"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-board-inputs-2"
+    },
+    "game_key": {
+      "type": "string"
+    },
+    "quote_id": {
+      "type": "string"
+    },
+    "calculation_context": {
+      "type": "object",
+      "required": [
+        "context_id",
+        "epoch",
+        "dependency_revision",
+        "policy_revision",
+        "engine_binding"
+      ],
+      "properties": {
+        "context_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "dependency_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engine_binding": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "event",
+        "selection",
+        "source",
+        "original",
+        "times",
+        "native_contract",
+        "provenance",
+        "benchmark",
+        "representation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "event": {},
+        "selection": {},
+        "source": {},
+        "original": {},
+        "times": {},
+        "native_contract": {},
+        "provenance": {},
+        "benchmark": {},
+        "representation": {}
+      }
+    },
+    "provider_requests": {
+      "const": 0
+    }
+  },
+  "additionalProperties": false
+}

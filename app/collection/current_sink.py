@@ -16,7 +16,7 @@ def utc():
     return datetime.now(timezone.utc).isoformat()
 
 
-def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None):
+def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None, include_missing=False):
     from app.comparison.event_links import current_event_key as event_key, provider_key
     from .v1_comparison import predicates
     records = []
@@ -81,21 +81,21 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         label=kind.capitalize() if name is None else name+(' does not win' if kind=='not_win' else ''))
                 for native, predicate, meaning in native_predicates:
                     ladder = ladders.get(native)
-                    if not ladder or not ladder['asks']:
+                    if (not ladder or not ladder['asks']) and not include_missing:
                         continue
                     selection=selections[native]
                     participant=selection['participant'];kind=selection['predicate'];signed=selection['signed_line']
-                    levels = sorted(ladder['asks']['levels'], key=lambda x: Decimal(x['price']['value']))
-                    if not levels:continue  # known empty side remains an outcome without a price
+                    levels = sorted(ladder['asks']['levels'], key=lambda x: Decimal(x['price']['value'])) if ladder and ladder['asks'] else []
+                    if not levels and not include_missing:continue  # known empty side remains an outcome without a price
                     if len(levels) > 4096 or any(Decimal(l['quantity']['value']) <= 0 for l in levels):
                         raise ValueError('Invalid bounded book depth')
-                    value = str(levels[0]['price']['value'])
+                    value = str(levels[0]['price']['value']) if levels else None
                     side = sides[native]
                     original = dict(value=value, units='usd_per_contract', payout='1', payout_units='USD',
                                     quantity_units='contracts', role='comparison')
                     # The reused purchase_book conversion supplies the original
                     # opposite bid and preserves native liquidity independently.
-                    if venue=='kalshi' or venue == 'polymarket_us' and side.get('role') == 'Short':
+                    if value is not None and (venue=='kalshi' or venue == 'polymarket_us' and side.get('role') == 'Short'):
                         with localcontext() as ctx:
                             ctx.prec=600
                             original.update(native_value=str(Decimal(1)-Decimal(value)), native_units='usd_per_contract', transformation='one_minus_native_bid')
@@ -199,6 +199,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         q['revision'] = prior['revision'] + (fingerprint != prior['fingerprint'])
                         if fingerprint == prior['fingerprint'] or q['original']==prior.get('original'):
                             q['times'] = deepcopy(prior['times'])
+                    if value is None:normalized['offer_missing']=True
                     normalized['_instrument'] = instrument
                     normalized['_fingerprint'] = fingerprint
                     records.append(normalized)

@@ -8,7 +8,7 @@ from copy import deepcopy
 from .event_links import digest, instant, reviewed_links
 
 VERSION = 'predict-occurrence-match-1'
-MAX_MEMBERS = 800
+MAX_MEMBERS = 2048
 UNKNOWN = (None, '', 'unknown', 'unverified')
 
 

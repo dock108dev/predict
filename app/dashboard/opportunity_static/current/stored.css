@@ -587,29 +587,6 @@ summary {
 .slate-alternatives summary,.slate-pending summary { min-height:36px; font-size:.8125rem; color:var(--blue) }
 .slate-alternative { display:flex; gap:4px 12px; align-items:baseline; flex-wrap:wrap; padding:5px 0; font-size:.8125rem }
 .slate-alternative button { min-height:36px; padding:4px 10px }
-.slate-result {
-  display:grid;
-  grid-template-columns:minmax(240px,1.2fr) minmax(260px,1fr) auto;
-  gap:8px 20px;
-  align-items:start
-}
-.slate-result-identity h3 { font-size:.875rem; margin:8px 0 2px }
-.slate-result-identity p { font-size:.8125rem; margin:3px 0 }
-.slate-result-identity>small { font-size:.6875rem }
-.slate-result-values { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px }
-.slate-result-values .metric strong { font-size:21px; letter-spacing:-.2px }
-.slate-result-values .metric small { font-size:.75rem }
-.slate-result-values>small,.slate-result-values>.conditional-label,.slate-result-benchmark { grid-column:1/-1; font-size:.75rem }
-.slate-result-benchmark { display:flex; align-items:baseline; flex-wrap:wrap; gap:0 8px }
-.slate-result-benchmark strong { font-size:.875rem }
-.slate-result-benchmark small { font-size:.6875rem }
-.slate-result-meta { grid-column:1/3; display:flex; flex-wrap:wrap; gap:2px 12px; align-items:baseline }
-.slate-result-meta small,.slate-result-meta .tag { font-size:.6875rem; margin:0 }
-.slate-result-meta .tag+small { font-size:.6875rem }
-.slate-result>button { grid-column:3; grid-row:1/3; align-self:center; min-height:40px; padding:6px 12px }
-.slate-leg { display:flex; flex-direction:column; gap:1px; padding-top:6px }
-.slate-leg strong { font-size:.8125rem }
-.slate-leg span { color:var(--muted); font-size:.75rem }
 .conditional-label { color:#815613 }
 .pending-label { color:#174d9b; font-size:.75rem; margin-bottom:4px }
 .slate-pending { padding:0 4px; font-size:.8125rem }
@@ -639,6 +616,37 @@ summary {
 .compact-odds .slate-summary { display:inline-flex; font-size:.75rem; margin:0 12px 7px 0 }
 .compact-odds .slate-coverage { display:inline-flex; gap:2px 10px; font-size:.6875rem; margin:0 0 7px; vertical-align:baseline }
 .compact-odds .slate-coverage small { flex-basis:auto; font-size:.6875rem }
+
+/* Compact saved comparisons share one game heading and one instrument label. */
+.slate-comparison-game { background:white; border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin:8px 0 14px; min-width:0 }
+.slate-comparison-game .slate-game-heading { border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:0 }
+.slate-instrument h3 { font-size:.875rem; margin:12px 0 3px }
+.instrument-reference { display:flex; flex-wrap:wrap; gap:3px 10px; align-items:baseline; font-size:.75rem; color:var(--muted); margin-bottom:4px }
+.instrument-reference strong { font-size:.8125rem; color:#1e293b }
+.slate-result { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto; gap:3px 18px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); min-width:0 }
+.slate-result:last-child { border-bottom:0 }
+.slate-result-identity { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; min-width:0; font-size:.875rem }
+.comparison-rank { color:var(--muted); font-variant-numeric:tabular-nums; font-size:.6875rem }
+.slate-result-values { display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; min-width:0 }
+.slate-result-values .metric strong { font-size:19px; letter-spacing:0 }
+.slate-result-values .metric small { font-size:.6875rem }
+.slate-result-values>small { grid-column:1/-1; font-size:.6875rem }
+.slate-result-note { grid-column:1/3; font-size:.75rem; color:#815613; overflow-wrap:anywhere }
+.slate-result>button { grid-column:3; grid-row:1/3; min-height:40px; padding:6px 12px; align-self:center }
+.slate-arb .slate-result-identity { display:grid; grid-template-columns:auto 1fr 1fr; gap:8px }
+.slate-leg { margin:0; min-width:0; font-size:.8125rem }
+.slate-leg strong,.slate-leg span { display:block; overflow-wrap:anywhere }
+.slate-leg span { color:var(--muted); font-size:.75rem; margin-top:3px }
+.reference-evidence summary,.same-venue-history summary { color:var(--blue); font-size:.75rem; min-height:32px; padding:7px 0 }
+.reference-evidence p,.same-venue-history p { font-size:.75rem; overflow-wrap:anywhere }
+.same-venue-history button { display:block; text-align:left; margin:6px 0; max-width:100%; overflow-wrap:anywhere }
+.native-meaning,.ranking-help { color:var(--muted); font-size:.6875rem; margin:4px 0 }
+.slate-fair>strong,.slate-fair>small { display:block!important; margin:1px 0!important; white-space:normal!important }
+.compact-odds .compact-source-clock { display:block; white-space:normal; font-size:.625rem }
+.slate-price-cell { min-width:0; overflow-wrap:anywhere }
+
+.compact-comparisons .slate-result { border:0; border-bottom:1px solid var(--line); border-radius:0; margin:0; background:transparent }
+.compact-comparisons .slate-result:last-child { border-bottom:0 }
 dialog {
   width:min(800px,calc(100% - 24px));
   max-height:90dvh;
@@ -1160,4 +1168,27 @@ opposing comparisons have four. */
   .compact-odds .compact-source-clock { display:inline-block; vertical-align:middle; margin:0 0 0 5px; white-space:nowrap }
   .compact-odds .slate-fair strong { display:inline; vertical-align:middle }
   .compact-odds .slate-fair>small:not(.mobile-price-label) { display:inline-block; vertical-align:middle; margin-left:5px; white-space:nowrap }
+}
+
+/* Comparisons wrap within the page at narrow widths and enlarged text. */
+@media(max-width:900px) {
+  .compact-comparisons .slate-result { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto }
+}
+@media(max-width:600px) {
+  .slate-comparison-game { padding:10px 12px }
+  .compact-comparisons .slate-result { grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; padding:12px 0 }
+  .compact-comparisons .slate-result-identity { grid-column:1; grid-row:1 }
+  .compact-comparisons .slate-result-values { grid-column:1/-1; grid-row:2 }
+  .compact-comparisons .slate-result-note { grid-column:1/-1; grid-row:3 }
+  .compact-comparisons .slate-result>button { grid-column:2; grid-row:1; min-height:44px; padding:6px 10px }
+  .slate-arb .slate-result-identity { grid-template-columns:1fr; gap:6px }
+  .slate-arb .comparison-rank { grid-column:1 }
+  .compact-odds .slate-price-row { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 12px }
+  .compact-odds .slate-team-name { grid-column:1/-1 }
+  .compact-odds .slate-price-cell .mobile-price-label { font-size:.75rem }
+  .compact-odds .slate-price-cell .slate-action { min-height:44px; font-size:16px }
+  .compact-odds .compact-source-clock { font-size:.6875rem }
+  .compact-odds .slate-fair { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:3px 10px }
+  .slate-result-values .metric strong { font-size:20px }
+  .reference-evidence summary,.same-venue-history summary { min-height:44px }
 }

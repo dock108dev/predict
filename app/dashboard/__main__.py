@@ -1,4 +1,4 @@
-"""Run the ordinary file-backed dashboard through its authoritative entry point."""
+"""Run the local dashboard through its authoritative entry point."""
 from app.dashboard.opportunity_board import main
 
 

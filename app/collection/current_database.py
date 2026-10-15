@@ -1,15 +1,10 @@
-"""Ordinary bounded SQL catch-up and per-game calculation owner."""
+"""Direct current-row SQL ingress and bounded ordinary lifecycle status."""
 import asyncio
-import base64
 from copy import deepcopy
-from hashlib import sha256
-import json
-from threading import RLock
 from pathlib import Path
 from time import monotonic
-from app.storage.current_games import GameStore,calculate,utc
+from app.storage.current_games import utc
 from app.storage.store import connect,Store
-from app.comparison.estimated_policy import load
 from .current_storage_policy import SQL_BYTE_CAP,sql_usage,require_disk_space
 
 
@@ -31,193 +26,162 @@ def catch_up_segments(store,journal,records=8, *, deadline=None):
 
 
 class DatabaseIngressSink:
-    """Cheap native ownership reducer. Durable source-local projection is separate."""
+    """Direct synchronous SQL publication; no durable feed or retry queue."""
+    acknowledgment='saved-current-row-transaction'
     def __init__(self,store,raw,config):
         from app.dashboard.session_projection import SessionProjection
         self.reducer=SessionProjection();self.store=store;self.config=config
         self.sequence=0;self.metrics=dict(admitted_observations=0,rejected_observations=0)
-        self.exclusions=[];self.revisions={}
+        self.exclusions=[];self.revisions={};self.error=None
+
     def commit(self,row,states):
-        from app.dashboard.current_contract import packed,snapshot_inputs
-        # Aggregate wire bytes are already journaled separately. Count their
-        # bounded size without passing bytes through the JSON metadata encoder.
-        body=row.get('body') if row['type']=='current_aggregate' else None
-        metadata={k:v for k,v in row.items() if k!='body'} if body is not None else row
-        if body is not None and not isinstance(body,bytes):raise ValueError('Current aggregate body type')
-        if len(packed(metadata))+(len(body) if body is not None else 0)>self.config['ingress_bytes']:
-            raise ValueError('Current ingress observation capacity')
-        if row['type'] not in ('current_aggregate','current_aggregate_batches'):
-            observations=row['observations'] if row['type']=='prediction_books' else [row]
-            from copy import copy
-            candidate=copy(self.reducer)
-            for name in ('books','health','sizes','metadata'):setattr(candidate,name,dict(getattr(self.reducer,name)))
-            candidate.invalid=set(self.reducer.invalid)
-            for observation in observations:
-                if observation['type']=='prediction_book':
-                    book=observation['book'];ref=book['raw']['ref']
-                    market=next((m for m in candidate.inventory.get(row['source'],{}).get('markets',[]) if m['id']==ref['market_id'] and m['event_id']==ref['event_id']),None)
-                    if market is None or ref['venue']!=row['source'] or book['sync']!='synchronized' or book['quantity_unit']!='contracts':raise ValueError('Unadmitted current book identity or units')
-                    if {o['outcome_id'] for o in book['outcomes']}!={side['id'] for side in market['sides']}:raise ValueError('Incomplete current outcome set')
-                    from app.dashboard.current_contract import bounded_decimal,stamp
-                    stamp(book['raw']['received_at']);stamp(book['raw'].get('exchange_at'),True)
-                    for outcome in book['outcomes']:
-                        for side in ('asks','bids'):
-                            ladder=outcome[side]
-                            if ladder is None:continue
-                            if len(ladder['levels'])>4096:raise ValueError('Current book level bound')
-                            for level in ladder['levels']:
-                                if not 0<=bounded_decimal(level['price']['value'])<=1 or bounded_decimal(level['quantity']['value'])<=0 or level['quantity']['unit']!='contracts':raise ValueError('Invalid current native level')
-                candidate.reduce_observation(observation)
-            self.reducer=candidate
-        raw=snapshot_inputs(self.store._state);raw.update(source_status=deepcopy(states),clock_at=utc(),projected_at=utc(),state_revision=raw['state_revision']+1)
-        if getattr(self.store,'_source_stopping',False):self.store.admit_shutdown_health(states)
-        else:self.store.commit(raw)
-        self.sequence+=1;self.metrics['admitted_observations']+=1
-        return dict(service_sequence=self.sequence)
+        from app.storage.current_rows import CurrentRowStore
+        from app.dashboard.current_contract import snapshot_inputs,packed
+        from copy import deepcopy
+        candidate=deepcopy(self.reducer);records=[];scopes=[];withdraw=set()
+        now=utc()
+        try:
+            metadata={k:v for k,v in row.items() if k!='body'}
+            if len(packed(metadata))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
+            if row['type']=='current_aggregate_records':
+                records=row['records']
+                scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at']) for v in row['complete_venues']]
+            elif row['type'] in ('current_aggregate','current_aggregate_batches'):
+                # Explicit compatibility admission, never a startup disk import.
+                from .current_aggregate_admission import admit
+                for batch in row.get('batches',[row]):
+                    for venue in ('novig','prophetx','pinnacle'):
+                        try:accepted=admit(batch['body'],batch['sport'],batch['received_at'],venue=venue)
+                        except (ValueError,KeyError,TypeError):continue
+                        records.extend(accepted);scopes.append(dict(venue=venue,competition=batch['sport'],received_at=batch['received_at']))
+            else:
+                observations=row['observations'] if row['type']=='prediction_books' else [row]
+                if row['type']=='coverage_inventory':
+                    def material(m):
+                        b=m.get('v1_raw_binding',{})
+                        return [m.get('sides'),m.get('terms'),m.get('native_scope_binding'),
+                            b.get('identity'),b.get('source_predicate'),b.get('settlement')]
+                    old_markets={(s,m['event_id'],m['id']):m for s,c in self.reducer.inventory.items() for m in c['markets']}
+                    for s,c in row['inventory'].items():
+                        for m in c['markets']:
+                            key=(s,m['event_id'],m['id'])
+                            if key in old_markets and material(m)!=material(old_markets[key]):withdraw.add(key)
+                for observation in observations:
+                    if observation['type']=='prediction_book':
+                        book=observation['book'];ref=book['raw']['ref']
+                        market=next((m for m in candidate.inventory.get(row['source'],{}).get('markets',[]) if m['id']==ref['market_id'] and m['event_id']==ref['event_id']),None)
+                        if market is None or ref['venue']!=row['source'] or book['sync']!='synchronized' or book['state']=='unknown' or book['quantity_unit']!='contracts':raise ValueError('Unadmitted current book identity or units')
+                        if {o['outcome_id'] for o in book['outcomes']}!={side['id'] for side in market['sides']}:raise ValueError('Incomplete current outcome set')
+                        from app.dashboard.current_contract import bounded_decimal,stamp
+                        stamp(book['raw']['received_at']);stamp(book['raw'].get('exchange_at'),True)
+                        for outcome in book['outcomes']:
+                            for side in ('asks','bids'):
+                                ladder=outcome[side]
+                                if ladder is None:continue
+                                if len(ladder['levels'])>4096:raise ValueError('Current book level bound')
+                                for level in ladder['levels']:
+                                    if not 0<=bounded_decimal(level['price']['value'])<=1 or bounded_decimal(level['quantity']['value'])<=0 or level['quantity']['unit']!='contracts':raise ValueError('Invalid current native level')
+                    candidate.reduce_observation(observation)
+                for key in withdraw:candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.discard(key)
+                if row['type']!='source_health':
+                    from app.comparison.combined_native import normalize
+                    for source,inventory in candidate.inventory.items():
+                        if source!=row['source']:continue
+                        selected={tuple(o['book']['raw']['ref'][k] for k in ('event_id','market_id')) for o in observations if o['type']=='prediction_book'}
+                        catalog=dict(id='transient-current-catalog',record=dict(source=source,value=dict(inventory=inventory)))
+                        books=[]
+                        for key,observation in candidate.books.items():
+                            if key[0]!=source or selected and (key[1],key[2]) not in selected:continue
+                            books.append(dict(id='transient-current-book',record=dict(retained_at=observation['book']['raw']['received_at'],value=dict(observations=[observation]))))
+                            event=next((e for e in inventory['events'] if e['id']==key[1]),None)
+                            if event:
+                                scopes.append(dict(venue=source,competition=event['competition'],native_event_id=key[1],native_market_id=key[2],
+                                    received_at=observation['book']['raw']['received_at'],source_at=observation['book']['raw'].get('exchange_at')))
+                        native,errors=normalize(catalog,books,at=now,include_missing=True);records.extend(native);self.exclusions=errors[:200]
+            with connect() as db:
+                require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
+                if sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
+                rows=CurrentRowStore(db)
+                with db.transaction():
+                    changed=rows.upsert_records(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now)
+                    if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
+                    if row['type']=='coverage_inventory':
+                        # A catalog identity change invalidates an already-held book;
+                        # absence on a partial discovery page alone is not removal.
+                        memberships=candidate.memberships();prior_memberships=self.reducer.memberships()
+                        for key,prior in prior_memberships.items():
+                            if key[0]!=row['source'] or key not in memberships or memberships[key]==prior:continue
+                            withdraw.add(key)
+                    for key in withdraw:rows.withdraw_native_market(*key)
+            self.reducer=candidate;self.error=None
+            raw=snapshot_inputs(self.store._state);raw.update(source_status=deepcopy(states),clock_at=now,projected_at=now,state_revision=raw['state_revision']+1)
+            if getattr(self.store,'_source_stopping',False):self.store.admit_shutdown_health(states)
+            else:self.store.commit(raw)
+            self.sequence+=1;self.metrics['admitted_observations']+=1
+            return dict(service_sequence=self.sequence,current_rows_changed=changed,acknowledgment=self.acknowledgment)
+        except Exception as exc:
+            self.error=type(exc).__name__+': '+str(exc)[:160];self.metrics['rejected_observations']+=1
+            raise
 
 
 class DatabasePipeline:
+    """Lifecycle/status shim. Direct ingress and transient reads replace catch-up."""
     MAX_PENDING=4
-    INGRESS_RECORDS=64
-    INGRESS_SECONDS=1.0
     def __init__(self,service,selected):
-        self.service=service;self.selected=selected;self.pending={};self.closed=False
-        self.wake=asyncio.Event();self.queue_lock=RLock();self.generations={};self.generation_counter=0;self.active_scope=None
-        self.task=None;self.error=None;self.failures=0;self.imported=0;self.backlog=None;self.busy=False
-        self.sql_bytes=None;self.ingress_task=None;self.ingress_error=None;self.ingress_failures=0;self.ingress_busy=False
+        self.service=service;self.selected=selected;self.closed=False;self.task=None;self.ingress_task=None
+        self.error=None;self.ingress_error=None;self.busy=False;self.ingress_busy=False;self.wake=asyncio.Event()
     async def start(self):
-        self.ingress_task=asyncio.create_task(self.run_ingress(),name='predict-stored-ingress')
-        self.task=asyncio.create_task(self.run(),name='predict-stored-games')
+        from app.storage.current_rows import CurrentRowStore
+        from .current_policy import aggregate_scope
+        from uuid import uuid4
+        try:
+            with connect() as db:
+                Store(db).migrate();rows=CurrentRowStore(db)
+                with db.transaction():
+                    # A reopened process cannot revive an earlier Details context.
+                    # This generation has no authority over source price clocks.
+                    db.execute('UPDATE current_row_epoch SET epoch=%s WHERE singleton=true',(str(uuid4()),))
+                    for venue in ('kalshi','polymarket_us','novig','prophetx','pinnacle'):
+                        rows.expire_out_of_scope(venue,self.service.config['sports'] if venue in ('kalshi','polymarket_us') else aggregate_scope(self.service.config),self.service.config['families'])
+                    rows.expire()
+            self.error=None
+            self.task=asyncio.create_task(self.run_maintenance(),name='predict-current-expiry')
+        except Exception as exc:
+            self.error=type(exc).__name__+': '+str(exc)[:160]
+            raise
     def request(self,key,policy):
-        with self.queue_lock:
-            if self.closed:raise ValueError('saved_updates_stopped')
-            ident=(key,policy.revision);scope=(key,getattr(policy,'benchmark_venue','pinnacle'))
-            # New settings for the same visible occurrence supersede queued work.
-            remove=[i for i,p in self.pending.items() if (i[0],getattr(p,'benchmark_venue','pinnacle'))==scope and i!=ident]
-            if ident not in self.pending and len(self.pending)-len(remove)>=self.MAX_PENDING:raise ValueError('saved_calculation_queue_capacity')
-            for i in remove:self.pending.pop(i)
-            if ident not in self.pending:
-                self.generation_counter+=1;self.generations[scope]=self.generation_counter
-            self.pending[ident]=policy
-            live={(k[0],getattr(p,'benchmark_venue','pinnacle')) for k,p in self.pending.items()}|{self.active_scope}
-            self.generations={k:v for k,v in self.generations.items() if k in live}
-        self.wake.set()
-    def tick(self, *, ingress=True, import_only=False):
-        from app.comparison.calculation_control import cancellation, CalculationStopped, checkpoint
-        if self.closed:return 0
-        with cancellation(lambda:self.closed), connect() as db:
-            Store(db).migrate();s=GameStore(db)
-            self.sql_bytes=sql_usage(db)
-            if self.sql_bytes>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
-            require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
-            count=0
-            if ingress:
-                keys,count,self.backlog=catch_up_segments(s,self.service.journal,
-                    records=self.INGRESS_RECORDS,deadline=monotonic()+self.INGRESS_SECONDS);self.imported+=count
-                # Bootstrap allowlisted retained diagnostics without claiming wire bytes.
-                if not getattr(self,'bootstrapped',False):
-                    for path in self.service.retained_directory.glob('NFL.json'):
-                        v=json.loads(path.read_text());body=json.dumps(v['replay']).encode()
-                        r=dict(source='the_odds_api',kind='aggregate_batch',retained_at=v['received_at'],
-                            value=dict(sport=v['sport'],received_at=v['received_at'],body_sha256=sha256(body).hexdigest(),body_b64=base64.b64encode(body).decode()))
-                        keys.update(s.import_record(r))
-                    self.bootstrapped=True
-                for key in sorted(keys):
-                    checkpoint()
-                    s.project(key)
-            if import_only:return count
-            from app.storage.comparison_board import capture, saved
-            policy=load()
-            with self.queue_lock:jobs=dict(self.pending)
-            # Selected/visible requests only. No calculation of an unselected slate.
-            for key in self.selected[:self.MAX_PENDING]:jobs.setdefault((key,policy.revision),policy)
-            for (key,_),p in jobs.items():
-                if self.closed:break
-                scope=(key,getattr(p,'benchmark_venue','pinnacle'))
-                with self.queue_lock:
-                    generation=self.generations.get(scope,0);self.active_scope=scope
-                try:
-                    snapshot=capture(s,key,p)
-                except ValueError as exc:
-                    if str(exc)=='board_occurrence_absent_or_ambiguous':
-                        with self.queue_lock:self.pending.pop((key,p.revision),None)
-                        continue
-                    raise
-                canonical=snapshot['projection']['inputs']['game_key']
-                previous=saved(s,canonical,p)
-                if previous and previous['input_version']==snapshot['input_version'] and not previous['superseded']:
-                    with self.queue_lock:self.pending.pop((key,p.revision),None)
-                    continue
-                # Capture transaction has ended; finance never holds its locks.
-                try:
-                    with cancellation(lambda:self.closed):
-                        result=calculate(snapshot)
-                except CalculationStopped:
-                    with self.queue_lock:self.active_scope=None
-                    break
-                with self.queue_lock:
-                    allowed=not self.closed and generation==self.generations.get(scope,0)
-                    _,published=s.publish(snapshot,result,allow_latest=allowed)
-                    if self.pending.get((key,p.revision))==p:
-                        if published:self.pending.pop((key,p.revision),None)
-                        elif not self.closed:
-                            # A changing native dependency may continuously
-                            # refuse latest publication. Retain its exact job
-                            # and generation, but let other visible jobs take
-                            # their bounded turn before retrying it.
-                            self.pending[(key,p.revision)]=self.pending.pop((key,p.revision))
-                with self.queue_lock:self.active_scope=None
-                break
-        return count
-    async def run(self):
-        from app.comparison.calculation_control import CalculationStopped
+        if self.closed:raise ValueError('current_updates_stopped')
+    def tick(self,*,ingress=True,import_only=False):
+        # Deliberately no journal, diagnostic, cursor, snapshot or publication path.
+        if not self.closed:
+            from app.storage.current_rows import CurrentRowStore
+            with connect() as db:CurrentRowStore(db).expire()
+        return 0
+    async def run_maintenance(self):
+        failures=0
         while not self.closed:
-            try:
-                self.busy=True;count=await asyncio.to_thread(self.tick,ingress=False)
-                self.error=None;self.failures=0
-            except CalculationStopped:
-                if not self.closed:raise
-                count=0
-            except Exception as exc:
-                self.error=type(exc).__name__+': '+str(exc)[:180];self.failures+=1
-                if self.failures>=5:break
-                count=0
-            finally:self.busy=False
-            try:await asyncio.wait_for(self.wake.wait(),timeout=0.05 if count else min(30,2**self.failures))
+            try:await asyncio.wait_for(self.wake.wait(),timeout=60)
             except TimeoutError:pass
             self.wake.clear()
-    async def run_ingress(self):
-        from app.comparison.calculation_control import CalculationStopped
-        while not self.closed:
+            if self.closed:break
             try:
-                self.ingress_busy=True
-                count=await asyncio.to_thread(self.tick,import_only=True)
-                self.ingress_error=None;self.ingress_failures=0
-                if count:self.wake.set()
-            except CalculationStopped:
-                if not self.closed:raise
-                count=0
+                await asyncio.to_thread(self.tick);failures=0;self.error=None
             except Exception as exc:
-                self.ingress_error=type(exc).__name__+': '+str(exc)[:180];self.ingress_failures+=1
-                if self.ingress_failures>=5:
-                    self.closed=True;self.wake.set();break
-                count=0
-            finally:self.ingress_busy=False
-            if not self.closed:await asyncio.sleep(0.05 if count else min(1,2**self.ingress_failures))
+                self.error=type(exc).__name__+': '+str(exc)[:160];failures+=1
+                if failures>=3:return
     async def close(self):
-        with self.queue_lock:self.closed=True
-        self.wake.set()
-        # Do not cancel a thread while its SQL transaction owns a connection.
-        tasks=[task for task in (self.task,self.ingress_task) if task is not None]
-        if tasks:
-            try:await asyncio.wait_for(asyncio.shield(asyncio.gather(*tasks)),timeout=self.service.config['cleanup_seconds'])
+        self.closed=True;self.wake.set()
+        if self.task:
+            try:await asyncio.wait_for(asyncio.shield(self.task),timeout=self.service.config['cleanup_seconds'])
             except TimeoutError:return False
         return True
     def status(self):
-        return dict(database='prediction_arb',socket='.local/pgsocket',schema='008_current_exact_clocks.sql',
-            state='unavailable' if self.error or self.ingress_error else 'catching_up' if self.backlog else 'available',
-            error=self.ingress_error or self.error,backlog_bytes=self.backlog,imported_records=self.imported,
-            pending_calculations=len(self.pending),busy=self.busy or self.ingress_busy,sql_byte_cap=SQL_BYTE_CAP,sql_bytes=self.sql_bytes,
-            observation_representation='parsed/redacted aggregate batches and reconstructed books',
-            journal_byte_cap=getattr(self.service.journal,'total_byte_cap',self.service.journal.byte_cap),
-            journal_segment_byte_cap=self.service.journal.byte_cap,finite_failure_limit=5)
+        error=getattr(self.service.sink,'error',None) or self.error
+        try:
+            with connect() as db:used=sql_usage(db)
+        except Exception as exc:used=None;error=type(exc).__name__
+        return dict(database='prediction_arb',socket='.local/pgsocket',schema='012_current_rows.sql',
+            state='unavailable' if error else 'available',error=error,backlog_bytes=0,imported_records=0,
+            pending_calculations=0,busy=False,sql_byte_cap=SQL_BYTE_CAP,sql_bytes=used,
+            observation_representation='current event/contract/offer/shared depth upserts; transient calculations',
+            journal_byte_cap=0,journal_segment_byte_cap=0,finite_failure_limit=0)

@@ -3,6 +3,7 @@
 Provider event identity binds Novig/ProphetX within this response only. It never
 asserts a native occurrence join, depth, payout, season, fees or freshness SLA.
 """
+from dataclasses import dataclass
 from copy import deepcopy
 from decimal import Decimal
 from hashlib import sha256
@@ -14,10 +15,29 @@ from app.reference.aggregate import bind, VENUES
 from app.reference.product import SPORT_KEYS
 
 
-def admit(body, sport, received_at, *, venue=None, event_ids=None):
+@dataclass(frozen=True)
+class ParsedAggregateFrame:
+    payload: object
+    receipt_sha256: str
+
+
+def parse_frame(body):
+    """One strict decode retaining original decimal spellings for every adapter."""
     from app.reference.odds_acquire import strict_json
-    strict_json(body)
-    payload=json.loads(body,parse_float=str)
+    return ParsedAggregateFrame(strict_json(body,parse_float=str),sha256(body).hexdigest())
+
+
+def _frame(body,frame):
+    frame=parse_frame(body) if frame is None else frame
+    if not isinstance(frame,ParsedAggregateFrame) or frame.receipt_sha256!=sha256(body).hexdigest():
+        raise ValueError('aggregate_parsed_frame_identity')
+    return frame
+
+
+def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
+    frame=_frame(body,frame)
+    # Venue filtering/validation is isolated; it never mutates the shared frame.
+    payload=deepcopy(frame.payload)
     if event_ids is not None:
         # A read may normalize only already-admitted provider events. Keep the
         # full original receipt hash below; filtering is never new acquisition
@@ -57,9 +77,8 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None):
                 if market['key']=='spreads' and Decimal(str(market['outcomes'][0]['point']))!=-Decimal(str(market['outcomes'][1]['point'])):raise ValueError('aggregate_spread_line_conflict')
                 if supported_prices:valid_markets.append(market)
             book['markets']=valid_markets
-    # Existing normalizer preserves original JSON decimal spellings with parse_float=str.
-    rows=normalize(json.dumps(payload).encode(),sport,received_at)
-    for row in rows:row['receipt_sha256']=sha256(body).hexdigest()
+    # The existing normalizer consumes the already-decoded exact fields.
+    rows=normalize(body,sport,received_at,_parsed_events=payload,_receipt_sha256=frame.receipt_sha256)
     if len(rows)>1200:raise ValueError('aggregate_quote_bound')
     bound=bind(rows)
     for r in bound:
@@ -112,7 +131,7 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None):
                 observation_time_evidence='The Odds API original update clocks: '+json.dumps(clocks,sort_keys=True)+
                     '; selected basis: '+clock_basis+'; upstream delay unknown.',
                 provider_clocks=dict(book=clocks['book'],market=clocks['market'],selected_basis=clock_basis),
-                provenance=dict(mode='current',real_source=True,sha256=sha256(body).hexdigest()))
+                provenance=dict(mode='current',real_source=True,sha256=frame.receipt_sha256))
             record=dict(event=deepcopy(event),market_identity=dict(event=key,sport=event['sport'],competition=sport,season='unverified',stage='unverified',
                 scheduled_start=raw['scheduled_start'],family=family,period='full_game',line=canonical,outcome_set=stable(selections),rules='aggregate-common-1'),
                 period_boundary='Provider full-game market; exceptional settlement unverified',anchor_participant=home if market=='spreads' else None,
@@ -128,21 +147,28 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None):
     return records
 
 
-def admit_venues(body,sport,received_at):
-    records={};errors={}
-    for venue in VENUES:
-        try:records[venue]=admit(body,sport,received_at,venue=venue)
+def _admission_error(exc):
+    code=str(exc)
+    if not code.startswith('aggregate_') or len(code)>80 or not all(c.islower() or c=='_' for c in code):
+        code='aggregate_missing_'+exc.args[0] if isinstance(exc,KeyError) and exc.args[0] in ('markets','outcomes','price','point','home_team','away_team','commence_time','sport_key') else 'aggregate_schema_'+type(exc).__name__.lower()
+    return code
+
+
+def admit_venues(body,sport,received_at,*,frame=None,include_reference=False):
+    records={};errors={};venues=(*VENUES,'pinnacle') if include_reference else VENUES
+    try:frame=_frame(body,frame)
+    except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration) as exc:
+        return {},{venue:_admission_error(exc) for venue in venues}
+    for venue in venues:
+        try:records[venue]=admit(body,sport,received_at,venue=venue,frame=frame)
         except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration) as exc:
-            code=str(exc)
-            if not code.startswith('aggregate_') or len(code)>80 or not all(c.islower() or c=='_' for c in code):
-                code='aggregate_missing_'+exc.args[0] if isinstance(exc,KeyError) and exc.args[0] in ('markets','outcomes','price','point','home_team','away_team','commence_time','sport_key') else 'aggregate_schema_'+type(exc).__name__.lower()
-            errors[venue]=code
+            errors[venue]=_admission_error(exc)
     return records,errors
 
 
-def market_exclusions(body):
+def market_exclusions(body,*,frame=None):
     """Invalid decimal prices exclude their complete market, never one leg."""
-    payload=json.loads(body,parse_float=str);counts={}
+    payload=_frame(body,frame).payload;counts={}
     for event in payload if isinstance(payload,list) else []:
         for book in event.get('bookmakers',[]):
             if book.get('key') not in VENUES:continue

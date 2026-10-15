@@ -109,7 +109,7 @@ main{padding:16px 16px 32px}.page-heading{gap:8px;margin-bottom:12px;display:gri
 }
 @media(prefers-reduced-transparency:reduce){.app-header,.empty{background:#fff}body.current-app{background:var(--paper)}}
 
-/* EV07 funded result and shared policy controls. */
+/* Funded result and shared policy controls. */
 .current-app .quote-estimate{display:block;color:var(--accent);font-size:.75rem;margin-top:4px;font-weight:600;overflow-wrap:anywhere}
 .current-app .raw-label{display:block;font-size:.75rem;font-weight:600;color:var(--muted)}
 .current-app #settings{border:1px solid var(--line);border-radius:10px;padding:0 16px;background:rgba(255,255,255,.65);margin:12px 0 18px}

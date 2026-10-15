@@ -1,0 +1,1329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-comparison-board-2.schema.json",
+  "title": "Current compact Odds EV Arbs response",
+  "type": "object",
+  "required": [
+    "version",
+    "view",
+    "filter",
+    "game_key",
+    "input_version",
+    "policy",
+    "benchmark",
+    "as_of",
+    "read_at",
+    "result_as_of",
+    "delivery_state",
+    "status",
+    "prices",
+    "rows",
+    "empty_reason",
+    "provider_requests",
+    "limits",
+    "calculation_context"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-comparison-board-2"
+    },
+    "view": {
+      "enum": [
+        "odds",
+        "ev",
+        "arbs"
+      ]
+    },
+    "filter": {
+      "enum": [
+        "positive",
+        "all",
+        "hedges"
+      ]
+    },
+    "game_key": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "input_version": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "policy": {
+      "type": "object"
+    },
+    "benchmark": {
+      "type": "object",
+      "required": [
+        "venue",
+        "method",
+        "revision",
+        "available",
+        "originals",
+        "fair",
+        "freshness"
+      ],
+      "properties": {
+        "venue": {
+          "enum": [
+            "pinnacle",
+            "novig",
+            "prophetx"
+          ]
+        },
+        "originals": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "fair": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "freshness": {
+          "enum": [
+            "current",
+            "historical",
+            "unavailable"
+          ]
+        }
+      }
+    },
+    "as_of": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "read_at": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "result_as_of": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
+    },
+    "delivery_state": {
+      "enum": [
+        "complete",
+        "pending",
+        "stopped"
+      ]
+    },
+    "status": {
+      "enum": [
+        "current",
+        "historical",
+        "mixed",
+        "prices_only"
+      ]
+    },
+    "prices": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "quote_id",
+          "selection",
+          "venue",
+          "source",
+          "original",
+          "common_odds",
+          "times"
+        ],
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "selection": {
+            "type": "object"
+          },
+          "venue": {
+            "enum": [
+              "novig",
+              "prophetx",
+              "kalshi",
+              "polymarket_us"
+            ]
+          },
+          "source": {
+            "type": "object"
+          },
+          "original": {
+            "type": "object",
+            "required": [
+              "value",
+              "units",
+              "payout",
+              "payout_units",
+              "quantity_units"
+            ]
+          },
+          "common_odds": {
+            "type": "object",
+            "required": [
+              "american",
+              "meaning"
+            ]
+          },
+          "times": {
+            "type": "object",
+            "required": [
+              "source_at",
+              "received_at",
+              "projected_at"
+            ]
+          },
+          "freshness": {
+            "type": "object",
+            "required": [
+              "status",
+              "reasons"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "current",
+                  "historical"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "maxItems": 64
+              }
+            }
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 64
+    },
+    "empty_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
+    },
+    "provider_requests": {
+      "const": 0
+    },
+    "limits": {
+      "type": "object"
+    },
+    "calculation_context": {
+      "type": "object",
+      "required": [
+        "context_id",
+        "epoch",
+        "dependency_revision",
+        "policy_revision",
+        "engine_binding"
+      ],
+      "properties": {
+        "context_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "dependency_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engine_binding": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "view": {
+            "const": "odds"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {
+              "type": "object",
+              "required": [
+                "quote_id",
+                "selection",
+                "venue",
+                "source",
+                "original",
+                "common_odds",
+                "times"
+              ],
+              "properties": {
+                "quote_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "selection": {
+                  "type": "object"
+                },
+                "venue": {
+                  "enum": [
+                    "novig",
+                    "prophetx",
+                    "kalshi",
+                    "polymarket_us"
+                  ]
+                },
+                "source": {
+                  "type": "object"
+                },
+                "original": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "units",
+                    "payout",
+                    "payout_units",
+                    "quantity_units"
+                  ]
+                },
+                "common_odds": {
+                  "type": "object",
+                  "required": [
+                    "american",
+                    "meaning"
+                  ]
+                },
+                "times": {
+                  "type": "object",
+                  "required": [
+                    "source_at",
+                    "received_at",
+                    "projected_at"
+                  ]
+                },
+                "freshness": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "reasons"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "current",
+                        "historical"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "maxItems": 64
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view": {
+            "const": "ev"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "quote_id",
+                    "selection",
+                    "venue",
+                    "source",
+                    "original",
+                    "common_odds",
+                    "times"
+                  ],
+                  "properties": {
+                    "quote_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "selection": {
+                      "type": "object"
+                    },
+                    "venue": {
+                      "enum": [
+                        "novig",
+                        "prophetx",
+                        "kalshi",
+                        "polymarket_us"
+                      ]
+                    },
+                    "source": {
+                      "type": "object"
+                    },
+                    "original": {
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "units",
+                        "payout",
+                        "payout_units",
+                        "quantity_units"
+                      ]
+                    },
+                    "common_odds": {
+                      "type": "object",
+                      "required": [
+                        "american",
+                        "meaning"
+                      ]
+                    },
+                    "times": {
+                      "type": "object",
+                      "required": [
+                        "source_at",
+                        "received_at",
+                        "projected_at"
+                      ]
+                    },
+                    "freshness": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "reasons"
+                      ],
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "current",
+                            "historical"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 256
+                          },
+                          "maxItems": 64
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "model_available",
+                    "ranking_eligible",
+                    "freshness",
+                    "details",
+                    "benchmark_identity"
+                  ],
+                  "properties": {
+                    "model_available": {
+                      "type": "boolean"
+                    },
+                    "ranking_eligible": {
+                      "type": "boolean"
+                    },
+                    "freshness": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "reasons"
+                      ],
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "current",
+                            "historical"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 256
+                          },
+                          "maxItems": 64
+                        }
+                      }
+                    },
+                    "details": {
+                      "type": "object",
+                      "required": [
+                        "policy_revision",
+                        "context_id"
+                      ],
+                      "properties": {
+                        "quote_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 256
+                        },
+                        "pair_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 256
+                        },
+                        "policy_revision": {
+                          "type": "string",
+                          "maxLength": 256
+                        },
+                        "context_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "financial_metrics": {
+                      "type": "object",
+                      "properties": {
+                        "gross_benchmark_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "gross_benchmark_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_modeled_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_modeled_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_net_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_buffered_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "decisive_opposing_margin_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_decisive_opposing_margin_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_decisive_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "complete_modeled_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_complete_modeled_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "rule_adjustment_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_upfront_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "expected_settlement_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "reconciliation_expected_settlement_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffer_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "version": {
+                          "const": "predict-financial-metrics-1"
+                        },
+                        "reconciliation_condition": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "percentage_denominator": {
+                          "const": "actual_deployed_capital"
+                        },
+                        "rule_adjustment_includes": {
+                          "type": "string"
+                        },
+                        "expected_charge_is_not_maximum": {
+                          "const": true
+                        },
+                        "actual_charges": {
+                          "type": "null"
+                        },
+                        "conditional_net_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_buffered_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_complete_minimum_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "gross_benchmark_ev_usd",
+                        "net_modeled_ev_usd",
+                        "buffered_ev_usd",
+                        "decisive_opposing_margin_usd",
+                        "buffered_decisive_opposing_margin_usd",
+                        "complete_modeled_minimum_usd",
+                        "buffered_complete_modeled_minimum_usd"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "funding": {
+                      "type": "object",
+                      "required": [
+                        "requested_usd",
+                        "deployed_usd",
+                        "residual_usd",
+                        "legs",
+                        "actual_fill_support"
+                      ],
+                      "properties": {
+                        "requested_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "deployed_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "residual_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "actual_fill_support": {
+                          "const": false
+                        },
+                        "legs": {
+                          "type": "array",
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    "benchmark_identity": {
+                      "type": "object",
+                      "required": [
+                        "venue",
+                        "method",
+                        "revision"
+                      ]
+                    },
+                    "classification": {
+                      "type": "object",
+                      "required": [
+                        "category",
+                        "main_positive_eligible",
+                        "positive_rule_sensitive_eligible",
+                        "adverse_outcomes",
+                        "unknown_outcomes"
+                      ]
+                    }
+                  },
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "buffered_profit_usd"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "buffered_return_percent"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view": {
+            "const": "arbs"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "model_available",
+                    "ranking_eligible",
+                    "freshness",
+                    "details",
+                    "benchmark_identity"
+                  ],
+                  "properties": {
+                    "model_available": {
+                      "type": "boolean"
+                    },
+                    "ranking_eligible": {
+                      "type": "boolean"
+                    },
+                    "freshness": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "reasons"
+                      ],
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "current",
+                            "historical"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 256
+                          },
+                          "maxItems": 64
+                        }
+                      }
+                    },
+                    "details": {
+                      "type": "object",
+                      "required": [
+                        "policy_revision",
+                        "context_id"
+                      ],
+                      "properties": {
+                        "quote_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 256
+                        },
+                        "pair_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 256
+                        },
+                        "policy_revision": {
+                          "type": "string",
+                          "maxLength": 256
+                        },
+                        "context_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "financial_metrics": {
+                      "type": "object",
+                      "properties": {
+                        "gross_benchmark_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "gross_benchmark_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_modeled_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_modeled_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_net_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_buffered_ev_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "decisive_opposing_margin_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_decisive_opposing_margin_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_decisive_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "complete_modeled_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_complete_modeled_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "rule_adjustment_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "net_upfront_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "expected_settlement_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "reconciliation_expected_settlement_fee_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffer_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "version": {
+                          "const": "predict-financial-metrics-1"
+                        },
+                        "reconciliation_condition": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "percentage_denominator": {
+                          "const": "actual_deployed_capital"
+                        },
+                        "rule_adjustment_includes": {
+                          "type": "string"
+                        },
+                        "expected_charge_is_not_maximum": {
+                          "const": true
+                        },
+                        "actual_charges": {
+                          "type": "null"
+                        },
+                        "conditional_net_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "conditional_buffered_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_complete_minimum_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "gross_benchmark_ev_usd",
+                        "net_modeled_ev_usd",
+                        "buffered_ev_usd",
+                        "decisive_opposing_margin_usd",
+                        "buffered_decisive_opposing_margin_usd",
+                        "complete_modeled_minimum_usd",
+                        "buffered_complete_modeled_minimum_usd"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "funding": {
+                      "type": "object",
+                      "required": [
+                        "requested_usd",
+                        "deployed_usd",
+                        "residual_usd",
+                        "legs",
+                        "actual_fill_support"
+                      ],
+                      "properties": {
+                        "requested_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "deployed_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "residual_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "actual_fill_support": {
+                          "const": false
+                        },
+                        "legs": {
+                          "type": "array",
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    "benchmark_identity": {
+                      "type": "object",
+                      "required": [
+                        "venue",
+                        "method",
+                        "revision"
+                      ]
+                    },
+                    "classification": {
+                      "type": "object",
+                      "required": [
+                        "category",
+                        "main_positive_eligible",
+                        "positive_rule_sensitive_eligible",
+                        "adverse_outcomes",
+                        "unknown_outcomes"
+                      ]
+                    }
+                  },
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "buffered_profit_usd"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "buffered_return_percent"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "pair_id",
+                    "legs"
+                  ],
+                  "properties": {
+                    "pair_id": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "legs": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "required": [
+                              "quote_id",
+                              "selection",
+                              "venue",
+                              "source",
+                              "original",
+                              "common_odds",
+                              "times"
+                            ],
+                            "properties": {
+                              "quote_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "selection": {
+                                "type": "object"
+                              },
+                              "venue": {
+                                "enum": [
+                                  "novig",
+                                  "prophetx",
+                                  "kalshi",
+                                  "polymarket_us"
+                                ]
+                              },
+                              "source": {
+                                "type": "object"
+                              },
+                              "original": {
+                                "type": "object",
+                                "required": [
+                                  "value",
+                                  "units",
+                                  "payout",
+                                  "payout_units",
+                                  "quantity_units"
+                                ]
+                              },
+                              "common_odds": {
+                                "type": "object",
+                                "required": [
+                                  "american",
+                                  "meaning"
+                                ]
+                              },
+                              "times": {
+                                "type": "object",
+                                "required": [
+                                  "source_at",
+                                  "received_at",
+                                  "projected_at"
+                                ]
+                              },
+                              "freshness": {
+                                "type": "object",
+                                "required": [
+                                  "status",
+                                  "reasons"
+                                ],
+                                "properties": {
+                                  "status": {
+                                    "enum": [
+                                      "current",
+                                      "historical"
+                                    ]
+                                  },
+                                  "reasons": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "maxLength": 256
+                                    },
+                                    "maxItems": 64
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "native_quantity",
+                              "native_unit",
+                              "acquisition_usd",
+                              "upfront_fee_usd"
+                            ],
+                            "properties": {
+                              "native_quantity": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                                "maxLength": 256
+                              },
+                              "native_unit": {
+                                "type": "object"
+                              },
+                              "acquisition_usd": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                                "maxLength": 256
+                              },
+                              "upfront_fee_usd": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                                "maxLength": 256
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

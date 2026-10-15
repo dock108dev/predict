@@ -77,33 +77,36 @@ function price(q) {
     ? q.common_odds.american
     : quantity(q.original?.value) + " " + words(q.original?.units);
 }
+// Exact display conversion only: signed integer American, half away from zero,
+// matching u0_display.py. Never round a decimal/probability before conversion.
+export function americanDecimal(value) {
+  function decimal(text) {
+    const m = /^(\d+)(?:\.(\d+))?$/.exec(text);
+    if (!m || text.length > 256) throw Error("Invalid decimal odds");
+    return [BigInt(m[1] + (m[2] || "")), 10n ** BigInt((m[2] || "").length)];
+  }
+  try {
+    const parts = String(value).split("/");
+    if (parts.length > 2) return "Unavailable";
+    const a = decimal(parts[0]), b = parts.length === 2 ? decimal(parts[1]) : [1n, 1n];
+    const n = a[0] * b[1], d = a[1] * b[0];
+    if (d <= 0n || n <= d) return "Unavailable";
+    const positive = n >= 2n * d;
+    const numerator = 100n * (positive ? n - d : d), denominator = positive ? d : n - d;
+    const rounded = (2n * numerator + denominator) / (2n * denominator);
+    return (positive ? "+" : "-") + rounded.toString();
+  } catch { return "Unavailable"; }
+}
 function benchmark(root, b, participantId) {
-  const f = b?.fair?.find((f) => f.participant === participantId);
-  root.append(el("small", venue(b?.venue) + " fair benchmark"));
-  root.append(
-    el(
-      "strong",
-      f
-        ? numeric(f.fair_decimal_odds).toFixed(3) + " decimal"
-        : "Missing benchmark",
-    ),
-  );
-  root.append(
-    el(
-      "small",
-      f
-        ? percent(String(numeric(f.decisive_probability) * 100)) +
-            " decisive win probability"
-        : words(b?.reason),
-    ),
-  );
-  if (b?.freshness)
-    root.append(
-      el(
-        "small",
-        b.freshness === "current" ? "Current benchmark" : "As-of benchmark",
-      ),
-    );
+  const f = b?.fair?.find(f => f.participant === participantId);
+  const original = b?.originals?.find(o => o.selection?.participant_id === participantId);
+  root.append(el("small", venue(b?.venue) + " decisive win reference"));
+  root.append(el("strong", f ? "Fair " + americanDecimal(f.fair_decimal_odds) : "Fair unavailable"));
+  root.append(el("small", "Offered " + americanDecimal(original?.decimal_odds)));
+  if (b?.freshness) root.append(el("small", b.freshness === "current" ? "Current benchmark" : "As-of benchmark"));
+  root.title = "Fair: " + String(f?.fair_decimal_odds ?? "Unknown") + " decimal; decisive probability " + String(f?.decisive_probability ?? "Unknown") +
+    "; offered: " + String(original?.decimal_odds ?? "Unknown") + " decimal; " + words(b?.method) + "; " + words(b?.conditioning) +
+    "; Source " + time(original?.book_at || original?.market_at) + "; Received " + time(original?.received_at);
 }
 export function labelsFor(participants = []) {
   function participant(id) {

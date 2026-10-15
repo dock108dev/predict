@@ -5,8 +5,9 @@ import {
   percent,
   quantity,
   settings,
-  checkSlate,
+  SlateAccumulator,
   checkDetails,
+  checkInputs,
   LatestRead,
   SavedReadPoller,
   followGame,
@@ -37,8 +38,8 @@ const view =
       : "odds";
 const read = new LatestRead(),
   detailRead = new LatestRead(),
-  originalRead = new LatestRead(),
-  historyRead = new LatestRead();
+  originalRead = new LatestRead();
+let pullGeneration = 0;
 let previousSelection = null;
 let applied = { ...defaults },
   games = [],
@@ -135,9 +136,9 @@ function draw(v) {
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
-  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached · " : "Saved updates paused · ") : v.storage?.state === "catching_up" ? "Saving new inputs · " : "";
-  setStatus((stopped ? "Collection stopped · " : "") + storageNote + v.games.length + " saved games · " + (!unavailable && pending ? pending + " calculations pending · " : "") + "Each price and result keeps its own source age", unavailable ? "error" : pending ? "busy" : "ready");
-  if (failures) setStatus("Saved reads unavailable · retained values have unverified freshness", "error");
+  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached · " : "Current updates paused · ") : v.storage?.state === "catching_up" ? "Saving new inputs · " : "";
+  setStatus((stopped ? "Collection stopped · " : "") + storageNote + v.games.length + " current games · " + (!unavailable && pending ? pending + " calculations pending · " : "") + "Each price and result keeps its own source age", unavailable ? "error" : pending ? "busy" : "ready");
+  if (failures) setStatus("Current reads unavailable · prior values have unverified freshness", "error");
   preserveContent(() =>
     renderers.draw(v, {
       view,
@@ -176,13 +177,23 @@ function catalogOptions() {
 async function pull() {
   polling.cancel();
   if (failures >= 4) return;
-  const c = context();
+  const c = context(), generation = ++pullGeneration;
   try {
     const qs = query({ ...c, game: "" });
     qs.set("view", c.view);
     qs.set("filter", c.filter);
-    const value = await read.read("/api/boards/slate?" + qs, v => checkSlate(v, c), 8388608);
-    if (!value) return;
+    qs.set("limit", "50");
+    const pages = new SlateAccumulator(c);
+    do {
+      qs.set("offset", String(pages.nextOffset));
+      if (pages.expectedRevision) qs.set("expected_revision", pages.expectedRevision);
+      const completed = await read.read("/api/boards/slate?" + qs, (page, metadata) => {
+        pages.append(page, metadata.bytes);
+        return true;
+      }, 8388608);
+      if (!completed || generation !== pullGeneration) return;
+    } while (!pages.complete);
+    const value = pages.result();
     polling.setSlate({ ...value, stopped: stopRequested || value.stopped });
     const continued = followGame(
       games.find((g) => g.game_key === game) ||
@@ -206,7 +217,7 @@ async function pull() {
     persist();
     if (!games.length) {
       draw(value);
-      setStatus("No saved NFL winner games available.");
+      setStatus("No current games available.");
       return;
     }
     if (game && !games.some((g) => g.game_key === game)) {
@@ -219,7 +230,7 @@ async function pull() {
     $("retry").hidden = true;
     if (detail?.kind === "result") refreshDetails();
   } catch (e) {
-    if (e.name === "AbortError") return;
+    if (e.name === "AbortError" || generation !== pullGeneration) return;
     polling.setSlate(null);
     failures++;
     if (!games.length) {
@@ -230,19 +241,19 @@ async function pull() {
       $("content").replaceChildren(
         el(
           "p",
-          "Positive results withheld while saved reads are unavailable.",
+          "Positive results withheld while current reads are unavailable.",
           "notice",
         ),
       );
     setStatus(
-      "Saved view unavailable: " +
+      "Current view unavailable: " +
         e.message +
         (current ? " · Prior view retained; freshness is unverified." : ""),
       "error",
     );
     $("retry").hidden = false;
   } finally {
-    if (!read.pending) polling.schedule();
+    if (generation === pullGeneration && !read.pending) polling.schedule();
   }
 }
 function showDialog(button) {
@@ -255,7 +266,6 @@ function closeDetails() {
   detail = null;
   detailRead.cancel();
   originalRead.cancel();
-  historyRead.cancel();
   $("details").close();
   polling.schedule();
   if (wasOpen) {
@@ -269,79 +279,23 @@ function closeDetails() {
   }
 }
 $("close-details").onclick = closeDetails;
+$("details").addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const targets = [...$("details").querySelectorAll("button:not([disabled]), summary, a[href], input:not([disabled]), select:not([disabled]), [tabindex='0']")].filter(n => n.getClientRects().length);
+  const first = targets[0], last = targets[targets.length - 1];
+  if (e.shiftKey && document.activeElement === first || !e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    (e.shiftKey ? last : first)?.focus();
+  }
+});
 $("details").addEventListener("cancel", (e) => {
   e.preventDefault();
   closeDetails();
 });
 function reconcile(v) {
-  const { advanced, history } = renderSavedDetails(v, {
+  renderSavedDetails(v, {
     root: $("detail-content"),
     participants: detail.participants,
-  });
-  const load = el("button", "Load original input envelopes");
-  load.onclick = async () => {
-    const held = detail;
-    try {
-      const qs = query(held.context);
-      qs.set("result_id", held.identity.result_id);
-      const inputs = await originalRead.read(
-        "/api/boards/inputs?" + qs,
-        (x) => {
-          if (
-            x.version !== "predict-board-inputs-1" ||
-            x.inputs?.input_version !== v.original_inputs_identity.input_version
-          )
-            throw Error("Original input identity crossed.");
-          return x;
-        },
-        8388608,
-      );
-      if (inputs && held === detail)
-        advanced.append(el("pre", JSON.stringify(inputs, null, 2)));
-    } catch (e) {
-      if (e.name !== "AbortError") load.textContent = e.message;
-    }
-  };
-  advanced.append(load);
-  history.addEventListener("toggle", async () => {
-    if (!history.open || history.dataset.loaded) return;
-    const held = detail;
-    try {
-      const x = await historyRead.read(
-        "/api/boards/history?" + query(held.context),
-        (x) => {
-          if (
-            x.version !== "predict-board-history-1" ||
-            x.game_key !== held.context.game ||
-            x.policy_revision !== held.identity.policy_revision
-          )
-            throw Error("History identity crossed.");
-          return x;
-        },
-      );
-      if (!x || held !== detail) return;
-      history.dataset.loaded = "true";
-      for (const entry of x.results) {
-        const b = el("button", "Open " + time(entry.calculated_at));
-        b.onclick = () => {
-          detail = {
-            ...held,
-            rendered: false,
-            identity: {
-              ...held.identity,
-              result_id: entry.result_id,
-              snapshot_id: entry.snapshot_id,
-            },
-          };
-          refreshDetails();
-        };
-        history.append(b);
-      }
-      if (!x.results.length)
-        history.append(el("p", "No saved history for these settings."));
-    } catch (e) {
-      history.append(el("p", e.message));
-    }
   });
 }
 async function refreshDetails() {
@@ -349,7 +303,7 @@ async function refreshDetails() {
   if (held?.kind !== "result") return;
   const qs = query(held.context),
     d = held.identity;
-  qs.set("result_id", d.result_id);
+  qs.set("context_id", d.context_id);
   qs.set(d.quote_id ? "quote" : "pair", d.quote_id || d.pair_id);
   try {
     const v = await detailRead.read(
@@ -358,39 +312,33 @@ async function refreshDetails() {
       8388608,
     );
     if (!v || detail !== held) return;
-    if (held.rendered) {
-      const age = $("detail-freshness");
-      age.replaceChildren();
-      freshness(
-        age,
-        (v.pair || v.quote.calculations.funded_estimate).freshness,
-      );
-      return;
-    }
     held.rendered = true;
     const open = [...$("detail-content").querySelectorAll("details[open]")].map(
         (x, i) => x.dataset.key || String(i),
       ),
-      active = document.activeElement;
+      active = document.activeElement,
+      activeDisclosure = active?.closest?.("details")?.dataset.key,
+      focusedSummary = active?.tagName === "SUMMARY";
     reconcile(v);
     for (const [i, x] of [
       ...$("detail-content").querySelectorAll("details"),
     ].entries())
       if (open.includes(x.dataset.key || String(i))) x.open = true;
     if (active === $("close-details")) active.focus({ preventScroll: true });
+    else if (focusedSummary && activeDisclosure)
+      [...$("detail-content").querySelectorAll("details")].find(x => x.dataset.key === activeDisclosure)?.querySelector("summary")?.focus({ preventScroll: true });
   } catch (e) {
     if (e.name !== "AbortError" && held === detail)
-      $("detail-content").prepend(
-        el("p", "Details unavailable: " + e.message, "warning"),
+      $("detail-content").replaceChildren(
+        el("p", "Current inputs changed, were removed or are unavailable. Close Details and reopen the current selection. " + e.message, "warning"),
       );
   }
 }
 function openDetails(row, button, selectedGame) {
   detailRead.cancel();
   originalRead.cancel();
-  historyRead.cancel();
   detail = { kind: "result", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
-  $("detail-content").replaceChildren(el("p", "Loading exact saved Details…"));
+  $("detail-content").replaceChildren(el("p", "Loading current Details…"));
   showDialog(button);
   refreshDetails();
 }
@@ -399,43 +347,31 @@ async function openOriginal(q, button, selectedGame) {
   const { selection } = labelsFor(selectedGame.participants);
   detailRead.cancel();
   originalRead.cancel();
-  historyRead.cancel();
-  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q });
-  $("detail-content").replaceChildren(
-    el("h3", selection(q)),
-    el("p", venue(q.venue) + " · " + price(q)),
-  );
-  textLine(
-    $("detail-content"),
-    "Original native price",
-    quantity(q.original.value) + " " + words(q.original.units),
-  );
-  freshness($("detail-content"), q.freshness);
+  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, policy_revision: current.policy.revision } });
+  $("detail-content").replaceChildren(el("p", "Loading current original contract and source evidence…"));
   showDialog(button);
   try {
+    const qs = query(held.context);
+    qs.set("context_id", q.inputs_identity.context_id);
+    qs.set("quote", q.quote_id);
     const inputs = await originalRead.read(
-      "/api/boards/inputs?" + query(held.context),
-      (x) => {
-        if (
-          x.version !== "predict-board-inputs-1" ||
-          x.inputs?.input_version !== q.inputs_identity.input_version ||
-          x.inputs.game_key !== q.inputs_identity.game_key
-        )
-          throw Error("Original price changed; reopen its current identity.");
-        return x;
-      },
+      "/api/boards/inputs?" + qs,
+      x => checkInputs(x, held.context, held.identity),
       8388608,
     );
     if (!inputs || held !== detail) return;
+    $("detail-content").replaceChildren(el("h3", selection(q)), el("p", venue(q.venue) + " · " + price(q)));
+    textLine($("detail-content"), "Original native price", quantity(q.original.value) + " " + words(q.original.units));
+    textLine($("detail-content"), "Original source / receipt", time(q.freshness?.source_at) + " / " + time(q.freshness?.received_at));
     const d = el("details");
     d.append(
       el("summary", "Original contract and source evidence"),
-      el("pre", JSON.stringify(inputs, null, 2)),
+      el("pre", JSON.stringify(inputs.evidence, null, 2)),
     );
     $("detail-content").append(d);
   } catch (e) {
-    if (e.name !== "AbortError")
-      $("detail-content").append(el("p", e.message, "warning"));
+    if (e.name !== "AbortError" && held === detail)
+      $("detail-content").replaceChildren(el("p", "Original inputs changed, expired or are unavailable. Reopen the current price. " + e.message, "warning"));
   }
 }
 function changeSettings(next) {
@@ -443,6 +379,7 @@ function changeSettings(next) {
   form();
   persist();
   failures = 0;
+  pullGeneration++;
   read.cancel();
   closeDetails();
   current = null;
@@ -482,6 +419,7 @@ for (const b of $("filters").querySelectorAll("button")) {
     for (const other of $("filters").querySelectorAll("button"))
       other.setAttribute("aria-pressed", String(other === b));
     failures = 0;
+    pullGeneration++;
     read.cancel();
     pull();
   };
@@ -493,8 +431,11 @@ $("retry").onclick = () => {
 $("stop").onclick = async () => {
   polling.cancel();
   polling.setSlate(null);
+  pullGeneration++;
   read.cancel();
   detailRead.cancel();
+  closeDetails();
+  polling.cancel();
   stopRequested = true;
   stopped = true;
   $("stop").disabled = true;
@@ -518,7 +459,7 @@ $("title").textContent =
   view === "odds" ? "Odds" : view === "ev" ? "Expected value" : "Arbitrage";
 $("purpose").textContent =
   view === "odds"
-    ? "Every saved game and its available winner prices, with a separate fair benchmark."
+    ? "Every current game and its available winner prices, with a separate fair benchmark."
     : view === "ev"
       ? "Compare estimated profit across all games after modeled costs, rule effects and one buffer."
       : "Compare opposing selections across all games, with one shared amount and margins after costs.";
@@ -531,9 +472,9 @@ form();
 window.addEventListener("pagehide", () => {
   unloading = true;
   polling.cancel();
+  pullGeneration++;
   read.cancel();
   detailRead.cancel();
   originalRead.cancel();
-  historyRead.cancel();
 });
 pull();

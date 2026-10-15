@@ -12,7 +12,7 @@ from app.collection.current_sink import normalized_records
 VERSION = 'predict-combined-native-1'
 
 
-def normalize(catalog, books, *, at, associations=None):
+def normalize(catalog, books, *, at, associations=None, include_missing=False):
     source = catalog['record']['source']
     inventory = deepcopy(catalog['record']['value']['inventory'])
     reducer = SessionProjection(); reducer.inventory = {source: inventory}
@@ -25,7 +25,7 @@ def normalize(catalog, books, *, at, associations=None):
             reducer.reduce_observation(deepcopy(obs)); associations[key] = envelope['id']
     states = unavailable()['source_status']
     states[source]['state'] = 'available'
-    records, excluded = normalized_records(reducer, states, {}, dated_annotations=False, clock=at)
+    records, excluded = normalized_records(reducer, states, {}, dated_annotations=False, clock=at, include_missing=include_missing)
     markets = {m['id']: m for m in inventory['markets']}
     result = []
     for row in records:

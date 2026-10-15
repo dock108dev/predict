@@ -24,7 +24,9 @@ def engine_binding():
     paths=['app/comparison/estimated_ev.py','app/comparison/estimated_pair.py','app/comparison/estimated_consumer.py','app/comparison/estimated_content.py','app/comparison/estimated_templates.py','app/fees/engine.py','app/fixtures/estimated-content-v1.json','app/fixtures/comparison-source-rules-v1.json','app/fixtures/comparison-selected-applicability-v1.json']
     paths += ['app/comparison/estimated_policy.py','app/comparison/effective_policy.py','app/comparison/benchmark.py','app/comparison/requested_sizing.py','app/comparison/financial_metrics.py','app/comparison/source_inputs.py','app/comparison/current_metrics.py','app/comparison/current_dependencies.py','app/comparison/domain.py']
     paths += ['app/storage/comparison_board.py','app/dashboard/comparison_board.py','app/dashboard/comparison_board_api.py','app/dashboard/query_policy.py','app/collection/current_database.py','app/comparison/calculation_control.py','app/normalization/registry.py']
+    paths += ['app/storage/current_rows.py','app/dashboard/comparison_slate.py']
     paths += ['app/comparison/combined_inputs.py','app/comparison/combined_native.py','app/comparison/occurrence_matching.py','app/collection/current_sink.py','app/collection/current_aggregate_admission.py','app/dashboard/current_normalized.py','app/collection/current_comparison_inputs.py','app/storage/current_games.py']
+    paths += ['app/collection/current_aggregate.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
     return hashed({p:sha256((root/p).read_bytes()).hexdigest() for p in paths})
 
 
@@ -34,7 +36,8 @@ class GameStore:
     def immutable(self, table, key, row):
         # DO NOTHING does not fire the immutable UPDATE trigger on a retry.
         from psycopg import sql
-        from .payload_codec import TABLES, encode
+        from .payload_codec import TABLES
+        from .domain_history import encode
         cols=list(row)
         select=sql.SQL('SELECT * FROM {} WHERE {}=%s').format(sql.Identifier(table),sql.Identifier(key))
         if table in TABLES:
@@ -44,7 +47,7 @@ class GameStore:
                     raise ValueError('conflicting immutable identity: '+table)
                 return
         stored=dict(row)
-        if table in TABLES:stored['payload']=encode(row['payload'])
+        if table in TABLES:stored['payload']=encode(row['payload'],self.db,table)
         self.db.execute(sql.SQL('INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO NOTHING').format(
             sql.Identifier(table),sql.SQL(',').join(map(sql.Identifier,cols)),
             sql.SQL(',').join(sql.Placeholder() for _ in cols),sql.Identifier(key)),list(stored.values()))
@@ -60,12 +63,28 @@ class GameStore:
             source=record['source'],kind=record['kind'],retained_at=record['retained_at']))
         return identity
 
-    def source(self, source, kind, native, at, eid, payload):
-        self.db.execute('''INSERT INTO current_source_projection (source,kind,native_id,observed_at,envelope_id,payload,observed_order) VALUES (%s,%s,%s,%s,%s,%s,%s)
-          ON CONFLICT(source,kind,native_id) DO UPDATE SET observed_at=excluded.observed_at,
-          envelope_id=excluded.envelope_id,payload=excluded.payload,observed_order=excluded.observed_order
-          WHERE excluded.observed_order>current_source_projection.observed_order''',
-          (source,kind,native,at,eid,wire(payload),exact_time(at)))
+    def source(self, source, kind, native, at, eid, payload, *, received_at):
+        # The secondary order is the original provider receipt, separately from
+        # local retention/read/import time. Provider/source clocks stay untouched.
+        observed=exact_time(at);received=exact_time(received_at);body=wire(payload)
+        with self.db.transaction():
+            self.db.execute('SELECT pg_advisory_xact_lock(901091)')
+            old=self.db.execute('''SELECT observed_order,received_order,payload FROM current_source_projection
+              WHERE source=%s AND kind=%s AND native_id=%s FOR UPDATE''',(source,kind,native)).fetchone()
+            if old and old['received_order'] is None:
+                raise ValueError('current_source_receipt_backfill_required')
+            if old and (old['observed_order'],old['received_order'])==(observed,received) and old['payload']!=body:
+                raise ValueError('current_source_equal_clock_conflict')
+            row=self.db.execute('''INSERT INTO current_source_projection
+              (source,kind,native_id,observed_at,envelope_id,payload,observed_order,received_order)
+              VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+              ON CONFLICT(source,kind,native_id) DO UPDATE SET observed_at=excluded.observed_at,
+              envelope_id=excluded.envelope_id,payload=excluded.payload,observed_order=excluded.observed_order,
+              received_order=excluded.received_order
+              WHERE (excluded.observed_order,excluded.received_order)>
+                (current_source_projection.observed_order,current_source_projection.received_order)
+              RETURNING native_id''',(source,kind,native,at,eid,body,observed,received)).fetchone()
+            return row is not None
 
     def import_record(self, record, identity=None):
         with self.db.transaction():
@@ -85,18 +104,19 @@ class GameStore:
                     native=hashed([q['venue'],key,q['source']['native_market_id'],q['source']['native_outcome_id']])
                     # Unknown source clocks sort by their original receipt, never insertion.
                     at=q['times']['source_at'] or q['times']['received_at']
-                    self.source(source,'quote',native,at,eid,row)
-                    if v['sport']=='NFL':affected.add(source+':'+key)
+                    changed=self.source(source,'quote',native,at,eid,row,received_at=q['times']['received_at'])
+                    if changed and v['sport']=='NFL':affected.add(source+':'+key)
             elif kind=='catalog':
-                self.source(source,'catalog',source,record['retained_at'],eid,v['inventory'])
-                affected.update(source+':'+e['id'] for e in v['inventory']['events'] if e.get('competition')=='NFL')
+                if self.source(source,'catalog',source,record['retained_at'],eid,v['inventory'],received_at=record['retained_at']):
+                    affected.update(source+':'+e['id'] for e in v['inventory']['events'] if e.get('competition')=='NFL')
             elif kind=='admitted_books':
                 for o in v['observations']:
                     book=o['book'];ref=book['raw']['ref']
                     if ref['venue']!=source:raise ValueError('native_book_source_conflict')
-                    self.source(source,'book',ref['event_id']+':'+ref['market_id'],
-                        book['raw'].get('exchange_at') or book['raw']['received_at'],eid,o)
-                    affected.add(source+':'+ref['event_id'])
+                    if self.source(source,'book',ref['event_id']+':'+ref['market_id'],
+                            book['raw'].get('exchange_at') or book['raw']['received_at'],eid,o,
+                            received_at=book['raw']['received_at']):
+                        affected.add(source+':'+ref['event_id'])
             return affected
 
     def catch_up(self, path, *, records=16, deadline=None):
@@ -117,6 +137,9 @@ class GameStore:
                 if len(line)>MAX_PAYLOAD:raise ValueError('journal_record_cap')
                 if not line.endswith(b'\n'):break # incomplete durable tail remains visible
                 record=json.loads(line)
+                if record.get('schema')=='predict-domain-journal-2':
+                    from app.collection.current_journal_domains import unpack_record
+                    record=unpack_record(record,path.parent)
                 with self.db.transaction():
                     affected.update(self.import_record(record,hashed([name,start])))
                     self.db.execute('''INSERT INTO current_import_cursor VALUES (%s,%s)
@@ -265,6 +288,8 @@ class GameStore:
         if len(encoded(payload))>MAX_PAYLOAD:raise ValueError('combined_snapshot_byte_cap')
         with self.db.transaction():
             for e in bundle['envelopes']:self.envelope(e['record'],e['id'])
+            from .price_projection import observe_bundle
+            observe_bundle(self.db,bundle)
             self.db.execute('INSERT INTO current_game_projection VALUES (%s,%s,%s,%s) ON CONFLICT(game_key) DO UPDATE SET input_version=excluded.input_version,payload=excluded.payload,updated_at=excluded.updated_at WHERE current_game_projection.input_version<>excluded.input_version',
                 (key,bundle['input_version'],wire(payload),utc()))
         return key
@@ -277,7 +302,9 @@ class GameStore:
             projection=json.loads(row['payload'])
             combined=projection.get('version')=='predict-combined-occurrence-inputs-1'
             if combined and at is not None and at!=projection['inputs']['as_of']:raise ValueError('combined_original_evaluation_instant_conflict')
-            at=at or (projection['inputs']['as_of'] if combined else utc());value=dict(version=VERSION,game_key=key,input_version=row['input_version'],
+            # An unchanged source-local projection keeps its first evaluation instant
+            # just like a combined capture; retry timing belongs to attempts.
+            at=at or (projection['inputs']['as_of'] if combined else row['updated_at'].isoformat());value=dict(version=VERSION,game_key=key,input_version=row['input_version'],
                 policy=policy.to_dict(),as_of=at,projection=json.loads(row['payload']),engine_binding=engine_binding(),
                 engines=['predict-funded-single-2','predict-funded-pair-2','fees-1'] if getattr(policy,'sizing_mode',None) is not None else ['predict-funded-single-1','predict-funded-pair-1','fees-1'],
                 model='existing EV05/EV06 NFL pregame model; original assumptions retained')
@@ -292,19 +319,32 @@ class GameStore:
             for field in ('snapshot_id','game_key','input_version','policy','engine_binding'):
                 expected=snapshot['id'] if field=='snapshot_id' else snapshot[field]
                 if result.get(field)!=expected:raise ValueError('board_result_snapshot_binding_conflict:'+field)
-        rid=hashed(dict(snapshot_id=snapshot['id'],result=result))
+        rid=hashed(dict(snapshot_id=snapshot['id'],result=result));reused=False
         with self.db.transaction():
             if guard is not None:
                 from .comparison_board import LOCK,source_guard
                 self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
-            self.immutable('current_game_result','id',dict(id=rid,snapshot_id=snapshot['id'],payload_sha256=hashed(result),
-                payload=wire(result),calculated_at=result['calculated_at']))
+            self.db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',('calculation:'+snapshot['id'],))
+            # Numeric/meaningful calculation identity belongs to the immutable
+            # snapshot (exact dependencies, policy and engine), not retry time.
+            prior=self.db.execute('SELECT id,payload FROM current_game_result WHERE snapshot_id=%s ORDER BY calculated_at,id LIMIT 1',(snapshot['id'],)).fetchone()
+            if prior:
+                original=json.loads(prior['payload'])
+                if {k:v for k,v in original.items() if k!='calculated_at'}!={k:v for k,v in result.items() if k!='calculated_at'}:
+                    raise ValueError('same_snapshot_calculation_conflict')
+                rid=prior['id'];reused=True
+            else:
+                self.immutable('current_game_result','id',dict(id=rid,snapshot_id=snapshot['id'],payload_sha256=hashed(result),
+                    payload=wire(result),calculated_at=result['calculated_at']))
             row=self.db.execute('SELECT input_version FROM current_game_projection WHERE game_key=%s FOR UPDATE',(snapshot['game_key'],)).fetchone()
-            if not allow_latest:return rid,False
-            if row is None or row['input_version']!=snapshot['input_version'] or snapshot['engine_binding']!=engine_binding():return rid,False
-            if guard is not None and guard!=source_guard(self,snapshot['projection']['inputs']['members']):return rid,False
+            allowed=allow_latest and row is not None and row['input_version']==snapshot['input_version'] and snapshot['engine_binding']==engine_binding()
+            if allowed and guard is not None:allowed=guard==source_guard(self,snapshot['projection']['inputs']['members'])
+            self.db.execute('INSERT INTO current_calculation_attempt(snapshot_id,result_id,attempted_at,reused,published) VALUES (%s,%s,%s,%s,%s)',
+                (snapshot['id'],rid,result['calculated_at'],reused,allowed))
+            if not allowed:return rid,False
             self.db.execute('''INSERT INTO current_latest_result VALUES (%s,%s,%s,%s)
-             ON CONFLICT(game_key,policy_version) DO UPDATE SET input_version=excluded.input_version,result_id=excluded.result_id''',
+             ON CONFLICT(game_key,policy_version) DO UPDATE SET input_version=excluded.input_version,result_id=excluded.result_id
+             WHERE (current_latest_result.input_version,current_latest_result.result_id) IS DISTINCT FROM (excluded.input_version,excluded.result_id)''',
                 (snapshot['game_key'],snapshot['policy']['revision'],snapshot['input_version'],rid))
             return rid,True
 

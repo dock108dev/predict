@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "app/dashboard/opportunity_static/current"
 JAVASCRIPT = (
     "board-elements.js",
+    "comparison-slate-views.js",
     "stored-views.js",
     "stored-details.js",
     "stored-controller.js",
@@ -33,7 +34,9 @@ CLIENT_NAMES = (
     "settings",
     "checkBoard",
     "checkSlate",
+    "SlateAccumulator",
     "checkDetails",
+    "checkInputs",
     "LatestRead",
     "SavedReadPoller",
     "followGame",

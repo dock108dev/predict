@@ -104,7 +104,16 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
                 raise web.HTTPRequestEntityTooLarge(max_size=limit,actual_size=request.content_length)
             if request.path in ('/api/dashboard','/api/calculate','/api/sessions','/api/resolution'):
                 validate_http_query(request.query)
-            r=await handler(request)
+            if getattr(current_provider,'database_games',None) is not None and (
+                request.path in ('/api/comparison','/api/arbs','/api/coverage','/current/coverage')
+                or request.path=='/api/current' or request.path.startswith('/api/current/')
+                or request.path=='/api/selections' or request.path.startswith('/api/selections/')):
+                # The ordinary installation has one SQL owner. Its old injected
+                # state transport must not silently show an empty/stale fallback.
+                r=web.json_response(dict(error='current_state_transport_retired',
+                    reason='Use current SQL comparison boards and their revision-bound Details.',
+                    current_api='/api/boards/slate',current_url='/',provider_requests=0),status=410)
+            else:r=await handler(request)
         except web.HTTPException as exc:
             r=web.json_response({'error':exc.reason},status=exc.status)
             if exc.status == 408:r.force_close()

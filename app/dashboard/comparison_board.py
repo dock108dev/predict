@@ -9,7 +9,7 @@ from app.comparison.estimated_ev import temporal
 from app.comparison.estimated_content import describe
 from app.comparison.benchmark import TwoWayBenchmark
 
-VERSION='predict-comparison-board-1'
+VERSION='predict-comparison-board-2'
 MAX_RESPONSE=512*1024
 
 
@@ -115,7 +115,7 @@ def benchmark(bundle, at=None):
 
 
 def details_id(value, *, quote=None,pair=None):
-    return dict(result_id=value['result_id'],snapshot_id=value['snapshot_id'],quote_id=quote,pair_id=pair,
+    return dict(context_id=value['calculation_context']['context_id'],quote_id=quote,pair_id=pair,
         policy_revision=value['policy']['revision'])
 
 
@@ -140,14 +140,14 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
     saved=None if value is None else age(value,at=instant.isoformat(),current=state,stopped=stopped,history=history)
     out=dict(version=VERSION,view=view,filter=filter,game_key=bundle['game_key'],input_version=bundle['input_version'],
         policy=policy.to_dict(),benchmark=benchmark(bundle,instant.isoformat()),as_of=bundle['as_of'],read_at=instant.isoformat(),
-        result_id=None if saved is None else saved['result_id'],snapshot_id=None if saved is None else saved['snapshot_id'],
+        calculation_context=bundle.get('calculation_context') if saved is None else saved['calculation_context'],
         result_as_of=None if saved is None else saved['as_of'],
-        delivery_state='stopped' if stopped else 'pending' if saved is None or saved.get('superseded') else 'complete',
+        delivery_state='stopped' if stopped else 'complete' if view=='odds' else 'pending' if saved is None or saved.get('superseded') else 'complete',
         status='historical' if stopped else 'prices_only' if saved is None else saved['status'],
         prices=[],rows=[],empty_reason=None,provider_requests=0,limits=dict(maximum_response_bytes=MAX_RESPONSE))
     for event,group,q in entries(state):
         row=price(q);row['freshness']=freshness(q,state['comparison_profiles'],event,instant,financial=False)
-        row['inputs_identity']=dict(game_key=bundle['game_key'],input_version=bundle['input_version'],quote_id=row['quote_id'],envelope_ids=bundle['envelope_ids'])
+        row['inputs_identity']=dict(game_key=bundle['game_key'],input_version=bundle['input_version'],quote_id=row['quote_id'],context_id=out['calculation_context']['context_id'])
         out['prices'].append(row)
     if view=='odds':out['rows']=deepcopy(out['prices'])
     elif saved:
@@ -159,10 +159,13 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
         else:
             for event in saved['state']['events']:
                 for r in event.get('funded_pairs',[]):
+                    if len({originals[l['quote_id']]['venue'] for l in r['legs']})!=2:continue
                     row=dict(financial_row(r),pair_id=r['id'],details=details_id(saved,pair=r['id']),legs=[])
+                    funding={leg['quote_id']:leg for leg in r.get('funding',{}).get('legs',[])}
                     for index,l in enumerate(r['legs']):
-                        row['legs'].append(dict(price(originals[l['quote_id']]),native_quantity=l['native_quantity'],native_unit=l['native_unit'],
-                            acquisition_usd=l['acquisition_usd'],upfront_fee_usd=l['net_upfront_fee_usd']))
+                        exact=funding.get(l['quote_id'],l)
+                        row['legs'].append(dict(price(originals[l['quote_id']]),native_quantity=exact['native_quantity'],native_unit=exact['native_unit'],
+                            acquisition_usd=exact['acquisition_usd'],upfront_fee_usd=exact['net_upfront_fee_usd']))
                     c=row.get('classification',{})
                     if filter=='all' or filter=='positive' and c.get('main_positive_eligible') or filter=='hedges' and c.get('positive_rule_sensitive_eligible'):out['rows'].append(row)
     if not out['rows']:out['empty_reason']='Calculation pending' if saved is None else 'No positive EV found' if view=='ev' and filter=='positive' else 'No estimated arbitrage found' if view=='arbs' and filter=='positive' else 'No eligible comparisons found'
@@ -176,8 +179,8 @@ def details(value, *, quote=None,pair=None,at=None,current=None,stopped=False,hi
     if bool(quote)==bool(pair):raise ValueError('one_exact_saved_selection_required')
     q=rows.get(quote);p=next((p for e in v['state']['events'] for p in e.get('funded_pairs',[]) if p['id']==pair),None)
     if not q and not p:raise ValueError('exact_saved_selection_absent')
-    return dict(version='predict-board-details-1',game_key=v['game_key'],result_id=v['result_id'],snapshot_id=v['snapshot_id'],
+    return dict(version='predict-board-details-2',game_key=v['game_key'],calculation_context=v['calculation_context'],
         as_of=v['as_of'],read_at=v['read_at'],status=v['status'],policy=v['policy'],quote=q,pair=p,
-        original_inputs_identity=dict(game_key=v['game_key'].split(':benchmark:',1)[0],input_version=v['input_version'],result_id=v['result_id'],policy_revision=v['policy']['revision']),
+        original_inputs_identity=dict(game_key=v['game_key'].split(':benchmark:',1)[0],input_version=v['input_version'],context_id=v['calculation_context']['context_id'],policy_revision=v['policy']['revision']),
         leg_quotes=[rows[l['quote_id']] for l in p['legs']] if p else [],profiles=v['state']['comparison_profiles'],
-        envelope_ids=v['envelope_ids'],representation=v['representation'])
+        representation=v['representation'])

@@ -1,6 +1,6 @@
 # Calculation basis and benchmark EV
 
-The ordinary saved-board model evaluates NFL pregame full-game winners. It uses
+The ordinary comparison model evaluates NFL pregame full-game winners. It uses
 original source prices, a selected two-way sportsbook reference, scoped fee/payout
 recipes and disclosed provisional exceptional-outcome probabilities. It does not
 establish actual fills, final grades or known total account charges.

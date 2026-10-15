@@ -8,6 +8,9 @@ import zlib
 
 LEGACY_PREFIX = 'predict-payload-zlib-1:'
 PREFIX = 'predict-payload-xz-2:'
+from .domain_delta import PREFIX as DOMAIN_PREFIX
+from .domain_frame import FRAME_PREFIX
+DOMAIN_PREFIXES = (DOMAIN_PREFIX, FRAME_PREFIX)
 PREFIXES = (LEGACY_PREFIX, PREFIX)
 MAX_LOGICAL_BYTES = 8 * 1024 * 1024
 MAX_COMPRESSED_BYTES = MAX_LOGICAL_BYTES + 1024
@@ -21,6 +24,8 @@ def decode(value):
     """Accept legacy JSON or verify and restore the exact encoded UTF-8 string."""
     if not isinstance(value, str):
         raise ValueError('saved_payload_text_required')
+    if value.startswith(DOMAIN_PREFIXES):
+        raise ValueError('saved_domain_connection_required')
     prefix = next((p for p in PREFIXES if value.startswith(p)), None)
     if prefix is None:
         return value
@@ -60,6 +65,13 @@ def encode(value):
     return encoded if len(encoded.encode()) < len(body) else original
 
 
+def decode_for_connection(value,db):
+    if isinstance(value,str) and value.startswith(DOMAIN_PREFIXES):
+        from .domain_history import decode as domain_decode
+        return domain_decode(value,db)
+    return decode(value)
+
+
 def payload_row(cursor):
     """Decode saved payload columns at the shared read boundary, never in SQL."""
     from psycopg.rows import dict_row
@@ -67,8 +79,11 @@ def payload_row(cursor):
     def row(values):
         result = make_row(values)
         value = result.get('payload')
-        if isinstance(value, str) and value.startswith(PREFIXES):
-            result['payload'] = decode(value)
+        if isinstance(value, str) and value.startswith(PREFIXES+DOMAIN_PREFIXES):
+            from psycopg import ServerCursor
+            if value.startswith(DOMAIN_PREFIXES) and isinstance(cursor,ServerCursor):
+                raise ValueError('saved_domain_server_cursor_requires_explicit_decode')
+            result['payload'] = decode_for_connection(value,cursor.connection) if value.startswith(DOMAIN_PREFIXES) else decode(value)
         return result
     return row
 
@@ -81,7 +96,7 @@ def logical_size_sql(column='payload'):
     field=sql.Identifier(*column.split('.'))
     rejected=sql.Literal(MAX_LOGICAL_BYTES*257)
     branches=[]
-    for prefix in PREFIXES:
+    for prefix in PREFIXES+DOMAIN_PREFIXES:
         start=sql.Literal(len(prefix)+1)
         head=sql.SQL("split_part(substring({} from {} for 9),':',1)").format(field,start)
         branches.append(sql.SQL("""WHEN left({field},{prefix_length})={prefix} THEN

@@ -1,4 +1,4 @@
-// The browser formats server results; financial sizing and reconciliation stay in B01/S01.
+// The browser formats server results; the server owns financial sizing and reconciliation.
 export const defaults = Object.freeze({
   amount: "1000",
   buffer: "0.005",
@@ -121,7 +121,7 @@ export function checkPolicy(policy, context) {
 export function checkBoard(v, c) {
   checkPolicy(v.policy, c);
   if (
-    v.version !== "predict-comparison-board-1" ||
+    v.version !== "predict-comparison-board-2" ||
     v.game_key !== c.game ||
     v.view !== c.view ||
     v.filter !== c.filter ||
@@ -131,8 +131,11 @@ export function checkBoard(v, c) {
     v.benchmark?.venue !== c.benchmark_venue
   )
     throw Error("Game or view identity crossed; response withheld.");
-  if (v.rows.length && c.view !== "odds" && (!v.result_id || !v.snapshot_id))
-    throw Error("Saved result identity missing; response withheld.");
+  checkCalculationContext(v.calculation_context, v.policy.revision);
+  if (v.calculation_context.dependency_revision !== v.input_version)
+    throw Error("Current dependency identity crossed; response withheld.");
+  if (v.result_id != null || v.snapshot_id != null)
+    throw Error("Legacy saved identity is unavailable; reopen the current view.");
   for (const q of v.prices) {
     if (
       !q.quote_id ||
@@ -140,7 +143,8 @@ export function checkBoard(v, c) {
       !q.original.units ||
       q.inputs_identity?.quote_id !== q.quote_id ||
       q.inputs_identity?.game_key !== v.game_key ||
-      q.inputs_identity?.input_version !== v.input_version
+      q.inputs_identity?.input_version !== v.input_version ||
+      q.inputs_identity?.context_id !== v.calculation_context.context_id
     )
       throw Error("Original price identity crossed; response withheld.");
   }
@@ -169,8 +173,8 @@ export function checkBoard(v, c) {
       throw Error("Funded quantity or units missing; response withheld.");
     const d = row.details;
     if (
-      d?.result_id !== v.result_id ||
-      d.snapshot_id !== v.snapshot_id ||
+      d?.context_id !== v.calculation_context.context_id ||
+      d.result_id != null || d.snapshot_id != null ||
       d.policy_revision !== v.policy.revision ||
       !!d.quote_id === !!d.pair_id ||
       (c.view === "ev"
@@ -184,14 +188,17 @@ export function checkBoard(v, c) {
 export function checkSlate(v, c) {
   checkPolicy(v.policy, c);
   if (
-    v.version !== "predict-comparison-slate-1" ||
+    v.version !== "predict-comparison-slate-2" ||
     v.view !== c.view ||
     v.filter !== c.filter ||
     !Array.isArray(v.games) ||
     !Array.isArray(v.boards) ||
-    v.games.length > 200 ||
-    v.boards.length > 200 ||
-    v.bounds?.maximum_games !== 200 ||
+    v.games.length > 500 ||
+    v.boards.length > 50 ||
+    v.bounds?.maximum_games !== 500 ||
+    v.bounds?.maximum_page_games !== 50 ||
+    typeof v.read_revision !== "string" || !v.read_revision ||
+    typeof v.epoch !== "string" || !v.epoch ||
     v.bounds?.maximum_bytes !== 8388608 ||
     (v.errors !== undefined && !Array.isArray(v.errors)) ||
     typeof v.stopped !== "boolean"
@@ -203,32 +210,49 @@ export function checkSlate(v, c) {
       throw Error("Slate occurrence identity crossed; response withheld.");
     catalog.set(g.game_key, g);
   }
+  const coverage = v.coverage;
+  if (!coverage || coverage.total_games !== v.games.length ||
+      !Number.isSafeInteger(coverage.offset) || coverage.offset < 0 || coverage.offset > v.games.length ||
+      !Number.isSafeInteger(coverage.limit) || coverage.limit < 1 || coverage.limit > 50 ||
+      coverage.returned_games !== Math.min(coverage.limit, v.games.length - coverage.offset) ||
+      coverage.next_offset !== (coverage.offset + coverage.returned_games < v.games.length ? coverage.offset + coverage.returned_games : null) ||
+      coverage.complete !== (coverage.next_offset === null))
+    throw Error("Current slate page coverage crossed; response withheld.");
+  const expected = new Set(v.games.slice(coverage.offset, coverage.offset + coverage.returned_games).map(g => g.game_key));
   const seen = new Set();
   for (const b of v.boards) {
-    if (!catalog.has(b.game_key) || seen.has(b.game_key) || b.policy?.revision !== v.policy.revision)
+    if (!expected.has(b.game_key) || seen.has(b.game_key) || b.policy?.revision !== v.policy.revision)
       throw Error("Slate board occurrence crossed; response withheld.");
     checkBoard(b, { ...c, game: b.game_key });
+    if (b.calculation_context.epoch !== v.epoch)
+      throw Error("Current reset identity crossed; response withheld.");
     seen.add(b.game_key);
   }
   for (const error of v.errors || []) {
-    if (!catalog.has(error.game_key) || seen.has(error.game_key) || typeof error.reason !== "string")
+    if (!expected.has(error.game_key) || seen.has(error.game_key) || typeof error.reason !== "string")
       throw Error("Slate unavailable occurrence crossed; response withheld.");
     seen.add(error.game_key);
   }
-  if (seen.size !== catalog.size)
+  if (seen.size !== expected.size)
     throw Error("Slate occurrence board absent; response withheld.");
   return v;
 }
+export function checkCalculationContext(value, policyRevision) {
+  if (!value || !["context_id", "epoch", "dependency_revision", "engine_binding"].every(k => typeof value[k] === "string" && value[k].length > 0 && value[k].length <= 256) || value.policy_revision !== policyRevision)
+    throw Error("Current calculation identity unavailable; response withheld.");
+  return value;
+}
 export function checkDetails(v, c, d) {
   checkPolicy(v.policy, c);
+  checkCalculationContext(v.calculation_context, v.policy.revision);
   if (
-    v.version !== "predict-board-details-1" ||
-    v.game_key !== c.game + ":benchmark:" + c.benchmark_venue ||
+    v.version !== "predict-board-details-2" ||
+    v.game_key !== c.game ||
     v.original_inputs_identity?.game_key !== c.game ||
-    v.original_inputs_identity?.result_id !== d.result_id ||
+    v.original_inputs_identity?.context_id !== d.context_id ||
     v.original_inputs_identity?.policy_revision !== d.policy_revision ||
-    v.result_id !== d.result_id ||
-    v.snapshot_id !== d.snapshot_id ||
+    v.calculation_context.context_id !== d.context_id ||
+    v.result_id != null || v.snapshot_id != null ||
     v.policy.revision !== d.policy_revision ||
     (d.quote_id
       ? v.quote?.id !== d.quote_id || v.pair != null
@@ -236,6 +260,55 @@ export function checkDetails(v, c, d) {
   )
     throw Error("Details identity crossed; response withheld.");
   return v;
+}
+export function checkInputs(v, c, identity) {
+  checkCalculationContext(v.calculation_context, identity.policy_revision);
+  if (v.version !== "predict-board-inputs-2" || v.game_key !== c.game ||
+      v.calculation_context.context_id !== identity.context_id || v.quote_id !== identity.quote_id ||
+      !v.evidence || typeof v.evidence !== "object" || Array.isArray(v.evidence))
+    throw Error("Original price changed; reopen its current identity.");
+  return v;
+}
+// A complete browser view is assembled from at most ten separately bounded
+// wire pages. It has its own identity and byte disclosure; it is never a wire
+// slate claiming that 500 boards fit within one 8 MiB response.
+export class SlateAccumulator {
+  constructor(context) {
+    this.context = context;
+    this.value = null;
+    this.nextOffset = 0;
+    this.pageCount = 0;
+    this.totalBytes = 0;
+  }
+  get expectedRevision() { return this.value?.read_revision; }
+  get complete() { return this.value !== null && this.nextOffset === null; }
+  append(page, bytes) {
+    if (this.complete || this.pageCount >= 10 || !Number.isSafeInteger(bytes) || bytes < 0 || bytes > 8388608 || this.totalBytes + bytes > 83886080)
+      throw Error("Current slate exceeds its bounded page or complete-read capacity.");
+    checkSlate(page, this.context);
+    if (page.coverage.offset !== this.nextOffset || page.coverage.limit !== 50 || this.value &&
+        (page.read_revision !== this.value.read_revision || page.epoch !== this.value.epoch ||
+         JSON.stringify(page.games) !== this.catalogIdentity || page.policy.revision !== this.value.policy.revision))
+      throw Error("Current slate changed while reading its pages. Retry the current view.");
+    if (!this.value) {
+      this.catalogIdentity = JSON.stringify(page.games);
+      this.value = { ...page, version: "predict-comparison-slate-view-2", boards: [], errors: [],
+        bounds: { maximum_games: 500, maximum_page_games: 50, maximum_page_bytes: 8388608, maximum_read_bytes: 83886080, maximum_pages: 10 } };
+    }
+    // Retain only these board/error objects and the first small catalog. Later
+    // page envelopes and repeated catalogs become collectible immediately.
+    this.value.boards.push(...page.boards);
+    this.value.errors.push(...(page.errors || []));
+    this.nextOffset = page.coverage.next_offset;
+    this.pageCount++;
+    this.totalBytes += bytes;
+  }
+  result() {
+    if (!this.complete) throw Error("Current slate coverage is incomplete; response withheld.");
+    this.value.coverage = { total_games: this.value.games.length, returned_games: this.value.boards.length + this.value.errors.length,
+      complete: true, page_count: this.pageCount, wire_bytes: this.totalBytes };
+    return this.value;
+  }
 }
 export class LatestRead {
   constructor(fetcher = (...args) => fetch(...args)) {
@@ -267,7 +340,7 @@ export class LatestRead {
         length += value.length;
         if (length > limit) {
           await reader.cancel();
-          throw Error("Response exceeds its saved-data bound.");
+          throw Error("Response exceeds its current-data bound.");
         }
         chunks.push(value);
       }
@@ -280,8 +353,8 @@ export class LatestRead {
       }
       const value = JSON.parse(new TextDecoder().decode(bytes));
       if (!response.ok)
-        throw Error(value.reason || value.error || "Saved data unavailable.");
-      return validate(value);
+        throw Error(value.reason || value.error || "Current data unavailable.");
+      return validate(value, { bytes: length });
     } finally {
       clearTimeout(timeout);
       if (this.active === active) this.active = undefined;

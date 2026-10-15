@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-board-details-2.schema.json",
+  "type": "object",
+  "required": [
+    "version",
+    "game_key",
+    "calculation_context",
+    "as_of",
+    "read_at",
+    "status",
+    "policy",
+    "quote",
+    "pair",
+    "original_inputs_identity",
+    "leg_quotes",
+    "profiles",
+    "representation"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-board-details-2"
+    },
+    "game_key": {
+      "type": "string"
+    },
+    "calculation_context": {
+      "type": "object",
+      "required": [
+        "context_id",
+        "epoch",
+        "dependency_revision",
+        "policy_revision",
+        "engine_binding"
+      ],
+      "properties": {
+        "context_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "dependency_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engine_binding": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    },
+    "quote": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "pair": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "leg_quotes": {
+      "type": "array",
+      "maxItems": 2
+    }
+  },
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "result_id"
+        ]
+      },
+      {
+        "required": [
+          "snapshot_id"
+        ]
+      },
+      {
+        "required": [
+          "envelope_ids"
+        ]
+      }
+    ]
+  }
+}

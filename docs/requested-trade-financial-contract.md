@@ -4,6 +4,13 @@ The server uses shared policy, benchmark, funded single and opposing allocation
 owners. This contract describes their exact inputs, output meanings and limits.
 See [calculation basis](benchmark-ev.md) for the user-facing explanation.
 
+## Persistence boundary
+
+Ordinary reads build transient typed inputs from current rows, keep shared
+definitions once and expand only selected Details. Complete profile/scenario
+graphs are not persisted per quote, poll or calculation. Current board and client
+identities bind those same inputs; see the [board contract](comparison-board-api-contract.md).
+
 ## Invoke the owners
 
 ```python
@@ -50,13 +57,13 @@ Use `financial_metrics`, not the predecessor conditional alias `buffered_profit_
 
 `gross + rule_adjustment - upfront_fee - reconciliation_expected_settlement_fee` equals the declared complete or conditional net estimate. The buffer is subtracted once after that estimate and once from each inspected scenario, never charged to funding. Already-withheld charges stay inside attached net receipts; pooled payable commissions are charged at the joint market gain rather than summing standalone maxima.
 
-Use `classification.main_positive_eligible` for the main positive list. Singles never establish an arb. Use `positive_rule_sensitive_eligible` for a separate hedge list and show its adverse/unknown states. A positive expected value or a zero exceptional probability cannot override a losing scenario. Losing results remain inspectable. Saved aging/stopping withdraws positive-list authority. These are modeled economic categories; actual fills, charges and grades remain unknown.
+Use `classification.main_positive_eligible` for the main positive list. Singles never establish an arb. Use `positive_rule_sensitive_eligible` for a separate hedge list and show its adverse/unknown states. A positive expected value or a zero exceptional probability cannot override a losing scenario. Losing results remain inspectable. Current dependency aging/stopping withdraws positive-list authority. These are modeled economic categories; actual fills, charges and grades remain unknown.
 
 ## Identity, storage and limits
 
-`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing mode and benchmark venue/method. Conflicting amount aliases reject. The existing saved-result endpoint accepts these fields; request scheduling and saved/latest keys use the resulting policy revision. Attaching/changing either original reference changes the dependency/reference/result revision. Selected benchmark profiles remain in saved combined inputs; the database pipeline owns bounded request scheduling and guarded latest publication.
+`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing mode and benchmark venue/method. Conflicting amount aliases reject. The implemented legacy saved-result endpoint accepts these fields. Its current-row replacement must bind calculation/cache/context identity to that policy revision without requiring a durable saved result. Attaching/changing either original reference changes the dependency/reference/result revision. The selected benchmark and shared model versions remain exact transient dependencies; any compact current cache and publication guard binds those revisions. Full saved combined profiles are not required.
 
-The engine binding includes the new sizing, policy, benchmark and metrics owners plus source/domain validation. Historical saved payloads remain readable; re-evaluating an old engine-bound snapshot requires the matching original engine implementation. Do not replace an old snapshot's engine binding to make it look like a new result.
+The engine binding includes the new sizing, policy, benchmark and metrics owners plus source/domain validation. If a legacy fixture/result is deliberately retained, its engine/policy meaning stays original. It need not survive a sports reset. Never relabel an old result as current or silently bind mutable current inputs to an old immutable snapshot ID.
 
 Requested pair sizing uses at most 24 local balance iterations / 192 balance probes and a 5×5 legal neighborhood. It balances allocation-specific net decisive cashflows and funding, then selects the closest balance, using greater funding to break equal balance. It retains the $25 exposure floor and 20% share constraint. It does not prove a global optimum for nonlinear fees/depth. A diagnostic continuous grid is expressly hypothetical; actual/native or declared grids are evaluated separately. Single sizing preserves the existing maximum-funded legal search and next-quantity proof or specific limitation. Observed depth is consumed before a labeled residual at its last price; no modeled remainder claims observed liquidity.
 

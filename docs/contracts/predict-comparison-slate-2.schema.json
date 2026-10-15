@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-comparison-slate-2.schema.json",
+  "title": "One coherent bounded page of current upcoming NFL comparisons",
+  "type": "object",
+  "required": [
+    "version",
+    "view",
+    "filter",
+    "policy",
+    "games",
+    "boards",
+    "errors",
+    "stopped",
+    "as_of",
+    "bounds",
+    "provider_requests",
+    "read_revision",
+    "epoch",
+    "coverage"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-comparison-slate-2"
+    },
+    "view": {
+      "enum": [
+        "odds",
+        "ev",
+        "arbs"
+      ]
+    },
+    "filter": {
+      "enum": [
+        "positive",
+        "all",
+        "hedges"
+      ]
+    },
+    "policy": {
+      "type": "object"
+    },
+    "games": {
+      "$ref": "predict-board-catalog-2.schema.json#/properties/games"
+    },
+    "boards": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "$ref": "predict-comparison-board-2.schema.json"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": [
+          "game_key",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "game_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "stopped": {
+      "type": "boolean"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bounds": {
+      "type": "object",
+      "required": [
+        "maximum_games",
+        "maximum_bytes",
+        "maximum_page_games"
+      ],
+      "properties": {
+        "maximum_games": {
+          "const": 500
+        },
+        "maximum_bytes": {
+          "const": 8388608
+        },
+        "maximum_page_games": {
+          "const": 50
+        }
+      }
+    },
+    "provider_requests": {
+      "const": 0
+    },
+    "storage": {
+      "type": "object"
+    },
+    "read_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "epoch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "total_games",
+        "offset",
+        "limit",
+        "returned_games",
+        "next_offset",
+        "complete"
+      ],
+      "properties": {
+        "total_games": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 499
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "returned_games": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "next_offset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 499
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

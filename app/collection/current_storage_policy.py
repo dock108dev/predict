@@ -22,10 +22,14 @@ FREE_DISK_BYTE_FLOOR = GIB
 
 
 def sql_usage(db):
-    """Read current-table heap, indexes and TOAST bytes, including SQL history."""
+    """Read current heap/index/TOAST/history and owned sequence backing pages."""
     row = db.execute(
-        "SELECT sum(pg_total_relation_size(format('%I.%I',schemaname,tablename))) AS n "
-        "FROM pg_tables WHERE schemaname='public' AND left(tablename,8)='current_'"
+        "SELECT sum(bytes) AS n FROM ("
+        "SELECT pg_total_relation_size(format('%I.%I',schemaname,tablename)) AS bytes "
+        "FROM pg_tables WHERE schemaname='public' AND left(tablename,8)='current_' "
+        "UNION ALL SELECT pg_relation_size(c.oid) AS bytes FROM pg_class c "
+        "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' "
+        "AND c.relkind='S' AND left(c.relname,8)='current_') owned"
     ).fetchone()
     value = row['n']
     if value is None:

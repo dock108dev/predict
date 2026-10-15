@@ -45,7 +45,8 @@ def _json(raw):
 
 class CurrentJournal:
     def __init__(self, directory, *, byte_cap=JOURNAL_SEGMENT_BYTE_CAP,
-                 record_cap=JOURNAL_RECORD_BYTE_CAP, total_byte_cap=None):
+                 record_cap=JOURNAL_RECORD_BYTE_CAP, total_byte_cap=None,
+                 compact_history=None):
         if not _integer(byte_cap) or byte_cap <= 0:
             raise ValueError('current_observation_storage_cap')
         if not _integer(record_cap) or record_cap <= 0:
@@ -65,6 +66,9 @@ class CurrentJournal:
         self.temporary_path = self.path.parent / 'observations.manifest.tmp'
         self.lock_path = self.path.parent / 'observations.lock'
         self.segmented = total_byte_cap > byte_cap
+        self.compact_history = (byte_cap == JOURNAL_SEGMENT_BYTE_CAP
+            and record_cap == JOURNAL_RECORD_BYTE_CAP
+            and total_byte_cap == JOURNAL_BYTE_CAP) if compact_history is None else bool(compact_history)
         self._verified = {}
 
     def _directory_sync(self):
@@ -82,6 +86,12 @@ class CurrentJournal:
         fd = os.open(self.lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, 'r+b') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
+            from .current_journal_domains import recover_domains
+            try:
+                recover_domains(self.path.parent,
+                    lambda extra: self._check_budget(append_bytes=extra))
+            except ValueError as exc:
+                raise BudgetStop('current_observation_integrity_failed') from exc
             yield
 
     def _stat(self, path):
@@ -113,7 +123,7 @@ class CurrentJournal:
                     if len(raw) > self.record_cap:
                         raise BudgetStop('current_observation_record_cap')
                     try:
-                        _json(raw)
+                        self.read_record(_json(raw), path.parent)
                     except (ValueError, UnicodeError) as exc:
                         raise BudgetStop('current_observation_integrity_failed') from exc
                     digest.update(raw)
@@ -175,13 +185,29 @@ class CurrentJournal:
         return paths
 
     def _check_budget(self, *, append_bytes=0, new_manifest=None):
-        data = sum(self._stat(path).st_size for path in self._data_paths())
+        from .current_journal_domains import artifact_usage
+        data = sum((max(self._stat(path).st_size, self._stat(path).st_blocks * 512)
+                    if self.compact_history else self._stat(path).st_size)
+                   for path in self._data_paths())
         metadata = self._metadata_bytes()
+        # Legacy tiny-cap fixtures retain their byte-exact single-file contract.
+        # Ordinary journals charge actual allocated storage for every artifact.
+        if self.compact_history:
+            metadata = sum(max(self._stat(path).st_size, self._stat(path).st_blocks * 512)
+                for path in (self.manifest_path, self.temporary_path, self.lock_path)
+                if path.exists() or path.is_symlink())
+        data += artifact_usage(self.path.parent)
         # The old manifest and complete replacement coexist until os.replace.
         # The fixed temporary file is overwritten rather than multiplied.
         if new_manifest is not None:
             temporary = self._stat(self.temporary_path).st_size if self.temporary_path.exists() else 0
-            metadata += max(0, len(new_manifest) - temporary)
+            replacement = len(new_manifest)
+            if self.compact_history:
+                replacement = (replacement + 4095) // 4096 * 4096
+                temporary = max(temporary, self._stat(self.temporary_path).st_blocks * 512) if temporary else 0
+            metadata += max(0, replacement - temporary)
+        if self.compact_history:
+            append_bytes = (append_bytes + 4095) // 4096 * 4096
         if data + metadata + append_bytes > self.total_byte_cap:
             raise BudgetStop('current_observation_storage_cap')
         require_disk_space(self.path.parent, append_bytes + (len(new_manifest) if new_manifest else 0))
@@ -294,6 +320,14 @@ class CurrentJournal:
             raise BudgetStop('current_observation_record_cap')
         require_disk_space(self.path.parent, len(raw))
         with self._lock():
+            if self.compact_history:
+                from .current_journal_domains import pack_record
+                packed = pack_record(record, self.path.parent,
+                    lambda extra: self._check_budget(append_bytes=extra))
+                raw = json.dumps(packed, sort_keys=True, separators=(',', ':'),
+                    ensure_ascii=False, allow_nan=False).encode() + b'\n'
+                if len(raw) > self.record_cap or (self.segmented and len(raw) > self.byte_cap):
+                    raise BudgetStop('current_observation_record_cap')
             if not self.segmented:
                 if self.manifest_path.exists():
                     raise BudgetStop('current_observation_manifest_corrupt')
@@ -303,6 +337,7 @@ class CurrentJournal:
                     length = 0
                 if length + len(raw) > self.byte_cap:
                     raise BudgetStop('current_observation_storage_cap')
+                self._check_budget(append_bytes=len(raw))
                 self._append_raw(self.path, raw)
             else:
                 if not self.manifest_path.exists():
@@ -320,6 +355,11 @@ class CurrentJournal:
                 self._check_budget(append_bytes=len(raw))
                 self._append_raw(path, raw)
             self.records += 1
+
+    @staticmethod
+    def read_record(record, directory):
+        from .current_journal_domains import unpack_record
+        return unpack_record(record, directory)
 
     def prepare(self):
         """Seal preserved history for an owned handover, without a fake record.
@@ -387,10 +427,12 @@ class CurrentJournal:
                 active = self.path
                 orphan = False
             journal_bytes = sum(self._stat(path).st_size for path in paths)
-            total = sum(self._stat(path).st_size for path in self._data_paths()) + self._metadata_bytes()
+            from .current_journal_domains import artifact_paths, artifact_usage
+            domain_bytes = artifact_usage(self.path.parent)
+            total = sum(self._stat(path).st_size for path in self._data_paths()) + self._metadata_bytes() + domain_bytes
             all_files = self._data_paths() + [p for p in (
                 self.manifest_path, self.temporary_path, self.lock_path,
-            ) if p.exists()]
+            ) if p.exists()] + artifact_paths(self.path.parent)
             allocation = sum(max(self._stat(p).st_size, self._stat(p).st_blocks * 512) for p in all_files)
             return dict(path=str(self.path), bytes=journal_bytes, total_bytes=total,
                 byte_cap=self.byte_cap, total_byte_cap=self.total_byte_cap,
@@ -398,4 +440,5 @@ class CurrentJournal:
                 segment_count=len(paths), sealed_count=len(manifest['sealed']) if manifest else 0,
                 allocation_bytes=allocation, manifest_path=str(self.manifest_path),
                 pending_rotation=orphan, records_this_runtime=self.records,
-                append_only=True, segmented=self.segmented)
+                append_only=True, segmented=self.segmented, domain_bytes=domain_bytes,
+                compact_history=self.compact_history)

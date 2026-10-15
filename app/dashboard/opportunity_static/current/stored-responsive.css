@@ -415,3 +415,26 @@ opposing comparisons have four. */
   .compact-odds .slate-fair strong { display:inline; vertical-align:middle }
   .compact-odds .slate-fair>small:not(.mobile-price-label) { display:inline-block; vertical-align:middle; margin-left:5px; white-space:nowrap }
 }
+
+/* Comparisons wrap within the page at narrow widths and enlarged text. */
+@media(max-width:900px) {
+  .compact-comparisons .slate-result { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto }
+}
+@media(max-width:600px) {
+  .slate-comparison-game { padding:10px 12px }
+  .compact-comparisons .slate-result { grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; padding:12px 0 }
+  .compact-comparisons .slate-result-identity { grid-column:1; grid-row:1 }
+  .compact-comparisons .slate-result-values { grid-column:1/-1; grid-row:2 }
+  .compact-comparisons .slate-result-note { grid-column:1/-1; grid-row:3 }
+  .compact-comparisons .slate-result>button { grid-column:2; grid-row:1; min-height:44px; padding:6px 10px }
+  .slate-arb .slate-result-identity { grid-template-columns:1fr; gap:6px }
+  .slate-arb .comparison-rank { grid-column:1 }
+  .compact-odds .slate-price-row { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 12px }
+  .compact-odds .slate-team-name { grid-column:1/-1 }
+  .compact-odds .slate-price-cell .mobile-price-label { font-size:.75rem }
+  .compact-odds .slate-price-cell .slate-action { min-height:44px; font-size:16px }
+  .compact-odds .compact-source-clock { font-size:.6875rem }
+  .compact-odds .slate-fair { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:3px 10px }
+  .slate-result-values .metric strong { font-size:20px }
+  .reference-evidence summary,.same-venue-history summary { min-height:44px }
+}

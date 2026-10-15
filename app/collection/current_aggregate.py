@@ -82,15 +82,20 @@ class CurrentOddsTransport:
             raw=bytes(body)
             import json
             from urllib.parse import unquote
-            try:decoded=json.dumps(json.loads(raw),ensure_ascii=False)
-            except (ValueError,UnicodeError,RecursionError):decoded=raw.decode('utf-8',errors='replace')
+            from .current_aggregate_admission import parse_frame
+            parsed_frame=None;parse_error=False
+            try:
+                parsed_frame=parse_frame(raw)
+                decoded=json.dumps(parsed_frame.payload,ensure_ascii=False)
+            except (ValueError,UnicodeError,RecursionError):
+                parse_error=True;decoded=raw.decode('utf-8',errors='replace')
             for _ in range(3):decoded=unquote(decoded)
             if key in decoded or 'apikey' in decoded.lower() or 'api_key' in decoded.lower():raise QuotaStop('aggregate_secret_echo_suppressed')
             if any(secret in raw for secret in (key.encode(),base64.b64encode(key.encode()),quote(key).encode())):
                 raise QuotaStop('aggregate_secret_echo_suppressed')
             self.phase="complete"
             # Return header values only if bounded; never provider error body text.
-            return dict(status=response.status,headers=safe,body=raw if response.status==200 else b'',received_at=now())
+            return dict(status=response.status,headers=safe,body=raw if response.status==200 else b'',received_at=now(),parsed_frame=parsed_frame,parse_error=parse_error)
 
     async def close(self):
         self.closed=True
@@ -253,16 +258,6 @@ class AggregateScheduler:
                 responses=[]
                 for sport,request in zip(sports,requests):
                     response=await self.dispatch(request,POLICY.credits_per_batch)
-                    self.retain_diagnostic(response,sport)
-                    if reference:
-                        from .current_aggregate_admission import diagnostic
-                        from hashlib import sha256
-                        root=ROOT/'.local/predict-odds/baselines'/sha256(identity.encode()).hexdigest()[:24]
-                        root.mkdir(parents=True,exist_ok=True)
-                        record=diagnostic(response['body'],sport,response['received_at'],{})
-                        record['authority']='Owner authorized one full Novig, ProphetX and Pinnacle baseline pull'
-                        record['request_id']=identity
-                        (root/(sport+'.json')).write_text(json.dumps(record,sort_keys=True))
                     responses.append((sport,response))
                 errors=[]
                 for sport,response in responses:
@@ -300,8 +295,9 @@ class AggregateScheduler:
         if self.bootstrapped and inventory and (stamp(now())-stamp(inventory['at'])).total_seconds()>=POLICY.inventory_seconds:self.bootstrapped=False
         if not self.bootstrapped:
             response=await self.dispatch(dict(path='/v4/sports',params={}),0,bootstrap=True)
-            from app.reference.odds_acquire import strict_json
-            sports=strict_json(response['body'])
+            from .current_aggregate_admission import parse_frame
+            if response.get('parse_error'):raise QuotaStop('aggregate_bootstrap_schema')
+            sports=(response.get('parsed_frame') or parse_frame(response['body'])).payload
             if not isinstance(sports,list) or len(sports)>512 or any(not isinstance(x,dict) or not isinstance(x.get('key'),str) or type(x.get('active')) is not bool for x in sports):
                 raise QuotaStop('aggregate_bootstrap_schema')
             available={x['key'] for x in sports if x['active'] and x.get('has_outrights') is False}
@@ -330,39 +326,23 @@ class AggregateScheduler:
             self.admit_response(response,sport)
         self.cycle_id=None
 
-    def retain_diagnostic(self,response,sport,rejected=None):
-        from .current_aggregate_admission import diagnostic
-        value=diagnostic(response['body'],sport,response['received_at'],rejected or {})
-        directory=self.ledger.directory/'diagnostics'
-        directory.mkdir(parents=True,exist_ok=True,mode=0o700)
-        import json,tempfile
-        data=json.dumps(value,sort_keys=True).encode()
-        if len(data)>POLICY.response_bytes:raise QuotaStop('aggregate_diagnostic_bound')
-        fd,name=tempfile.mkstemp(dir=directory)
-        try:
-            with os.fdopen(fd,'wb') as f:f.write(data);f.flush();os.fsync(f.fileno())
-            os.replace(name,directory/(sport+'.json'))
-        finally:
-            from pathlib import Path
-            Path(name).unlink(missing_ok=True)
-
     def admit_response(self,response,sport):
-        # Retain safe replay context before attempting admission or committing.
-        if not response.get('retained'):self.retain_diagnostic(response,sport)
+        # One decoded exact frame supplies admission, references and coverage.
         self.permitted() # Revocation forbids admission, independently of charge reconciliation.
         self.issue_context['sport']=sport
         states=deepcopy(self.service.states)
         due=self.ledger.snapshot()['next_due_at']
-        from .current_aggregate_admission import admit_venues,market_exclusions
-        exclusions=market_exclusions(response['body'])
+        from .current_aggregate_admission import admit_venues,market_exclusions,parse_frame
+        if response.get('parse_error'):raise ValueError('aggregate_json_invalid')
+        frame=response.get('parsed_frame') or parse_frame(response['body'])
+        exclusions=market_exclusions(response['body'],frame=frame)
         self.metrics.setdefault('unsupported_market_exclusions',{})[sport]=exclusions
-        batches,rejected=admit_venues(response['body'],sport,response['received_at'])
+        batches,rejected=admit_venues(response['body'],sport,response['received_at'],frame=frame,include_reference=True)
         if hasattr(self.service,'coverage'):
             from app.comparison.coverage import aggregate_observation
-            aggregate_observation(self.service.coverage,response['body'],sport,response['received_at'],rejected)
-        records=[r for batch in batches.values() for r in batch]
-        if not response.get('retained'):self.retain_diagnostic(response,sport,rejected)
-        if len(rejected)==2:
+            aggregate_observation(self.service.coverage,response['body'],sport,response['received_at'],rejected,parsed_frame=frame)
+        records=[r for venue,batch in batches.items() if venue!='pinnacle' for r in batch]
+        if all(venue in rejected for venue in ('novig','prophetx')):
             self.ledger.pause('aggregate_admission_failed')
             raise QuotaStop('aggregate_admission_failed')
         for venue in ('novig','prophetx'):
@@ -379,11 +359,13 @@ class AggregateScheduler:
                 reason_code='aggregate_scope_observed' if healthy else states[venue]['reason_code'],
                 reason='Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. '+ '; '.join(scope+': '+value['reason'] for scope,value in observations),
                 received_at=response['received_at'],next_due_at=due)
-        if hasattr(self.service,'retain'):
-            self.service.retain('the_odds_api','aggregate_batch',dict(sport=sport,
-                received_at=response['received_at'],body_sha256=sha256(response['body']).hexdigest(),
-                body_b64=base64.b64encode(response['body']).decode('ascii')))
-        self.service.sink.commit(dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states),states)
+        if getattr(self.service,'database',None) is not None:
+            complete=list(batches)
+            records.extend(batches.get('pinnacle',[]))
+            self.service.sink.commit(dict(type='current_aggregate_records',source='the_odds_api',sport=sport,
+                records=records,complete_venues=complete,received_at=response['received_at']),states)
+        else:
+            self.service.sink.commit(dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states),states)
         self.service.states=states
         self.service.observation('the_odds_api','admission',dict(sport=sport,quotes=len(records),venues=sorted({r['quote']['venue'] for r in records})))
         self.metrics.update(admitted_records=len(records),rejected_venues=len(rejected))
@@ -392,22 +374,8 @@ class AggregateScheduler:
             elif not any(r['quote']['venue']==venue for r in records):self.service.issue(venue,'offering_unobserved','aggregate_offering_unobserved')
 
     def restore_retained(self):
-        if getattr(self.service,'database',None) is not None:
-            return  # The SQL journal owner restores original clocks independently.
-        # Reopening reuses recorded observations with their original clocks;
-        # it neither dispatches nor renews freshness or quota observations.
-        for sport in SPORTS:
-            path=self.ledger.directory/'diagnostics'/(sport+'.json')
-            if not path.exists():continue
-            try:
-                if path.stat().st_size>POLICY.response_bytes:raise ValueError('Retained response bound')
-                value=json.loads(path.read_text())
-                if value.get('schema')!='predict-redacted-aggregate-diagnostic-1' or value.get('sport')!=sport:raise ValueError('Retained response identity')
-                if self.service.sink.aggregate_receipts.get(sport)==value['received_at']:continue
-                response=dict(body=json.dumps(value['replay']).encode(),received_at=value['received_at'],retained=True)
-                self.admit_response(response,sport)
-            except (ValueError,KeyError,TypeError,QuotaStop):
-                self.service.issue('the_odds_api','malformed_source','aggregate_retained_admission_failed')
+        # Reopening never imports diagnostics. Original current rows remain in SQL.
+        return
 
     async def run(self):
         self.restore_retained()

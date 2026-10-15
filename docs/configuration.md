@@ -4,13 +4,18 @@ Use the [README](../README.md) to install the app. The supported runtime is a lo
 macOS source checkout, Python 3.11+ with `stream` dependencies and a dedicated
 socket-only PostgreSQL cluster. Keep the listener on loopback.
 
+Ordinary ingress uses direct SQL
+upserts and shared depth; v2 boards derive transient calculations from those
+rows. The [storage guide](current-row-storage.md) and
+[current-read contract](comparison-board-api-contract.md) describe this path.
+
 ## Source configuration
 
 Copy [the sample](../config/current.example.json) to
 `.local/predict-current-config.json`. The launcher reads that file; foreground
 operation accepts `--current-config PATH`. Both `enabled` and `aggregate_enabled`
 must be explicit booleans. The sample enables native acquisition and disables
-aggregate requests. Set `enabled=false` for saved-data inspection without acquisition.
+aggregate requests. Set `enabled=false` for current-data inspection without acquisition.
 A missing explicit path fails. If the default file is absent, validated internal
 defaults enable both native and aggregate acquisition, so create the file deliberately.
 
@@ -58,16 +63,18 @@ Do not remove `.local` to troubleshoot: it includes data, ledgers and process st
 
 | Surface | Behavior |
 | --- | --- |
-| `/`, `/ev`, `/arbs` | Saved per-game Odds, EV and opposing allocations |
-| Details and history | Exact saved inputs/results; inspection does not acquire prices |
+| `/`, `/ev`, `/arbs` | All-game current Odds, EV and opposing allocations |
+| Details and Original | Expected current context; changed/removed inputs require a fresh selection |
+| Old history routes | HTTP 410; sports history was retired |
 | `/admin` | Source, quota, storage and issue status; pause, Stop and guarded recovery |
 | `/admin/retained` | Separate finite-session and saved-capture readers |
 
 Source workers run while the owned app runs, independently of browser attendance.
-Startup restores valid retained observations with their original clocks before
-acquisition. Loading saved data requires no credential or quota mutation. Stale
-results remain inspectable but lose current positive-list eligibility. Database
-failure is visible; there is no in-memory financial fallback.
+Startup does not import old journals or retained diagnostics. Current rows retain original source and
+receipt clocks. Reads/calculations require no acquisition or quota mutation;
+any available stale current values lose current positive-list eligibility.
+Discarded sports history need not reopen. Database failure is visible; there is
+no in-memory financial fallback.
 
 ## Credentials
 
@@ -112,22 +119,35 @@ Omitted fields use defaults. For example:
 
 Policy changes invalidate dependent results on the next read/projection. Malformed
 configuration refuses the affected operation. Browser amount/buffer/benchmark
-settings select a saved policy variant without writing global configuration or
+settings select a calculation policy variant without writing global configuration or
 requesting source data. See [calculation basis](benchmark-ev.md).
 
 ## Storage and recovery
 
-Observations enter an append-only journal before SQL import. Journal limits are
-256 MiB per segment, 8 GiB total, 8 MiB per record and at least 1 GiB free disk after
-an append. An existing `observations.jsonl` remains an original segment; numbered
-`observations-000001.jsonl` files follow the manifest order. Rotation precedes the
-segment cap. There is no automatic deletion, truncation or pruning.
+Ordinary observations commit current events/contracts/offers and synchronized
+native depth in one transaction. Price changes replace rows; original source
+clocks and receipt clocks remain distinct. Completed/pregame-expired events
+cascade to dependent rows. A 60-second expiry worker stops after three failures.
+There is no ordinary journal, diagnostic body file, retry archive, saved report
+or persistent calculation cache. SQL failure is visible as unsaved/unavailable.
 
-SQL keeps immutable envelopes, snapshots/results and guarded latest pointers.
-The 2 GiB soft ceiling counts public `current_*` table heap, index and TOAST bytes
-before bounded batches; a batch may cross it before the next refusal. The app's
-RSS guard is 768 MiB. Admin shows usage, backlog and persistence errors. Migrations
-are ordered, transactional and hash-checked; never edit an applied migration.
+The 2 GiB soft ceiling counts public `current_*` heap, index, TOAST and owned
+sequence bytes before bounded writes. Free disk must remain at least 1 GiB; the
+RSS guard remains 768 MiB. Admin reports actual saving failures and SQL usage.
+Migrations are ordered, transactional and hash-checked; never edit an applied
+migration. Legacy journal codecs and their historical caps remain separate
+research compatibility, not the ordinary writer.
+
+`python -m app.storage.current_reset --plan PATH` writes an exact sports-only
+reset plan without changing data. Applying it requires `--apply --receipt PATH`,
+a stopped owned board, no database clients, the acquisition lock and an unchanged
+plan/source/protected state. This deliberate cutover tool is never called on
+startup. Sports SQL/journals/sidecars/cursors/diagnostics have no mandatory history.
+Credentials/configuration, account/quota/audit/due/consumed-attempt records,
+reservations, both original holds and actual financial records remain protected.
+Those records share directories with disposable sports artifacts: never delete
+their parent directory. Do not rewrite applied migration checksums. After a reset,
+restart the app and check source and saving status in Admin.
 
 Quota availability subtracts unresolved/reserved exposure and the 50-credit
 reserve from the latest authenticated remaining balance. Confirmed spending is

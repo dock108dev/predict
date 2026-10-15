@@ -14,7 +14,7 @@ manual dispatch. Four jobs feed the stable `CI readiness` gate:
 | `offline` | `sh scripts/check-ci`: classified Python modules in fresh processes, client regressions, compile and JavaScript syntax, coverage and generated frontend drift |
 | `quality` | Critical Ruff checks, CI support formatting, pinned actionlint, shell syntax, shipped documentation links, dependency consistency, reporting tests, redacted Gitleaks scan, hash-locked pip-audit, fresh package/install smoke |
 | `postgres` | Reusable `storage.yml`: disposable socket-only PostgreSQL 16, integration tests, migration hashes and repeat migration no-op, teardown |
-| `browser` | Locked Playwright/Chromium: fully intercepted saved-board journeys at desktop/narrow widths, settings, exact Details, keyboard focus, Retry, empty state, Stop and enlarged text |
+| `browser` | Locked Playwright/Chromium: fully intercepted current-board journeys at desktop/narrow widths, settings, exact Details, keyboard focus, Retry, empty state, Stop and enlarged text |
 
 Primary runners use Ubuntu 24.04, Python 3.14 and Node 22. Missing, failed,
 cancelled, skipped or malformed required results fail readiness. The gate consumes
@@ -80,7 +80,8 @@ inputs and non-loopback connections. They are regression guards, not an OS sandb
 SQL creates and stops its own temporary cluster. Browser requests are intercepted.
 Package smoke installs a fresh distribution with acquisition disabled.
 
-`export.py EMPTY_DESTINATION` exports tracked/nonignored source and rejects private
+`.venv/bin/python scripts/ci/export.py EMPTY_DESTINATION` exports tracked/nonignored
+source and rejects private
 paths and escaping symlinks. Tests requiring Git metadata need a disposable checkout
 or export with its original index; the exporter does not create Git metadata.
 Required fixtures and frozen executor inputs must stay available. The documentation

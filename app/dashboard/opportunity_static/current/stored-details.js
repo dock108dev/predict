@@ -40,7 +40,7 @@ export function renderSavedDetails(v, { root, participants }) {
   age.id = "detail-freshness";
   freshness(age, selected.freshness);
   root.append(age);
-  root.append(el("small", "Saved result as-of " + time(v.as_of)));
+  root.append(el("small", "Calculation as-of " + time(v.as_of)));
   for (const q of quotes)
     textLine(
       root,
@@ -161,11 +161,9 @@ export function renderSavedDetails(v, { root, participants }) {
   const advanced = el("details");
   advanced.dataset.key = "originals";
   advanced.append(
-    el("summary", "Original contracts, profiles and exact saved evidence"),
+    el("summary", "Original contracts, profiles and current calculation evidence"),
     el("pre", JSON.stringify(v, null, 2)),
   );
-  const history = el("details");
-  history.append(el("summary", "Saved calculation history for these settings"));
-  root.append(advanced, history);
-  return { advanced, history };
+  root.append(advanced);
+  return { advanced };
 }

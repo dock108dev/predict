@@ -1,9 +1,12 @@
-# Current-state runtime and bounded delivery
+# Compatibility current-state runtime
 
-Ordinary saved-board calculations use the journal/PostgreSQL pipeline described
-in [architecture](architecture.md). The separate current-state provider supports
+Ordinary comparison calculations use current SQL rows and transient reads,
+as described in [architecture](architecture.md). This guide covers the separate
+current-state provider, which supports
 injected fixtures, retained admission, complete snapshot reads and temporary
-policy calculations through the same router. It is not a database-failure fallback.
+policy calculations through the same router. Its admission generations and
+temporary resources are separate from the ordinary board's v2 context IDs.
+It is not a database-failure fallback.
 
 ## Admission and publication
 

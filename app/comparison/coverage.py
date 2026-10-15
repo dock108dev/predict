@@ -152,14 +152,14 @@ def current_rows(index):
     return result
 
 
-def aggregate_observation(ledger, body, sport, received_at, rejected=None):
+def aggregate_observation(ledger, body, sport, received_at, rejected=None, *, parsed_frame=None):
     """Count sanitized complete aggregate offerings, before display filtering."""
     rejected = rejected or {}
     try:
-        payload = json.loads(body)
+        payload = json.loads(body) if parsed_frame is None else parsed_frame.payload
         if not isinstance(payload, list) or len(payload) > 200:
             raise ValueError()
-        receipt = sha256(body).hexdigest()
+        receipt = sha256(body).hexdigest() if parsed_frame is None else parsed_frame.receipt_sha256
         for venue in ('novig', 'prophetx', 'pinnacle'):
             if venue in rejected:
                 ledger.observe(sport, venue, checked_at=received_at, status='rejected_payload', reason='payload_rejected', evidence_sha256=receipt,detail_code=rejected[venue])

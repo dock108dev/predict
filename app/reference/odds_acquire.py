@@ -55,7 +55,7 @@ def authorize(authorization, folder):
     return candidate
 
 
-def strict_json(body):
+def strict_json(body, *, parse_float=None):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -65,7 +65,8 @@ def strict_json(body):
         return result
     def invalid(value):
         raise ValueError('Nonfinite JSON')
-    return json.loads(body, object_pairs_hook=pairs, parse_constant=invalid)
+    options={} if parse_float is None else dict(parse_float=parse_float)
+    return json.loads(body, object_pairs_hook=pairs, parse_constant=invalid, **options)
 
 
 def quota(result, maximum_cost):

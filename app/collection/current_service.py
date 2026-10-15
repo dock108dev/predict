@@ -24,8 +24,7 @@ class CurrentService:
             aggregate_scope(self.config) if self.config['aggregate_enabled'] else []
             for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}, self.config['families'])
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
-        from .current_journal import CurrentJournal
-        self.journal=CurrentJournal(observation_directory) if observation_directory is not None else None
+        self.journal=None  # Ordinary ingress never creates or reopens sports journals.
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
         self.evidence = evidence
@@ -39,10 +38,6 @@ class CurrentService:
         self.database = None
         if database_games is not None and (not isinstance(database_games,list) or not 1<=len(database_games)<=4 or any(not isinstance(k,str) or len(k)>256 or k.split(':',1)[0] not in ('the_odds_api','kalshi','polymarket_us') for k in database_games)):raise ValueError('Bounded source-local game selection required')
         self.database_games = database_games
-        self.retained_bootstrap = retained_directory is not None and database_games is None
-        self._retained_initial = None
-        self._retained_sink = None
-        self._retained_rejected = []
         self.bootstrap_task = None
         self.runtime_id = str(uuid4())
         self.store = self.sink = None
@@ -70,18 +65,12 @@ class CurrentService:
         self.states = self.initial_state()['source_status']
 
     def initial_state(self):
-        if self._retained_initial is not None:
-            return self._retained_initial
         raw = unavailable()
         raw.update(runtime_id=self.runtime_id, state='connecting')
         for venue in ('kalshi','polymarket_us'):
             raw['source_status'][venue] = dict(state='connecting', reason_code='native_connecting', reason='Connecting to the native feed.', next_due_at=None)
         for venue in ('novig','prophetx'):
             raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(aggregate_scope(self.config)) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
-        if self.retained_directory is not None and self.database_games is None:
-            from .current_retained import prepare
-            raw, self._retained_sink, self._retained_rejected = prepare(raw, self.config, self.retained_directory)
-            self._retained_initial = raw
         return raw
 
     async def start(self, store):
@@ -94,24 +83,8 @@ class CurrentService:
             self.database = DatabasePipeline(self,self.database_games)
             await self.database.start()
         else:
-            self.sink = self._retained_sink or LatestStateSink(store, self.initial_state(), self.config)
+            self.sink = LatestStateSink(store, self.initial_state(), self.config)
         self.sink.store = store
-        if self.retained_bootstrap:
-            store.start_retained()
-            self.digest, _ = candidate()
-            self.bootstrap_task = asyncio.create_task(self._start_after_retained(), name='predict-retained-startup')
-            return
-        await self._start_sources()
-
-    async def _start_after_retained(self):
-        outcome = await self.store.admission.latest['future']
-        if outcome.status != 'success' or self.closing or self.closed:
-            return
-        for sport in self._retained_rejected:
-            self.issue('the_odds_api','malformed_source','aggregate_retained_admission_failed')
-        # The input graph is now owned by the store and reducer; release the
-        # extra bootstrap graph. Native workers cannot race retained admission.
-        self._retained_initial = None
         await self._start_sources()
 
     async def _start_sources(self):
@@ -162,10 +135,8 @@ class CurrentService:
             self.evidence(dict(source=venue, kind=kind, at=utc(), value=value))
 
     def retain(self, venue, kind, value):
-        if self.journal is None:return
-        if not self.dispatch or self.closed or self.closing:raise asyncio.CancelledError()
-        self.journal.append(dict(schema='predict-current-observation-1',runtime_id=self.runtime_id,
-            candidate_digest=self.digest,source=venue,kind=kind,retained_at=utc(),value=value))
+        # Current ingress owns direct normalized SQL writes. No alternate archive.
+        return
 
     def issue(self, venue, category, code):
         from .current_admin import issue
@@ -455,7 +426,6 @@ class CurrentService:
             if reason:raise SelectionError(409,reason,'Recovery blocked after cleanup: '+reason.replace('_',' ')+'.')
             if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Application changed during cleanup; reopen with the current candidate.')
             self.runtime_id=str(uuid4());self.started=False;self.closed=False
-            self._retained_initial=None;self._retained_sink=None
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
             self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None;self.stop_reason=None
             self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
