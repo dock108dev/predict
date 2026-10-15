@@ -138,71 +138,57 @@ class CalculationOwnership(unittest.TestCase):
 
 
 class SharedPolicyEndpoints(unittest.IsolatedAsyncioTestCase):
-    async def test_closed_sql_pipeline_keeps_pending_prices_and_saved_results_readable(self):
+    async def test_current_reads_return_directly_for_active_and_stopped_sources(self):
         from app.dashboard import comparison_board_api
         from app.comparison.estimated_policy import DEFAULT_POLICY
-        database=SimpleNamespace(closed=True,request=Mock(side_effect=ValueError('saved_updates_stopped')))
-        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=database,
-                                 refresh_aggregate=Mock(),recover=Mock())
-        app=web.Application();comparison_board_api.mount(app,provider)
-        async with TestClient(TestServer(app)) as client:
-            for view in ('odds','ev','arbs'):
-                with self.subTest(view=view):
-                    saved=view!='odds'
-                    output=dict(version='predict-comparison-board-1',view=view,game_key='synthetic:game',
-                        delivery_state='pending',status='historical' if saved else 'prices_only',
-                        result_id='saved-result' if saved else None,snapshot_id='saved-snapshot' if saved else None,
-                        prices=[dict(quote_id='original-quote',original=dict(value='0.48',units='probability'))],
-                        rows=[dict(net_profit_usd='-30.4869')] if saved else [],provider_requests=0)
-                    with patch.object(comparison_board_api,'load',return_value=DEFAULT_POLICY), \
-                         patch.object(comparison_board_api.asyncio,'to_thread',return_value=(output,True)) as sql:
-                        response=await client.get('/api/boards/'+view,params={'game':'synthetic:game'})
-                        self.assertEqual(response.status,202)
-                        self.assertEqual(await response.json(),output)
-                        sql.assert_awaited_once()
-        database.request.assert_not_called()
-        provider.refresh_aggregate.assert_not_called()
-        provider.recover.assert_not_called()
-
-    async def test_active_sql_pipeline_still_queues_pending_calculation(self):
-        from app.dashboard import comparison_board_api
-        from app.comparison.estimated_policy import DEFAULT_POLICY
-        database=SimpleNamespace(closed=False,request=Mock())
-        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=database,
-                                 refresh_aggregate=Mock(),recover=Mock())
-        app=web.Application();comparison_board_api.mount(app,provider)
-        output=dict(game_key='synthetic:game',delivery_state='pending',prices=[],rows=[],provider_requests=0)
-        with patch.object(comparison_board_api,'load',return_value=DEFAULT_POLICY), \
-             patch.object(comparison_board_api.asyncio,'to_thread',return_value=(output,True)) as sql:
+        for stopped in (False,True):
+            provider=SimpleNamespace(closed=stopped,closing=False,dispatch=not stopped,
+                database=SimpleNamespace(),refresh_aggregate=Mock(),recover=Mock())
+            app=web.Application();comparison_board_api.mount(app,provider)
             async with TestClient(TestServer(app)) as client:
-                response=await client.get('/api/boards/odds',params={'game':'synthetic:game'})
-                self.assertEqual(response.status,202)
-                self.assertEqual(await response.json(),output)
-                sql.assert_awaited_once()
-        database.request.assert_called_once_with('synthetic:game',DEFAULT_POLICY)
-        provider.refresh_aggregate.assert_not_called()
-        provider.recover.assert_not_called()
+                for view in ('odds','ev','arbs'):
+                    with self.subTest(stopped=stopped,view=view):
+                        output=dict(version='predict-comparison-board-2',view=view,
+                            game_key='synthetic:game',stopped=stopped,provider_requests=0)
+                        with patch.object(comparison_board_api,'load',return_value=DEFAULT_POLICY), \
+                             patch.object(comparison_board_api.asyncio,'to_thread',return_value=output) as sql:
+                            response=await client.get('/api/boards/'+view,params={'game':'synthetic:game'})
+                            self.assertEqual(response.status,200)
+                            self.assertEqual(await response.json(),output)
+                            sql.assert_awaited_once()
+            provider.refresh_aggregate.assert_not_called()
+            provider.recover.assert_not_called()
 
-    async def test_saved_endpoints_use_one_settings_adapter_before_sql(self):
-        from app.dashboard import comparison_board_api, stored_games
+    async def test_current_endpoint_uses_one_settings_adapter_before_sql(self):
+        from app.dashboard import comparison_board_api as module
         from app.dashboard.query_policy import calculation_policy
         from app.dashboard.local_security import PublicRequestError
         from app.comparison.estimated_policy import DEFAULT_POLICY
-        provider=SimpleNamespace(closed=False, closing=False, dispatch=True, database=SimpleNamespace(status=lambda:{}))
-        for module, path, view in ((comparison_board_api,'/api/boards/{view}','odds'),
-                                   (stored_games,'/api/stored/result',None)):
-            app=web.Application();module.mount(app,provider)
-            handler=next(route.handler for route in app.router.routes() if route.method=='GET' and route.resource.canonical==path)
-            req=SimpleNamespace(query=MultiDict(game='synthetic:game',amount='500'),match_info={'view':view})
-            output=({'delivery_state':'complete'},False) if view else {'superseded':False,'state':{'events':[]}}
-            with patch.object(module,'load',return_value=DEFAULT_POLICY), \
-                 patch.object(module,'calculation_policy',wraps=calculation_policy) as settings, \
-                 patch.object(module.asyncio,'to_thread',return_value=output) as sql:
-                result=await handler(req)
-                self.assertEqual(result.status,200)
-                settings.assert_called_once_with(req.query,DEFAULT_POLICY)
-                self.assertEqual(sql.call_args.args[2].capital_ceiling_usd,'500')
-            req.query=MultiDict(game='synthetic:game',amount='500',ceiling='1000')
-            with patch.object(module,'load',return_value=DEFAULT_POLICY), patch.object(module.asyncio,'to_thread') as sql:
-                with self.assertRaises(PublicRequestError):await handler(req)
-                sql.assert_not_called()
+        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=SimpleNamespace())
+        app=web.Application();module.mount(app,provider)
+        handler=next(route.handler for route in app.router.routes() if route.method=='GET')
+        req=SimpleNamespace(query=MultiDict(game='synthetic:game',amount='500'),match_info={'view':'odds'})
+        with patch.object(module,'load',return_value=DEFAULT_POLICY), \
+             patch.object(module,'calculation_policy',wraps=calculation_policy) as settings, \
+             patch.object(module.asyncio,'to_thread',return_value={}) as sql:
+            result=await handler(req)
+            self.assertEqual(result.status,200)
+            settings.assert_called_once_with(req.query,DEFAULT_POLICY)
+            self.assertEqual(sql.call_args.args[2].capital_ceiling_usd,'500')
+        req.query=MultiDict(game='synthetic:game',amount='500',ceiling='1000')
+        with patch.object(module,'load',return_value=DEFAULT_POLICY),patch.object(module.asyncio,'to_thread') as sql:
+            with self.assertRaises(PublicRequestError):await handler(req)
+            sql.assert_not_called()
+
+    async def test_retired_history_cannot_load_policy_or_dispatch_sql(self):
+        from app.dashboard import comparison_board_api as module,stored_games
+        for owner,url in ((module,'/api/boards/history'),(module,'/api/boards/ev?result_id=old'),
+                          (stored_games,'/api/stored/games'),(stored_games,'/api/stored/result')):
+            with self.subTest(url=url):
+                app=web.Application();owner.mount(app,SimpleNamespace())
+                with patch.object(module,'load') as policy,patch.object(module.asyncio,'to_thread') as sql:
+                    async with TestClient(TestServer(app)) as client:
+                        response=await client.get(url)
+                        self.assertEqual(response.status,410)
+                        self.assertEqual((await response.json())['provider_requests'],0)
+                    policy.assert_not_called();sql.assert_not_called()

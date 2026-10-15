@@ -54,19 +54,20 @@ export function renderSavedDetails(v, { root, participants }) {
   const metrics = el("div", undefined, "metrics");
   metric(
     metrics,
-    v.pair ? "Buffered decisive margin" : "Complete buffered EV",
-    v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd,
+    v.pair ? "Buffered decisive margin" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
+    v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd ?? m.conditional_buffered_ev_usd,
   );
+  if (v.pair) {
+    metric(metrics,"Minimum across modeled outcomes · buffered",m.buffered_complete_modeled_minimum_usd);
+    if (m.buffered_complete_modeled_minimum_usd == null) metrics.append(el("small","Complete modeled minimum unknown; the decisive margin does not cover every outcome.","conditional-label"));
+  }
   root.append(metrics);
-  textLine(
-    root,
-    "Requested / deployed / residual",
-    money(f.requested_usd) +
-      " / " +
-      money(f.deployed_usd) +
-      " / " +
-      residual(f.residual_usd),
-  );
+  if (!v.pair && m.buffered_ev_usd == null) metrics.append(el("small", "Complete modeled EV unavailable", "conditional-label"));
+  const funding = el("div", undefined, "detail-funding");
+  for (const [label, value] of [["Requested funding",money(f.requested_usd)],["Deployed",money(f.deployed_usd)],["Residual",residual(f.residual_usd)]]) {
+    const item=el("div");item.append(el("small",label),el("strong",value));funding.append(item);
+  }
+  root.append(funding);
   for (const [i, leg] of (f.legs || []).entries())
     textLine(
       root,
@@ -87,7 +88,7 @@ export function renderSavedDetails(v, { root, participants }) {
         : "Estimated value reconciliation",
     ),
   );
-  const dl = el("dl");
+  const dl = el("dl", undefined, "detail-reconciliation");
   for (const [name, value] of [
     ["Gross benchmark estimate", m.gross_benchmark_ev_usd],
     ["Rule effects", m.rule_adjustment_usd],
@@ -120,7 +121,9 @@ export function renderSavedDetails(v, { root, participants }) {
       " · " +
       (f.residual_reason || "Unknown residual reason"),
   );
-  root.append(el("h3", "Modeled outcomes"));
+  const outcomes=el("details",undefined,"detail-outcomes");
+  outcomes.dataset.key="outcomes";
+  outcomes.append(el("summary", "Modeled outcomes"));
   const t = el("table"),
     head = el("tr");
   ["Outcome", "Net before buffer", "After buffer"].forEach((x) =>
@@ -141,7 +144,7 @@ export function renderSavedDetails(v, { root, participants }) {
     );
     t.append(tr);
   }
-  root.append(t);
+  outcomes.append(t);root.append(outcomes);
   if (selected.assumptions?.length) {
     const assumptions = el("details");
     assumptions.dataset.key = "assumptions";

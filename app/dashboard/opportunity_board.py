@@ -31,15 +31,13 @@ def create_app(sessions=None, **kwargs):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8783)
-    p.add_argument('--game',action='append',help='Source-local game key to calculate automatically; repeat for a bounded selection')
     p.add_argument('--current-config',help='Bounded native operational configuration JSON')
     a=p.parse_args()
     from app.collection.current_service import CurrentService
     from app.collection.current_policy import load
     application=create_app(current_provider=CurrentService(config=load(a.current_config), config_loader=lambda:load(a.current_config),
         retained_directory=ROOT/'.local/predict-odds/diagnostics',
-        observation_directory=ROOT/'.local/predict-observations',
-        database_games=a.game or ['the_odds_api:855f58fad5f0f14b239f4f63df27998b']))
+        database_mode=True))
     web.run_app(application,host='127.0.0.1',port=a.port,access_log=None)
 
 if __name__=='__main__':main()

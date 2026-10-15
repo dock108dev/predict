@@ -227,7 +227,6 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
       table.append(row);
     }
     root.append(table);
-    if (b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome")) root.append(el("small", "Native sides retain their own tie/refund payouts · inspect Original for terms.", "native-meaning"));
     const alternatives = b.prices.filter(q => q.selection.predicate !== "win" || !g.participants.some(p => p.id === q.selection.participant));
     if (alternatives.length) {
       const d = el("details", undefined, "slate-alternatives");
@@ -253,7 +252,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
       if (c.unknown_outcomes?.length || m.buffered_complete_modeled_minimum_usd == null) notes.push("Unknown outcome payouts");
     }
     if (numeric(row.funding?.residual_usd) >= 0.01) notes.push("Deployed " + money(row.funding.deployed_usd) + " · size limited");
-    if (!notes.length) notes.push(c.main_positive_eligible ? "Modeled estimate · fills/fees unconfirmed" : words(c.reason || "Modeled comparison"));
+    if (!notes.length) notes.push(c.main_positive_eligible ? "Modeled estimate · fills/fees unconfirmed" : (c.reason === "buffered_value_zero_or_negative" || c.reason === "buffered value is zero or negative") ? "No positive value after costs and buffer" : words(c.reason || "Modeled comparison"));
     return notes.join(" · ");
   }
   const signedMoney = v => (numeric(v) > 0 ? "+" : "") + money(v);
@@ -284,6 +283,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     }
     item.append(values);
     const note = el("small", risk(row, b, view, paused), "slate-result-note");
+    note.dataset.caution = String(row.freshness?.status !== "current" || m.buffered_ev_usd == null || !!row.classification?.positive_rule_sensitive_eligible);
     note.title = "Calculation as-of " + b.result_as_of + " · " + words(row.classification?.reason) + " · " + (row.freshness?.reasons || []).map(words).join(" · ");
     item.append(note);
     action(item, "Details", item.dataset.key, button => onDetails(row, button, g));
@@ -314,19 +314,22 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     const summary = el("div", undefined, "slate-summary");
     summary.append(el("strong", visible.size + " of " + v.games.length + " games"));
     if (view !== "odds") summary.append(el("span", rows.length + (view === "arbs" ? " cross-venue comparisons" : " comparisons") + " · " + (filter === "all" ? "all current results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
-    content.append(summary);
+    const overview = el("div", undefined, "slate-overview");
+    overview.append(summary);
     const coverage = el("div", undefined, "slate-coverage");
-    coverage.append(el("small", "Current coverage"));
+    coverage.append(el("small", "Observed coverage"));
     for (const book of ["novig", "prophetx", "kalshi", "polymarket_us", "pinnacle"]) coverage.append(el("span", venue(book) + " " + v.boards.filter(b => b.prices.some(q => q.venue === book) || (b.benchmark.venue === book && b.benchmark.available)).length + "/" + v.games.length));
-    content.append(coverage);
+    overview.append(coverage);
+    if (v.games.length) content.append(overview);
     if (!visible.size) {
       const empty = el("div", undefined, "empty");
-      empty.append(el("h2", v.games.length ? "No games match this filter" : "No current games yet"), el("p", v.games.length ? "Clear the team search or choose All games." : "Open Admin to check your source setup."));
+      empty.append(el("h2", v.games.length ? "No games match this filter" : "No current games yet"), el("p", v.games.length ? "Clear the team search or choose All games." : "Check source status in Admin. Available games appear here after an observation is received."));
       if (!v.games.length) { const a = el("a", "Check sources in Admin"); a.href = "/admin"; empty.append(a); }
       content.append(empty);
       return;
     }
     if (view === "odds") {
+      if (boards.some(b => b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome"))) content.append(el("small", "Native sides have their own tie and refund terms. Open a price to inspect its contract.", "native-meaning"));
       const h = el("div", undefined, "slate-price-headings slate-shared-headings");
       h.append(el("span", "Game / team"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
       content.append(h);
@@ -339,7 +342,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     }
     if (!rows.length) {
       const empty = el("div", undefined, "empty");
-      empty.append(el("h2", filter === "all" ? "No current comparisons available" : filter === "hedges" ? "No positive rule-sensitive hedges" : view === "arbs" ? "No estimated arbitrage found" : "No positive EV found"), el("p", "This applies across all visible games and your settings. " + (filter === "all" ? "Prices remain available in Odds." : "Signed and conditional comparisons remain under All comparisons.")));
+      empty.append(el("h2", filter === "all" ? "No current comparisons available" : filter === "hedges" ? "No positive rule-sensitive hedges" : view === "arbs" ? "No estimated arbitrage found" : "No positive EV found"), el("p", filter === "all" ? "Prices remain available in Odds." : "See signed and conditional results in All comparisons."));
       if (filter !== "all") { const button = el("button", "Show all comparisons"); button.onclick = onShowAll; empty.append(button); }
       content.append(empty);
     }
@@ -766,19 +769,20 @@ function renderSavedDetails(v, { root, participants }) {
   const metrics = el("div", undefined, "metrics");
   metric(
     metrics,
-    v.pair ? "Buffered decisive margin" : "Complete buffered EV",
-    v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd,
+    v.pair ? "Buffered decisive margin" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
+    v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd ?? m.conditional_buffered_ev_usd,
   );
+  if (v.pair) {
+    metric(metrics,"Minimum across modeled outcomes · buffered",m.buffered_complete_modeled_minimum_usd);
+    if (m.buffered_complete_modeled_minimum_usd == null) metrics.append(el("small","Complete modeled minimum unknown; the decisive margin does not cover every outcome.","conditional-label"));
+  }
   root.append(metrics);
-  textLine(
-    root,
-    "Requested / deployed / residual",
-    money(f.requested_usd) +
-      " / " +
-      money(f.deployed_usd) +
-      " / " +
-      residual(f.residual_usd),
-  );
+  if (!v.pair && m.buffered_ev_usd == null) metrics.append(el("small", "Complete modeled EV unavailable", "conditional-label"));
+  const funding = el("div", undefined, "detail-funding");
+  for (const [label, value] of [["Requested funding",money(f.requested_usd)],["Deployed",money(f.deployed_usd)],["Residual",residual(f.residual_usd)]]) {
+    const item=el("div");item.append(el("small",label),el("strong",value));funding.append(item);
+  }
+  root.append(funding);
   for (const [i, leg] of (f.legs || []).entries())
     textLine(
       root,
@@ -799,7 +803,7 @@ function renderSavedDetails(v, { root, participants }) {
         : "Estimated value reconciliation",
     ),
   );
-  const dl = el("dl");
+  const dl = el("dl", undefined, "detail-reconciliation");
   for (const [name, value] of [
     ["Gross benchmark estimate", m.gross_benchmark_ev_usd],
     ["Rule effects", m.rule_adjustment_usd],
@@ -832,7 +836,9 @@ function renderSavedDetails(v, { root, participants }) {
       " · " +
       (f.residual_reason || "Unknown residual reason"),
   );
-  root.append(el("h3", "Modeled outcomes"));
+  const outcomes=el("details",undefined,"detail-outcomes");
+  outcomes.dataset.key="outcomes";
+  outcomes.append(el("summary", "Modeled outcomes"));
   const t = el("table"),
     head = el("tr");
   ["Outcome", "Net before buffer", "After buffer"].forEach((x) =>
@@ -853,7 +859,7 @@ function renderSavedDetails(v, { root, participants }) {
     );
     t.append(tr);
   }
-  root.append(t);
+  outcomes.append(t);root.append(outcomes);
   if (selected.assumptions?.length) {
     const assumptions = el("details");
     assumptions.dataset.key = "assumptions";
@@ -985,16 +991,16 @@ function draw(v) {
   current = v;
   $("applied").textContent =
     money(applied.amount) +
-    " funded · modeled fees included · " +
+    " funded · " +
     percent(String(numeric(applied.buffer) * 100)) +
     " buffer · " +
     venue(applied.benchmark_venue);
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
-  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached · " : "Current updates paused · ") : v.storage?.state === "catching_up" ? "Saving new inputs · " : "";
-  setStatus((stopped ? "Collection stopped · " : "") + storageNote + v.games.length + " current games · " + (!unavailable && pending ? pending + " calculations pending · " : "") + "Each price and result keeps its own source age", unavailable ? "error" : pending ? "busy" : "ready");
-  if (failures) setStatus("Current reads unavailable · prior values have unverified freshness", "error");
+  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Current updates paused. Open Admin to check source status.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
+  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
+  if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
   preserveContent(() =>
     renderers.draw(v, {
       view,
@@ -1069,11 +1075,12 @@ async function pull() {
     $("sort-setting").hidden = view === "odds" || !games.length;
     stopped = stopRequested || value.stopped;
     $("stop").disabled = stopped;
+    $("stop").textContent = stopped ? "Collection stopped" : "Stop collection";
     catalogOptions();
     persist();
     if (!games.length) {
       draw(value);
-      setStatus("No current games available.");
+      setStatus("");
       return;
     }
     if (game && !games.some((g) => g.game_key === game)) {
@@ -1084,6 +1091,7 @@ async function pull() {
     failures = 0;
     draw(value);
     $("retry").hidden = true;
+    $("read-diagnostics").hidden = true;
     if (detail?.kind === "result") refreshDetails();
   } catch (e) {
     if (e.name === "AbortError" || generation !== pullGeneration) return;
@@ -1101,12 +1109,14 @@ async function pull() {
           "notice",
         ),
       );
-    setStatus(
-      "Current view unavailable: " +
-        e.message +
-        (current ? " · Prior view retained; freshness is unverified." : ""),
-      "error",
-    );
+    if (!current) {
+      document.querySelector(".selection").hidden = true;
+      $("settings").hidden = true;
+      $("filters").hidden = true;
+    }
+    setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Retry or check sources in Admin." : "Couldn’t load current games. Retry or check sources in Admin.", "error");
+    $("read-error").textContent = e.message;
+    $("read-diagnostics").hidden = false;
     $("retry").hidden = false;
   } finally {
     if (generation === pullGeneration && !read.pending) polling.schedule();
@@ -1154,6 +1164,12 @@ function reconcile(v) {
     participants: detail.participants,
   });
 }
+function detailFailure(message, diagnostic) {
+  $("detail-content").replaceChildren(el("p",message,"warning"));
+  const explanation=el("details");explanation.dataset.key="error";
+  explanation.append(el("summary","Technical details"),el("p",diagnostic,"muted"));
+  $("detail-content").append(explanation);
+}
 async function refreshDetails() {
   const held = detail;
   if (held?.kind !== "result") return;
@@ -1185,9 +1201,7 @@ async function refreshDetails() {
       [...$("detail-content").querySelectorAll("details")].find(x => x.dataset.key === activeDisclosure)?.querySelector("summary")?.focus({ preventScroll: true });
   } catch (e) {
     if (e.name !== "AbortError" && held === detail)
-      $("detail-content").replaceChildren(
-        el("p", "Current inputs changed, were removed or are unavailable. Close Details and reopen the current selection. " + e.message, "warning"),
-      );
+      detailFailure("Current inputs changed, were removed or are unavailable. Close Details and reopen the current selection.",e.message);
   }
 }
 function openDetails(row, button, selectedGame) {
@@ -1227,7 +1241,7 @@ async function openOriginal(q, button, selectedGame) {
     $("detail-content").append(d);
   } catch (e) {
     if (e.name !== "AbortError" && held === detail)
-      $("detail-content").replaceChildren(el("p", "Original inputs changed, expired or are unavailable. Reopen the current price. " + e.message, "warning"));
+      detailFailure("Original inputs changed, expired or are unavailable. Reopen the current price.",e.message);
   }
 }
 function changeSettings(next) {
@@ -1243,6 +1257,19 @@ function changeSettings(next) {
   setStatus("Loading requested settings…", "busy");
   pull();
 }
+const settingsDisclosure=document.querySelector(".calculation-settings");
+settingsDisclosure.addEventListener("focusout",event=>{
+  if (event.relatedTarget && !settingsDisclosure.contains(event.relatedTarget)) settingsDisclosure.open=false;
+});
+document.addEventListener("pointerdown",event=>{
+  if (settingsDisclosure.open && !settingsDisclosure.contains(event.target)) settingsDisclosure.open=false;
+});
+document.addEventListener("keydown",event=>{
+  if (event.key==="Escape" && settingsDisclosure.open && !$("details").open) {
+    settingsDisclosure.open=false;
+    settingsDisclosure.querySelector("summary").focus();
+  }
+});
 $("settings").onsubmit = (e) => {
   e.preventDefault();
   try {
@@ -1297,7 +1324,8 @@ $("stop").onclick = async () => {
   $("stop").disabled = true;
   current = null;
   $("content").replaceChildren();
-  setStatus("Stopping collection · positive authority withdrawn.", "busy");
+  $("stop").textContent = "Stopping…";
+  setStatus("Stopping collection. Positive results are withheld during cleanup.", "busy");
   try {
     const r = await fetch("/api/admin/current", {
       method: "POST",

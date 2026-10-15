@@ -67,20 +67,15 @@ class Lifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(worker.client.budget.bytes,100)
 
 class Retention(unittest.TestCase):
-    def test_retention_is_explicit_and_isolated(self):
+    def test_ordinary_service_has_no_archive_writer_or_bootstrap(self):
         from app.collection.current_service import CurrentService
         with tempfile.TemporaryDirectory() as root:
             service=CurrentService(config=dict(DEFAULT,aggregate_enabled=False),directory=Path(root)/'state')
-            self.assertIsNone(service.journal)
-            service.retain('kalshi','controlled',{})
+            for name in ('journal','retain','bootstrap_task'):
+                self.assertFalse(hasattr(service,name))
             self.assertEqual(list(Path(root).iterdir()),[])
-            service=CurrentService(config=dict(DEFAULT,aggregate_enabled=False),directory=Path(root)/'state',observation_directory=Path(root)/'observations')
-            service.dispatch=True
-            service.retain('kalshi','controlled',{'received_at':'2026-10-13T00:00:00Z'})
-            self.assertEqual(service.journal.records,1)
-            before=service.journal.path.read_bytes();service.closed=True
-            with self.assertRaises(asyncio.CancelledError):service.retain('kalshi','controlled',{})
-            self.assertEqual(service.journal.path.read_bytes(),before)
+            with self.assertRaises(TypeError):
+                CurrentService(config=DEFAULT,observation_directory=Path(root)/'observations')
     def test_reopen_preserves_clocks_and_full_storage_never_overwrites(self):
         with tempfile.TemporaryDirectory() as root:
             journal=CurrentJournal(root,byte_cap=400)

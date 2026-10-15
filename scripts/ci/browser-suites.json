@@ -36,6 +36,8 @@
     "test_ev09_read_polling.cjs",
     "test_stored_views.cjs",
     "test_slate_ui.cjs",
-    "test_slate_polling.cjs"
+    "test_slate_polling.cjs",
+    "test_comparison_usability.cjs",
+    "test_d03_current_client.cjs"
   ]
 }

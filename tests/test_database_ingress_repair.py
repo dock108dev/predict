@@ -8,12 +8,38 @@ from app.storage.current_games import age_result
 
 R=Path(__file__).resolve().parents[1]
 class IngressRepair(unittest.TestCase):
-    def test_aggregate_byte_payload_uses_existing_ingress_bound(self):
-        sink=DatabaseIngressSink(None,None,DEFAULT)
-        # Deliberately stop after byte admission, before the unrelated state reducer.
-        with self.assertRaises(AttributeError):sink.commit(dict(type='current_aggregate',body=b'[]'),{})
-        with self.assertRaisesRegex(ValueError,'capacity'):
-            sink.commit(dict(type='current_aggregate',body=b'x'*DEFAULT['ingress_bytes']),{})
+    def test_only_admitted_aggregate_records_enter_ordinary_sql(self):
+        from unittest.mock import patch
+        for kind in ('current_aggregate', 'current_aggregate_batches', 'unknown'):
+            with self.subTest(kind=kind):
+                sink=DatabaseIngressSink(None,DEFAULT)
+                with patch('app.collection.current_database.connect') as connect:
+                    with self.assertRaisesRegex(ValueError,'current_ingress_type_unsupported'):
+                        sink.commit(dict(type=kind,body=b'[]'),{})
+                connect.assert_not_called()
+                self.assertEqual(sink.sequence,0)
+                self.assertEqual(sink.metrics['rejected_observations'],1)
+                self.assertIn('current_ingress_type_unsupported',sink.error)
+
+    def test_admitted_record_bound_includes_the_complete_handoff(self):
+        from unittest.mock import patch
+        sink=DatabaseIngressSink(None,DEFAULT)
+        with patch('app.collection.current_database.connect') as connect:
+            with self.assertRaisesRegex(ValueError,'capacity'):
+                sink.commit(dict(type='current_aggregate_records',records=['x'*DEFAULT['ingress_bytes']]),{})
+        connect.assert_not_called()
+        self.assertEqual(sink.sequence,0)
+
+    def test_raw_payload_cannot_hide_inside_an_admitted_record(self):
+        from unittest.mock import patch
+        for field in ('body','batches'):
+            with self.subTest(field=field):
+                sink=DatabaseIngressSink(None,DEFAULT)
+                with patch('app.collection.current_database.connect') as connect:
+                    with self.assertRaisesRegex(ValueError,'current_ingress_raw_payload_unsupported'):
+                        sink.commit(dict(type='current_aggregate_records',**{field:[]}),{})
+                connect.assert_not_called()
+
     def test_approved_reference_clocks_control_saved_freshness(self):
         v=json.loads((R/'tests/fixtures/stored-game-arrival.json').read_text())
         current=age_result(v,at=v['as_of'])

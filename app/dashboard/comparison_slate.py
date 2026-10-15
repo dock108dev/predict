@@ -1,5 +1,4 @@
 """Bounded, coherent pages of the current NFL slate; no saved report dependency."""
-from datetime import datetime, timezone
 from app.dashboard.comparison_board import response
 from app.storage.comparison_board import ReadContext, discover, calculate_current, context_identity
 from app.storage.current_games import GameStore
@@ -10,9 +9,6 @@ MAX_GAMES=500
 MAX_PAGE_GAMES=50
 MAX_BYTES=8*1024*1024
 
-
-def upcoming(game,at):
-    return not game.get('start_at') or datetime.fromisoformat(game['start_at'].replace('Z','+00:00'))>at
 
 
 def read(db,policy, *, view,filter,stopped,offset=0,limit=25,expected_revision=None):
@@ -42,8 +38,3 @@ def read(db,policy, *, view,filter,stopped,offset=0,limit=25,expected_revision=N
     out=dict(version=VERSION,view=view,filter=filter,policy=policy.to_dict(),games=games,boards=boards,errors=errors,stopped=stopped,as_of=context.at,read_revision=context.read_revision,epoch=context.epoch,coverage=dict(total_games=len(games),offset=offset,limit=limit,returned_games=len(page),next_offset=None if complete else end,complete=complete),bounds=dict(maximum_games=MAX_GAMES,maximum_page_games=MAX_PAGE_GAMES,maximum_bytes=MAX_BYTES),provider_requests=0)
     if len(encoded(out))>MAX_BYTES:raise ValueError('slate_response_byte_capacity')
     return out,[]
-
-
-def schedule(database,keys,policy):
-    """Legacy callers cannot recreate the retired sports calculation archive."""
-    return None

@@ -16,7 +16,7 @@ from tests.test_current_state import owner
 class Assets(unittest.IsolatedAsyncioTestCase):
     async def test_three_ordinary_pages_deliver_their_module_graph(self):
         provider = InjectedTestProvider()
-        provider.database_games = ["the_odds_api:test"]
+        provider.database_mode = True
         app = create_app(owner=owner(), sessions={}, current_provider=provider)
         async with TestClient(TestServer(app)) as client:
             for page in ("/", "/ev", "/arbs"):

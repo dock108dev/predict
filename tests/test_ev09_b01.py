@@ -3,7 +3,6 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import timedelta
 from fractions import Fraction as F
-from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
 from tests.test_ev09_n01 import retained, entries as originals, AT
@@ -12,18 +11,19 @@ from app.comparison.benchmark import TwoWayBenchmark
 from app.comparison.current_dependencies import instant
 from app.storage.comparison_board import catalog
 from app.comparison.estimated_policy import DEFAULT_POLICY
-from app.collection.current_database import DatabasePipeline
 
 
 def value():
-    b,s=retained()
-    return dict(state=deepcopy(s),as_of=AT,result_id='retained-result',snapshot_id='retained-snapshot',policy=DEFAULT_POLICY.to_dict(),
-        input_version=b['input_version'],game_key=b['game_key'],superseded=False,envelope_ids=b['envelope_ids'],representation=b['representation'])
+    from tests.test_current_board_reads import context,bundle
+    from app.storage.comparison_board import calculate_current
+    c=context();b=bundle(c)
+    return calculate_current(b,DEFAULT_POLICY,context=c,details=True)
 
 
 class BoardReadModel(unittest.TestCase):
     def board(self,view,filter='all',v=None,b=None,**kw):
-        return response(b or retained()[0],v or value(),DEFAULT_POLICY,view=view,filter=filter,at=AT,**kw)
+        from tests.test_current_board_reads import context,bundle
+        return response(b or bundle(context()),v or value(),DEFAULT_POLICY,view=view,filter=filter,at=AT,**kw)
     def test_authentic_canonical_catalog_and_alternatives(self):
         b,s=retained();c=catalog([b]);self.assertEqual(len(c['games']),1);self.assertEqual(len(c['games'][0]['members']),3)
         odds=self.board('odds');self.assertEqual(len(odds['rows']),len(originals(s)));self.assertEqual(odds['benchmark']['venue'],'pinnacle')
@@ -74,7 +74,9 @@ class BoardReadModel(unittest.TestCase):
                 changed.weight(selected,at=instant(AT),venue=changed.venue,method=changed.method)
     def test_original_to_response_details_financial_trace(self):
         v=value();ev=self.board('ev',v=v);arbs=self.board('arbs',v=v)
-        self.assertEqual(len(ev['rows']),len(originals(v['state'])));self.assertEqual(len(arbs['rows']),20)
+        self.assertEqual(len(ev['rows']),len(originals(v['state'])))
+        venues={q['id']:q['venue'] for _,_,q in entries(v['state'])}
+        self.assertEqual(len(arbs['rows']),sum(len({venues[leg['quote_id']] for leg in pair['legs']})==2 for event in v['state']['events'] for pair in event['funded_pairs']))
         for r in ev['rows']:
             d=details(v,quote=r['quote_id'],at=AT);s=d['quote']['calculations']['funded_estimate']
             for field in ('funding','classification','model_versions'):self.assertEqual(r[field],s[field])
@@ -105,25 +107,8 @@ class BoardReadModel(unittest.TestCase):
         current['events'][0]['groups']=[g for g in current['events'][0]['groups'] if not any(r['id']==q['id'] for o in g['outcomes'] for r in __import__('app.dashboard.current_contract',fromlist=['quotes_of']).quotes_of(o))]
         aged=age(v,at=AT,current=current);self.assertTrue(any('dependency_changed_or_removed' in r['calculations']['funded_estimate']['freshness']['reasons'] for _,_,r in entries(aged['state'])))
     def test_profile_reference_kickoff_and_stop_withdraw_authority(self):
-        v=value();future=age(v,at='2026-10-17T00:00:00Z');self.assertEqual(future['status'],'historical');self.assertEqual(future['as_of'],AT)
+        v=value();before=deepcopy(v);future=age(v,at='2026-10-17T00:00:00Z');self.assertEqual(future['status'],'historical');self.assertEqual(future['as_of'],AT)
         stopped=age(v,at=AT,stopped=True)
         self.assertTrue(all(not q['calculations']['funded_estimate'].get('classification',{}).get('main_positive_eligible') for _,_,q in entries(stopped['state'])))
         self.assertEqual(age(v,at='2026-10-14T01:50:00Z')['status'],'historical')
-        self.assertEqual(value(),v)
-    def test_pending_keeps_prices_and_prior_results(self):
-        b=retained()[0];out=response(b,None,DEFAULT_POLICY,view='ev',at=AT)
-        self.assertEqual(out['delivery_state'],'pending');self.assertTrue(out['prices']);self.assertIsNone(out['result_id'])
-        v=value();v['superseded']=True;out=self.board('ev',v=v)
-        self.assertEqual(out['delivery_state'],'pending');self.assertTrue(out['rows']);self.assertEqual(out['result_as_of'],AT)
-
-
-class BoardQueue(unittest.TestCase):
-    def pipe(self):return DatabasePipeline(SimpleNamespace(config={'cleanup_seconds':1},journal=SimpleNamespace(byte_cap=1)),[])
-    def test_coalesced_bounded_policy_variants(self):
-        p=self.pipe();p.request('same',DEFAULT_POLICY);p.request('same',DEFAULT_POLICY);self.assertEqual(len(p.pending),1)
-        half=replace(DEFAULT_POLICY,capital_ceiling_usd='500');p.request('same',half);self.assertEqual(list(p.pending.values()),[half])
-        p.request('same',replace(half,benchmark_venue='novig'));self.assertEqual(len(p.pending),2)
-        p.request('other',DEFAULT_POLICY);p.request('third',DEFAULT_POLICY)
-        with self.assertRaisesRegex(ValueError,'capacity'):p.request('fourth',DEFAULT_POLICY)
-        p.closed=True
-        with self.assertRaisesRegex(ValueError,'stopped'):p.request('same',DEFAULT_POLICY)
+        self.assertEqual(before,v)

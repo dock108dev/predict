@@ -8,6 +8,7 @@ from app.comparison.estimated_policy import load
 from .query_policy import calculation_policy
 from .comparison_board import response, details, entries, quote_key
 from .local_security import PublicRequestError
+from .comparison_slate import MAX_BYTES
 
 
 def mount(app,provider):
@@ -39,7 +40,7 @@ def mount(app,provider):
         else:
             value=None if view=='odds' else calculate_current(bundle,p,context=context)
             out=response(bundle,value,p,view=view,filter=req.query.get('filter','positive'),at=context.at,stopped=stopped())
-        if len(encoded(out))>8*1024*1024:raise ValueError('board_response_byte_capacity')
+        if len(encoded(out))>MAX_BYTES:raise ValueError('board_response_byte_capacity')
         return out
     def controlled_read(req,p):
         from app.comparison.calculation_control import cancellation,checkpoint
@@ -73,7 +74,9 @@ def mount(app,provider):
                     # A disconnected request cannot release the memory slot while its worker lives.
                     try:await asyncio.shield(task)
                     finally:raise
-            if view=='slate':out['storage']=provider.database.status()
+            if view=='slate':
+                out['storage']=provider.database.status()
+                if len(encoded(out))>MAX_BYTES:raise ValueError('board_response_byte_capacity')
             return web.json_response(out)
         except ValueError as exc:return web.json_response(dict(error='current_inputs_unavailable',reason=str(exc),provider_requests=0),status=409)
         except Exception as exc:

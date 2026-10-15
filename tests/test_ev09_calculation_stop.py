@@ -12,7 +12,7 @@ from app.collection.current_database import DatabasePipeline
 class CalculationStop(unittest.IsolatedAsyncioTestCase):
     async def test_close_interrupts_active_financial_probe_within_existing_limit(self):
         started = threading.Event()
-        pipe = DatabasePipeline(SimpleNamespace(config={'cleanup_seconds':1}), [])
+        pipe = DatabasePipeline(SimpleNamespace(config={'cleanup_seconds':1}))
         published = []
         def calculation():
             with cancellation(lambda:pipe.closed):
@@ -41,19 +41,3 @@ class CalculationStop(unittest.IsolatedAsyncioTestCase):
             active = True
             with self.assertRaises(CalculationStopped):
                 consume(None, None, at=None, native_quantity='1')
-
-    async def test_pipeline_stop_is_not_reported_as_a_storage_failure(self):
-        started = threading.Event()
-        pipe = DatabasePipeline(SimpleNamespace(config={'cleanup_seconds':1}), [])
-        def tick(**kwargs):
-            with cancellation(lambda:pipe.closed):
-                started.set()
-                while True:
-                    checkpoint()
-                    time.sleep(.005)
-        with patch.object(pipe, 'tick', side_effect=tick):
-            await pipe.start()
-            self.assertTrue(await asyncio.to_thread(started.wait, 1))
-            self.assertTrue(await pipe.close())
-        self.assertEqual(pipe.failures, 0)
-        self.assertIsNone(pipe.error)

@@ -9,6 +9,11 @@ upserts and shared depth; v2 boards derive transient calculations from those
 rows. The [storage guide](current-row-storage.md) and
 [current-read contract](comparison-board-api-contract.md) describe this path.
 
+Ordinary launch explicitly selects current SQL boards and their all-games paging.
+The retired `--game` option and observation-archive directory constructor option
+are rejected. `enabled=false` permits current SQL inspection without acquisition.
+Explicit injected/research factories retain their own ephemeral state transport.
+
 ## Source configuration
 
 Copy [the sample](../config/current.example.json) to

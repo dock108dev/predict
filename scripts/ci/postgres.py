@@ -19,7 +19,7 @@ def main():
     )
     output = Path("test-results/postgres").resolve()
     output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="predict-pg-") as directory:
+    with tempfile.TemporaryDirectory(prefix="predict-pg-", dir="/tmp") as directory:
         root = Path(directory)
         socket = root / ".local/pgsocket"
         socket.mkdir(parents=True)
@@ -74,7 +74,7 @@ def main():
             )
             # The application connects only to its checkout-specific socket. Redirect
             # that root inside this test process, never alter application configuration.
-            code = 'from pathlib import Path; import app.storage.store as s; s.ROOT=Path(__import__("sys").argv[1]); import pytest; raise SystemExit(pytest.main(["-q", "integration_tests", "--junitxml="+__import__("sys").argv[2]]))'
+            code = 'from pathlib import Path; import app.storage.store as s; s.ROOT=Path(__import__("sys").argv[1]); import pytest; raise SystemExit(pytest.main(["-q", "integration_tests", "tests/test_d03_current_rows.py", "tests/test_current_row_financial_roundtrip.py", "tests/test_current_row_occurrence_roundtrip.py", "--junitxml="+__import__("sys").argv[2]]))'
             environment = os.environ.copy()
             environment["PREDICT_CI_ISOLATED_ROOT"] = str(
                 Path(__file__).resolve().parents[2]

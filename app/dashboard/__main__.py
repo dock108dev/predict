@@ -1,4 +1,4 @@
-"""Run the local dashboard through its authoritative entry point."""
+"""Run the ordinary current-row SQL dashboard through its authoritative entry point."""
 from app.dashboard.opportunity_board import main
 
 

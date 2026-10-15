@@ -52,8 +52,10 @@ node tests/test_comparison_usability.cjs
 | Current v2 contracts, financial adapters, Details and Stop/read bounds | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
 | Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, fee, cashflow and metric tests |
 | Occurrence matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, event-link and domain tests |
-| Legacy/research journal admission; no ordinary-history requirement | `test_current_journal_segments.py`, `test_current_retained.py`, `test_ev09_ingress_isolation.py` |
-| Native HTTP framing | `test_native_http_reader.py` |
+| Ordinary admitted-only SQL boundary and expiry/Stop ownership | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
+| Explicit retained journal/import contracts; no ordinary-history requirement | `test_current_journal_segments.py`, `test_ingress_catchup_budget.py` |
+| Native HTTP framing, admission and retry budgets | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
+| Dashboard request validation, safe errors and retired routes | `test_security_hardening.py::BrowserHardening`, `test_current_route_retirement.py` |
 | CI support and report failures | `test_ci_reporting.py` |
 
 Python test filenames above are under `tests/`. Run resource-sensitive modules in
@@ -61,8 +63,10 @@ fresh processes: combining them can exceed process caps that each module tests.
 Use authored fixtures and disposable state, not credentials or ordinary storage.
 The SQL tests in the table need a disposable socket-only database and a redirected
 `app.storage.store.ROOT`; do not invoke them directly against ordinary storage.
-`scripts/ci/postgres.py` supplies that isolation for `integration_tests`. Its
-current command does not select the separate current-row roundtrip modules.
+`scripts/ci/postgres.py` supplies that isolation for `integration_tests` and the
+registered current-row, financial and occurrence SQL modules. Those SQL-only
+modules are excluded from the portable runner. The harness uses a short temporary
+path to respect Unix socket path limits.
 `sh scripts/check-ci` selects the portable manifest and writes ignored reports
 under `test-results/ci`. [CI](CI.md) describes SQL, browser and scheduled checks.
 
@@ -124,19 +128,34 @@ with extraction or justification above 1,000; JavaScript uses 300/600, UI presen
 250/500, CSS 300/600, markup 250/500 and shell 100/200. Generated files, immutable
 schemas and applied migrations are not mechanically split.
 
-The comparison controller keeps one selection/cancellation mutation boundary; splitting
-it among mutable owners would make publication races harder to reason about.
-The view presenter shares one participant/callback context; responsive CSS keeps
-cross-view breakpoints and final overrides together. Discovery, native lifecycle
-and quota owners also keep ordering, budgets and cleanup in cohesive state
-machines. Transport and stream mechanics already have separate modules. Wire
-validators stay beside the types they admit. Revisit these choices when a module
-grows or gains a responsibility.
+The comparison controller keeps one selection/cancellation/publication boundary;
+its calculation-settings disclosure shares that owner. Independent presenters
+remain separate. The view presenter shares one participant/callback context;
+responsive CSS keeps cross-view breakpoints and final overrides in cascade order.
+Use the physical-line thresholds above, rather than compressing source, when
+reviewing these retained boundaries.
+
+`continuous_rest.py` owns sequential HTTP admission, pacing and retries. The public
+`continuous.REST` binding supplies the collector clock, just as `continuous.Venue`
+binds stream dependencies. Discovery and finite-session resource/finalization
+ordering remain in `continuous.py`. `request_guard.py` owns request validation,
+ordinary SQL route retirement and safe HTTP errors; `multi_game_server.py` composes
+routes/sessions and explicitly supplies its diagnostic logger. These helpers do
+not import their composers or share mutable globals with them.
+
+Native lifecycle and quota owners retain acquisition/Stop and charge/hold ordering.
+Typed financial validators remain beside the models they admit; cleanup does not
+change their rules or applied migrations. Revisit boundaries after material growth
+or a new responsibility.
 
 Keep credentials, local state, reports and coding notes out of Git. Required
 fixtures live in `tests/fixtures` and `app/fixtures`; schema examples live in
 `docs/contracts`. Sealed executors depend on exact inputs under
 `scripts/v1_coverage_package` and `scripts/v1_counterpart_package`; preserve them.
-The retained fee PDF is a test input, not disposable output. Run
+The retained fee PDF is a test input, not disposable output. A narrow historical
+proposal exception in `.gitignore` serves `reference/odds_acquire.py`; that separate
+tool requires its exact local proposal and is deferred from portable CI. The public
+exporter excludes `evidence/`. Do not reconstruct or substitute an acquisition
+proposal to make a historical test pass. Run
 `git diff --check` after edits. Public docs must stand on repository-owned paths
 and must not depend on local reports, plans or personal trackers.

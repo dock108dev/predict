@@ -33,6 +33,19 @@ clicked context revision. There is no persistent calculation cache. The
 [storage guide](current-row-storage.md) describes tables, ordering, expiry and
 retired paths.
 
+`AggregateScheduler.admit_response` sends admitted `current_aggregate_records`
+through that SQL sink. Shared strict frame parsing and independent venue/reference
+admission belong to `current_aggregate_admission.py`. Raw responses, legacy batch
+wrappers and unknown observation types fail at the ordinary SQL boundary rather
+than being normalized again. Explicit injected `LatestStateSink` fixtures retain
+their separate raw-response adapter.
+
+The ordinary CLI explicitly selects `CurrentService(database_mode=True)` and
+current SQL boards. It does not accept a historical `--game` selector or an
+observation-archive directory. `DatabasePipeline` owns startup, expiry and Stop;
+it has no journal catch-up, diagnostic bootstrap or saved-calculation request queue.
+Board/slate reads call the transient financial owners directly.
+
 ## HTTP surfaces
 
 | Surface | Responsibility |
@@ -41,9 +54,9 @@ retired paths.
 | `/api/boards/{view}` | Current facts, transient calculations, revision-bound Details and typed Original |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
 | `/admin`, `/api/admin/status`, `/api/admin/current` | Sources, quota, storage, pause, Stop and guarded recovery |
-| `/api/current`, `/api/current/changes`, `/api/current/updates` | Validated current-state compatibility interface and bounded revision notices |
-| `/api/comparison`, `/api/arbs`, `/api/current/details` | Current-state calculations and exact selected evidence |
-| `/api/selections/{token}` and related POST routes | Temporary immutable inspection and explicit manual What-if |
+| `/api/current` and its subroutes | HTTP 410 in ordinary SQL mode; validated state and bounded notices in explicitly injected mode |
+| `/api/comparison`, `/api/arbs`, `/api/coverage`, `/current/coverage` | HTTP 410 in ordinary SQL mode; explicitly injected inspection only |
+| `/api/selections` and its subroutes | HTTP 410 in ordinary SQL mode; injected inspection and manual What-if only |
 | `/admin/retained`, `/game`, `/coverage` | Finite-session and retained capture interfaces |
 
 The [board contract](comparison-board-api-contract.md) defines current v2 reads;
@@ -103,8 +116,8 @@ Paths are relative to `app/`.
 | Configuration and lifecycle | `collection/current_policy.py`, `current_service.py`, `local_ownership.py`, `current_native.py` |
 | Aggregate schedule and accounting | `collection/current_aggregate_policy.py`, `current_schedule.py`, `current_quota.py`, `current_conservative.py` |
 | Credentials and recovery | `collection/credential_handoff.py`, `current_account_recovery.py`, `venue_access.py` |
-| Native HTTP transport | `collection/native_http_transport.py`; producers retain admission and request budgets |
-| Direct current ingress and guards | `collection/current_database.py`, `current_storage_policy.py` |
+| Native HTTP transport | `collection/native_http_transport.py`; `continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
+| Direct admitted-only current ingress and guards | `collection/current_database.py`, `current_storage_policy.py` |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
 | Current reads and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `comparison_slate.py` |
 | Occurrence and native adaptation | `comparison/occurrence_matching.py`, `event_links.py`, `combined_inputs.py`, `combined_native.py`, `domain.py`, `source_inputs.py` |
@@ -113,7 +126,7 @@ Paths are relative to `app/`.
 | Financial assembly | `comparison/current_metrics.py`, `estimated_ev.py`, `estimated_pair.py`, `requested_sizing.py`, `estimated_consumer.py`, `financial_metrics.py` |
 | Shared input graphs | `comparison/shared_templates.py`, `current_dependencies.py`, `projection_batches.py`, `current_details.py` |
 | Current-state compatibility | `dashboard/current_state.py`, `current_contract.py`, `current_incremental.py` |
-| Browser boundary and presentation | `dashboard/local_security.py`; authored saved-board modules under `dashboard/opportunity_static/current/` |
+| Browser boundary and presentation | `dashboard/local_security.py`, `request_guard.py`; authored current-board modules under `dashboard/opportunity_static/current/` |
 | Retained lifecycle and projection | `dashboard/coverage_owner.py`, `session_projection.py`, `session_history.py`, `collection/continuous.py`, `continuous_streams.py` |
 | Shared domain mathematics | `fees/`, `settlement.py`, `normalization/`, `depth.py`, `opportunities/percentages.py` |
 

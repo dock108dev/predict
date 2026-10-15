@@ -17,14 +17,13 @@ from app.dashboard.current_contract import packed
 class CurrentService:
     allow_synthetic = False
 
-    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, observation_directory=None, database_games=None):
+    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, database_mode=False):
         self.config = load() if config is None else validate(config)
         from app.comparison.coverage import CoverageLedger
         self.coverage = CoverageLedger({v: self.config['sports'] if v in ('kalshi','polymarket_us') else
             aggregate_scope(self.config) if self.config['aggregate_enabled'] else []
             for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}, self.config['families'])
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
-        self.journal=None  # Ordinary ingress never creates or reopens sports journals.
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
         self.evidence = evidence
@@ -36,9 +35,8 @@ class CurrentService:
             from .current_quota import QuotaLedger
             self.retained_quota = QuotaLedger(Path(retained_directory).parent)
         self.database = None
-        if database_games is not None and (not isinstance(database_games,list) or not 1<=len(database_games)<=4 or any(not isinstance(k,str) or len(k)>256 or k.split(':',1)[0] not in ('the_odds_api','kalshi','polymarket_us') for k in database_games)):raise ValueError('Bounded source-local game selection required')
-        self.database_games = database_games
-        self.bootstrap_task = None
+        if type(database_mode) is not bool:raise ValueError('Explicit current database mode required')
+        self.database_mode = database_mode
         self.runtime_id = str(uuid4())
         self.store = self.sink = None
         self.workers = {}
@@ -77,10 +75,10 @@ class CurrentService:
         if self.started: return
         self.started = True
         self.store = store
-        if self.database_games is not None:
+        if self.database_mode:
             from .current_database import DatabasePipeline, DatabaseIngressSink
-            self.sink = DatabaseIngressSink(store,self.initial_state(),self.config)
-            self.database = DatabasePipeline(self,self.database_games)
+            self.sink = DatabaseIngressSink(store,self.config)
+            self.database = DatabasePipeline(self)
             await self.database.start()
         else:
             self.sink = LatestStateSink(store, self.initial_state(), self.config)
@@ -133,10 +131,6 @@ class CurrentService:
     def observation(self, venue, kind, value):
         if self.evidence:
             self.evidence(dict(source=venue, kind=kind, at=utc(), value=value))
-
-    def retain(self, venue, kind, value):
-        # Current ingress owns direct normalized SQL writes. No alternate archive.
-        return
 
     def issue(self, venue, category, code):
         from .current_admin import issue
@@ -223,7 +217,6 @@ class CurrentService:
             annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2')
         generation=(self.sink.reducer.generation or 0)+1
         prior_books=set(self.sink.reducer.books)
-        self.retain(venue,'catalog',dict(inventory=cats[venue],generation=generation))
         self.sink.commit(self.row('coverage_inventory',venue,inventory=cats,generation=generation,
                                  previous_generation=self.sink.reducer.generation),self.states)
         affected={key[0] for key in prior_books-set(self.sink.reducer.books)}
@@ -246,7 +239,6 @@ class CurrentService:
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
         try:
             observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
-            self.retain(venue,'admitted_books',dict(observations=observations))
             self.sink.commit(self.row('prediction_books',venue,observations=observations),states)
             self.states=states
         except Exception as exc:
@@ -333,7 +325,6 @@ class CurrentService:
             if self.store:await self.store.revoke_source_publication()
             current=asyncio.current_task()
             tasks=[t for t in self.tasks.values() if t is not current]
-            if self.bootstrap_task and self.bootstrap_task is not current:tasks.append(self.bootstrap_task)
             if self.watchdog and self.watchdog is not current:tasks.append(self.watchdog)
             for task in tasks:task.cancel()
             done,pending=await asyncio.wait(tasks,timeout=self.config['cleanup_seconds']) if tasks else (set(),set())
@@ -361,7 +352,7 @@ class CurrentService:
             ownership_held=self.ownership.file is not None,cleanup_complete=self.cleanup_complete,
             cleanup_errors=list(self.cleanup_errors),config=self.config,source_status=self.states,
             metrics={v:deepcopy(w.metrics) for v,w in self.workers.items()},peak_rss_bytes=self.peak_rss,
-            observation_retention=self.journal.snapshot() if self.journal else None,
+            observation_retention=None,
             sink=None if self.sink is None else dict(sequence=self.sink.sequence,**self.sink.metrics),
             exclusions=[] if self.sink is None else self.sink.exclusions,issues=deepcopy(self.issues),
             odds_api_requests=self.workers['the_odds_api'].metrics['requests'] if 'the_odds_api' in self.workers else 0,

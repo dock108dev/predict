@@ -77,7 +77,13 @@ const copy = value => JSON.parse(JSON.stringify(value));
     assert.equal(content.querySelector('.same-venue-history').querySelectorAll('button').length,62);
     const value=read('final-ev.json');renderer.draw(value,{view:'ev',filter:'all'});
     assert.equal(content.querySelectorAll('.slate-ev').length,value.boards.reduce((n,b)=>n+b.rows.length,0));
-    console.log('PASS authentic retained replay: six exact Long/Short originals, 80 cross-venue + 62 advanced pairs, every EV instrument retained; immutable inputs');
+    renderer.draw(slate('ev'),{view:'ev',filter:'all'});
+  const ordinary=content.querySelectorAll('.slate-result-note').find(n=>n.textContent==='No positive value after costs and buffer');
+  assert(ordinary,'ordinary non-positive result uses reader-facing copy');
+  assert.equal(ordinary.dataset.caution,'false','routine negative is not a material warning');
+  renderer.draw(slate('odds'),{view:'odds',filter:'all'});
+  assert.equal(content.querySelectorAll('.native-meaning').length,1,'shared native limitation appears once');
+  console.log('PASS authentic retained replay: six exact Long/Short originals, 80 cross-venue + 62 advanced pairs, every EV instrument retained; immutable inputs');
   }
   console.log('PASS independent odds vectors, execution venue scope/counts in all filters, same-provider venues, grouped distinct instruments, exact callbacks, compact risk and missing/empty states');
 })().catch(error=>{console.error(error);process.exitCode=1;});

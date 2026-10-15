@@ -2,58 +2,36 @@
 import asyncio
 from copy import deepcopy
 from pathlib import Path
-from time import monotonic
 from app.storage.current_games import utc
 from app.storage.store import connect,Store
 from .current_storage_policy import SQL_BYTE_CAP,sql_usage,require_disk_space
 
 
-def catch_up_segments(store,journal,records=8, *, deadline=None):
-    """One shared record budget over stable per-path SQL checkpoints."""
-    paths=journal.paths() if hasattr(journal,'paths') else (journal.path,)
-    keys=set();count=0;backlog=0
-    for path in paths:
-        if count<records and (deadline is None or monotonic()<deadline):
-            options={} if deadline is None else dict(deadline=deadline)
-            changed,n=store.catch_up(path,records=records-count,**options)
-            keys.update(changed);count+=n
-        cursor=store.db.execute('SELECT byte_offset FROM current_import_cursor WHERE path=%s',(str(path.resolve()),)).fetchone()
-        size=path.stat().st_size if path.exists() else 0
-        offset=cursor['byte_offset'] if cursor else 0
-        if offset>size:raise ValueError('journal_truncated')
-        backlog+=size-offset
-    return keys,count,backlog
-
 
 class DatabaseIngressSink:
     """Direct synchronous SQL publication; no durable feed or retry queue."""
     acknowledgment='saved-current-row-transaction'
-    def __init__(self,store,raw,config):
+    def __init__(self,store,config):
         from app.dashboard.session_projection import SessionProjection
         self.reducer=SessionProjection();self.store=store;self.config=config
         self.sequence=0;self.metrics=dict(admitted_observations=0,rejected_observations=0)
-        self.exclusions=[];self.revisions={};self.error=None
+        self.exclusions=[];self.error=None
 
     def commit(self,row,states):
         from app.storage.current_rows import CurrentRowStore
         from app.dashboard.current_contract import snapshot_inputs,packed
         from copy import deepcopy
-        candidate=deepcopy(self.reducer);records=[];scopes=[];withdraw=set()
         now=utc()
         try:
-            metadata={k:v for k,v in row.items() if k!='body'}
-            if len(packed(metadata))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
+            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health'):
+                raise ValueError('current_ingress_type_unsupported: use admitted current records or native observations')
+            if 'body' in row or 'batches' in row:
+                raise ValueError('current_ingress_raw_payload_unsupported: use admitted current records')
+            if len(packed(row))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
+            candidate=deepcopy(self.reducer);records=[];scopes=[];withdraw=set()
             if row['type']=='current_aggregate_records':
                 records=row['records']
                 scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at']) for v in row['complete_venues']]
-            elif row['type'] in ('current_aggregate','current_aggregate_batches'):
-                # Explicit compatibility admission, never a startup disk import.
-                from .current_aggregate_admission import admit
-                for batch in row.get('batches',[row]):
-                    for venue in ('novig','prophetx','pinnacle'):
-                        try:accepted=admit(batch['body'],batch['sport'],batch['received_at'],venue=venue)
-                        except (ValueError,KeyError,TypeError):continue
-                        records.extend(accepted);scopes.append(dict(venue=venue,competition=batch['sport'],received_at=batch['received_at']))
             else:
                 observations=row['observations'] if row['type']=='prediction_books' else [row]
                 if row['type']=='coverage_inventory':
@@ -125,11 +103,10 @@ class DatabaseIngressSink:
 
 
 class DatabasePipeline:
-    """Lifecycle/status shim. Direct ingress and transient reads replace catch-up."""
-    MAX_PENDING=4
-    def __init__(self,service,selected):
-        self.service=service;self.selected=selected;self.closed=False;self.task=None;self.ingress_task=None
-        self.error=None;self.ingress_error=None;self.busy=False;self.ingress_busy=False;self.wake=asyncio.Event()
+    """Current-row startup, expiry and Stop; finance belongs to request reads."""
+    def __init__(self,service):
+        self.service=service;self.closed=False;self.task=None
+        self.error=None;self.wake=asyncio.Event()
     async def start(self):
         from app.storage.current_rows import CurrentRowStore
         from .current_policy import aggregate_scope
@@ -149,9 +126,7 @@ class DatabasePipeline:
         except Exception as exc:
             self.error=type(exc).__name__+': '+str(exc)[:160]
             raise
-    def request(self,key,policy):
-        if self.closed:raise ValueError('current_updates_stopped')
-    def tick(self,*,ingress=True,import_only=False):
+    def tick(self):
         # Deliberately no journal, diagnostic, cursor, snapshot or publication path.
         if not self.closed:
             from app.storage.current_rows import CurrentRowStore

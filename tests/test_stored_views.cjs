@@ -71,14 +71,24 @@ const asset = (name) =>
   assert(root.textContent.includes("One buffer on deployed amount"));
   assert(
     root.textContent.includes(
-      "Original contracts, profiles and exact saved evidence",
+      "Original contracts, profiles and current calculation evidence",
     ),
   );
-  assert.equal(nodes.history, root.children[root.children.length - 1]);
+  assert.equal(nodes.advanced, root.children[root.children.length - 1]);
   assert.equal(nodes.advanced.parentNode, root);
   renderSavedDetails(fixture.pair, { root, participants });
   assert(root.textContent.includes("Leg 2 quantity"));
   assert(root.textContent.includes("Modeled outcomes"));
+  assert(root.textContent.includes("Requested funding"));
+  assert(root.textContent.includes("Minimum across modeled outcomes · buffered"));
+  assert(root.querySelectorAll('.detail-outcomes').length===1);
+  const conditional=JSON.parse(JSON.stringify(fixture.single));
+  conditional.quote.calculations.funded_estimate.financial_metrics.buffered_ev_usd=null;
+  conditional.quote.calculations.funded_estimate.financial_metrics.conditional_buffered_ev_usd='12.34';
+  renderSavedDetails(conditional,{root,participants});
+  assert(root.textContent.includes("Conditional EV · buffered"));
+  assert(root.textContent.includes("$12.34"));
+  assert(root.textContent.includes("Complete modeled EV unavailable"));
   console.log(
     "PASS pure Odds/EV/Arbs/Details rendering, original/selected callbacks, funding, empty-state action and evidence slots",
   );

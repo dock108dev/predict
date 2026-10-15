@@ -4,8 +4,9 @@ import asyncio
 from datetime import datetime, timezone
 from app.diagnostics import failure
 from aiohttp import web
-from app.dashboard.local_security import HEADERS,check_browser,read_json,body_limit,IMPORT_BODY_LIMIT,PublicRequestError
-from app.dashboard.query_policy import validate_http_query,validate_assumptions,validate_unique_query
+from app.dashboard.local_security import HEADERS,read_json,IMPORT_BODY_LIMIT,PublicRequestError
+from app.dashboard.request_guard import dashboard_guard
+from app.dashboard.query_policy import validate_http_query,validate_assumptions
 from app.dashboard.opportunity_board import ROOT,load_sessions,present
 from app.dashboard.multi_game import OUTPUT,configuration,saved_rows,project_game,default_point,game_calculation,rank_filter
 from app.opportunities.board import SIDES,TEAMS,CANDIDATES
@@ -92,51 +93,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if snapshot is None:raise PublicRequestError('Older segmented cutoff available after Stop')
             return snapshot
         return session_history.load(d['folder'],cutoff)
-    from .current_state import SelectionError
-
-    @web.middleware
-    async def guard(request,handler):
-        try:
-            check_browser(request)
-            validate_unique_query(request.query)
-            limit=body_limit(request.path)
-            if request.method=='POST' and (request.content_length or 0)>limit:
-                raise web.HTTPRequestEntityTooLarge(max_size=limit,actual_size=request.content_length)
-            if request.path in ('/api/dashboard','/api/calculate','/api/sessions','/api/resolution'):
-                validate_http_query(request.query)
-            if getattr(current_provider,'database_games',None) is not None and (
-                request.path in ('/api/comparison','/api/arbs','/api/coverage','/current/coverage')
-                or request.path=='/api/current' or request.path.startswith('/api/current/')
-                or request.path=='/api/selections' or request.path.startswith('/api/selections/')):
-                # The ordinary installation has one SQL owner. Its old injected
-                # state transport must not silently show an empty/stale fallback.
-                r=web.json_response(dict(error='current_state_transport_retired',
-                    reason='Use current SQL comparison boards and their revision-bound Details.',
-                    current_api='/api/boards/slate',current_url='/',provider_requests=0),status=410)
-            else:r=await handler(request)
-        except web.HTTPException as exc:
-            r=web.json_response({'error':exc.reason},status=exc.status)
-            if exc.status == 408:r.force_close()
-            for header in ('Allow','Retry-After'):
-                if header in exc.headers:r.headers[header]=exc.headers[header]
-        except SelectionError as exc:
-            r=web.json_response(exc.body,status=exc.status,headers={'Retry-After':'1'} if exc.status==503 else None)
-        except PublicRequestError as exc:
-            r=web.json_response({'error':str(exc)},status=422)
-        except ValueError as exc:
-            failure(__name__, 'dashboard_input_or_data', exc)
-            r=web.json_response({'error':'Invalid input or unavailable local data; check inputs and the local log'},status=422)
-        except ArithmeticError as exc:
-            failure(__name__, 'dashboard_arithmetic', exc)
-            r=web.json_response({'error':'Calculation unavailable; check inputs and the local log'},status=422)
-        except (KeyError,StopIteration):
-            r=web.json_response({'error':'Unknown selection'},status=422)
-        except Exception as exc:
-            failure(__name__, 'dashboard_request', exc)
-            r=web.json_response({'error':'Local data unavailable'},status=503)
-        r.headers.update(HEADERS)
-        return r
-    app=web.Application(middlewares=[guard],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
+    app=web.Application(middlewares=[dashboard_guard(current_provider, logger=__name__)],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):
         from pathlib import Path
@@ -542,7 +499,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/api/updates',updates)
     from pathlib import Path
     static_root=Path(__file__).parent
-    database_mode=getattr(current_provider,'database_games',None) is not None
+    database_mode=getattr(current_provider,'database_mode',False)
     async def page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/index.html'))
     async def admin(req):return web.FileResponse(static_root/'opportunity_static/current/admin.html')
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
@@ -572,7 +529,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def comparison_data(req):
         from .current_response import CurrentResponse
         from .current_state import CURRENT_KEY
-        from .current_contract import stamp
         from app.comparison.metrics import snapshot_metrics
         allowed={'view','venue','league','market','basis','results','search','ceiling','buffer',
             'runtime_id','state_revision','request_generation'}

@@ -107,7 +107,7 @@ async def smoke():
     owner=SimpleNamespace(close=close, session=None)
     from app.dashboard.current_state import CurrentStateProvider
     provider=CurrentStateProvider()
-    provider.database_games=[]  # Serve ordinary SQL-mode assets without starting SQL or sources.
+    provider.database_mode = True  # Serve ordinary SQL-mode assets without starting SQL or sources.
     app=app_module.create_app(owner=owner, sessions={},current_provider=provider)
     runner=web.AppRunner(app)
     await runner.setup()

@@ -104,7 +104,7 @@ class CurrentRows(unittest.TestCase):
         from app.collection.current_aggregate_admission import admit
         import base64
         raw=unavailable();store=SimpleNamespace(_state=raw,commit=lambda value:setattr(store,'_state',value))
-        sink=DatabaseIngressSink(store,raw,DEFAULT);states=raw['source_status']
+        sink=DatabaseIngressSink(store,DEFAULT);states=raw['source_status']
         source='polymarket_us';cats={}
         cat=next(e['record']['value']['inventory'] for e in envelopes() if e['record']['kind']=='catalog' and e['record']['source']==source)
         cats[source]=cat
@@ -130,13 +130,36 @@ class CurrentRows(unittest.TestCase):
         self.assertEqual(sink.sequence,before);self.assertIn('authored-sql',sink.error)
         self.assertFalse(hasattr(sink,'pending'))
 
+    def test_scheduler_admitted_handoff_reaches_current_sql_without_raw_fallback(self):
+        import json
+        from app.collection.current_database import DatabaseIngressSink
+        from app.collection.current_policy import DEFAULT
+        from app.dashboard.current_state import unavailable
+        from tests.test_d03_aggregate_frame import ordinary_scheduler
+        from tests.test_current_aggregate import body
+        raw=unavailable();state=SimpleNamespace(_state=raw)
+        state.commit=lambda value:setattr(state,'_state',value)
+        sink=DatabaseIngressSink(state,DEFAULT)
+        scheduler,_,_=ordinary_scheduler();scheduler.service.sink=sink
+        payload=json.loads(body('NFL',books=('novig','prophetx','pinnacle')))
+        payload[0]['commence_time']=(datetime.now(timezone.utc)+timedelta(days=3)).isoformat()
+        received='2026-10-15T12:00:01Z'
+        with patch('app.collection.current_database.connect',lambda:connect(self.name)):
+            scheduler.admit_response(dict(body=json.dumps(payload).encode(),received_at=received),'NFL')
+        records=self.store.records()
+        self.assertEqual({r['quote']['venue'] for r in records},{'novig','prophetx','pinnacle'})
+        self.assertTrue(all(r['quote']['times']['received_at']==received for r in records))
+        self.assertTrue(all(r['quote']['times']['source_at']=='2026-10-03T00:00:00Z' for r in records))
+        self.assertEqual(sink.sequence,1)
+        self.assertEqual(self.counts()['current_envelope']+self.counts()['current_game_snapshot']+self.counts()['current_game_result'],0)
+
     def test_pipeline_restart_cannot_import_old_diagnostics_or_journal(self):
         from app.collection.current_database import DatabasePipeline
         from app.collection.current_policy import DEFAULT
         import asyncio
         def denied():raise AssertionError('retired archive path invoked')
         service=SimpleNamespace(config=DEFAULT,journal=SimpleNamespace(paths=denied),retained_directory=SimpleNamespace(glob=denied))
-        pipeline=DatabasePipeline(service,[])
+        pipeline=DatabasePipeline(service)
         with patch('app.collection.current_database.connect',lambda:connect(self.name)):
             asyncio.run(pipeline.start());pipeline.tick()
         self.assertEqual(self.counts()['current_envelope'],0)
@@ -170,7 +193,7 @@ class CurrentRows(unittest.TestCase):
         self.store.upsert_records(future_records());before=self.store.capture();counts=self.counts()
         service=SimpleNamespace(config=DEFAULT)
         async def reopen():
-            pipeline=DatabasePipeline(service,[])
+            pipeline=DatabasePipeline(service)
             await pipeline.start()
             epoch=self.store.capture()['epoch']
             self.assertTrue(await pipeline.close())
@@ -187,7 +210,7 @@ class CurrentRows(unittest.TestCase):
         from app.collection.current_database import DatabasePipeline
         from app.collection.current_policy import DEFAULT
         import asyncio
-        before=self.store.capture()['epoch'];pipeline=DatabasePipeline(SimpleNamespace(config=DEFAULT),[])
+        before=self.store.capture()['epoch'];pipeline=DatabasePipeline(SimpleNamespace(config=DEFAULT))
         with patch('app.collection.current_database.connect',side_effect=OSError('authored-start-sql-unavailable')):
             with self.assertRaisesRegex(OSError,'authored-start-sql'):asyncio.run(pipeline.start())
         self.assertIn('authored-start-sql',pipeline.error)

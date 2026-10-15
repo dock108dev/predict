@@ -230,129 +230,62 @@ summary {
   color:#245bcc
 }
 
-/* The ordinary slate keeps every game visible and reserves full evidence for Details. */
-.slate-summary {
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:6px 16px;
-  margin:0 0 12px;
-  font-size:.875rem;
-  color:var(--muted)
-}
+/* Current comparisons use shared columns and legible, directly actionable prices. */
+.slate-overview { display:flex; align-items:baseline; flex-wrap:wrap; justify-content:space-between; gap:4px 20px; margin:0 0 12px }
+.slate-summary { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; font-size:.875rem; color:var(--muted); margin:0 }
 .slate-summary strong { color:#23354c }
-.slate-game,.slate-result {
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:10px;
-  margin:0 0 12px;
-  padding:14px 16px
-}
-.slate-game-heading {
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:space-between;
-  gap:4px 16px;
-  margin-bottom:10px
-}
-.slate-game h2,.slate-result h2 { font-size:16px; margin:0 }
-.slate-game h2 { font-weight:650 }
-.slate-prices { display:grid }
-.slate-price-headings,.slate-price-row {
-  display:grid;
-  grid-template-columns:minmax(160px,1.2fr) repeat(4,minmax(90px,1fr)) minmax(155px,1.3fr);
-  align-items:start;
-  gap:10px
-}
-.slate-price-headings {
-  color:var(--muted);
-  font-size:.75rem;
-  border-bottom:1px solid var(--line);
-  padding:0 0 8px
-}
-.slate-price-row { padding:10px 0 }
-.slate-price-row+.slate-price-row { border-top:1px solid #e5eaf2 }
-.slate-price-row.team { border-top:0 }
-.slate-price-row.team+.slate-price-row.team { border-top:1px solid #e5eaf2 }
-.slate-team-name { font-size:.875rem; padding-top:7px }
-.slate-price-cell { min-width:0 }
-.slate-price-cell .slate-action {
-  font-size:17px;
-  font-variant-numeric:tabular-nums;
-  min-height:36px;
-  padding:3px 10px;
-  color:var(--blue);
-  border-color:#cfdaec;
-  background:#f8faff
-}
-.slate-price-cell small { font-size:.6875rem; line-height:1.35 }
-.slate-price-cell .tag { font-size:.6875rem; margin-top:2px }
-.slate-price-cell .tag+small { font-size:.6875rem }
-.mobile-price-label { display:none }
-.unavailable-price { display:block; font-size:18px; line-height:36px; color:#718096 }
-.slate-fair { background:#f1f5fe; padding:6px 8px; border-radius:6px }
-.slate-fair strong { font-size:15px; display:block }
-.slate-alternatives { margin-top:0 }
-.slate-alternatives summary,.slate-pending summary { min-height:36px; font-size:.8125rem; color:var(--blue) }
-.slate-alternative { display:flex; gap:4px 12px; align-items:baseline; flex-wrap:wrap; padding:5px 0; font-size:.8125rem }
-.slate-alternative button { min-height:36px; padding:4px 10px }
-.conditional-label { color:#815613 }
-.pending-label { color:#174d9b; font-size:.75rem; margin-bottom:4px }
-.slate-pending { padding:0 4px; font-size:.8125rem }
-.slate-coverage { display:flex; flex-wrap:wrap; gap:4px 12px; margin:-4px 0 12px; color:var(--muted); font-size:.75rem }
-.slate-coverage small { flex-basis:100%; font-size:.6875rem }
+.slate-coverage { display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--muted); font-size:.75rem; margin:0 }
+.slate-coverage small { font-size:inherit }
 .slate-coverage span { white-space:nowrap }
-
-.compact-odds .slate-game {
-  padding:8px 12px;
-  margin-bottom:6px;
-  border-radius:7px
-}
-.compact-odds .slate-game-heading { margin-bottom:2px; align-items:baseline }
-.compact-odds .slate-game-heading h2 { font-size:13px; line-height:1.3 }
-.compact-odds .slate-game-heading small { font-size:.625rem }
-.slate-shared-headings { padding:0 12px 5px; margin-bottom:4px; border-bottom:0 }
-.compact-odds .slate-price-row { padding:3px 0; align-items:center }
-.compact-odds .slate-team-name { font-size:.8125rem; padding:0 }
-.compact-odds .slate-price-cell .slate-action { font-size:16px; min-height:28px; padding:1px 8px; line-height:1.3 }
-.compact-odds .compact-source-clock { font-size:.625rem; line-height:1.25; margin-top:1px }
-.compact-odds .slate-fair { background:none; padding:0; border-radius:0 }
-.compact-odds .slate-fair strong { font-size:15px; line-height:1.3 }
-.compact-odds .slate-fair small { font-size:.625rem; line-height:1.25 }
-.compact-odds .unavailable-price { font-size:16px; line-height:28px }
-.compact-odds .pending-label { font-size:.625rem; margin:1px 0 }
-.compact-odds .slate-alternatives summary { min-height:26px; padding:3px 0; font-size:.6875rem }
-.compact-odds .slate-summary { display:inline-flex; font-size:.75rem; margin:0 12px 7px 0 }
-.compact-odds .slate-coverage { display:inline-flex; gap:2px 10px; font-size:.6875rem; margin:0 0 7px; vertical-align:baseline }
-.compact-odds .slate-coverage small { flex-basis:auto; font-size:.6875rem }
-
-/* Compact saved comparisons share one game heading and one instrument label. */
-.slate-comparison-game { background:white; border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin:8px 0 14px; min-width:0 }
-.slate-comparison-game .slate-game-heading { border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:0 }
-.slate-instrument h3 { font-size:.875rem; margin:12px 0 3px }
-.instrument-reference { display:flex; flex-wrap:wrap; gap:3px 10px; align-items:baseline; font-size:.75rem; color:var(--muted); margin-bottom:4px }
-.instrument-reference strong { font-size:.8125rem; color:#1e293b }
-.slate-result { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto; gap:3px 18px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); min-width:0 }
-.slate-result:last-child { border-bottom:0 }
-.slate-result-identity { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; min-width:0; font-size:.875rem }
-.comparison-rank { color:var(--muted); font-variant-numeric:tabular-nums; font-size:.6875rem }
-.slate-result-values { display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; min-width:0 }
-.slate-result-values .metric strong { font-size:19px; letter-spacing:0 }
-.slate-result-values .metric small { font-size:.6875rem }
-.slate-result-values>small { grid-column:1/-1; font-size:.6875rem }
-.slate-result-note { grid-column:1/3; font-size:.75rem; color:#815613; overflow-wrap:anywhere }
-.slate-result>button { grid-column:3; grid-row:1/3; min-height:40px; padding:6px 12px; align-self:center }
-.slate-arb .slate-result-identity { display:grid; grid-template-columns:auto 1fr 1fr; gap:8px }
-.slate-leg { margin:0; min-width:0; font-size:.8125rem }
-.slate-leg strong,.slate-leg span { display:block; overflow-wrap:anywhere }
-.slate-leg span { color:var(--muted); font-size:.75rem; margin-top:3px }
-.reference-evidence summary,.same-venue-history summary { color:var(--blue); font-size:.75rem; min-height:32px; padding:7px 0 }
-.reference-evidence p,.same-venue-history p { font-size:.75rem; overflow-wrap:anywhere }
-.same-venue-history button { display:block; text-align:left; margin:6px 0; max-width:100%; overflow-wrap:anywhere }
-.native-meaning,.ranking-help { color:var(--muted); font-size:.6875rem; margin:4px 0 }
-.slate-fair>strong,.slate-fair>small { display:block!important; margin:1px 0!important; white-space:normal!important }
-.compact-odds .compact-source-clock { display:block; white-space:normal; font-size:.625rem }
+.slate-game { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin:0 0 12px; padding:12px 16px }
+.slate-game-heading { display:flex; align-items:baseline; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; margin-bottom:10px }
+.slate-game h2,.slate-comparison-game h2 { font-size:1rem; line-height:1.4; margin:0; font-weight:650; overflow-wrap:anywhere }
+.slate-game-heading small { font-size:.75rem }
+.slate-prices { display:grid }
+.slate-price-headings,.slate-price-row { display:grid; grid-template-columns:minmax(155px,1.15fr) repeat(4,minmax(105px,1fr)) minmax(155px,1.15fr); align-items:center; gap:12px }
+.slate-price-headings { color:var(--muted); font-size:.8125rem; padding:0 16px 8px }
+.slate-price-row { padding:8px 0 }
+.slate-price-row.team { border:0; border-radius:0; margin:0; box-shadow:none; background:transparent }
+.slate-price-row.team+.slate-price-row.team { border-top:1px solid #e3e9f2 }
+.slate-team-name { font-size:.9375rem; padding:0; line-height:1.4; overflow-wrap:anywhere }
 .slate-price-cell { min-width:0; overflow-wrap:anywhere }
-
-.compact-comparisons .slate-result { border:0; border-bottom:1px solid var(--line); border-radius:0; margin:0; background:transparent }
-.compact-comparisons .slate-result:last-child { border-bottom:0 }
+.slate-price-cell .slate-action { font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; min-height:44px; padding:6px 10px; color:#204fbb; border:1px solid #6f88b1; background:#f3f7ff; line-height:1.35; text-align:left }
+.slate-price-cell .slate-action:hover { border-color:#6e90cc; background:#e8f0ff }
+.compact-source-clock { font-size:.75rem; line-height:1.45; margin-top:4px }
+.mobile-price-label { display:none }
+.unavailable-price { display:block; font-size:18px; line-height:44px; color:#64748b }
+.slate-fair { padding-left:10px; border-left:1px solid #dbe3f1 }
+.slate-fair strong { display:block; font-size:1rem; line-height:1.4; color:#243852 }
+.slate-fair small { font-size:.75rem; line-height:1.4 }
+.slate-alternatives,.reference-evidence { display:inline-block; vertical-align:top; margin:4px 20px 0 0 }
+.slate-alternatives[open],.reference-evidence[open] { display:block; margin-right:0 }
+.slate-alternatives summary,.reference-evidence summary,.same-venue-history summary { color:#2458b6; font-size:.8125rem; min-height:44px; padding:10px 0 }
+.slate-alternatives button,.same-venue-history button { display:block; text-align:left; margin:6px 0; max-width:100%; overflow-wrap:anywhere; min-height:44px }
+.reference-evidence p,.same-venue-history p { font-size:.875rem; overflow-wrap:anywhere }
+.conditional-label { color:#815613 }
+.pending-label { color:#174d9b; font-size:.8125rem; margin-bottom:6px }
+.slate-pending { padding:0 4px; font-size:.875rem }
+.native-meaning,.ranking-help { color:var(--muted); font-size:.8125rem; margin:0 0 10px; line-height:1.45 }
+.slate-comparison-game { background:white; border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin:10px 0 16px; min-width:0 }
+.slate-comparison-game .slate-game-heading { border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:0 }
+.slate-instrument h3 { font-size:.9375rem; margin:16px 0 4px }
+.instrument-reference { display:flex; flex-wrap:wrap; gap:3px 10px; align-items:baseline; font-size:.8125rem; color:var(--muted); margin-bottom:4px }
+.instrument-reference small { font-size:inherit }
+.instrument-reference strong { font-size:.875rem; color:#1e293b }
+.slate-result { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) auto; gap:4px 20px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); min-width:0 }
+.slate-result:last-child { border-bottom:0 }
+.slate-result-identity { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; min-width:0; font-size:.9375rem }
+.comparison-rank { color:var(--muted); font-variant-numeric:tabular-nums; font-size:.75rem }
+.slate-result-values { display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; min-width:0 }
+.slate-result-values .metric strong { font-size:22px; letter-spacing:-.3px }
+.slate-result-values .metric small,.slate-result-values>small { font-size:.8125rem }
+.slate-result-values>small { grid-column:1/-1 }
+.slate-result-note { grid-column:1/3; font-size:.8125rem; color:#526278; overflow-wrap:anywhere }
+.slate-result-note[data-caution=true] { color:#815613 }
+.slate-result>button { grid-column:3; grid-row:1/3; min-height:44px; padding:8px 14px; align-self:center }
+.slate-arb .slate-result-identity { display:grid; grid-template-columns:auto 1fr 1fr; gap:8px }
+.slate-leg { margin:0; min-width:0; font-size:.875rem }
+.slate-leg strong,.slate-leg span { display:block; overflow-wrap:anywhere }
+.slate-leg span { color:var(--muted); font-size:.8125rem; margin-top:3px }
+.slate-result-values .metric { display:flex; flex-direction:column }
+.slate-result-values .metric>small { flex:1 }

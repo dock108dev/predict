@@ -53,6 +53,6 @@ function slate(view = 'odds') {
   renderer.draw(slate('arbs'),{view:'arbs',filter:'all'});assert.equal(content.querySelectorAll('.slate-result').length,28);assert(content.textContent.includes('Complete EV unknown'));assert(content.textContent.includes('Modeled minimum · buffered'));
   const pending=slate();pending.storage={state:'unavailable',error:'current_database_storage_cap'};pending.boards.forEach(b=>b.delivery_state='pending');renderer.draw(pending,{view:'odds',filter:'all'});
   assert(content.textContent.includes('Current updates paused'));assert(!content.textContent.includes('Calculation pending'));
-  let all=0;const empty=slate('arbs');empty.boards.forEach(b=>b.rows=[]);renderer.draw(empty,{view:'arbs',filter:'positive',onShowAll:()=>all++});content.querySelectorAll('button')[0].onclick();assert.equal(all,1);assert(content.textContent.includes('across all visible games'));
+  let all=0;const empty=slate('arbs');empty.boards.forEach(b=>b.rows=[]);renderer.draw(empty,{view:'arbs',filter:'positive',onShowAll:()=>all++});content.querySelectorAll('button')[0].onclick();assert.equal(all,1);assert(content.textContent.includes('See signed and conditional results in All comparisons.'));
   console.log('PASS slate exact settings/game/board guards, default all-game rendering, venue coverage, local filters, cross-game Details, global supplied-metric sort and paused/empty states');
 })().catch(error=>{console.error(error);process.exitCode=1;});

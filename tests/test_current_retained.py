@@ -1,4 +1,4 @@
-"""Ordinary retained startup: isolated replay, no credential or acquisition I/O."""
+"""No ordinary diagnostic bootstrap; explicit retained preparation stays separate."""
 import asyncio
 from copy import deepcopy
 import json
@@ -30,41 +30,25 @@ class OrdinaryRetained(unittest.IsolatedAsyncioTestCase):
         await self.store.close()
         self.temp.cleanup()
 
-    async def test_disabled_dispatch_restores_original_clocks_and_funded_history(self):
-        with patch('app.collection.current_aggregate.credential', side_effect=AssertionError('credential read')):
+    async def test_disabled_start_does_not_import_retired_diagnostics(self):
+        with patch('app.collection.current_aggregate.credential',side_effect=AssertionError('credential read')), \
+             patch('app.collection.current_retained.prepare',side_effect=AssertionError('startup diagnostic import')):
             await self.service.start(self.store)
-            self.assertEqual(self.store._input_epoch, 0)
-            await asyncio.wait_for(self.service.bootstrap_task, 10)
+            await self.service.close()
+        self.assertFalse(self.store._state['events'])
         self.assertFalse(self.service.dispatch)
         self.assertFalse(self.service.workers)
-        self.assertIsNone(self.service.ownership.file)
+        self.assertFalse(hasattr(self.service,'bootstrap_task'))
         self.assertFalse(list((self.root/'service').glob('attempt-*.json')))
-        quotes = [x['quote'] for x in self.store.index(self.store._state).values()]
-        self.assertTrue(quotes)
-        self.assertTrue(all(q['times']['received_at']==self.at for q in quotes))
-        self.assertTrue(all(q['times']['source_at']=='2026-10-03T00:00:00Z' for q in quotes))
-        self.assertTrue(all(q['stale'] for q in quotes))
-        self.assertEqual(self.store._state['estimate_policy']['capital_ceiling_usd'], '1000')
-        await self.service.close()
-        self.assertEqual(self.store.admission.page()['status'], 'stopped')
-        self.assertEqual(self.store.admission.page()['rows'], [])
         self.assertTrue(self.service.cleanup_complete)
 
-    async def test_stop_before_bootstrap_complete_never_republishes(self):
-        await self.service.start(self.store)
-        await self.service.close()
-        await asyncio.sleep(0)
-        self.assertTrue(self.service.bootstrap_task.done())
-        self.assertEqual(self.store.admission.page()['rows'], [])
-        self.assertEqual(self.store._input_epoch, 0)
-
-    async def test_bad_other_sport_keeps_independent_valid_records(self):
+    async def test_explicit_retained_prepare_is_separate_and_sport_isolated(self):
         from app.collection.current_retained import prepare
+        from app.dashboard.current_state import unavailable
         (self.root/'MLB.json').write_text('{bad json')
-        config = dict(DEFAULT, enabled=False, aggregate_sports=['NFL','MLB'])
-        raw, _, refused = prepare(self.service._retained_sink.envelope, config, self.root)
-        self.assertTrue(raw['events'])
-        self.assertEqual(refused, ['MLB'])
+        config=dict(DEFAULT,enabled=False,aggregate_sports=['NFL','MLB'])
+        raw,_,refused=prepare(unavailable(),config,self.root)
+        self.assertTrue(raw['events']);self.assertEqual(refused,['MLB'])
 
 
 class SynchronousConstruction(unittest.TestCase):
@@ -78,7 +62,7 @@ class SynchronousConstruction(unittest.TestCase):
             self.assertIsNone(store.admission.latest)
             async def check():
                 await service.start(store)
-                await service.bootstrap_task
+                self.assertFalse(hasattr(service,'bootstrap_task'))
                 await store.close()
             asyncio.run(check())
 

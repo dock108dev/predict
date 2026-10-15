@@ -1,15 +1,17 @@
 """Shared finite reader in ordinary collection; only numeric loopback traffic."""
-import asyncio
 import base64
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from email.utils import format_datetime
 from hashlib import sha256
 import json
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+
+import httpx
 
 from aiohttp import web
 from aiohttp.test_utils import TestServer
@@ -112,6 +114,26 @@ class Policy(unittest.TestCase):
 
 
 class HTTP(unittest.IsolatedAsyncioTestCase):
+    async def test_http_date_retry_uses_public_collector_clock(self):
+        clock = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
+        limits = configuration()['prediction']
+        client = REST('http://127.0.0.1:1', limits, lambda row: None, 5,
+                      PredictionBudget(limits))
+        responses = [httpx.Response(429, headers={
+            'Retry-After': format_datetime(clock + timedelta(seconds=3), usegmt=True)
+        }), httpx.Response(200)]
+        try:
+            with patch('app.collection.prediction_producer.MockREST.get',
+                       new_callable=AsyncMock, side_effect=responses) as transport, \
+                 patch('app.collection.continuous.now', return_value=clock), \
+                 patch.object(client, 'bounded_wait', new_callable=AsyncMock) as wait:
+                response = await client.get('http://127.0.0.1:1/events')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(transport.await_count, 2)
+            wait.assert_awaited_once_with(3.0)
+        finally:
+            await client.aclose()
+
     async def test_ordinary_discovery_status_recovery_keeps_precise_receipts(self):
         calls=[];rows=[];stops=[];value=configuration();client=None
         async def deliver(writer):

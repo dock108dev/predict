@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
@@ -19,16 +18,6 @@ from tests.test_current_state import owner
 AT = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
 
 
-class FrozenTime(datetime):
-    @classmethod
-    def now(cls, tz=None):
-        return AT
-
-
-def game(key, start="2026-10-16T00:15:00+00:00"):
-    return dict(game_key=key, start_at=start, title=key, participants=[])
-
-
 def body():
     return dict(
         version=slate.VERSION,
@@ -41,191 +30,51 @@ def body():
         stopped=False,
         as_of=AT.isoformat(),
         provider_requests=0,
-        bounds=dict(maximum_games=200, maximum_bytes=slate.MAX_BYTES),
+        bounds=dict(maximum_games=500, maximum_page_games=50, maximum_bytes=slate.MAX_BYTES),
     )
 
 
 class Database:
-    MAX_PENDING = 2
-
-    def __init__(self):
-        self.closed = False
-        self.pending = {}
-        self.calls = []
-        self.info = dict(state="available", error=None, backlog_bytes=0)
-
-    def status(self):
-        return deepcopy(self.info)
-
-    def request(self, key, policy):
-        if self.closed:
-            raise AssertionError("Closed local queue must not receive work")
-        if len(self.pending) >= self.MAX_PENDING:
-            raise ValueError("saved_calculation_queue_capacity")
-        self.calls.append((key, policy))
-        self.pending[key, policy.revision] = policy
+    def __init__(self):self.info=dict(state='available',error=None)
+    def status(self):return deepcopy(self.info)
 
 
 class SlateRead(TestCase):
-    def harness(self, games, values=None, failed=()):
-        context = SimpleNamespace(
-            engine="current-engine", catalog=lambda: dict(games=games)
-        )
-        values = values or {}
-        store = object()
-        bundles = [dict(game_key=g["game_key"]) for g in games]
-        captured = []
+    def read(self,**options):
+        from contextlib import nullcontext
+        from tests.test_current_board_reads import context
+        c=context();db=MagicMock();db.transaction.return_value=nullcontext()
+        with patch.object(slate,'ReadContext',return_value=c):
+            return slate.read(db,DEFAULT_POLICY,view='odds',filter='all',stopped=False,**options)
 
-        def selected(actual_store, bundle, policy, *, context):
-            self.assertIs(actual_store, store)
-            if bundle["game_key"] in failed:
-                raise ValueError("private input details are not public errors")
-            return bundle
+    def test_current_rows_produce_v2_page_without_saved_queue(self):
+        output,pending=self.read()
+        self.assertEqual(output['version'],'predict-comparison-slate-2')
+        self.assertEqual(output['bounds']['maximum_games'],500)
+        self.assertEqual(output['bounds']['maximum_page_games'],50)
+        self.assertTrue(output['boards'])
+        self.assertTrue(output['coverage']['complete'])
+        self.assertEqual(output['provider_requests'],0)
+        self.assertEqual(pending,[])
 
-        def restored(actual_store, key, policy, *, context):
-            self.assertIs(actual_store, store)
-            return deepcopy(values.get(key))
+    def test_changed_cross_page_revision_fails_explicitly(self):
+        with self.assertRaisesRegex(ValueError,'current_slate_changed'):
+            self.read(expected_revision='retired-page-revision')
 
-        def response(bundle, value, policy, **settings):
-            captured.append((bundle, value, settings))
-            return dict(
-                game_key=bundle["game_key"],
-                saved=value,
-                original_source_at="2026-10-13T12:00:00+00:00",
-            )
+    def test_page_capacity_is_checked_before_inputs(self):
+        for options in ({'offset':500},{'offset':-1},{'limit':51},{'limit':0}):
+            with self.subTest(options=options),self.assertRaisesRegex(ValueError,'slate_page_capacity'):
+                self.read(**options)
 
-        patches = [
-            patch.object(slate, "datetime", FrozenTime),
-            patch.object(slate, "GameStore", return_value=store),
-            patch.object(slate, "ReadContext", return_value=context),
-            patch.object(slate, "discover", side_effect=lambda actual_store,**kwargs:[b for b in bundles if b['game_key']==kwargs['game']]),
-            patch.object(slate, "view_bundle", side_effect=selected),
-            patch.object(slate, "saved", side_effect=restored),
-            patch.object(slate, "response", side_effect=response),
-        ]
-        mocks = [p.start() for p in patches]
-        for p in patches:
-            self.addCleanup(p.stop)
-        return context, captured, mocks
-
-    def test_all_upcoming_ordered_with_one_shared_read_context(self):
-        games = [
-            game("later", "2026-10-18T00:00:00+00:00"),
-            game("old", "2026-10-13T00:00:00+00:00"),
-            game("first"),
-        ]
-        context, _, mocks = self.harness(games)
-        output, pending = slate.read(
-            object(), DEFAULT_POLICY, view="odds", filter="all", stopped=False
-        )
-        self.assertEqual([g["game_key"] for g in output["games"]], ["first", "later"])
-        self.assertEqual([b["game_key"] for b in output["boards"]], ["first", "later"])
-        self.assertEqual(pending, ["first", "later"])
-        self.assertEqual(output["as_of"], AT.isoformat())
-        self.assertEqual(output["provider_requests"], 0)
-        self.assertEqual(
-            output["bounds"], dict(maximum_games=200, maximum_bytes=8388608)
-        )
-        self.assertEqual(mocks[2].call_count, 1)
-        for mock in mocks[3:6]:
-            for call in mock.call_args_list:
-                self.assertIs(call.kwargs["context"], context)
-        self.assertEqual([call.kwargs['game'] for call in mocks[3].call_args_list],['first','later'])
-        self.assertTrue(all(call.kwargs['cache'] is False for call in mocks[3].call_args_list))
-        self.assertTrue(
-            all(b["original_source_at"] != output["as_of"] for b in output["boards"])
-        )
-
-    def test_engine_changes_withdraw_authority_without_mutating_saved_inputs(self):
-        values = dict(
-            old=dict(engine_binding="predecessor", superseded=False),
-            current=dict(engine_binding="current-engine", superseded=False),
-            pending=dict(engine_binding="current-engine", superseded=True),
-        )
-        original = deepcopy(values)
-        _, captured, _ = self.harness([game(k) for k in values], values)
-        _, pending = slate.read(
-            object(), DEFAULT_POLICY, view="arbs", filter="positive", stopped=False
-        )
-        flags = {b["game_key"]: v["engine_binding_changed"] for b, v, _ in captured}
-        self.assertEqual(flags, dict(old=True, current=False, pending=False))
-        self.assertEqual(pending, ["pending"])
-        self.assertEqual(values, original)
-
-    def test_one_bad_game_preserves_healthy_independent_boards(self):
-        self.harness([game("healthy"), game("failed")], failed={"failed"})
-        output, pending = slate.read(
-            object(), DEFAULT_POLICY, view="ev", filter="all", stopped=True
-        )
-        self.assertEqual([b["game_key"] for b in output["boards"]], ["healthy"])
-        self.assertEqual(
-            output["errors"],
-            [dict(game_key="failed", reason="game_inputs_unavailable")],
-        )
-        self.assertEqual(pending, ["healthy"])
-        self.assertTrue(output["stopped"])
-
-    def test_unknown_kickoff_is_retained_without_inventing_a_date(self):
-        for start in (None, "unknown", "2026-10-16T00:00:00"):
-            item = game("unknown", start)
-            self.assertTrue(slate.upcoming(item, AT))
-            self.assertEqual(item["start_at"], start)
-        self.assertFalse(slate.upcoming(game("at-kickoff", AT.isoformat()), AT))
-
-    def test_game_capacity_refuses_before_building_financial_boards(self):
-        _, _, mocks = self.harness([game(str(i)) for i in range(201)])
-        with self.assertRaisesRegex(ValueError, "slate_game_capacity"):
-            slate.read(
-                object(), DEFAULT_POLICY, view="odds", filter="all", stopped=False
-            )
-        mocks[3].assert_not_called()
-        mocks[6].assert_not_called()
-
-    def test_total_serialized_capacity_is_explicit(self):
-        self.harness([game("bounded")])
-        with (
-            patch.object(slate, "encoded", return_value=b"x" * 10),
-            patch.object(slate, "MAX_BYTES", 9),
-        ):
-            with self.assertRaisesRegex(ValueError, "slate_response_byte_capacity"):
-                slate.read(
-                    object(), DEFAULT_POLICY, view="odds", filter="all", stopped=False
-                )
-        with (
-            patch.object(slate, "encoded", return_value=b"x" * 9),
-            patch.object(slate, "MAX_BYTES", 9),
-        ):
-            output, _ = slate.read(
-                object(), DEFAULT_POLICY, view="odds", filter="all", stopped=False
-            )
-            self.assertEqual(len(output["boards"]), 1)
-
-
-class SlateQueue(TestCase):
-    def test_duplicate_work_coalesces_and_existing_queue_capacity_wins(self):
-        database = Database()
-        database.pending["existing", DEFAULT_POLICY.revision] = DEFAULT_POLICY
-        slate.schedule(database, ["existing", "new", "over-capacity"], DEFAULT_POLICY)
-        self.assertEqual([key for key, _ in database.calls], ["new"])
-        self.assertEqual(len(database.pending), database.MAX_PENDING)
-
-    def test_closed_and_refused_local_queue_receive_no_more_work(self):
-        database = Database()
-        database.closed = True
-        slate.schedule(database, ["one"], DEFAULT_POLICY)
-        self.assertEqual(database.calls, [])
-        database.closed = False
-        with patch.object(
-            database, "request", side_effect=ValueError("capacity")
-        ) as request:
-            slate.schedule(database, ["one", "two"], DEFAULT_POLICY)
-            self.assertEqual(request.call_count, 1)
+    def test_current_serialized_capacity_is_explicit(self):
+        with patch.object(slate,'MAX_BYTES',1),self.assertRaisesRegex(ValueError,'slate_response_byte_capacity'):
+            self.read()
 
 
 class SlateLoopback(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.provider = InjectedTestProvider()
-        self.provider.database_games = []
+        self.provider.database_mode = True
         self.provider.closed = False
         self.provider.closing = False
         self.provider.dispatch = True
@@ -261,7 +110,7 @@ class SlateLoopback(IsolatedAsyncioTestCase):
         await self.client.start_server()
         self.addAsyncCleanup(self.client.close)
 
-    async def test_loopback_shape_settings_storage_and_local_scheduling(self):
+    async def test_loopback_shape_settings_storage_without_scheduling(self):
         self.provider.database.info = dict(
             state="unavailable", error="current_database_storage_cap", backlog_bytes=12
         )
@@ -269,27 +118,22 @@ class SlateLoopback(IsolatedAsyncioTestCase):
         response = await self.client.get(
             "/api/boards/slate?view=odds&filter=all&amount=500&buffer=0.01&benchmark_venue=novig"
         )
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status, 200)
         value = await response.json()
         self.assertEqual(value["storage"], self.provider.database.info)
         self.assertEqual(value["provider_requests"], 0)
         policy = self.read.call_args.args[1]
         self.assertEqual(str(policy.requested_amount_usd), "500")
         self.assertEqual(policy.benchmark_venue, "novig")
-        self.assertEqual(
-            [key for key, _ in self.provider.database.calls], ["first", "second"]
-        )
+        self.assertFalse(hasattr(self.provider.database,'request'))
         self.provider.acquire.assert_not_called()
-        self.db.execute.assert_called_once_with(
-            "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"
-        )
+        self.db.execute.assert_not_called()  # The slate reader owns its SQL transaction.
 
     async def test_invalid_crossed_or_duplicate_queries_refuse_before_sql(self):
         for query in (
             "view=invalid",
             "filter=invalid",
             "game=mandatory-selection",
-            "result_id=old",
             "view=odds&view=ev",
             "amount=NaN",
             "benchmark_venue=unknown",
@@ -313,9 +157,9 @@ class SlateLoopback(IsolatedAsyncioTestCase):
         self.provider.dispatch = False
         self.read.return_value = (body(), ["first"])
         response = await self.client.get("/api/boards/slate?view=arbs&filter=all")
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status, 200)
         self.assertTrue(self.read.call_args.kwargs["stopped"])
-        self.assertEqual(self.provider.database.calls, [])
+        self.assertFalse(hasattr(self.provider.database,'request'))
         self.provider.acquire.assert_not_called()
 
     async def test_failure_is_bounded_and_public_without_provider_fallback(self):
@@ -325,17 +169,17 @@ class SlateLoopback(IsolatedAsyncioTestCase):
         self.assertEqual(
             (await response.json())["reason"], "slate_response_byte_capacity"
         )
-        self.assertEqual(self.provider.database.calls, [])
+        self.assertFalse(hasattr(self.provider.database,'request'))
         self.provider.acquire.assert_not_called()
 
     async def test_final_cap_includes_appended_storage_metadata(self):
         self.provider.database.info = dict(state="available", error="large-status" * 40)
         limit = len(slate.encoded(body())) + 10
         self.assertLessEqual(len(slate.encoded(body())), limit)
-        with patch.object(slate, "MAX_BYTES", limit):
+        with patch("app.dashboard.comparison_board_api.MAX_BYTES", limit):
             response = await self.client.get("/api/boards/slate")
         self.assertEqual(response.status, 409)
         self.assertEqual(
-            (await response.json())["reason"], "slate_response_byte_capacity"
+            (await response.json())["reason"], "board_response_byte_capacity"
         )
-        self.assertEqual(self.provider.database.calls, [])
+        self.assertFalse(hasattr(self.provider.database,'request'))

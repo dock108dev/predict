@@ -78,6 +78,12 @@ function slate(view,filter,state) {
         await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'close-details');await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.dataset.key),pairKey);
         await page.locator('#sort').selectOption('start');assert((await page.locator('.slate-comparison-game').first().innerText()).includes(fixture.catalog.games[0].title));
         await page.locator('#search').fill('Second');assert.equal(await page.locator('.slate-arb').count(),14);await page.locator('#search').fill('');
+        await page.locator('.calculation-settings>summary').click();
+        await page.locator('#amount').fill('1250');
+        await page.clock.runFor(10010);await page.waitForTimeout(30);
+        assert.equal(await page.locator('#amount').inputValue(),'1250','polls preserve the expanded settings draft');
+        await page.locator('#amount').fill('0');await page.locator('#amount').press('Enter');
+        assert.equal(await page.locator('#status').getAttribute('data-state'),'error','invalid funding has visible feedback');
         await page.locator('#restore').click();await page.waitForSelector('.slate-arb');assert.equal(await page.locator('#amount').inputValue(),'1000');assert.equal(await page.locator('#game').inputValue(),'');
         await page.evaluate(()=>document.documentElement.style.fontSize='20px');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no document overflow at enlarged text');
         state.failure=true;await page.reload();await page.waitForSelector('#retry:not([hidden])');state.failure=false;await page.locator('#retry').click();await page.waitForSelector('.empty');await page.getByRole('button',{name:'Show all comparisons',exact:true}).click();await page.waitForSelector('.slate-arb');
@@ -108,7 +114,7 @@ function slate(view,filter,state) {
     try{
       await pagingPage.goto('http://paging.invalid/');await pagingPage.waitForSelector('.slate-game');
       assert.equal(await pagingPage.locator('.slate-game').count(),500);assert.equal(pageRequests,10);
-      assert((await pagingPage.locator('#status').innerText()).includes('500 current games'));
+      assert((await pagingPage.locator('.slate-summary').innerText()).includes('500 of 500 games'));
       await pagingPage.locator('#search').fill('Authored game 499');assert.equal(await pagingPage.locator('.slate-game').count(),1);assert.equal(pageRequests,10,'filter remains local after all pages');
       revisionChanged=true;await pagingPage.reload();await pagingPage.waitForSelector('#retry:not([hidden])');
       assert.equal(await pagingPage.locator('.slate-game').count(),0,'changed page never publishes partial first-page counts or prices');

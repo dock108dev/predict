@@ -424,7 +424,6 @@
     "name": "current-storage-rollover",
     "tests": [
       "tests/test_current_storage_policy.py",
-      "tests/test_current_database_segments.py",
       "tests/test_current_journal_segments.py",
       "tests/test_storage_admission_repair.py"
     ]
@@ -455,9 +454,21 @@
       "tests/test_ev09_registry_index.py",
       "tests/test_comparison_slate.py",
       "tests/test_comparison_read_context.py",
-      "tests/test_comparison_slate_fairness.py",
       "tests/test_ingress_catchup_budget.py",
       "tests/test_payload_codec.py"
+    ]
+  },
+  {
+    "name": "d03-current-contracts",
+    "tests": [
+      "tests/test_current_board_reads.py",
+      "tests/test_current_journal_domains.py",
+      "tests/test_current_reset.py",
+      "tests/test_current_route_retirement.py",
+      "tests/test_d03_aggregate_frame.py",
+      "tests/test_d03_financial_workload.py",
+      "tests/test_domain_delta.py",
+      "tests/test_domain_frame.py"
     ]
   }
 ]

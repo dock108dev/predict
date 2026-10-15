@@ -13,7 +13,7 @@ manual dispatch. Four jobs feed the stable `CI readiness` gate:
 | --- | --- |
 | `offline` | `sh scripts/check-ci`: classified Python modules in fresh processes, client regressions, compile and JavaScript syntax, coverage and generated frontend drift |
 | `quality` | Critical Ruff checks, CI support formatting, pinned actionlint, shell syntax, shipped documentation links, dependency consistency, reporting tests, redacted Gitleaks scan, hash-locked pip-audit, fresh package/install smoke |
-| `postgres` | Reusable `storage.yml`: disposable socket-only PostgreSQL 16, integration tests, migration hashes and repeat migration no-op, teardown |
+| `postgres` | Reusable `storage.yml`: disposable socket-only PostgreSQL 16, integration and current-row financial/occurrence roundtrip tests, migration hashes and repeat migration no-op, teardown |
 | `browser` | Locked Playwright/Chromium: fully intercepted current-board journeys at desktop/narrow widths, settings, exact Details, keyboard focus, Retry, empty state, Stop and enlarged text |
 
 Primary runners use Ubuntu 24.04, Python 3.14 and Node 22. Missing, failed,

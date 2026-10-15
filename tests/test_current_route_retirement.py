@@ -9,7 +9,7 @@ from tests.test_current_state import owner
 class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
     async def test_sql_installation_explicitly_retires_old_state_reads(self):
         provider = InjectedTestProvider()
-        provider.database_games = ['the_odds_api:authored']
+        provider.database_mode = True
         app = create_app(owner=owner(), sessions={}, current_provider=provider)
         async with TestClient(TestServer(app)) as client:
             for path in ('/api/current', '/api/current/details', '/api/current/prices',
@@ -30,3 +30,58 @@ class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
             response = await client.get('/api/current')
             self.assertEqual(response.status, 200)
             self.assertEqual((await response.json())['schema'], 'predict-current-1')
+
+
+class OrdinaryExecutionRetirement(unittest.TestCase):
+    def test_retired_ordinary_workers_and_queue_are_absent(self):
+        from app.collection import current_database
+        from app.dashboard import comparison_slate
+        self.assertFalse(hasattr(current_database,'catch_up_segments'))
+        self.assertFalse(hasattr(current_database.DatabasePipeline,'request'))
+        self.assertFalse(hasattr(current_database.DatabasePipeline,'MAX_PENDING'))
+        self.assertFalse(hasattr(comparison_slate,'schedule'))
+
+
+    def test_retired_game_cli_option_fails_before_service_construction(self):
+        from unittest.mock import patch
+        from app.dashboard.opportunity_board import main
+        with patch('sys.argv',['predict','--game','the_odds_api:old']), \
+             patch('app.collection.current_service.CurrentService') as service, \
+             self.assertRaises(SystemExit) as error:
+            main()
+        self.assertEqual(error.exception.code,2)
+        service.assert_not_called()
+
+    def test_database_mode_requires_explicit_boolean_and_retires_game_selection(self):
+        from app.collection.current_service import CurrentService
+        from app.collection.current_policy import DEFAULT
+        for mode in ([],None,1,'true'):
+            with self.subTest(mode=mode),self.assertRaisesRegex(ValueError,'Explicit current database mode'):
+                CurrentService(config=DEFAULT,database_mode=mode)
+        with self.assertRaises(TypeError):CurrentService(config=DEFAULT,database_games=['the_odds_api:old'])
+
+
+class CurrentModeWiring(unittest.IsolatedAsyncioTestCase):
+    async def test_sql_mode_constructs_only_the_direct_owner_once(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock,patch
+        from app.collection.current_service import CurrentService
+        from app.collection.current_policy import DEFAULT
+        from app.collection.current_database import DatabaseIngressSink
+        with TemporaryDirectory() as root:
+            service=CurrentService(config=dict(DEFAULT,enabled=False),directory=Path(root)/'service',database_mode=True)
+            lifecycle=SimpleNamespace(start=AsyncMock())
+            store=object()
+            with patch('app.collection.current_database.DatabasePipeline',return_value=lifecycle) as owner, \
+                 patch.object(service,'_start_sources',new_callable=AsyncMock) as sources:
+                await service.start(store)
+                await service.start(store)
+            owner.assert_called_once_with(service)
+            lifecycle.start.assert_awaited_once_with()
+            sources.assert_awaited_once_with()
+            self.assertIsInstance(service.sink,DatabaseIngressSink)
+            self.assertIs(service.sink.store,store)
+            for name in ('journal','bootstrap_task','retain','database_games'):
+                self.assertFalse(hasattr(service,name))

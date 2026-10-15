@@ -78,12 +78,30 @@ and support increased text size. Dialogs support a focus loop, Escape/Close and
 focus return to the opening row or a useful fallback. Collapsed sections do not
 leave hidden controls in the tab sequence.
 
+Common game/search filters stay visible. Calculation settings use an anchored
+expandable panel, with applied funding, buffer and reference always shown.
+Opening it reveals the existing fields, Apply and Restore defaults without moving
+the comparison rows. Escape or an outside click closes the panel while retaining
+its draft. Polls preserve drafts and focus, and sticky navigation keeps Stop
+available. Source clocks use at least 12px text while game/team names and prices
+carry the main visual hierarchy.
+
 First use offers Admin source status when no game is available. Positive empty
 states offer All comparisons. Failed reads offer Retry with a useful reason;
 pending, stopped and unavailable-saving states remain distinct. Source clocks and
 one concise material note stay on ordinary boards; quota, recovery and storage
 diagnostics belong in Admin. Sports reset is separate from protected configuration,
 credentials and provider account/quota/audit/attempt/hold records.
+
+Healthy routine status prose stays out of the price rows; actual source times
+remain beside prices and shared native limitations appear once per displayed
+slate. Empty first use shows one source-setup action. Failed reads lead with
+Retry/Admin guidance and retain technical reasons in a disclosure. Details leads
+with the supplied complete or conditional estimate, then separate funding and
+reconciliation; modeled outcomes and original inputs sit in named disclosures.
+Opposing Details shows the supplied modeled minimum or its explicit unknown state.
+Ordinary negative results use neutral copy; material uncertainty retains caution
+styling. These presentation choices do not alter financial or protocol guards.
 
 [Development](development.md#frontend-sources) describes the readable frontend
 modules, generated public assets and verification boundaries.

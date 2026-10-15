@@ -103,3 +103,14 @@ footer {
 [hidden] {
   display:none!important
 }
+
+.detail-funding { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; border-bottom:1px solid var(--line); padding:0 0 16px; margin:16px 0 }
+.detail-funding small { margin-bottom:4px }
+.detail-funding strong { display:block; font-variant-numeric:tabular-nums; overflow-wrap:anywhere }
+.detail-reconciliation dt:last-of-type,.detail-reconciliation dd:last-of-type { color:#172b46; font-weight:700; border-top:1px solid #b9c9e1; background:#f2f6fd; padding-top:12px; padding-bottom:12px }
+#detail-content .detail-outcomes { border-top:1px solid var(--line); margin-top:20px }
+#detail-content details summary { color:#2458b6; min-height:44px }
+#detail-content .metrics strong { font-size:30px; font-variant-numeric:tabular-nums }
+#detail-content>.metrics .metric { display:flex; flex-direction:column }
+#detail-content>.metrics .metric>small { flex:1 }
+#detail-content>.metrics>.conditional-label { grid-column:1/-1 }
