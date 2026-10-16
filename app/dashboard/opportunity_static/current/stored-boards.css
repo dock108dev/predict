@@ -289,3 +289,27 @@ summary {
 .slate-leg span { color:var(--muted); font-size:.8125rem; margin-top:3px }
 .slate-result-values .metric { display:flex; flex-direction:column }
 .slate-result-values .metric>small { flex:1 }
+
+/* U02: one supplied percentage; shared reference and availability context. */
+.view-purpose { margin:-4px 0 18px; max-width:920px; color:#45556c; font-size:.9375rem; line-height:1.55 }
+.availability-notice { border:1px solid #c7d6ef; border-left:3px solid #416aa8; border-radius:8px; background:#edf3fc; padding:12px 16px; margin-bottom:14px; min-width:0 }
+.availability-notice>strong { color:#233c60; font-size:.9375rem }
+.availability-notice p { font-size:.875rem; overflow-wrap:anywhere }
+.availability-notice>button { margin-top:10px; background:#245bcc; color:white; border-color:#245bcc }
+.availability-causes { margin:4px 0 0 }
+.availability-causes summary { min-height:44px; padding:10px 0; font-size:.8125rem; color:#2458b6; cursor:pointer }
+.availability-causes a { display:inline-block; min-height:44px; padding:10px 0; font-size:.875rem }
+.game-reference { font-size:.8125rem; line-height:1.5; color:#526278; padding:8px 0; overflow-wrap:anywhere; border-bottom:1px solid var(--line) }
+.game-reference small { display:inline; margin-left:8px }
+.slate-instrument h3 { margin:12px 0 2px; font-size:.875rem; color:#344b69; overflow-wrap:anywhere }
+.slate-result { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto; padding:10px 0; gap:2px 18px }
+.slate-result-identity { gap:4px 12px; overflow-wrap:anywhere }
+.execution-price { font-variant-numeric:tabular-nums }
+.slate-result-values { display:block }
+.slate-result-values .metric small { font-size:.75rem; line-height:1.4 }
+.slate-result-values .metric strong { font-size:1.375rem; line-height:1.4; font-variant-numeric:tabular-nums }
+.slate-result-note { font-size:.75rem; line-height:1.45; grid-column:1/3 }
+.slate-result>button { grid-row:1/3 }
+.slate-arb .slate-result-identity { grid-template-columns:1fr 1fr; gap:10px }
+.slate-leg strong { font-size:.875rem }
+.comparison-unavailable strong { color:#687386; font-size:.875rem; font-weight:500 }

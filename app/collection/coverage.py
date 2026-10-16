@@ -392,7 +392,7 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
         discoveries.append(status)
         (event_pages if field == 'events' else market_pages).extend(accepted)
     row_index = 0
-    # D2 may independently enumerate US markets by the documented native gameId.
+    # US markets can also be enumerated by the documented native gameId.
     # Retain both sources. Query exhaustion cannot erase an observed listing.
     independent_games = {str(params(p).get('gameId')) for p, _, _ in market_pages
                          if venue == 'polymarket_us' and params(p).get('gameId')}

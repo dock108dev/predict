@@ -59,29 +59,23 @@ def gross_metric(natural):
 
 
 def calculation_instant(quotes,profiles,current_at):
-    """Stable input boundary; current eligibility is checked separately.
+    """Evaluate captured last-known prices under models applicable at capture/read.
 
-    Receipt/projected clocks describe evaluation inputs, never price freshness.
-    Unchanged graphs retain their evaluation instant across clock-only ticks.
+    This is not a reconstructed past trade. Never shift a quote into an older
+    model interval or move evaluation forward to make a future model effective.
+    Source/receipt clocks remain original and separately govern live eligibility.
     """
     from .current_dependencies import instant
-    times=[]
     for q in quotes:
-        times.extend(instant(q['times'][field]) for field in ('received_at','projected_at') if q['times'][field] is not None)
-        for kind,value in references(q,profiles).items():
-            payload=value['payload'];intervals=[payload]
-            if kind=='fee':
-                intervals.append(payload.get('rule',{}))
-                selected=payload.get('engine_context',{}).get('schedule_version')
-                intervals.extend(s for s in payload.get('engine_registry',{}).get('schedules',[]) if s.get('version')==selected)
-                metadata=payload.get('engine_context',{}).get('kalshi_metadata',{})
-                times.extend(instant(change['scheduled_ts']) for kind in ('series_changes','event_changes')
-                    for change in metadata.get(kind,[]) if change.get('scheduled_ts') is not None and
-                    instant(change['scheduled_ts'])<=current_at)
-            for interval in intervals:
-                if interval.get('effective_from'):times.append(instant(interval['effective_from']))
-            if kind=='reference':times.extend(instant(o['received_at']) for o in payload.get('outcomes',[]))
-    return max(times)
+        for field in ('source_at', 'received_at', 'projected_at'):
+            value = q['times'].get(field)
+            if value is None and field != 'projected_at':
+                raise ValueError('estimate_source_clock_unknown')
+            if value is not None and instant(value) > current_at:
+                raise ValueError('estimate_source_clock_future')
+        if instant(q['times']['source_at']) > instant(q['times']['received_at']):
+            raise ValueError('estimate_source_clock_conflict')
+    return current_at
 
 
 def missing(q, reason, *, details=None):

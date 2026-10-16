@@ -21,7 +21,7 @@ native depth. This guide describes their ownership, ordering and expiry. See
 | `current_source_status` | Bounded latest source status, without full response bodies. |
 | `current_refresh_scope` | Latest authoritative exact-scope ordering guards; expires after 48 hours and has an explicit capacity. |
 
-Migration `012_current_rows.sql` adds these independent working tables. Applied migrations 009–011 and their checksum history are unchanged. None of these tables references protected provider account, quota, audit, reservation or financial authority.
+Migration `012_current_rows.sql` defines these working tables. They are independent of protected provider account, quota, audit, reservation and financial authority records.
 
 Current snapshots and calculation results are not persisted by this owner. Shared financial definitions and user configuration retain their existing separate owners. `capture(include_depth=False)` supplies a coherent repeatable-read metadata frame and semantic dependencies. MVCC binds reads without taking the writer advisory lock; catalog construction cannot hold that write lock. A standalone capture starts its own repeatable-read, read-only transaction; ordinary API callers provide an existing repeatable-read transaction through selected-depth hydration. `hydrate_records` reads only selected execution ask ladders; its caller binds the expected revision before/after hydration. The API integration owner provides the transient calculation and Details context.
 
@@ -33,8 +33,8 @@ Only admitted complete refresh scopes remove absent contracts. Aggregate scopes 
 
 Pregame rows expire at scheduled start; explicit completed/final/settled/cancelled event statuses expire immediately. Cascading ownership removes dependent offers, contracts and depth. Configured sport/family changes retire out-of-scope rows at startup. A small 60-second maintenance task performs expiry only, stops after three failures and joins on Stop.
 
-## Retired ordinary archives
+## Compatibility readers and reset
 
-`CurrentService` neither constructs nor reopens `CurrentJournal`; its former retention callback does not write. `DatabasePipeline` has no journal catch-up, import-cursor advance, diagnostic bootstrap, saved snapshot calculation or result publication. Startup never restores aggregate diagnostics. Both automatic and manual aggregate paths discard response bodies after admission and do not write sports diagnostic/baseline files. Provider consumed attempts, charge headers, original response hashes, quota and independent account audit continue through their existing protected owners.
+Ordinary startup and `DatabasePipeline` do not reopen journals, restore aggregate diagnostics, import archived snapshots or publish saved calculation results. Both automatic and manual aggregate paths discard response bodies after admission. Provider consumed attempts, charge headers, original response hashes, quota and independent account audit have separate protected owners.
 
 Legacy codecs/readers remain available to separately selected retained/research paths. Their presence does not create an ordinary startup writer. `storage/current_reset.py` coordinates the explicit sports-only reset. Ingress and startup do not reset owner storage.

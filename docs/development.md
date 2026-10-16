@@ -1,7 +1,7 @@
 # Development
 
-Use Python 3.11+ from a source checkout. Python 3.14 and Node 22 match primary
-CI. Run commands from the repository root. Native operation uses macOS Keychain;
+Use Python 3.11+ from a source checkout. Python 3.14 and Node 22 match primary CI.
+Run commands from the repository root. Native operation uses macOS Keychain;
 portable offline tests also run on Linux.
 
 ## Install tools
@@ -14,61 +14,53 @@ python3 -m venv .venv
 .venv/bin/python -m pip check
 ```
 
-The hash lock includes runtime, stream, test and build dependencies. For ordinary
-app use, the smaller editable installation in the [README](../README.md) suffices.
-
-## Current-row ownership
-
-Ordinary ingress commits through `CurrentRowStore`; v2 board/slate reads hydrate
-selected depth and calculate transiently. Old `GameStore` archive methods and
-codecs serve retained research compatibility. Ordinary board reads do not fall
-back to them. See [architecture](architecture.md), [current storage](current-row-storage.md)
-and the [board contract](comparison-board-api-contract.md).
-
-The v2 slate admits up to 500 games through pages of at most 50 and rejects
-changed cross-page revisions. Sports rows are disposable; credentials, settings,
-account/quota/audit/due/attempt/hold state have independent lifetimes. Use the
-explicit sports reset when needed. Applied migration SQL/checksums are immutable.
+The hash lock includes runtime, stream, test and build dependencies. The smaller
+editable installation in the [README](../README.md) is enough for ordinary use.
 
 ## Focused checks
 
-Choose tests for the changed behavior. Do not discover every test indiscriminately:
-some historical acquisition tools require captured inputs or provider access.
+Use existing tests for the behavior you change. The manifests under `scripts/ci/`
+distinguish portable tests from SQL tests and older acquisition tools that require
+captured inputs or provider access. Do not run every discovered test against
+ordinary local data.
 
 ```sh
-.venv/bin/python -m compileall -q app/dashboard app/collection
-.venv/bin/python -m ruff check app tests scripts/ci
+.venv/bin/python -m ruff check app tests scripts/ci browser_tests
 .venv/bin/python scripts/ci/docs.py
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
 node tests/test_stored_views.cjs
 node tests/test_comparison_usability.cjs
+git diff --check
 ```
 
-| Change | Useful existing tests |
+| Change | Useful tests under `tests/` |
 | --- | --- |
-| Asset delivery, publication and calculation Stop | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
-| Settings, selection and read cancellation | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
-| Current SQL, expiry, ordering, failed saving and concurrent readers | `test_d03_current_rows.py`, `test_d03_aggregate_frame.py`, `test_current_reset.py` |
-| Current v2 contracts, financial adapters, Details and Stop/read bounds | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
-| Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, fee, cashflow and metric tests |
-| Occurrence matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, event-link and domain tests |
-| Ordinary admitted-only SQL boundary and expiry/Stop ownership | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
-| Explicit retained journal/import contracts; no ordinary-history requirement | `test_current_journal_segments.py`, `test_ingress_catchup_budget.py` |
-| Native HTTP framing, admission and retry budgets | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
-| Dashboard request validation, safe errors and retired routes | `test_security_hardening.py::BrowserHardening`, `test_current_route_retirement.py` |
-| CI support and report failures | `test_ci_reporting.py` |
+| Asset delivery and calculation cancellation | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
+| Settings, game selection and polling | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
+| Current board contracts and selected Details | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
+| Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, `test_comparison_cashflows.py` |
+| Event matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, `test_comparison_event_links.py` |
+| SQL ingress, expiry and retired routes | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
+| Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
+| CI reporting failures | `test_ci_reporting.py` |
 
-Python test filenames above are under `tests/`. Run resource-sensitive modules in
-fresh processes: combining them can exceed process caps that each module tests.
-Use authored fixtures and disposable state, not credentials or ordinary storage.
-The SQL tests in the table need a disposable socket-only database and a redirected
-`app.storage.store.ROOT`; do not invoke them directly against ordinary storage.
-`scripts/ci/postgres.py` supplies that isolation for `integration_tests` and the
-registered current-row, financial and occurrence SQL modules. Those SQL-only
-modules are excluded from the portable runner. The harness uses a short temporary
-path to respect Unix socket path limits.
-`sh scripts/check-ci` selects the portable manifest and writes ignored reports
-under `test-results/ci`. [CI](CI.md) describes SQL, browser and scheduled checks.
+Run resource-sensitive Python modules in fresh processes: some deliberately
+measure process caps. Use authored fixtures and temporary state. For SQL tests,
+use `.venv/bin/python scripts/ci/postgres.py`; it creates a disposable socket-only
+cluster, redirects the storage root, runs `integration_tests` and the registered
+current-row roundtrips, then tears down the cluster. Do not invoke those SQL
+modules directly against ordinary storage. The harness also keeps socket paths
+short enough for Unix limits and requires PostgreSQL's `pg_config` on PATH.
+
+`PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci` runs the full portable manifest
+and writes ignored reports under `test-results/ci`. See [CI](CI.md) for browser,
+packaging and scheduled checks. A documentation-only edit usually needs the
+documentation checker, reference review and whitespace check.
+
+The optional `browser_tests/test_u02_browser.cjs` replay takes explicit response
+and partial-failure JSON paths and uses `PREDICT_PLAYWRIGHT_MODULE` to locate an
+installed Playwright module. Its reports stay under `test-results/u02-replay/`;
+it does not read an implicit temporary export or contact the running app.
 
 ## Synthetic preview
 
@@ -77,85 +69,58 @@ under `test-results/ci`. [CI](CI.md) describes SQL, browser and scheduled checks
 ```
 
 Open its loopback address, `/arbs` or `/admin`; stop with Ctrl-C. The provider is
-explicitly synthetic and does not acquire data. Its `/__test/commit` route is
-exclusive to this test server. `.venv/bin/python -m tests.comparison_preview`
-provides additional comparison fixtures. These previews use the injected current
-state interface. Browser tests under `browser_tests/` intercept the current v2
-slate and revision-bound Details interface. Neither injected previews nor
-intercepted responses demonstrate ordinary SQL persistence or live coverage.
+synthetic and does not acquire source data. Its `/__test/commit` route belongs
+only to this test server. `.venv/bin/python -m tests.comparison_preview` supplies
+additional comparison fixtures. Injected previews and intercepted browser tests
+exercise presentation and contracts; SQL persistence and live coverage have
+separate tests.
 
 ## Frontend sources
 
-Under `app/dashboard/opportunity_static/current/`:
+The authored frontend is under `app/dashboard/opportunity_static/current/`:
 
-- `stored-controller.js` owns settings, game/result selection, three cancellable
-  read channels, polling, dialog ownership and Stop.
-- `board-client.js` validates exact settings/response identities and bounded reads.
-- `board-elements.js` provides display primitives, participant labels and exact
-  rational/decimal reference prices formatted as American odds.
-- `comparison-slate-views.js` owns compact all-games grouping, cross-venue
-  presentation selection and immutable per-row callbacks. `stored-views.js`
-  retains the compatible per-board presenter and ordinary factory.
-- `stored-details.js` renders selected current reconciliation. The controller requires the clicked context revision, replaces the whole dialog on refresh and clears financial content on changed/removed inputs. Old history/envelope controls are removed; Original requests allowlisted selected current facts.
+- `stored-controller.js` owns settings, selection, polling, cancellable reads,
+  dialogs and Stop.
+- `board-client.js` validates settings and response identities; `board-elements.js`
+  provides shared formatting and display primitives.
+- `comparison-slate-views.js` groups games and rows; `stored-views.js` supplies
+  the compatible per-board presenter and view factory.
+- `stored-details.js` renders the selected current calculation and original inputs.
 - `stored-shell.css`, `stored-boards.css`, `stored-details.css` and
   `stored-responsive.css` compose styles in cascade order.
 
-Regenerate the required public assets after editing their sources:
+Regenerate the public assets after editing their authored sources:
 
 ```sh
-python3 scripts/build_stored_frontend.py
-python3 scripts/build_stored_frontend.py --check
+.venv/bin/python scripts/build_stored_frontend.py
+.venv/bin/python scripts/build_stored_frontend.py --check
 node --check app/dashboard/opportunity_static/current/stored.js
 ```
 
-The dependency-free generator supports this closed graph and unaliased named
-imports; new client symbols must be added to `CLIENT_NAMES`. Module-local mutable
-state belongs only in the controller. It is not a general JavaScript bundler.
-Keep generated `stored.js` and `stored.css` available to packaging and routes;
-do not edit or ignore them. CI checks generated drift. The fixed public names
-also work with an already loaded asset allowlist. Reload the page after rebuilding
-frontend assets; restart the app after backend or credential changes.
+The dependency-free generator handles this closed graph and unaliased named
+imports; add new client symbols to `CLIENT_NAMES`. It is not a general JavaScript
+bundler. Generated `stored.js` and `stored.css` are required packaged resources:
+keep them tracked and do not edit them directly. CI checks for drift. Reload the
+page after rebuilding assets; restart the app after backend or credential changes.
 
-## Maintenance
+## Maintenance boundaries
 
-[Architecture](architecture.md#module-ownership) defines module boundaries. Preserve
-public imports, packaged resource paths and explicit protocol versions. Legacy
-sports-history readers need not survive a deliberate reset; current contracts
-and protected account/configuration state must remain correct. Ruff checks
-critical defects; formatting checks cover CI support. Keep localized product
-edits consistent with adjacent source. Review physical Python lines above 500,
-with extraction or justification above 1,000; JavaScript uses 300/600, UI presenters
-250/500, CSS 300/600, markup 250/500 and shell 100/200. Generated files, immutable
-schemas and applied migrations are not mechanically split.
+[Architecture](architecture.md) describes module ownership. Ordinary ingress uses
+`CurrentRowStore`; board and slate reads calculate transiently from current SQL
+rows. Details binds to the clicked input context and requires a new selection
+when those inputs change. Older archive readers serve separate retained-research
+interfaces. See the [storage guide](current-row-storage.md) and
+[board contract](comparison-board-api-contract.md).
 
-The comparison controller keeps one selection/cancellation/publication boundary;
-its calculation-settings disclosure shares that owner. Independent presenters
-remain separate. The view presenter shares one participant/callback context;
-responsive CSS keeps cross-view breakpoints and final overrides in cascade order.
-Use the physical-line thresholds above, rather than compressing source, when
-reviewing these retained boundaries.
+Preserve public imports, packaged resource paths, protocol versions and applied
+migrations. Keep financial validation beside the models it admits, collection
+Stop and cleanup ordering with lifecycle owners, and quota/hold updates with
+their accounting owners. Prefer focused helpers when a module gains a distinct
+responsibility; keep controller state and CSS cascade ordering coherent.
 
-`continuous_rest.py` owns sequential HTTP admission, pacing and retries. The public
-`continuous.REST` binding supplies the collector clock, just as `continuous.Venue`
-binds stream dependencies. Discovery and finite-session resource/finalization
-ordering remain in `continuous.py`. `request_guard.py` owns request validation,
-ordinary SQL route retirement and safe HTTP errors; `multi_game_server.py` composes
-routes/sessions and explicitly supplies its diagnostic logger. These helpers do
-not import their composers or share mutable globals with them.
-
-Native lifecycle and quota owners retain acquisition/Stop and charge/hold ordering.
-Typed financial validators remain beside the models they admit; cleanup does not
-change their rules or applied migrations. Revisit boundaries after material growth
-or a new responsibility.
-
-Keep credentials, local state, reports and coding notes out of Git. Required
-fixtures live in `tests/fixtures` and `app/fixtures`; schema examples live in
-`docs/contracts`. Sealed executors depend on exact inputs under
-`scripts/v1_coverage_package` and `scripts/v1_counterpart_package`; preserve them.
-The retained fee PDF is a test input, not disposable output. A narrow historical
-proposal exception in `.gitignore` serves `reference/odds_acquire.py`; that separate
-tool requires its exact local proposal and is deferred from portable CI. The public
-exporter excludes `evidence/`. Do not reconstruct or substitute an acquisition
-proposal to make a historical test pass. Run
-`git diff --check` after edits. Public docs must stand on repository-owned paths
-and must not depend on local reports, plans or personal trackers.
+Keep credentials, local state, generated reports and coding notes out of Git.
+Required fixtures belong in `tests/fixtures` or `app/fixtures`; schemas and wire
+examples belong in `docs/contracts`. Retained fee documents and the exact inputs
+used by sealed executor packages are test/runtime inputs, not disposable output.
+Public documentation should use repository-owned paths and explain current
+behavior without depending on local plans or reports.

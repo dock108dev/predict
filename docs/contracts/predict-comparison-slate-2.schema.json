@@ -69,6 +69,85 @@
           "reason": {
             "type": "string",
             "maxLength": 512
+          },
+          "availability": {
+            "type": "object",
+            "required": [
+              "version",
+              "state",
+              "reason_codes",
+              "metrics",
+              "numeric_metrics",
+              "current_opportunity_eligible"
+            ],
+            "properties": {
+              "version": {
+                "const": "predict-calculation-availability-1"
+              },
+              "state": {
+                "enum": [
+                  "numeric_current",
+                  "numeric_last_known",
+                  "missing_reference",
+                  "unsupported_inputs",
+                  "calculation_failed",
+                  "not_evaluated"
+                ]
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "maxItems": 64,
+                "uniqueItems": true
+              },
+              "numeric_metrics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4
+              },
+              "metrics": {
+                "type": "object",
+                "maxProperties": 4,
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "reason_codes"
+                  ],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "numeric_current",
+                        "numeric_last_known",
+                        "missing_reference",
+                        "unsupported_inputs",
+                        "calculation_failed",
+                        "not_evaluated"
+                      ]
+                    },
+                    "reason_codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 160
+                      },
+                      "maxItems": 64,
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "current_opportunity_eligible": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
           }
         }
       }
@@ -154,6 +233,133 @@
         },
         "complete": {
           "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "availability": {
+      "type": "object",
+      "required": [
+        "version",
+        "scope",
+        "games",
+        "total_results",
+        "numeric_results",
+        "current_results",
+        "positive_results",
+        "counts",
+        "outcome",
+        "causes"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-calculation-availability-1"
+        },
+        "scope": {
+          "const": "evaluated_results_before_filter"
+        },
+        "games": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "numeric_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positive_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counts": {
+          "type": "object",
+          "required": [
+            "numeric_current",
+            "numeric_last_known",
+            "missing_reference",
+            "unsupported_inputs",
+            "calculation_failed",
+            "not_evaluated"
+          ],
+          "properties": {
+            "numeric_current": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "numeric_last_known": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "missing_reference": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unsupported_inputs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "calculation_failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "not_evaluated": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "outcome": {
+          "enum": [
+            "not_evaluated",
+            "unavailable",
+            "partial",
+            "last_known_only",
+            "evaluated_no_positive",
+            "positive"
+          ]
+        },
+        "causes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "affected_results",
+              "affected_games",
+              "venues"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "affected_results": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "affected_games": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "venues": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

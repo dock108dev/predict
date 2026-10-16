@@ -29,6 +29,38 @@ Observed prices remain visible independently of financial eligibility. Native Po
 
 Per-game compact boards are bounded at 512 KiB; Details/typed Original responses at 8 MiB. The read context admits at most 16,384 typed records and 96 MiB of encoded typed inputs, with occurrence matching capped at 16,000 records/2,048 source members. Native depth hydrates only selected games. Catalogs retain compact metadata, never every game's expanded profile graph. The 500-event slate uses explicit bounded pages described in [the slate contract](comparison-slate-api-contract.md).
 
-One heavy HTTP read runs at a time, with at most four waiting requests; excess requests return HTTP 429 `current_read_busy`. A disconnected request retains its slot until its worker ends. Existing cooperative financial cancellation stops active work when Stop arrives. SQL capture and selected depth hydration finish before finance, releasing the transaction and ingress lock. Read failures are explicit HTTP 409 or database-unavailable HTTP 503, with no disk spill, persistent report cache or retry archive. Existing 2 GiB SQL, 1 GiB free-disk and 768 MiB process guards remain unchanged.
+One heavy HTTP read runs at a time, with at most four waiting requests; excess requests return HTTP 429 `current_read_busy`. A disconnected request retains its slot until its worker ends. Cooperative financial cancellation stops active work when Stop arrives. SQL capture and selected depth hydration finish before finance, releasing the transaction and ingress lock. Read failures are explicit HTTP 409 or database-unavailable HTTP 503, with no disk spill, persistent report cache or retry archive. Collection is bounded by a 2 GiB SQL allowance, a 1 GiB free-disk floor and a 768 MiB process guard.
 
 Schemas: [board v2](contracts/predict-comparison-board-2.schema.json), [catalog v2](contracts/predict-board-catalog-2.schema.json), [Details v2](contracts/predict-board-details-2.schema.json), [typed Original v2](contracts/predict-board-inputs-2.schema.json). Legacy v1 schema files preserve their original protocol meaning and are not ordinary current endpoints.
+
+## Calculation availability
+
+Each financial row and selected result carries `availability`
+(`predict-calculation-availability-1`), metric-specific states/reason codes and
+`numeric_metrics`. States distinguish `numeric_current`, `numeric_last_known`,
+`missing_reference`, `unsupported_inputs`, `calculation_failed` and
+`not_evaluated`. Complete EV can remain null beside a numeric conditional EV or
+decisive pair margin. See the
+[financial contract](requested-trade-financial-contract.md#last-known-evaluation-and-availability)
+for evaluation and model applicability.
+
+Board summaries count the evaluated scope before filtering. Shared reasons carry
+affected result/game counts and venues. Arbs summaries also count refused leg
+candidates, so summary totals can exceed the displayed pair count. Odds has
+`not_evaluated` availability because it does not run financial calculations.
+
+`evaluation_frame` preserves original price/reference clocks and ages,
+capture/evaluation time and whether source times differ. `calculated_at` is
+actual calculation completion; price rows also expose `source_state`. A fresh
+quote with an older reference is a last-known dependency set, not evidence of a
+simultaneous historical trade. Paused transport and price age do not erase
+supported inspection math; positive filtering still requires current eligible
+inputs.
+
+Board and Details provide the same server-derived percentage companions for
+financial metrics, using deployed capital as the denominator. Clients validate
+supplied availability fields and show separate empty states for unavailable,
+unevaluated and last-known-only results. Read failure envelopes include structured
+calculation-failure availability, except the dedicated Stop response.
+
+Schema: [calculation availability v1](contracts/predict-calculation-availability-1.schema.json).

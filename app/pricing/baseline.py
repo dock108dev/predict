@@ -105,7 +105,7 @@ class Estimate:
 
 
 def calculate(replay, *, target, cutoff, estimated_at, policy=Policy()):
-    """Requires a validated E2 as-of bundle, never detached quote objects."""
+    """Requires a validated reference as-of bundle, never detached quote objects."""
     with localcontext(Context(prec=policy.time_precision, rounding=policy.rounding)):
         return _calculate(replay, target=target, cutoff=cutoff, estimated_at=estimated_at, policy=policy)
 
@@ -136,7 +136,7 @@ def _calculate(replay, *, target, cutoff, estimated_at, policy):
         q = rev.quote if rev else None
         evidence = json.loads(rev.evidence_json) if rev else {}
         reasons = list(global_reasons)
-        # E2 scope is fixed provider/event/book; session IDs are delivery paths,
+        # Reference scope is fixed provider/event/book; session IDs are delivery paths,
         # never separate opinions. A rejected newest receipt still takes the slot.
         path = receipt.scope
         if path in seen_paths:

@@ -12,7 +12,7 @@ new provider observations.
 
 The offline seal tool copies required review inputs, code and these format notes.
 Its package is an input for explicit retained inspection, not ordinary app startup.
-Required saved data stays in the repository where fixture or package readers need
-it. Generated measurements, screenshots and internal planning notes are local
-working output. See [development](development.md) for testing and [native review
+Fixture and package readers require their referenced saved inputs; missing inputs
+are reported as unavailable. The ordinary app does not need those inputs to start.
+See [development](development.md) for testing and [native review
 records](native-review-records.md) for the record contract.

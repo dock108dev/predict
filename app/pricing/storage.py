@@ -70,8 +70,8 @@ class FairPriceStore:
         return sha256(text.encode()).hexdigest()
 
     def restore(self, path):
-        # Restore E2 reference-bundle-1 first on a fresh store. Retains all E2
-        # arrivals, including later observations beyond individual estimate cuts.
+        # Restore reference-bundle-1 first on a fresh store. Retain all reference
+        # arrivals, including later observations beyond individual estimate cutoffs.
         estimate = restore(Path(path).read_text())
         self.save(estimate)
         return estimate

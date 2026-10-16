@@ -69,14 +69,14 @@ def _reference(q, values, roles, *, policy=None, benchmark=None, at=None):
         raise ValueError('estimate_identity_orientation_conflict')
     if benchmark is not None:
         from .benchmark import resolve
-        return resolve(benchmark, selected, policy, at)
+        return resolve(benchmark, selected, policy, at, allow_last_known=getattr(policy, 'sizing_mode', None) is not None)
     ref = values.get('reference')
     if ref is None:
         raise ValueError('estimate_exact_pinnacle_reference_missing')
     payload = ref['payload']
     if payload.get('version') == 'comparison-two-way-benchmark-1':
         from .benchmark import resolve
-        return resolve(payload,selected,policy,at)
+        return resolve(payload,selected,policy,at,allow_last_known=getattr(policy, 'sizing_mode', None) is not None)
     if policy is not None and getattr(policy, 'benchmark_venue', 'pinnacle') != 'pinnacle':
         raise ValueError('selected_benchmark_missing; no substitution')
     from app.collection.current_comparison_inputs import PRODUCER_VERSION
@@ -171,7 +171,7 @@ def eligibility(q, reference, at, event):
     for row in reference.outcomes:
         if row.source_at is None:
             reasons.append('reference_source_clock_unknown')
-        elif instant(row.source_at) > instant(row.received_at) or instant(row.source_at) > at or instant(row.received_at) > at:
+        elif any(instant(c)>instant(row.received_at) or instant(c)>at for c in (row.book_at,row.market_at) if c is not None) or instant(row.received_at)>at:
             reasons.append('reference_clock_future')
         elif (at - instant(row.source_at)).total_seconds() > 1800:
             reasons.append('reference_expired')
@@ -353,7 +353,7 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
             weight, reference = _reference(q, values, roles, policy=policy, benchmark=benchmark, at=at)
             if getattr(policy, 'sizing_mode', None) is not None:
                 ref_reasons = eligibility(q, reference, at, event)
-                invalid = [v for v in ref_reasons if v.startswith('reference_')]
+                invalid = [v for v in ref_reasons if v.startswith('reference_') and v != 'reference_expired']
                 if invalid:
                     raise ValueError('; '.join(invalid))
         except (ValueError, KeyError, TypeError) as error:
@@ -361,7 +361,7 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
                 raise
             weight, reference, reference_reason = None, None, str(error)
         rank_reasons = eligibility(q, reference, at, event) if reference is not None else eligibility(q, type('EmptyReference', (), {'outcomes': ()})(), at, event)
-        if any('future' in r for r in rank_reasons):
+        if any('future' in r or 'clock_unknown' in r for r in rank_reasons):
             raise ValueError('; '.join(rank_reasons))
         if link_reasons(q, at):
             raise ValueError('; '.join(link_reasons(q, at)))
@@ -476,7 +476,7 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
             modeled_native_quantity=wire(chosen-supported), acquisition_usd=component['acquisition_usd'],
             net_entry_fee_usd=None if cell(component,'fee','net_entry_fee_usd') is None else wire(cell(component,'fee','net_entry_fee_usd')),
             size_search=dict(search, evaluations=sizing_probes), grid=grid,
-            evaluated_at=evaluated_at.isoformat(), as_of_basis='historical_as_of_retained_inputs' if rank_reasons else 'retained_input_boundary_current_eligible',
+            evaluated_at=evaluated_at.isoformat(), as_of_basis='last_known_inputs_evaluated_together' if rank_reasons else 'current_inputs_evaluated_together',
             actual_facts=dict(charges=None, settlement=None, execution_support=None,
                 native_grid=grid['qualification'] if grid['qualification'] in ('bound_native_grid','selected_retail_decimal_grid','selected_fixed_point_grid','selected_public_retail_decimal_contracts') else None),
             assumptions=[*scope_assumptions, 'EV01 provisional priors; not calibrated NFL rates',
@@ -559,6 +559,8 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
         if getattr(policy, 'sizing_mode', None) is not None:
             from .financial_metrics import single_metrics
             single_metrics(result, policy, reference, weight, component, unit, path, chosen, reference_reason, q)
+        from .calculation_availability import frame
+        result['evaluation_frame'] = frame((q,), reference, at)
         result['revision'] = digest({k:(compact(v) if k=='supported_size_result' else v) for k,v in result.items() if k != 'revision'})
         if details:
             result.update(dependencies=dependencies, components=component, fills=fills,
@@ -576,7 +578,7 @@ def compact(result):
         'unused_cash_usd','buffer_usd','fee_adjusted_expected_profit_usd','buffered_profit_usd',
         'unbuffered_return_percent','buffered_return_percent','size_status','supported_native_quantity',
         'modeled_native_quantity','supported_capital_usd','policy_revision','evaluated_at','as_of_basis','display',
-        'supported_size_evaluation','supported_size_result','material_note')
+        'supported_size_evaluation','supported_size_result','material_note','evaluation_frame')
     from .financial_metrics import SUCCESSOR_FIELDS
     fields += SUCCESSOR_FIELDS
     return {k:(compact(result[k]) if k=='supported_size_result' else result[k]) for k in fields if k in result}

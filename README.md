@@ -2,18 +2,21 @@
 
 A local, read-only prediction-market comparison app for macOS. **Odds** groups
 observed NFL winner prices, **EV** shows modeled single-trade estimates, and
-**Arbs** compares opposing allocations. Details exposes original inputs, costs,
-settlement assumptions and typed current originals. Admin manages source status and collection.
+**Arbs** compares opposing allocations across venues. Filter all observed games,
+inspect original prices and calculation inputs in Details, and manage collection
+and source status in Admin.
 
 Kalshi and Polymarket US use native adapters; Novig and ProphetX can arrive through
 The Odds API. Pinnacle is a reference, not a purchase leg. The default calculation
 uses $1,000 funding and one 0.5% buffer on deployed capital. Estimates can be
-negative or unavailable. Predict does not place trades.
+negative, unavailable or labeled last-known when inputs have aged. Predict does
+not place trades.
 
 ## Requirements and quickstart
 
 Requires macOS, Python 3.11+ and PostgreSQL tools (`pg_ctl`, `initdb`, `psql`,
-`createdb`) on your PATH. Run commands from the repository root:
+`createdb`) on your PATH. Node 22 is needed only for client tests. Run commands
+from the repository root:
 
 ```sh
 python3 -m venv .venv
@@ -50,8 +53,8 @@ node tests/test_stored_views.cjs
 .venv/bin/python scripts/ci/docs.py
 ```
 
-Node 22 is used for client tests; it is not an app service. Use affected tests for
-small changes; [CI](docs/CI.md) describes the broader automated checks.
+Use affected tests for small changes; [CI](docs/CI.md) describes the broader
+automated checks.
 
 - [Architecture and module ownership](docs/architecture.md)
 - [Calculation basis and limitations](docs/benchmark-ev.md)

@@ -13,20 +13,21 @@
 <button id="stop" class="secondary">Stop collection</button>
 </header>
 <div class="heading"><div class="view-title"><h1 id="title">Odds</h1><span class="scope">NFL · Full game, including overtime</span></div>
-<details class="view-help"><summary>About this view</summary><div><p id="purpose">Compare winner prices against a named fair benchmark.</p><p>American odds make prices comparable. Open a price for its original contract; use Details in EV and Arbs to inspect funding, costs and modeled outcomes.</p></div></details></div>
+<details class="view-help"><summary>About this view</summary><div><p>American odds make prices comparable. Open a price for its original contract; use Details in EV and Arbs to inspect funding, costs and modeled outcomes.</p></div></details></div>
+<p id="purpose" class="view-purpose">Odds compares available prices across sites. EV shows estimated return against a reference. Arbs compares opposing bets across sites.</p>
 <div class="board-controls">
 <section class="selection slate-selection" aria-label="Game filters">
 <label>Games<select id="game"><option value="">All games</option></select></label>
 <label>Search teams<input id="search" type="search" placeholder="Find any team" autocomplete="off"></label>
-<label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Best modeled value</option><option value="start">Kickoff time</option></select></label>
+<label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Return / margin %</option><option value="start">Kickoff time</option></select></label>
 </section>
 <form id="settings" aria-label="Calculation settings">
-<details class="calculation-settings"><summary><span><strong>Applied settings</strong><span id="applied" class="muted">$1,000 funded · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
-<label>Funding amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
+<details class="calculation-settings"><summary><span><strong>Amount (optional)</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
+<label>Amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
 <label>Buffer (%)<input id="buffer" type="text" inputmode="decimal" value="0.5"></label>
 <label class="benchmark-setting">Reference<select id="benchmark"><option value="pinnacle">Pinnacle</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
 <button type="submit" class="primary">Apply</button><button id="restore" type="button" class="secondary">Restore defaults</button>
-</div><p class="settings-help">Funding includes modeled fees. The buffer applies once to deployed capital.</p></div></details></form>
+</div><p class="settings-help">Compare immediately using the defaults. Amount includes modeled fees; the buffer applies once to deployed capital.</p></div></details></form>
 </div>
 <div class="context-bar"><p id="status" role="status">Loading current games…</p><button id="retry" hidden>Retry current reads</button><details id="read-diagnostics" hidden><summary>Technical details</summary><p id="read-error"></p></details></div>
 <div id="filters" hidden role="group" aria-label="Results"><button data-filter="positive" aria-pressed="true">Positive</button><button data-filter="all" aria-pressed="false">All comparisons</button><button data-filter="hedges" aria-pressed="false" hidden>Rule-sensitive hedges</button></div>

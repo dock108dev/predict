@@ -10,9 +10,9 @@ SPORTS=('NFL','NCAAF','NBA','NCAAB','MLB','NHL')
 # Explicit observed series IDs; never construct tickers from inferred names.
 SERIES=dict(NFL='KXNFLGAME',NCAAF='KXNCAAFGAME',NBA='KXNBAGAME',
             NCAAB='KXNCAAMBGAME',MLB='KXMLBGAME',NHL='KXNHLGAME')
-# NFL successful league endpoint; remaining slugs observed in r4 league tags.
-# R2 complete /v2/leagues: CBB id=4, slug=cbb, tagId=8, basketball sportId=1;
-# separate WCBB id=17. This identifies the native family, not division/game identity.
+# League slugs come from native league tags and the /v2/leagues endpoint.
+# CBB has id=4, slug=cbb, tagId=8 and basketball sportId=1; WCBB has id=17.
+# These identify the native family, not division or game identity.
 LEAGUES=dict(NFL='nfl',NCAAF='cfb',NBA='nba',NCAAB='cbb',MLB='mlb',NHL='nhl')
 PAGE_SIZE=5
 PAGES=2

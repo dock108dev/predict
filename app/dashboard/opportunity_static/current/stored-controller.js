@@ -102,12 +102,18 @@ function persist() {
 function preserveContent(draw) {
   const active = document.activeElement,
     key = active?.dataset.key,
+    anchor = [...$("content").querySelectorAll(".slate-result, .slate-game")].find(n => n.getBoundingClientRect().bottom > 100),
+    anchorKey = anchor?.dataset.key, anchorTop = anchor?.getBoundingClientRect().top,
     disclosures = [...$("content").querySelectorAll("details[open]")].map(
       (d) => d.dataset.key,
     );
   draw();
   for (const d of $("content").querySelectorAll("details"))
     if (disclosures.includes(d.dataset.key)) d.open = true;
+  if (anchorKey) {
+    const replacement = [...$("content").querySelectorAll("[data-key]")].find(n => n.dataset.key === anchorKey && n.className === anchor.className);
+    if (replacement) window.scrollBy(0, replacement.getBoundingClientRect().top - anchorTop);
+  }
   if (key)
     $("content")
       .querySelectorAll("button[data-key]")
@@ -129,14 +135,14 @@ function draw(v) {
   current = v;
   $("applied").textContent =
     money(applied.amount) +
-    " funded · " +
+    " · " +
     percent(String(numeric(applied.buffer) * 100)) +
     " buffer · " +
     venue(applied.benchmark_venue);
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
-  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Current updates paused. Open Admin to check source status.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
+  const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Saving updates paused. Source status is in Admin.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
   setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
   if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
   preserveContent(() =>
@@ -146,7 +152,7 @@ function draw(v) {
       game,
       search: $("search").value,
       sort: $("sort").value,
-      onShowAll: () => $("filters").querySelector("[data-filter=all]").click(),
+      onShowAll: () => { const all = $("filters").querySelector("[data-filter=all]"); all.click(); all.focus({ preventScroll: true }); },
     }),
   );
 }
@@ -479,12 +485,6 @@ $("stop").onclick = async () => {
 };
 $("title").textContent =
   view === "odds" ? "Odds" : view === "ev" ? "Expected value" : "Arbitrage";
-$("purpose").textContent =
-  view === "odds"
-    ? "Every current game and its available winner prices, with a separate fair benchmark."
-    : view === "ev"
-      ? "Compare estimated profit across all games after modeled costs, rule effects and one buffer."
-      : "Compare opposing selections across all games, with one shared amount and margins after costs.";
 $("filters").hidden = view === "odds";
 $("filters").querySelector("[data-filter=hedges]").hidden = view !== "arbs";
 for (const a of document.querySelectorAll("nav a"))

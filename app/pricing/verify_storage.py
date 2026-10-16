@@ -1,6 +1,6 @@
 """Offline pricing persistence checks in an isolated socket-only database cluster.
 
-No default DB connection helper is called. Existing E2 evidence is read-only.
+No default DB connection helper is called. Retained reference inputs are read-only.
 """
 from dataclasses import replace
 from hashlib import sha256
@@ -70,7 +70,7 @@ def main():
             foundation = Store(db); foundation.migrate(); foundation.migrate()
             assert db.execute('SELECT count(*) AS n FROM schema_migration').fetchone()['n'] == len(list((ROOT/'app/storage/migrations').glob('*.sql')))
             refs, fair = ReferenceStore(db), FairPriceStore(db)
-            # Start with the exact E2 archive, not fabricated detached quotes.
+            # Restore the exact retained reference archive before calculating as-of estimates.
             original_path = ROOT/'evidence/e2/implementation/reference-bundle.json'
             refs.restore(original_path)
             refs.export(OUTPUT/'e2-reference-restored.json')
@@ -132,7 +132,7 @@ def main():
                 fair.export(estimate.id, OUTPUT/f'estimate-{index}.json')
             result['counts'] = {table: db.execute(sql.SQL('SELECT count(*) AS n FROM {}').format(sql.Identifier(table))).fetchone()['n']
                                 for table in ('reference_receipt', 'reference_quote_revision', 'reference_source_revision', 'fair_price', 'fair_price_input')}
-            # A capture exported with E2 migrations remains readable as well.
+            # A capture with the four-migration reference schema prefix remains readable.
             foundation.export(OUTPUT/'capture-current.json')
             e2_capture = json.loads((OUTPUT/'capture-current.json').read_text())
             e2_capture['payload']['migrations'] = e2_capture['payload']['migrations'][:4]

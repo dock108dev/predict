@@ -1,6 +1,6 @@
 """Offline opportunity persistence checks in an isolated socket-only database cluster.
 
-No default DB connection helper is called. Existing E2/E3 evidence is read-only.
+No default DB connection helper is called. Retained reference and pricing inputs are read-only.
 """
 from copy import deepcopy
 from dataclasses import replace
@@ -83,7 +83,7 @@ def main():
                 e=fair.restore(ROOT/f'evidence/e3/durable/estimate-{i}.json');estimates.append(e)
                 fair.export(e.id,OUTPUT/f'estimate-{i}.json')
                 assert (OUTPUT/f'estimate-{i}.json').read_bytes()==(ROOT/f'evidence/e3/durable/estimate-{i}.json').read_bytes()
-            # Public service entry reads persisted E3, not a detached caller estimate.
+            # Public service entry reads a persisted fair-price estimate with durable dependencies.
             cases=[('e3-unavailable-ev',inputs()),('invented-positive',inputs(model='complete')),
                 ('invented-negative',inputs(price='0.8',model='complete')),
                 ('invented-missing-mass',inputs(model='missing')),
@@ -184,7 +184,7 @@ def main():
             result['checks'].append('pre-E2 capture-bundle-1 restored with exact detector replay')
         with connection('e4_prefix') as db:
             st=Store(db);st.migrate()
-            # Both actual retained E2-prefix and actual E3 capture exports remain readable.
+            # Retained capture exports with supported migration prefixes remain readable.
             st.import_bundle(ROOT/'evidence/e3/durable/capture-e2-prefix.json')
         with connection('e4_e3_prefix') as db:
             st=Store(db);st.migrate();st.import_bundle(ROOT/'evidence/e3/durable/capture-current.json')

@@ -1,5 +1,84 @@
-import { numeric, money, percent } from "./board-client.js";
-import { el, side, venue, words, time, price, metric, benchmark, labelsFor } from "./board-elements.js";
+import { numeric, percent } from "./board-client.js";
+import { el, side, venue, words, time, price, metric, americanDecimal, labelsFor } from "./board-elements.js";
+
+const comparisonStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "calculation_failed", "not_evaluated"];
+const comparisonMetrics = {
+  buffered_ev_usd: ["buffered_return_percent", "Estimated return", 0],
+  conditional_buffered_ev_usd: ["conditional_buffered_return_percent", "Return · decisive outcomes only", 1],
+  buffered_complete_modeled_minimum_usd: ["buffered_complete_minimum_return_percent", "Minimum margin · modeled outcomes", 0],
+  buffered_decisive_opposing_margin_usd: ["buffered_decisive_return_percent", "Margin · decisive outcomes only", 1],
+};
+// Financial category decides the field. Never pick the most favorable number.
+export function primaryComparisonMetric(row, view) {
+  const fields = view === "arbs" ? (row.classification?.category === "positive_complete_modeled_pair" ? ["buffered_complete_modeled_minimum_usd"] : ["buffered_decisive_opposing_margin_usd"]) : ["buffered_ev_usd", "conditional_buffered_ev_usd"];
+  for (const field of fields) {
+    const [percentField, label, category] = comparisonMetrics[field], state = row.availability?.metrics?.[field]?.state;
+    if (row.availability?.numeric_metrics?.includes(field) && ["numeric_current", "numeric_last_known"].includes(state) && numeric(row.financial_metrics?.[field]) !== null && numeric(row.financial_metrics?.[percentField]) !== null)
+      return {field, percentField, label, category, state, value: row.financial_metrics[percentField]};
+  }
+  return null;
+}
+export function compareComparisonMetrics(a, b, view) {
+  const x = primaryComparisonMetric(a, view), y = primaryComparisonMetric(b, view);
+  if (!x || !y) return Number(!x) - Number(!y);
+  return x.category - y.category || numeric(y.value) - numeric(x.value);
+}
+const comparisonCauseLabels = {
+  selected_reference_missing: "Selected reference missing",
+  short_collateral_unresolved: "Short collateral unsupported",
+  source_unavailable: "Source status unavailable",
+  execution_source_unavailable: "Execution source paused or unavailable",
+  source_expired: "Execution prices are older",
+  reference_expired: "Reference prices are older",
+  reference_stale_or_unknown: "Reference freshness is stale or unknown",
+  source_price_expired: "Source price freshness has expired",
+  calculation_read_failed: "Calculation read failed",
+  calculation_failed: "Calculation failed",
+  complete_probability_partition_unsupported: "Complete outcome probabilities unsupported",
+  unsupported_model_or_contract: "Model or contract unsupported",
+  invalid_inputs: "Inputs invalid or conflicting",
+};
+function causeLabel(code) { return comparisonCauseLabels[code] || "Unsupported input (" + words(code) + ")"; }
+function unavailableLabel(a, shared) {
+  if (!a || a.state === "not_evaluated") return "Not evaluated";
+  const local = a.reason_codes.filter(c => !shared.has(c));
+  if (local.length) return causeLabel(local[0]);
+  return "Unavailable · see availability";
+}
+export function comparisonWarning(row, view, chosen) {
+  if (!chosen) return "";
+  const c = row.classification || {};
+  if (Object.entries(c.adverse_outcomes || {}).some(([state, v]) => !["a_wins", "b_wins"].includes(state) && numeric(v) < 0)) return "Can lose on tie or exceptional settlement · Details";
+  if (c.unknown_outcomes?.length) return "Some settlement payouts unknown · Details";
+  if (view === "arbs" && chosen.field === "buffered_decisive_opposing_margin_usd") return "Ties and cancellations are outside this margin";
+  return "";
+}
+export function scopedComparisonAvailability(boards, errors, games) {
+  const counts = Object.fromEntries(comparisonStates.map(s => [s, 0])), causes = new Map();
+  let positive = 0, evaluated = false;
+  function addCause(c) {
+    const entry = causes.get(c.code) || {code: c.code, affected_results: 0, affected_games: 0, venues: []};
+    entry.affected_results += c.affected_results; entry.affected_games += c.affected_games;
+    entry.venues = [...new Set([...entry.venues, ...c.venues])]; causes.set(c.code, entry);
+  }
+  for (const b of boards) {
+    const a = b.availability;
+    if (!a) continue;
+    evaluated ||= a.outcome !== "not_evaluated";
+    for (const state of comparisonStates) counts[state] += a.counts[state];
+    positive += a.positive_results;
+    a.causes.forEach(addCause);
+  }
+  for (const e of errors) {
+    const a = e.availability;
+    if (!a) continue;
+    evaluated ||= a.state !== "not_evaluated"; counts[a.state]++;
+    a.reason_codes.forEach(code => addCause({code, affected_results: 1, affected_games: 1, venues: []}));
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0), numericResults = counts.numeric_current + counts.numeric_last_known;
+  return {counts, total_results: total, numeric_results: numericResults, current_results: counts.numeric_current, positive_results: positive, games,
+    outcome: !evaluated ? "not_evaluated" : !numericResults && total ? "unavailable" : positive ? "positive" : numericResults < total ? "partial" : !counts.numeric_current && numericResults ? "last_known_only" : "evaluated_no_positive", causes: [...causes.values()]};
+}
 
 // Pure selection/presentation. Every callback keeps the original row and game;
 // grouping never combines instrument identities, financial values or clocks.
@@ -25,16 +104,13 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
   function referenceEvidence(root, g, b) {
     const d = el("details", undefined, "reference-evidence");
     d.dataset.key = g.game_key + ":reference";
-    d.append(el("summary", venue(b.benchmark.venue) + " reference · originals & method"));
+    d.append(el("summary", "Reference originals & method"));
     const { participant } = labelsFor(g.participants);
     d.append(el("p", words(b.benchmark.method) + " · " + words(b.benchmark.conditioning) + " · " + (b.benchmark.freshness === "current" ? "Current benchmark inputs" : "As-of benchmark")));
     for (const f of b.benchmark.fair || []) d.append(el("p", participant(f.participant) + " · fair decimal " + f.fair_decimal_odds + " · decisive probability " + f.decisive_probability));
     for (const o of b.benchmark.originals || []) d.append(el("p", participant(o.selection?.participant_id) + " · offered decimal " + o.decimal_odds + " · Source " + (o.book_at || o.market_at || "Unknown") + " · Received " + (o.received_at || "Unknown")));
     if (!b.benchmark.available) d.append(el("p", "Selected benchmark unavailable · " + words(b.benchmark.reason)));
     root.append(d);
-  }
-  function sourceClock(value) {
-    return value ? new Date(value).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Unknown";
   }
   function odds(g, b, paused) {
     const root = el("article", undefined, "slate-game slate-odds");
@@ -64,14 +140,16 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
           const meaning = labelsFor(g.participants).selection(q) + " · " + venue(book) + " · original " + q.original.value + " " + words(q.original.units) + " · " + (q.freshness?.status === "current" ? "Current inputs" : "As-of inputs") + " · Source " + (q.freshness?.source_at || "Unknown") + " · Received " + (q.freshness?.received_at || "Unknown");
           button.title = meaning;
           button.setAttribute("aria-label", meaning + " · Open original price");
-          const age = el("small", (q.freshness?.status === "current" ? "Source " : "As-of ") + sourceClock(q.freshness?.source_at), "compact-source-clock");
+          const age = el("small", q.freshness?.status === "current" ? "Current" : "Last-known", "compact-source-clock");
           age.title = meaning;
           cell.append(age);
         }
         row.append(cell);
       }
       const fair = el("div", undefined, "slate-price-cell slate-fair");
-      benchmark(fair, b.benchmark, team.id);
+      const f = b.benchmark.fair?.find(f => f.participant === team.id);
+      fair.append(el("strong", f ? "Fair " + americanDecimal(f.fair_decimal_odds) : "Fair unavailable"));
+      if (b.benchmark.available && b.benchmark.freshness !== "current") fair.append(el("small", "Last-known"));
       row.append(fair);
       table.append(row);
     }
@@ -87,63 +165,82 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     referenceEvidence(root, g, b);
     content.append(root);
   }
-  function risk(row, b, view, paused) {
-    const m = row.financial_metrics || {}, c = row.classification || {}, notes = [];
-    if (row.freshness?.status !== "current") notes.push("As-of inputs");
-    if (delivery(b, paused)) notes.push(delivery(b, paused));
-    if (view === "ev" && row.benchmark_identity?.revision && row.benchmark_identity.revision !== b.benchmark.revision) notes.push("Reference changed · current basis in Details");
-    if (view === "ev" && m.buffered_ev_usd == null) notes.push(m.conditional_buffered_ev_usd == null ? "EV unavailable" : "Conditional decisive EV · complete EV unknown");
-    if (view === "arbs") {
-      if (c.positive_rule_sensitive_eligible) notes.push("Rule-sensitive hedge");
-      if (m.buffered_ev_usd == null) notes.push("Complete EV unknown");
-      const adverse = Object.values(c.adverse_outcomes || {}).map(numeric).filter(v => v !== null);
-      if (adverse.length) notes.push("Adverse outcome " + money(String(Math.min(...adverse))) + " before buffer");
-      if (c.unknown_outcomes?.length || m.buffered_complete_modeled_minimum_usd == null) notes.push("Unknown outcome payouts");
-    }
-    if (numeric(row.funding?.residual_usd) >= 0.01) notes.push("Deployed " + money(row.funding.deployed_usd) + " · size limited");
-    if (!notes.length) notes.push(c.main_positive_eligible ? "Modeled estimate · fills/fees unconfirmed" : (c.reason === "buffered_value_zero_or_negative" || c.reason === "buffered value is zero or negative") ? "No positive value after costs and buffer" : words(c.reason || "Modeled comparison"));
-    return notes.join(" · ");
-  }
-  const signedMoney = v => (numeric(v) > 0 ? "+" : "") + money(v);
-  const signedPercent = v => (numeric(v) > 0 ? "+" : "") + percent(v);
-  function financial(root, g, b, row, view, paused, rank) {
+  function financial(root, g, b, row, view, paused, shared) {
     const item = el("div", undefined, "slate-result " + (view === "arbs" ? "slate-arb" : "slate-ev"));
     item.dataset.key = g.game_key + ":" + (row.quote_id || row.pair_id);
-    item.setAttribute("aria-label", g.title + " · rank " + rank);
+    item.setAttribute("aria-label", g.title + " · " + labelsFor(g.participants).selection(view === "ev" ? row : row.legs[0]));
     const identity = el("div", undefined, "slate-result-identity"), { selection } = labelsFor(g.participants);
-    identity.append(el("small", "#" + rank, "comparison-rank"));
-    if (view === "ev") identity.append(el("strong", venue(row.venue) + " " + price(row)));
-    else for (const [i, leg] of row.legs.entries()) {
+    if (view === "ev") identity.append(el("strong", venue(row.venue)), el("span", price(row), "execution-price"));
+    else for (const leg of row.legs) {
       const line = el("p", undefined, "slate-leg");
-      line.append(el("strong", selection(leg)), el("span", venue(leg.venue) + " " + price(leg) + " · " + money(row.funding?.legs?.[i]?.deployed_capital_usd)));
+      line.append(el("strong", selection(leg)), el("span", venue(leg.venue) + " · " + price(leg)));
       identity.append(line);
     }
     item.append(identity);
-    const m = row.financial_metrics || {}, values = el("div", undefined, "slate-result-values");
-    if (view === "ev") {
-      const conditional = m.buffered_ev_usd == null;
-      metric(values, conditional ? "Conditional EV · buffered" : "Complete EV · buffered", conditional ? m.conditional_buffered_ev_usd : m.buffered_ev_usd, signedMoney);
-      metric(values, "Return on deployed", conditional ? m.conditional_buffered_return_percent : m.buffered_return_percent, signedPercent);
+    const chosen = primaryComparisonMetric(row, view), values = el("div", undefined, "slate-result-values");
+    if (chosen) {
+      const prefix = chosen.state === "numeric_last_known" ? "Last-known · " : "";
+      metric(values, prefix + chosen.label, chosen.value, v => (numeric(v) > 0 ? "+" : "") + percent(v));
+      item.dataset.metric = chosen.field;
+      item.dataset.availability = chosen.state;
     } else {
-      metric(values, "Decisive margin · buffered", m.buffered_decisive_opposing_margin_usd, signedMoney);
-      metric(values, "Decisive return", m.buffered_decisive_return_percent, signedPercent);
-      values.append(el("small", "Modeled minimum · buffered " + money(m.buffered_complete_modeled_minimum_usd) + " · " + percent(m.buffered_complete_minimum_return_percent), "modeled-minimum"));
-      values.append(el("small", "Combined deployment " + money(row.funding?.deployed_usd)));
+      const status = el("div", undefined, "comparison-unavailable");
+      status.append(el("strong", unavailableLabel(row.availability, shared)));
+      values.append(status);
+      item.dataset.availability = row.availability?.state || "not_evaluated";
     }
     item.append(values);
-    const note = el("small", risk(row, b, view, paused), "slate-result-note");
-    note.dataset.caution = String(row.freshness?.status !== "current" || m.buffered_ev_usd == null || !!row.classification?.positive_rule_sensitive_eligible);
-    note.title = "Calculation as-of " + b.result_as_of + " · " + words(row.classification?.reason) + " · " + (row.freshness?.reasons || []).map(words).join(" · ");
-    item.append(note);
+    const warning = comparisonWarning(row, view, chosen);
+    if (warning) {
+      const note = el("small", warning, "slate-result-note");
+      note.dataset.caution = "true";
+      item.append(note);
+    }
     action(item, "Details", item.dataset.key, button => onDetails(row, button, g));
     root.append(item);
   }
-  function score(row, view) {
-    const m = row.financial_metrics || {};
-    return numeric(view === "ev" ? m.buffered_ev_usd ?? m.conditional_buffered_ev_usd : m.buffered_complete_modeled_minimum_usd ?? m.buffered_decisive_opposing_margin_usd) ?? -Infinity;
+  function gameReference(root, g, b) {
+    const line = el("p", undefined, "game-reference");
+    line.append(el("span", venue(b.benchmark.venue) + " fair American · "));
+    line.append(el("span", g.participants.map(p => {
+      const f = b.benchmark.fair?.find(f => f.participant === p.id);
+      return p.name + " " + (f ? americanDecimal(f.fair_decimal_odds) : "unavailable");
+    }).join(" · ")));
+    if (b.benchmark.freshness !== "current" && b.benchmark.available) line.append(el("small", "Last-known reference"));
+    root.append(line);
+  }
+  function availabilityNotice(scope, filter, onShowAll) {
+    const notice = el("aside", undefined, "availability-notice");
+    notice.setAttribute("aria-label", "Calculation availability");
+    const lastKnown = scope.counts.numeric_last_known > 0 && !scope.current_results;
+    const title = lastKnown ? "Last-known estimates available" : ({
+      partial: "Some calculations are unavailable", unavailable: "Calculations unavailable",
+      not_evaluated: "Calculations not evaluated", evaluated_no_positive: "No current positive result",
+      positive: "Current estimates available", last_known_only: "Last-known estimates available",
+    })[scope.outcome];
+    notice.append(el("strong", title));
+    if (lastKnown) notice.append(el("p", "Older prices or references support inspection, but are excluded from current Positive and Hedges."));
+    else if (scope.outcome === "unavailable") notice.append(el("p", "This scope could not supply a supported estimate. Prices remain inspectable in Odds."));
+    else if (scope.outcome === "not_evaluated") notice.append(el("p", "No financial evaluation is available for this scope."));
+    const counts = [];
+    if (scope.current_results) counts.push(scope.current_results + " current numeric");
+    if (scope.counts.numeric_last_known) counts.push(scope.counts.numeric_last_known + " last-known numeric");
+    const unavailable = scope.total_results - scope.numeric_results;
+    if (unavailable) counts.push(unavailable + " unavailable or not evaluated");
+    notice.append(el("small", counts.join(" · ") + (counts.length ? " · " : "") + scope.total_results + " inspected results/candidates before filtering"));
+    if (lastKnown && filter !== "all") action(notice, "View last-known estimates", "last-known-estimates", onShowAll);
+    if (scope.causes.length) {
+      const d = el("details", undefined, "availability-causes"); d.dataset.key = "availability-causes";
+      d.append(el("summary", "Why these results are last-known or unavailable"));
+      for (const cause of scope.causes) d.append(el("p", causeLabel(cause.code) + " · " + cause.affected_results + " inspected results/candidates in " + cause.affected_games + " games" + (cause.venues.length ? " · " + cause.venues.map(venue).join(", ") : "")));
+      if (scope.causes.length > 1) d.append(el("small", "Causes can overlap; their counts are not added."));
+      const link = el("a", "Check source status in Admin"); link.href = "/admin"; d.append(link); notice.append(d);
+    }
+    content.append(notice);
   }
   function advancedHistory(boards, visible) {
     const saved = boards.flatMap(b => b.rows.filter(r => r.legs?.length === 2 && r.legs[0].venue === r.legs[1].venue).map(row => ({ b, row, g: visible.get(b.game_key) })));
+    if (!saved.length) return;
     const d = el("details", undefined, "same-venue-history");
     d.dataset.key = "advanced-same-venue";
     d.append(el("summary", "Advanced current portfolios · same venue"));
@@ -158,16 +255,17 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     const visible = new Map(v.games.filter(g => (!game || g.game_key === game) && g.title.toLowerCase().includes(search.toLowerCase())).map(g => [g.game_key, g]));
     const boards = v.boards.filter(b => visible.has(b.game_key)), paused = v.storage?.state === "unavailable";
     const rows = boards.flatMap(b => b.rows.filter(row => view !== "arbs" || crossVenue(row)).map(row => ({ g: visible.get(b.game_key), b, row })));
-    rows.sort((a, b) => score(b.row, view) - score(a.row, view) || (a.g.start_at || "").localeCompare(b.g.start_at || ""));
-    rows.forEach((entry, i) => entry.rank = i + 1);
+    rows.sort((a, b) => compareComparisonMetrics(a.row, b.row, view) || (a.g.start_at || "").localeCompare(b.g.start_at || "") || a.g.game_key.localeCompare(b.g.game_key) || String(a.row.quote_id || a.row.pair_id).localeCompare(String(b.row.quote_id || b.row.pair_id)));
+    const scope = scopedComparisonAvailability(boards, (v.errors || []).filter(e => visible.has(e.game_key)), visible.size);
+    const shared = new Set(scope.causes.filter(c => c.affected_results > 1).map(c => c.code));
     const summary = el("div", undefined, "slate-summary");
-    summary.append(el("strong", visible.size + " of " + v.games.length + " games"));
-    if (view !== "odds") summary.append(el("span", rows.length + (view === "arbs" ? " cross-venue comparisons" : " comparisons") + " · " + (filter === "all" ? "all current results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
+    summary.append(el("strong", visible.size + " matching games · " + v.games.length + " in covered catalog"));
+    if (view !== "odds") summary.append(el("span", rows.length + (view === "arbs" ? " cross-venue comparisons" : " comparisons") + " · " + (filter === "all" ? "all returned results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
     const overview = el("div", undefined, "slate-overview");
     overview.append(summary);
     const coverage = el("div", undefined, "slate-coverage");
     coverage.append(el("small", "Observed coverage"));
-    for (const book of ["novig", "prophetx", "kalshi", "polymarket_us", "pinnacle"]) coverage.append(el("span", venue(book) + " " + v.boards.filter(b => b.prices.some(q => q.venue === book) || (b.benchmark.venue === book && b.benchmark.available)).length + "/" + v.games.length));
+    for (const book of ["novig", "prophetx", "kalshi", "polymarket_us", "pinnacle"]) coverage.append(el("span", venue(book) + " " + boards.filter(b => b.prices.some(q => q.venue === book) || (b.benchmark.venue === book && b.benchmark.available)).length + "/" + visible.size));
     overview.append(coverage);
     if (v.games.length) content.append(overview);
     if (!visible.size) {
@@ -189,10 +287,17 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
       }
       return;
     }
+    availabilityNotice(scope, filter, onShowAll);
     if (!rows.length) {
       const empty = el("div", undefined, "empty");
-      empty.append(el("h2", filter === "all" ? "No current comparisons available" : filter === "hedges" ? "No positive rule-sensitive hedges" : view === "arbs" ? "No estimated arbitrage found" : "No positive EV found"), el("p", filter === "all" ? "Prices remain available in Odds." : "See signed and conditional results in All comparisons."));
-      if (filter !== "all") { const button = el("button", "Show all comparisons"); button.onclick = onShowAll; empty.append(button); }
+      const heading = scope.outcome === "evaluated_no_positive" || scope.outcome === "positive"
+        ? filter === "all" ? "No returned comparisons" : filter === "hedges" ? "No positive rule-sensitive hedges" : "No current positive result"
+        : scope.outcome === "not_evaluated" ? "Not evaluated" : scope.numeric_results ? "No current positive result" : "No supported estimates in this scope";
+      empty.append(el("h2", heading));
+      if (filter !== "all" && !(scope.counts.numeric_last_known && !scope.current_results)) {
+        empty.append(el("p", "Inspect signed and conditional results in All comparisons."));
+        action(empty, "Show all comparisons", "show-all-comparisons", onShowAll);
+      }
       content.append(empty);
     }
     const groups = new Map();
@@ -202,11 +307,12 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     }
     const ordered = [...groups.values()];
     if (sort === "start") ordered.sort((a, b) => (a[0].g.start_at || "").localeCompare(b[0].g.start_at || ""));
-    if (rows.length) content.append(el("small", sort === "start" ? "Games ordered by kickoff · # shows rank across games" : "Games ordered by best buffered value · # shows rank across games", "ranking-help"));
+
     for (const entries of ordered) {
       const { g, b } = entries[0], root = el("article", undefined, "slate-comparison-game");
       root.dataset.key = g.game_key;
       heading(root, g);
+      gameReference(root, g, b);
       if (view === "ev") {
         const instruments = new Map();
         for (const entry of entries) {
@@ -219,14 +325,11 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
         for (const instrument of instruments.values()) {
           const section = el("section", undefined, "slate-instrument"), row = instrument[0].row;
           section.append(el("h3", labelsFor(g.participants).selection(row)));
-          const reference = el("div", undefined, "instrument-reference");
-          benchmark(reference, b.benchmark, row.selection.participant);
-          section.append(reference);
-          for (const e of instrument) financial(section, g, b, e.row, view, paused, e.rank);
+          for (const e of instrument) financial(section, g, b, e.row, view, paused, shared);
           root.append(section);
         }
         referenceEvidence(root, g, b);
-      } else for (const e of entries) financial(root, g, b, e.row, view, paused, e.rank);
+      } else for (const e of entries) financial(root, g, b, e.row, view, paused, shared);
       content.append(root);
     }
     const missing = boards.filter(b => !b.rows.length && (b.delivery_state === "pending" || filter === "all"));

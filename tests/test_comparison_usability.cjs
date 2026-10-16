@@ -9,6 +9,21 @@ global.fetch = () => { throw Error('Render cannot acquire data'); };
 const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current', name)).href;
 const fixture = JSON.parse(fs.readFileSync('tests/fixtures/ev09-u01-responses.json'));
 const copy = value => JSON.parse(JSON.stringify(value));
+// Legacy response facts are upgraded only in these authored renderer tests.
+function authoredAvailability(v) {
+ const states=['numeric_current','numeric_last_known','missing_reference','unsupported_inputs','calculation_failed','not_evaluated'];
+ for(const b of v.boards){
+  const counts=Object.fromEntries(states.map(s=>[s,0]));
+  for(const r of b.rows){
+   const numeric_metrics=['buffered_ev_usd','conditional_buffered_ev_usd','buffered_decisive_opposing_margin_usd','buffered_complete_modeled_minimum_usd'].filter(k=>r.financial_metrics?.[k]!=null);
+   const state=numeric_metrics.length?'numeric_current':'not_evaluated';counts[state]++;
+   r.availability={version:'predict-calculation-availability-1',state,reason_codes:[],numeric_metrics,metrics:Object.fromEntries(numeric_metrics.map(k=>[k,{state,reason_codes:[]}])),current_opportunity_eligible:false};
+  }
+  b.availability={version:'predict-calculation-availability-1',counts,total_results:b.rows.length,numeric_results:counts.numeric_current,current_results:counts.numeric_current,positive_results:0,outcome:counts.numeric_current?'evaluated_no_positive':'not_evaluated',causes:[]};
+ }
+ return v;
+}
+
 (async () => {
   const { americanDecimal } = await import(asset('board-elements.js'));
   const { createComparisonSlate, crossVenue } = await import(asset('comparison-slate-views.js'));
@@ -20,7 +35,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
   const renderer = createComparisonSlate({content,onDetails:(r,b,g)=>selected.push({r,b,g}),onOriginal:(q,b,g)=>originals.push({q,b,g})});
   function slate(view) {
     const b=copy(fixture[view]), g=copy(fixture.catalog.games[0]);
-    return {view,policy:b.policy,games:[g],boards:[b]};
+    return authoredAvailability({view,policy:b.policy,games:[g],boards:[b]});
   }
   for (const filter of ['all','positive','hedges']) {
     const v=slate('arbs'), before=JSON.stringify(v);
@@ -31,7 +46,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
     assert(content.querySelector('.slate-summary').textContent.includes('14 cross-venue comparisons'));
     for(const node of content.querySelectorAll('.slate-arb')){
       const row=expected.find(r=>node.dataset.key.endsWith(r.pair_id));assert(row);
-      assert(node.textContent.includes('Decisive margin · buffered'));
+      assert(node.textContent.includes('Margin · decisive outcomes only'));
       assert(!node.textContent.includes('Adverse outcomes before buffer:'));
       assert(!node.textContent.includes('Result as-of'));
       assert(!node.textContent.includes('residual'));
@@ -41,13 +56,13 @@ const copy = value => JSON.parse(JSON.stringify(value));
     assert.equal(JSON.stringify(v),before,'immutable server response');
   }
   const same=slate('arbs');same.boards[0].rows=same.boards[0].rows.filter(r=>!crossVenue(r));
-  renderer.draw(same,{view:'arbs',filter:'positive'});assert(content.textContent.includes('No estimated arbitrage found'));assert(content.textContent.includes('0 cross-venue comparisons'));
+  renderer.draw(same,{view:'arbs',filter:'positive'});assert(content.textContent.includes('No current positive result'));assert(content.textContent.includes('0 cross-venue comparisons'));
   const sensitive=slate('arbs');sensitive.boards[0].rows=sensitive.boards[0].rows.filter(crossVenue).slice(0,1);
   sensitive.boards[0].rows[0].classification.positive_rule_sensitive_eligible=true;
   sensitive.boards[0].rows[0].classification.unknown_outcomes=['tie'];
   sensitive.boards[0].rows[0].financial_metrics.buffered_complete_modeled_minimum_usd=null;
   renderer.draw(sensitive,{view:'arbs',filter:'hedges'});
-  assert(content.textContent.includes('Rule-sensitive hedge'));assert(content.textContent.includes('Unknown outcome payouts'));assert(content.textContent.includes('Adverse outcome'));
+  assert.equal(content.querySelectorAll('.slate-result-note').length,1);assert(content.textContent.includes('settlement'));
   const ev=slate('ev');renderer.draw(ev,{view:'ev',filter:'all'});
   assert.equal(content.querySelectorAll('.slate-comparison-game').length,1);
   assert.equal(content.querySelectorAll('.slate-ev').length,ev.boards[0].rows.length);

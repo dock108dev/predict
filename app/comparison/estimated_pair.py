@@ -58,6 +58,8 @@ def reference_basis(reference):
 class Leg:
     """Occurrence-local preparation and bounded scalar allocation cache."""
     def __init__(self,q,group,profiles,event,at,*,funding=None,policy=DEFAULT_POLICY,benchmark=None):
+        from .current_metrics import calculation_instant
+        at=calculation_instant((q,),profiles,at)
         self.q=q;self.group=group;self.profiles=profiles;self.at=at;self.event=event
         self.policy=policy;self.benchmark=benchmark
         self.funding=funding or {};self.cache={};self.probes=0
@@ -101,10 +103,10 @@ class Leg:
             if ref and ref['expires_at'] and at>=instant(ref['expires_at']):raise ValueError('pair_reference_expired')
         except (ValueError,KeyError,TypeError) as error:self.reference_reason=str(error);self.weight=None;self.reference=None
         self.rank_reasons=eligibility(q,self.reference,at,event) if self.reference else self._source_reasons()
-        if any('reference_clock_future' in r or (getattr(policy,'sizing_mode',None) is not None and r.startswith('reference_')) for r in self.rank_reasons):
+        if any('reference_clock_future' in r or (getattr(policy,'sizing_mode',None) is not None and r.startswith('reference_') and r!='reference_expired') for r in self.rank_reasons):
             self.reference=None;self.weight=None;self.reference_reason='pair_reference_invalid_or_expired';self.rank_reasons=self._source_reasons()
         self.shared_depth=(values.get('quantity') or {}).get('payload',{}).get('shared_depth_id')
-        if any('future' in r for r in self.rank_reasons):raise ValueError('; '.join(self.rank_reasons))
+        if any('future' in r or 'clock_unknown' in r for r in self.rank_reasons):raise ValueError('; '.join(self.rank_reasons))
         self.reference_basis=None if self.reference is None else reference_basis(self.reference)
         self.conditions=(values.get('payout') or {}).get('payload',{}).get('normal_condition')
         # Decisive opposition is determined from cashflows, never side labels.
@@ -430,6 +432,8 @@ def _evaluate(legs,policy,quantities,objective,terminal_weights,details):
     if getattr(policy,'sizing_mode',None) is not None:
         from .financial_metrics import pair_metrics
         pair_metrics(result,policy,legs,components,p,requested_search)
+    from .calculation_availability import frame
+    result['evaluation_frame']=frame([x.q for x in legs], next((x.reference for x in legs if x.reference is not None), None), max(x.at for x in legs))
     result['revision']=digest(result)
     if details:
         result['components']=[{k:v for k,v in x.get(n,rich=True).items() if not k.startswith('_pair_')} for x,n in zip(legs,qs)]
@@ -453,7 +457,7 @@ def _evaluate(legs,policy,quantities,objective,terminal_weights,details):
 
 def compact(value):
     """Small chosen result; native instruments reopen through exact quote IDs."""
-    fields=('version','id','revision','model_available','ranking_eligible','reasons','conditioning',
+    fields=('evaluation_frame','version','id','revision','model_available','ranking_eligible','reasons','conditioning',
         'policy_revision','objective','category','deployed_capital_usd','unused_cash_usd','buffer_usd',
         'minimum_spend_solution','buffered_profit_usd','buffered_return_percent',
         'buffered_decisive_minimum_usd','buffered_all_state_minimum_usd','limiting_states','size_status','display')

@@ -74,6 +74,16 @@ class CurrentBoardReads(unittest.TestCase):
         self.assertNotIn('snapshot_id',d);self.assertNotIn('result_id',d)
         self.assertEqual(d['quote']['original'],q['original'])
 
+    def test_details_percentage_companions_match_board_for_singles_and_pairs(self):
+        c=context();b=bundle(c);v=calculate_current(b,DEFAULT_POLICY,context=c,details=True)
+        for view in ('ev','arbs'):
+            board=response(b,v,DEFAULT_POLICY,view=view,filter='all',at=AT)
+            for row in board['rows']:
+                kwargs={'pair':row['pair_id']} if view=='arbs' else {'quote':row['quote_id']}
+                d=details(v,at=AT,current=b['state_inputs'],**kwargs)
+                selected=d['pair'] or d['quote']['calculations']['funded_estimate']
+                self.assertEqual(selected['financial_metrics'],row['financial_metrics'])
+
     def test_read_clocks_do_not_change_context_before_temporal_boundary(self):
         c=context();b=bundle(c);later=context(at='2026-10-14T01:16:00Z')
         self.assertEqual(b['calculation_context'],bundle(later)['calculation_context'])

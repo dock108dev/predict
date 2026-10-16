@@ -60,5 +60,5 @@ class OpportunityStore:
         return sha256(body.encode()).hexdigest()
 
     def restore(self, path):
-        # Restore full reference history and exact E3 estimates first.
+        # Restore full reference history and exact fair-price estimates first.
         audit=restore(Path(path).read_text()); self.save(audit); return audit

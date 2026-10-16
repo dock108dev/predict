@@ -3,6 +3,7 @@ from app.dashboard.comparison_board import response
 from app.storage.comparison_board import ReadContext, discover, calculate_current, context_identity
 from app.storage.current_games import GameStore
 from app.storage.store import encoded
+from app.comparison.calculation_availability import combine, result_availability
 
 VERSION='predict-comparison-slate-2'
 MAX_GAMES=500
@@ -29,12 +30,14 @@ def read(db,policy, *, view,filter,stopped,offset=0,limit=25,expected_revision=N
     boards=[];errors=[]
     for game,bundle,error in captured:
         if error:
-            errors.append(dict(game_key=game['game_key'],reason=error));continue
+            errors.append(dict(game_key=game['game_key'],reason=error,availability=result_availability(dict(reasons=['calculation_read_failed']))));continue
         try:
             value=None if view=='odds' else calculate_current(bundle,policy,context=context)
             boards.append(response(bundle,value,policy,view=view,filter=filter,stopped=stopped,at=context.at))
-        except (KeyError,ValueError) as exc:errors.append(dict(game_key=game['game_key'],reason=str(exc)))
+        except (KeyError,ValueError) as exc:errors.append(dict(game_key=game['game_key'],reason=str(exc),availability=result_availability(dict(reasons=['calculation_read_failed']))))
     end=offset+len(page);complete=end>=len(games)
     out=dict(version=VERSION,view=view,filter=filter,policy=policy.to_dict(),games=games,boards=boards,errors=errors,stopped=stopped,as_of=context.at,read_revision=context.read_revision,epoch=context.epoch,coverage=dict(total_games=len(games),offset=offset,limit=limit,returned_games=len(page),next_offset=None if complete else end,complete=complete),bounds=dict(maximum_games=MAX_GAMES,maximum_page_games=MAX_PAGE_GAMES,maximum_bytes=MAX_BYTES),provider_requests=0)
+    out['availability']=combine([b['availability'] for b in boards],games=len(page),
+        failures=[(e['game_key'],'calculation_read_failed') for e in errors],evaluated=view!='odds')
     if len(encoded(out))>MAX_BYTES:raise ValueError('slate_response_byte_capacity')
     return out,[]

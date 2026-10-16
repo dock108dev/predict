@@ -104,13 +104,14 @@ class TwoWayBenchmark(ReferenceSet):
             if row.source_at is None:
                 return 'unknown'
             source = instant(row.source_at); receipt = instant(row.received_at)
-            if source > receipt or source > at or receipt > at:
+            clocks=[instant(c) for c in (row.book_at,row.market_at) if c is not None]
+            if any(c > receipt or c > at for c in clocks) or receipt > at:
                 return 'future'
             if (at-source).total_seconds() > GROSS_MAXIMUM_AGE:
                 return 'expired'
         return 'current'
 
-    def weight(self, selected, *, at, venue, method):
+    def weight(self, selected, *, at, venue, method, allow_last_known=False):
         if self.venue != venue or self.method != method:
             raise ValueError('selected_benchmark_missing; no substitution')
         for row in self.outcomes:
@@ -118,19 +119,19 @@ class TwoWayBenchmark(ReferenceSet):
             if s.event.key != selected.event.key or s.scope.period != selected.scope.period:
                 raise ValueError('benchmark_occurrence_period_conflict')
         status = self.clock_status(at)
-        if status != 'current':
+        if status != 'current' and not (allow_last_known and status == 'expired'):
             reason = {'unknown':'source_clock_unknown', 'future':'clock_future', 'expired':'expired'}[status]
             raise ValueError('benchmark_' + reason)
         return self.fair_probabilities()[selected.event.home_id]
 
 
-def resolve(supplied, selected, policy, at):
+def resolve(supplied, selected, policy, at, *, allow_last_known=False):
     if isinstance(supplied, dict):
         supplied = TwoWayBenchmark.from_dict(supplied)
     if not isinstance(supplied, TwoWayBenchmark):
         raise ValueError('explicit_two_way_benchmark_required')
     return supplied.weight(selected, at=at, venue=policy.benchmark_venue,
-                           method=policy.benchmark_method), supplied
+                           method=policy.benchmark_method, allow_last_known=allow_last_known), supplied
 
 
 def metadata(reference, policy):

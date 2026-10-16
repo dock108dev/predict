@@ -27,6 +27,11 @@ in Details. A missing selected reference is not replaced implicitly.
 price and after-cost, after-buffer dollars/return together. Complete-state EV and
 conditional decisive EV have separate labels. Positive is the default; All
 comparisons includes concise signed current results and explicit unavailable states.
+Supported older inputs appear as **Last-known** estimates in All comparisons and
+are excluded from current Positive and Hedges. The board distinguishes those
+results from missing references, unsupported inputs, calculation failures and
+evaluated results with no positive value. Older inputs from different times do
+not establish a simultaneous historical trade.
 
 **Arbs** groups opposing legs with their shared funding and named buffered margin
 or return. Every ordinary filter requires distinct venues. Rule-sensitive hedges
@@ -45,10 +50,11 @@ liquidity and probability models retain their labels. See the
 ## Current Details and updates
 
 Details binds the selected game and instrument or pair to its input-dependency,
-policy and engine revisions. It begins with requested/deployed/residual funding
-and quantities, then reconciles gross value, rule adjustment, modeled fees, net
-estimate and one buffer. Native terms, exceptional outcomes, assumptions and
-selected current original inputs follow in expandable sections.
+policy and engine revisions. It leads with the supplied complete or conditional
+percentage, source status and buffered dollars, then requested/deployed/residual
+funding and quantities. Reconciliation explains gross value, rule adjustment,
+modeled fees, net estimate and one buffer. Native terms, exceptional outcomes,
+assumptions and selected current original inputs follow in expandable sections.
 
 Use a bounded transient context or explicitly report that the comparison changed,
 was removed or expired. Never silently replace the clicked selection or show new

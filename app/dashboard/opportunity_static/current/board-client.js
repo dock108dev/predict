@@ -118,8 +118,29 @@ export function checkPolicy(policy, context) {
   )
     throw Error("Settings identity crossed; response withheld.");
 }
+const availabilityStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "calculation_failed", "not_evaluated"];
+export function checkAvailability(value, summary = false) {
+  if (!value || value.version !== "predict-calculation-availability-1") throw Error("Calculation availability missing; response withheld.");
+  if (summary) {
+    if (!availabilityStates.every(s => Number.isSafeInteger(value.counts?.[s]) && value.counts[s] >= 0) ||
+        Object.values(value.counts).reduce((a, b) => a + b, 0) !== value.total_results ||
+        value.numeric_results !== value.counts.numeric_current + value.counts.numeric_last_known ||
+        value.current_results !== value.counts.numeric_current ||
+        !Number.isSafeInteger(value.positive_results) || value.positive_results < 0 ||
+        !Array.isArray(value.causes) || !["not_evaluated", "unavailable", "partial", "last_known_only", "evaluated_no_positive", "positive"].includes(value.outcome))
+      throw Error("Calculation availability counts crossed; response withheld.");
+  } else if (!availabilityStates.includes(value.state) || !Array.isArray(value.reason_codes) ||
+             !Array.isArray(value.numeric_metrics) || !value.metrics ||
+             Object.values(value.metrics).some(m => !availabilityStates.includes(m.state) || !Array.isArray(m.reason_codes)) ||
+             (value.state.startsWith("numeric_") !== (value.numeric_metrics.length > 0)) ||
+             (value.current_opportunity_eligible && value.state !== "numeric_current") ||
+             typeof value.current_opportunity_eligible !== "boolean")
+    throw Error("Calculation availability state crossed; response withheld.");
+  return value;
+}
 export function checkBoard(v, c) {
   checkPolicy(v.policy, c);
+  if (v.availability !== undefined) checkAvailability(v.availability, true);
   if (
     v.version !== "predict-comparison-board-2" ||
     v.game_key !== c.game ||
@@ -150,6 +171,13 @@ export function checkBoard(v, c) {
   }
   for (const row of v.rows) {
     if (c.view === "odds") continue;
+    if (row.availability !== undefined) {
+      checkAvailability(row.availability);
+      for (const key of row.availability.numeric_metrics) if (numeric(row.financial_metrics?.[key]) === null)
+        throw Error("Numeric availability crossed; response withheld.");
+      if (row.availability.state === "numeric_last_known" && (row.ranking_eligible || row.classification?.main_positive_eligible || row.classification?.positive_rule_sensitive_eligible))
+        throw Error("Last-known result cannot be a current opportunity.");
+    }
     if (
       c.filter !== "all" &&
       (row.freshness?.status !== "current" ||
@@ -187,6 +215,7 @@ export function checkBoard(v, c) {
 }
 export function checkSlate(v, c) {
   checkPolicy(v.policy, c);
+  if (v.availability !== undefined) checkAvailability(v.availability, true);
   if (
     v.version !== "predict-comparison-slate-2" ||
     v.view !== c.view ||
@@ -229,6 +258,7 @@ export function checkSlate(v, c) {
     seen.add(b.game_key);
   }
   for (const error of v.errors || []) {
+    if (error.availability !== undefined) checkAvailability(error.availability);
     if (!expected.has(error.game_key) || seen.has(error.game_key) || typeof error.reason !== "string")
       throw Error("Slate unavailable occurrence crossed; response withheld.");
     seen.add(error.game_key);
@@ -259,6 +289,8 @@ export function checkDetails(v, c, d) {
       : v.pair?.id !== d.pair_id || v.quote != null)
   )
     throw Error("Details identity crossed; response withheld.");
+  const result = v.pair || v.quote?.calculations?.funded_estimate;
+  if (result?.availability !== undefined) checkAvailability(result.availability);
   return v;
 }
 export function checkInputs(v, c, identity) {
@@ -307,6 +339,26 @@ export class SlateAccumulator {
     if (!this.complete) throw Error("Current slate coverage is incomplete; response withheld.");
     this.value.coverage = { total_games: this.value.games.length, returned_games: this.value.boards.length + this.value.errors.length,
       complete: true, page_count: this.pageCount, wire_bytes: this.totalBytes };
+    const summaries = this.value.boards.map(b => b.availability).filter(Boolean);
+    if (this.value.availability !== undefined) {
+      const states = Object.fromEntries(availabilityStates.map(s => [s, 0])), causes = new Map();
+      let positives = 0;
+      for (const a of summaries) {
+        for (const state of availabilityStates) states[state] += a.counts[state];
+        positives += a.positive_results;
+        for (const c of a.causes) {
+          const x = causes.get(c.code) || {code: c.code, affected_results: 0, affected_games: 0, venues: []};
+          x.affected_results += c.affected_results; x.affected_games += c.affected_games;
+          x.venues = [...new Set([...x.venues, ...c.venues])]; causes.set(c.code, x);
+        }
+      }
+      states.calculation_failed += this.value.errors.length;
+      if (this.value.errors.length) causes.set("calculation_read_failed", {code: "calculation_read_failed", affected_results: this.value.errors.length, affected_games: this.value.errors.length, venues: []});
+      const total = Object.values(states).reduce((a, b) => a + b, 0), count = states.numeric_current + states.numeric_last_known;
+      this.value.availability = {version: "predict-calculation-availability-1", scope: "evaluated_results_before_filter", games: this.value.games.length,
+        total_results: total, numeric_results: count, current_results: states.numeric_current, positive_results: positives, counts: states,
+        outcome: this.context.view === "odds" ? "not_evaluated" : !count && total ? "unavailable" : !total ? "evaluated_no_positive" : positives ? "positive" : count < total ? "partial" : !states.numeric_current ? "last_known_only" : "evaluated_no_positive", causes: [...causes.values()]};
+    }
     return this.value;
   }
 }

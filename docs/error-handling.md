@@ -63,7 +63,7 @@ as a scan failure. It closes intake and requests Stop with
 the runtime failed after resource shutdown. Flat and segmented owners refuse a
 completion manifest for this failure, even if the terminal journal was written.
 Normal monitor cancellation during Stop is expected. Preserve the journal and
-diagnostics; a monitor failure does not authorize another live attempt.
+diagnostics so a failed capture can be investigated before collection restarts.
 
 `CoverageOwner` enforces prior cleanup failure at Start itself,
 before opening the collector lock or accessing configuration. Hiding/disabling the
@@ -132,7 +132,8 @@ to prevent credential-bearing URLs from third-party HTTP logs. The Pinnacle
 sample restores the previous logging threshold in `finally`, including on
 cancellation, matching the aggregate acquisition tools. Sanitized result files
 remain the operating diagnostic while suppression is active. These executables
-are separate from the dashboard and require their existing exact authorization.
+are separate from the dashboard and have their own request budgets and
+consumed-attempt checks.
 
 Transport resource closure attempts every producer and optional reference client.
 Returned exceptions are recorded as source plus exception type in `cleanup_errors`,
@@ -179,7 +180,7 @@ locations are logged. Database recovery requires separate integration checks.
 3. Confirm the failed collector process has exited before restarting. Reopen only
    packages accepted by the saved-history verifier.
 
-## Limits and separate follow-up
+## Recovery limits
 
 Stop remains cooperative: per-socket timeouts do not provide a process-wide hard
 termination deadline. Do not treat repeating Stop or readable pending files as

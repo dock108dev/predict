@@ -889,6 +889,142 @@
     },
     "benchmark_method": {
       "const": "proportional_no_vig"
+    },
+    "availability": {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "reason_codes",
+        "metrics",
+        "numeric_metrics",
+        "current_opportunity_eligible"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-calculation-availability-1"
+        },
+        "state": {
+          "enum": [
+            "numeric_current",
+            "numeric_last_known",
+            "missing_reference",
+            "unsupported_inputs",
+            "calculation_failed",
+            "not_evaluated"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "numeric_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4
+        },
+        "metrics": {
+          "type": "object",
+          "maxProperties": 4,
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "state",
+              "reason_codes"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "numeric_current",
+                  "numeric_last_known",
+                  "missing_reference",
+                  "unsupported_inputs",
+                  "calculation_failed",
+                  "not_evaluated"
+                ]
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "maxItems": 64,
+                "uniqueItems": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "current_opportunity_eligible": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evaluation_frame": {
+      "type": "object",
+      "required": [
+        "version",
+        "evaluated_at",
+        "policy",
+        "simultaneous_historical_trade",
+        "mixed_source_times",
+        "quotes",
+        "reference_originals"
+      ],
+      "properties": {
+        "version": {
+          "const": "predict-last-known-frame-1"
+        },
+        "evaluated_at": {
+          "type": "string"
+        },
+        "policy": {
+          "const": "captured_prices_current_applicability"
+        },
+        "simultaneous_historical_trade": {
+          "const": false
+        },
+        "mixed_source_times": {
+          "type": "boolean"
+        },
+        "quotes": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object"
+          }
+        },
+        "reference_originals": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object"
+          }
+        },
+        "captured_at": {
+          "type": "string"
+        },
+        "reference_age_seconds": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

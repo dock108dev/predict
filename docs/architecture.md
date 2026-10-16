@@ -2,8 +2,8 @@
 
 Predict is a local read-only odds, EV and arbitrage comparison app. The current
 product needs current event/contract/price rows, shared depth and calculation
-rules. Sports/test history is disposable. Full feed archives and expanded result
-snapshots are not required for ordinary use.
+rules. Ordinary operation replaces and expires sports working data rather than retaining
+full feed archives or expanded calculation snapshots.
 
 ## Ordinary current data flow
 
@@ -26,7 +26,7 @@ snapshots are not required for ordinary use.
    calculation or receipt time never renews source freshness.
 
 `DatabaseIngressSink` commits directly through
-`CurrentRowStore` and migration 012. Ordinary collection does not construct a
+`CurrentRowStore` and the current-row schema. Ordinary collection does not construct a
 journal or import diagnostics. The v2 board/slate reader captures typed current
 facts, hydrates selected depth and calculates transiently. Details requires the
 clicked context revision. There is no persistent calculation cache. The
@@ -75,19 +75,26 @@ offers and transient calculation inputs. Selected Details expands only its coher
 current context, using an expected-revision check.
 A context binds game, instrument/pair, relevant input revisions, policy and engine;
 it does not require a permanent sports snapshot/result. Changed/reset/removed
-inputs are explicit rather than new clocks beside old money. Defaults and HTTP overrides use one policy owner; financial and display
-benchmark consumers use the same validated original outcomes and no-vig weights.
+inputs are explicit rather than new clocks beside old money. Defaults and HTTP overrides use one policy owner. Financial and display benchmark
+consumers use the same validated original outcomes and no-vig weights.
 Single and opposing allocation evaluators reuse fee, payout and funding owners.
 Conditional EV, complete modeled EV and scenario minima have separate meanings.
-See [financial contract](requested-trade-financial-contract.md) and
-[combined inputs](combined-occurrence-input-contract.md).
+Requested-trade calculations can inspect retained prices when their models still
+apply, while stale or stopped dependencies remove current positive eligibility.
+`comparison/calculation_availability.py` distinguishes numeric current and
+last-known results, missing references, unsupported inputs and calculation failures,
+including per-metric and scoped summaries. Original clocks, the evaluation instant
+and actual calculation completion stay separate. See the
+[financial contract](requested-trade-financial-contract.md),
+[availability transport](comparison-board-api-contract.md#calculation-availability)
+and [combined inputs](combined-occurrence-input-contract.md).
 
 ## Storage and retained readers
 
-`storage/store.py` provides project connections and ordered migrations. Migration
-012 adds independent current working tables; applied 009–011 checksums are
-unchanged. `storage/current_reset.py` declares the exact old sports SQL/file
-allowlist, refuses unexpected dependencies and verifies protected state. Startup
+`storage/store.py` provides project connections and ordered migrations. Current
+working tables are independent of retained sports history.
+`storage/current_reset.py` declares the exact legacy sports SQL/file allowlist,
+refuses unexpected dependencies and verifies protected state. Startup
 does not run this reset or import discarded sports data. Old codecs and archive
 readers remain for separately selected research paths; ordinary routes do not
 fall back to them. Account/configuration owners retain separate lifetimes.
@@ -112,22 +119,23 @@ Paths are relative to `app/`.
 
 | Domain | Authoritative modules |
 | --- | --- |
-| Entry points and routes | `dashboard/opportunity_board.py`, `multi_game_server.py`, `comparison_board_api.py` |
-| Configuration and lifecycle | `collection/current_policy.py`, `current_service.py`, `local_ownership.py`, `current_native.py` |
-| Aggregate schedule and accounting | `collection/current_aggregate_policy.py`, `current_schedule.py`, `current_quota.py`, `current_conservative.py` |
-| Credentials and recovery | `collection/credential_handoff.py`, `current_account_recovery.py`, `venue_access.py` |
-| Native HTTP transport | `collection/native_http_transport.py`; `continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
-| Direct admitted-only current ingress and guards | `collection/current_database.py`, `current_storage_policy.py` |
+| Entry points and routes | `dashboard/opportunity_board.py`, `dashboard/multi_game_server.py`, `dashboard/comparison_board_api.py` |
+| Configuration and lifecycle | `collection/current_policy.py`, `collection/current_service.py`, `collection/local_ownership.py`, `collection/current_native.py` |
+| Aggregate schedule and accounting | `collection/current_aggregate_policy.py`, `collection/current_schedule.py`, `collection/current_quota.py`, `collection/current_conservative.py` |
+| Credentials and recovery | `collection/credential_handoff.py`, `collection/current_account_recovery.py`, `collection/venue_access.py` |
+| Native HTTP transport | `collection/native_http_transport.py`; `collection/continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
+| Direct admitted-only current ingress and guards | `collection/current_database.py`, `collection/current_storage_policy.py` |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
-| Current reads and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `comparison_slate.py` |
-| Occurrence and native adaptation | `comparison/occurrence_matching.py`, `event_links.py`, `combined_inputs.py`, `combined_native.py`, `domain.py`, `source_inputs.py` |
-| Policy and request overrides | `comparison/estimated_policy.py`, `effective_policy.py`, `dashboard/query_policy.py` |
+| Current reads and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `dashboard/comparison_slate.py` |
+| Occurrence and native adaptation | `comparison/occurrence_matching.py`, `comparison/event_links.py`, `comparison/combined_inputs.py`, `comparison/combined_native.py`, `comparison/domain.py`, `comparison/source_inputs.py` |
+| Policy and request overrides | `comparison/estimated_policy.py`, `comparison/effective_policy.py`, `dashboard/query_policy.py` |
 | Named benchmark | `comparison/benchmark.py`; retained gross references use `collection/current_benchmark.py` |
-| Financial assembly | `comparison/current_metrics.py`, `estimated_ev.py`, `estimated_pair.py`, `requested_sizing.py`, `estimated_consumer.py`, `financial_metrics.py` |
-| Shared input graphs | `comparison/shared_templates.py`, `current_dependencies.py`, `projection_batches.py`, `current_details.py` |
-| Current-state compatibility | `dashboard/current_state.py`, `current_contract.py`, `current_incremental.py` |
-| Browser boundary and presentation | `dashboard/local_security.py`, `request_guard.py`; authored current-board modules under `dashboard/opportunity_static/current/` |
-| Retained lifecycle and projection | `dashboard/coverage_owner.py`, `session_projection.py`, `session_history.py`, `collection/continuous.py`, `continuous_streams.py` |
+| Financial assembly | `comparison/current_metrics.py`, `comparison/estimated_ev.py`, `comparison/estimated_pair.py`, `comparison/requested_sizing.py`, `comparison/estimated_consumer.py`, `comparison/financial_metrics.py` |
+| Calculation availability | `comparison/calculation_availability.py`; board/slate presenters summarize evaluated results before filtering |
+| Shared input graphs | `comparison/shared_templates.py`, `comparison/current_dependencies.py`, `comparison/projection_batches.py`, `comparison/current_details.py` |
+| Current-state compatibility | `dashboard/current_state.py`, `dashboard/current_contract.py`, `dashboard/current_incremental.py` |
+| Browser boundary and presentation | `dashboard/local_security.py`, `dashboard/request_guard.py`; authored current-board modules under `dashboard/opportunity_static/current/` |
+| Retained lifecycle and projection | `dashboard/coverage_owner.py`, `dashboard/session_projection.py`, `dashboard/session_history.py`, `collection/continuous.py`, `collection/continuous_streams.py` |
 | Shared domain mathematics | `fees/`, `settlement.py`, `normalization/`, `depth.py`, `opportunities/percentages.py` |
 
 Keep state owners cohesive, transports independent and current API versions explicit.

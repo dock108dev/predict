@@ -29,7 +29,7 @@ def signature(st):
 def stable_read(path):
     path=Path(path).resolve(strict=True)
     with ExitStack() as stack:
-        # Existing E6 owners lock the environment; new writers also lock the journal.
+        # Session owners lock the environment; journal writers also lock the file.
         owner=path.parent.parent/'owner.lock'
         if owner.exists():
             lock=stack.enter_context(owner.open('rb'));fcntl.flock(lock,fcntl.LOCK_SH|fcntl.LOCK_NB)

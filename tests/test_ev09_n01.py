@@ -68,9 +68,10 @@ class NativeOccurrence(unittest.TestCase):
             self.assertIsNotNone(r['financial_metrics']['buffered_ev_usd'])
     def test_expired_future_and_model_scope(self):
         _,s=retained();e,g,q=next(r for r in entries(s) if r[2]['venue']=='kalshi')
-        for at in ('2026-10-14T02:00:00Z','2026-10-17T00:00:00Z'):
-            r=evaluate(q,s['comparison_profiles'],at=instant(at),event=e,group=g)
-            self.assertFalse(r['ranking_eligible']);self.assertIsNone(r['financial_metrics']['buffered_ev_usd'])
+        r=evaluate(q,s['comparison_profiles'],at=instant('2026-10-14T02:00:00Z'),event=e,group=g)
+        self.assertFalse(r['ranking_eligible']);self.assertIsNotNone(r['financial_metrics']['buffered_ev_usd'])
+        r=evaluate(q,s['comparison_profiles'],at=instant('2026-10-17T00:00:00Z'),event=e,group=g)
+        self.assertFalse(r['ranking_eligible']);self.assertIsNone(r['financial_metrics']['buffered_ev_usd'])
         q=deepcopy(q);q['times']['source_at']='2026-10-15T00:00:00Z'
         self.assertFalse(evaluate(q,s['comparison_profiles'],at=instant(AT),event=e,group=g)['model_available'])
     def test_hash_and_bundle_tamper(self):

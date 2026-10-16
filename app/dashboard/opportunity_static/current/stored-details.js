@@ -1,4 +1,5 @@
-import { money, quantity } from "./board-client.js";
+import { primaryComparisonMetric } from "./comparison-slate-views.js";
+import { money, quantity, numeric, percent } from "./board-client.js";
 import {
   el,
   side,
@@ -36,11 +37,19 @@ export function renderSavedDetails(v, { root, participants }) {
         .join(" + "),
     ),
   );
+  const primary = primaryComparisonMetric(selected, v.pair ? "arbs" : "ev");
+  if (primary) {
+    const headline = el("div", undefined, "metrics selected-primary");
+    metric(headline, (primary.state === "numeric_last_known" ? "Last-known · " : "") + primary.label, primary.value, x => (numeric(x) > 0 ? "+" : "") + percent(x));
+    root.append(headline);
+  }
   const age = el("div");
   age.id = "detail-freshness";
   freshness(age, selected.freshness);
   root.append(age);
-  root.append(el("small", "Calculation as-of " + time(v.as_of)));
+  root.append(el("small", "Inputs captured " + time(v.as_of)));
+  const frame = selected.evaluation_frame;
+  if (frame) root.append(el("small", "Evaluated " + time(frame.evaluated_at) + (frame.mixed_source_times ? " · Last-known prices from different times; no simultaneous historical trade is established." : " · Original price clocks retained.")));
   for (const q of quotes)
     textLine(
       root,

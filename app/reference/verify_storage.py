@@ -161,7 +161,7 @@ def main():
                 checks.append({'cutoff':cutoff,'sha256':sha256(actual.encode()).hexdigest(),'byte_identical':True})
             result['replays']=checks
             result['checks']+=['fresh-store restore has byte-identical full export','six as-of reconstructions byte-identical after restore']
-        # Build a real pre-E2 capture-bundle-1 on the old schema and restore on all four migrations.
+        # Build capture-bundle-1 on the three-migration capture schema and restore on the installed schema.
         with connection('e2_legacy_source') as db:
             db.execute('CREATE TABLE schema_migration(version text PRIMARY KEY,sha256 text NOT NULL)')
             for p in sorted((Path(__file__).resolve().parents[1]/'storage/migrations').glob('00[123]_*.sql')):

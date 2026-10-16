@@ -24,7 +24,7 @@ def engine_binding():
     paths=['app/comparison/estimated_ev.py','app/comparison/estimated_pair.py','app/comparison/estimated_consumer.py','app/comparison/estimated_content.py','app/comparison/estimated_templates.py','app/fees/engine.py','app/fixtures/estimated-content-v1.json','app/fixtures/comparison-source-rules-v1.json','app/fixtures/comparison-selected-applicability-v1.json']
     paths += ['app/comparison/estimated_policy.py','app/comparison/effective_policy.py','app/comparison/benchmark.py','app/comparison/requested_sizing.py','app/comparison/financial_metrics.py','app/comparison/source_inputs.py','app/comparison/current_metrics.py','app/comparison/current_dependencies.py','app/comparison/domain.py']
     paths += ['app/storage/comparison_board.py','app/dashboard/comparison_board.py','app/dashboard/comparison_board_api.py','app/dashboard/query_policy.py','app/collection/current_database.py','app/comparison/calculation_control.py','app/normalization/registry.py']
-    paths += ['app/storage/current_rows.py','app/dashboard/comparison_slate.py']
+    paths += ['app/comparison/calculation_availability.py','app/storage/current_rows.py','app/dashboard/comparison_slate.py']
     paths += ['app/comparison/combined_inputs.py','app/comparison/combined_native.py','app/comparison/occurrence_matching.py','app/collection/current_sink.py','app/collection/current_aggregate_admission.py','app/dashboard/current_normalized.py','app/collection/current_comparison_inputs.py','app/storage/current_games.py']
     paths += ['app/collection/current_aggregate.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
     return hashed({p:sha256((root/p).read_bytes()).hexdigest() for p in paths})

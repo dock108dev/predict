@@ -400,3 +400,21 @@ opposing comparisons have four. */
   nav a { flex:1 }
 }
 @media(max-width:600px) { .detail-funding small { min-height:3em } }
+
+@media(max-width:600px) {
+  .view-purpose { margin:0 0 14px; font-size:.875rem }
+  .slate-result { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; padding:12px 0 }
+  .slate-result-identity { grid-column:1/-1; grid-row:1 }
+  .slate-result-values { grid-column:1; grid-row:2 }
+  .slate-result>button { grid-column:2; grid-row:2; align-self:center }
+  .slate-result-note { grid-column:1/-1; grid-row:3 }
+  .slate-arb .slate-result-identity { grid-template-columns:1fr; gap:5px }
+  .slate-leg strong,.slate-leg span { display:inline; font-size:.8125rem }
+  .slate-leg span { margin-left:7px }
+  .slate-result-values .metric strong { font-size:1.375rem }
+  .slate-result-values .metric small { font-size:.75rem }
+  .availability-notice { padding:10px 12px }
+  .availability-notice>button { max-width:100%; white-space:normal }
+  .game-reference { font-size:.75rem }
+  .game-reference small { display:block; margin-left:0 }
+}

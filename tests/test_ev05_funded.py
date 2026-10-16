@@ -228,7 +228,7 @@ class FundedTests(unittest.TestCase):
         self.assertTrue(stale['model_available']);self.assertFalse(stale['ranking_eligible'])
         self.assertIn('source_price_expired',stale['eligibility_reasons'])
         self.assertEqual(stale['fee_adjusted_expected_profit_usd'],result['fee_adjusted_expected_profit_usd'])
-        self.assertIn('historical_as_of',stale['as_of_basis'])
+        self.assertEqual(stale['as_of_basis'],'last_known_inputs_evaluated_together')
         self.assertEqual(run(q,p,ctx),result)
         self.assertNotEqual(stale['revision'],result['revision'])
         for name, changed in [('stage','playoffs'),('league','NBA')]:

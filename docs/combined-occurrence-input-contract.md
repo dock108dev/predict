@@ -4,21 +4,21 @@ Ordinary ingress persists typed current rows. `storage/comparison_board.py` capt
 
 ## Required transient current frame
 
-Resolve one exact current occurrence from event/source mappings, native contracts/selections, current offers, required shared synchronized depth, selected two-sided benchmark, shared versioned definitions and effective policy. Keep source-local IDs, participant/role/predicate, scope/status, exact numeric units and original source/receipt clocks. Incomplete/one-sided inputs remain useful prices; ambiguous membership cannot authorize a hedge.
+The current reader resolves one exact occurrence from event/source mappings, native contracts/selections, current offers, required shared synchronized depth, the selected two-sided benchmark, shared versioned definitions and effective policy. Source-local IDs, participant/role/predicate, scope/status, exact numeric units and original source/receipt clocks remain attached. Incomplete/one-sided inputs remain useful prices; ambiguous membership cannot authorize a hedge.
 
-Read a coherent frame and derive an input dependency revision from facts that actually affect this comparison. Feed the existing single/pair owners through their ephemeral/compact seams. The default is requested $1,000 funding and one 0.005 deployed-capital buffer. Raw responses, full catalogs, normalized copies and profile/scenario graphs need not be persisted in the frame or embedded per quote. Details expands only a selected current context; a bounded replaceable numeric cache is optional.
+One coherent frame supplies an input dependency revision from the facts that affect the comparison. Shared single/pair calculation owners expand these inputs transiently. The default is requested $1,000 funding and one 0.005 deployed-capital buffer. The ordinary path does not persist raw responses, full catalogs or calculation profile/scenario graphs. Details expands only a selected current context.
 
-Original inspection needs allowlisted current native values/units/contract meaning and clocks, not complete provider bodies. A compact source-frame association can bind the two benchmark outcomes without retaining the whole response. Exact policy, model and dependency identities remain required; indefinite historical reproduction is not.
+Original-input inspection exposes allowlisted current native values, units, contract meaning and clocks. A compact source-frame association binds the two benchmark outcomes without retaining the whole response. Exact policy, model and dependency identities prevent mixed calculations; ordinary current rows do not provide an indefinite historical archive.
 
 ## Selected benchmark and occurrence meaning
 
-Use the named Pinnacle, Novig or ProphetX originals from a genuine shared event/h2h frame, one decisive home win and one away win. Preserve their original prices, roles, bookmaker/market/source clocks, receipt and supplied revision/sequence. Missing, incoherent, expired or ambiguous originals withhold only dependent EV; never silently substitute a book or use native prices as the sportsbook benchmark.
+The selected Pinnacle, Novig or ProphetX benchmark requires originals from a shared event/h2h frame: one decisive home win and one away win. Their original prices, roles, bookmaker/market/source clocks, receipt and supplied revision/sequence are preserved. Missing, incoherent, expired or ambiguous originals withhold dependent EV. Another book or native execution price cannot silently replace the selected sportsbook benchmark.
 
 Occurrence matching uses actual event/participant/schedule/season/stage facts and explicit source mappings. Repeated opponents, role reversals and incompatible periods remain distinct. Shared display grouping does not rewrite native economic predicates. Proportional no-vig decisive weights do not establish tie/void probability or equivalent exceptional payouts.
 
 ## Native model and semantic boundaries
 
-Kalshi phase uses an exact scheduled milestone associated with the catalog event; US phase uses the exact event ID, active/open NS state and scheduled-start fact. Participant roles come from admitted current source roles. No dated selected-game proof, team-name-only join, bare unnamespaced source ID or permanently selected fixture provides authority.
+Kalshi pregame eligibility uses an exact scheduled milestone associated with the catalog event; Polymarket US eligibility uses the exact event ID, active/open NS state and scheduled-start fact. Participant roles come from admitted current source roles. Event matching requires scoped source identities and current occurrence facts rather than team names or fixture identities alone.
 
 YES/NO and Long/Short retain their source IDs and predicates. Kalshi NO remains not-win with its own tie receipt. US Short remains its original instrument and complementary bid representation; unsupported collateral remains `estimate_short_collateral_unresolved`. Kalshi's 48-hour start window, US's two-week rescheduling window, fair-mark terminal clauses and sportsbook refunds remain distinct in originals and modeled cashflows.
 

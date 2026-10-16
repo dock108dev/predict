@@ -86,7 +86,8 @@ class BoardReadModel(unittest.TestCase):
         self.assertIsNone(p['financial_metrics']['net_modeled_ev_usd']);self.assertIsNotNone(p['financial_metrics']['conditional_buffered_ev_usd'])
         self.assertEqual(F(p['buffer_usd']),F(p['funding']['deployed_usd'])/200)
     def test_negatives_and_empty_positive_lists(self):
-        self.assertEqual(self.board('arbs','positive')['rows'],[]);self.assertEqual(self.board('arbs','positive')['empty_reason'],'No estimated arbitrage found')
+        self.assertEqual(self.board('arbs','positive')['rows'],[]);self.assertEqual(self.board('arbs','positive')['availability']['outcome'],'partial')
+        self.assertEqual(self.board('arbs','positive')['empty_reason'],'Some comparisons unavailable; no current positive result')
         self.assertTrue(any(F(r['financial_metrics']['buffered_ev_usd'])<0 for r in self.board('ev')['rows'] if r.get('financial_metrics',{}).get('buffered_ev_usd')))
     def test_authored_mixed_age_preserves_independent_pairs(self):
         v=value();e,g,q=next(x for x in entries(v['state']) if x[2]['venue']=='kalshi')

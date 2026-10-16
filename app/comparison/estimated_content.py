@@ -145,7 +145,12 @@ def resolve_content(q, profiles, *, at, kind, _values=None):
         raise ValueError('estimate_content_contract_conflict')
     reasons=list(recipe['reasons'])
     if not _active(template,at) or not _active(recipe,at):reasons.append('estimate_content_expired_or_not_effective')
-    if q['state'] not in ('available','budget_delayed'):reasons.append('estimate_quote_unavailable')
+    profile=values.get(kind)
+    if profile is not None and q['comparison_input_status'][kind]['status']=='available_and_bound':
+        if not _active(profile,at) or not _active(profile['payload'],at):
+            reasons.append('estimate_'+kind+'_inputs_expired_or_not_effective')
+    # Transport state gates current ranking, not the economics of retained prices.
+    # Exact identity, recipe and applicability guards above still govern inspection.
     if not q['binding']['verified']:reasons.append('estimate_native_orientation_unresolved')
     return dict(version=VERSION,available=not reasons,reasons=sorted(set(reasons)),recipe=deepcopy(recipe),
         template=deepcopy(template),original_profile=deepcopy(values.get(kind)),

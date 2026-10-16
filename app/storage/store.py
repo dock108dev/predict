@@ -396,9 +396,9 @@ class Store:
         envelope=json.loads(Path(path).read_bytes()); payload=envelope['payload']
         if hashed(payload)!=envelope['sha256'] or payload['format']!='capture-bundle-1': raise ValueError('bundle mismatch')
         installed = self.db.execute('SELECT * FROM schema_migration ORDER BY version').fetchall()
-        # Additive reference history does not reinterpret capture-bundle-1 tables.
-        # Require an exact supported migration prefix: pre-E2, E2, E3, or current E4.
-        # Additive reference/pricing tables do not reinterpret capture tables.
+        # Additive reference/pricing tables do not reinterpret capture-bundle-1 tables.
+        # Accept exact supported prefixes of three, four or five migrations,
+        # or the complete installed schema; migration checksums must match.
         supplied = payload['migrations']
         allowed_lengths = {3, 4, 5, len(installed)}
         if len(supplied) not in allowed_lengths or supplied != installed[:len(supplied)]:

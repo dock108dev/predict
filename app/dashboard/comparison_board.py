@@ -8,6 +8,7 @@ from app.comparison.current_dependencies import references, link_reasons
 from app.comparison.estimated_ev import temporal
 from app.comparison.estimated_content import describe
 from app.comparison.benchmark import TwoWayBenchmark
+from app.comparison.calculation_availability import result_availability, summary, refusal
 
 VERSION='predict-comparison-board-2'
 MAX_RESPONSE=512*1024
@@ -67,6 +68,7 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
             r['ranking_eligible']=False
             for key in ('main_positive_eligible','positive_rule_sensitive_eligible'):
                 if 'classification' in r:r['classification'][key]=False
+        r['availability']=result_availability(r)
         statuses.append(f['status'])
     byid={q['id']:q for _,_,q in entries(v['state'])}
     for e in v['state']['events']:
@@ -81,6 +83,7 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
                 pair['ranking_eligible']=False
                 for key in ('main_positive_eligible','positive_rule_sensitive_eligible'):
                     if 'classification' in pair:pair['classification'][key]=False
+            pair['availability']=result_availability(pair,pair=True)
             statuses.append(pair['freshness']['status'])
     v.update(status='mixed' if len(set(statuses))>1 else statuses[0] if statuses else 'historical',read_at=instant.isoformat(),stopped=stopped)
     return v
@@ -96,7 +99,7 @@ def common_odds(q):
 
 def price(q):
     return dict(quote_id=quote_key(q),quote_revision=q['revision'],selection=deepcopy(q['binding']['selection']),venue=q['venue'],
-        native_side=q['source']['native_side'],source=deepcopy(q['source']),original=deepcopy(q['original']),
+        source_state=q['state'],native_side=q['source']['native_side'],source=deepcopy(q['source']),original=deepcopy(q['original']),
         common_odds=common_odds(q),times=deepcopy(q['times']),native_contract_id=q.get('native_contract',{}).get('id'))
 
 
@@ -121,7 +124,7 @@ def details_id(value, *, quote=None,pair=None):
 
 def financial_row(r):
     fields=('revision','dependency_revision','model_available','ranking_eligible','reasons','eligibility_reasons',
-        'financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
+        'availability','evaluation_frame','financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
     result={k:deepcopy(r[k]) for k in fields if k in r}
     b=r.get('benchmark',{})
     result['benchmark_identity']={k:deepcopy(b.get(k)) for k in ('venue','method','revision','available','reason','conditioning')}
@@ -141,7 +144,7 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
     out=dict(version=VERSION,view=view,filter=filter,game_key=bundle['game_key'],input_version=bundle['input_version'],
         policy=policy.to_dict(),benchmark=benchmark(bundle,instant.isoformat()),as_of=bundle['as_of'],read_at=instant.isoformat(),
         calculation_context=bundle.get('calculation_context') if saved is None else saved['calculation_context'],
-        result_as_of=None if saved is None else saved['as_of'],
+        result_as_of=None if saved is None else saved['as_of'],calculated_at=None if saved is None else saved.get('calculated_at'),
         delivery_state='stopped' if stopped else 'complete' if view=='odds' else 'pending' if saved is None or saved.get('superseded') else 'complete',
         status='historical' if stopped else 'prices_only' if saved is None else saved['status'],
         prices=[],rows=[],empty_reason=None,provider_requests=0,limits=dict(maximum_response_bytes=MAX_RESPONSE))
@@ -149,12 +152,14 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
         row=price(q);row['freshness']=freshness(q,state['comparison_profiles'],event,instant,financial=False)
         row['inputs_identity']=dict(game_key=bundle['game_key'],input_version=bundle['input_version'],quote_id=row['quote_id'],context_id=out['calculation_context']['context_id'])
         out['prices'].append(row)
+    availability_items=[];failures=[]
     if view=='odds':out['rows']=deepcopy(out['prices'])
     elif saved:
         originals={q['id']:q for _,_,q in entries(saved['state'])}
         if view=='ev':
             for _,_,q in entries(saved['state']):
                 r=q['calculations']['funded_estimate'];row=dict(price(q),**financial_row(r),details=details_id(saved,quote=q['id']))
+                availability_items.append((bundle['game_key'],[q['venue']],row['availability']))
                 if filter=='all' or row.get('classification',{}).get('main_positive_eligible'):out['rows'].append(row)
         else:
             for event in saved['state']['events']:
@@ -166,9 +171,21 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
                         exact=funding.get(l['quote_id'],l)
                         row['legs'].append(dict(price(originals[l['quote_id']]),native_quantity=exact['native_quantity'],native_unit=exact['native_unit'],
                             acquisition_usd=exact['acquisition_usd'],upfront_fee_usd=exact['net_upfront_fee_usd']))
+                    availability_items.append((bundle['game_key'],[l['venue'] for l in row['legs']],row['availability']))
                     c=row.get('classification',{})
                     if filter=='all' or filter=='positive' and c.get('main_positive_eligible') or filter=='hedges' and c.get('positive_rule_sensitive_eligible'):out['rows'].append(row)
+            for event in saved['state']['events']:
+                for diagnostic in event.get('funded_pair_search',{}).get('diagnostics',[]):
+                    state,codes=refusal([diagnostic['reason']])
+                    availability_items.append((bundle['game_key'],[],dict(state=state,reason_codes=codes,current_opportunity_eligible=False)))
+    out['availability']=summary(availability_items,evaluated=saved is not None and view!='odds',failures=failures)
     if not out['rows']:out['empty_reason']='Calculation pending' if saved is None else 'No positive EV found' if view=='ev' and filter=='positive' else 'No estimated arbitrage found' if view=='arbs' and filter=='positive' else 'No eligible comparisons found'
+    if not out['rows'] and view!='odds':
+        outcome=out['availability']['outcome']
+        if outcome in ('not_evaluated','unavailable','partial','last_known_only'):
+            out['empty_reason']={'not_evaluated':'Calculations not evaluated','unavailable':'Calculations unavailable',
+                'partial':'Some comparisons unavailable; no current positive result',
+                'last_known_only':'Only last-known estimates available; see All comparisons'}[outcome]
     if len(encoded(out))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
     return out
 
@@ -179,8 +196,12 @@ def details(value, *, quote=None,pair=None,at=None,current=None,stopped=False,hi
     if bool(quote)==bool(pair):raise ValueError('one_exact_saved_selection_required')
     q=rows.get(quote);p=next((p for e in v['state']['events'] for p in e.get('funded_pairs',[]) if p['id']==pair),None)
     if not q and not p:raise ValueError('exact_saved_selection_absent')
+    selected = p or q['calculations']['funded_estimate']
+    # Keep the server-supplied percentage companions identical to the board.
+    # This adds presentation fields to the copied frame without repricing it.
+    selected['financial_metrics'] = financial_row(selected)['financial_metrics']
     return dict(version='predict-board-details-2',game_key=v['game_key'],calculation_context=v['calculation_context'],
-        as_of=v['as_of'],read_at=v['read_at'],status=v['status'],policy=v['policy'],quote=q,pair=p,
+        as_of=v['as_of'],read_at=v['read_at'],calculated_at=v.get('calculated_at'),status=v['status'],policy=v['policy'],quote=q,pair=p,
         original_inputs_identity=dict(game_key=v['game_key'].split(':benchmark:',1)[0],input_version=v['input_version'],context_id=v['calculation_context']['context_id'],policy_revision=v['policy']['revision']),
         leg_quotes=[rows[l['quote_id']] for l in p['legs']] if p else [],profiles=v['state']['comparison_profiles'],
         representation=v['representation'])

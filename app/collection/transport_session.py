@@ -43,7 +43,7 @@ class JournalSink:
 
 
 class ObservationJournal:
-    """Bounded fsynced E6 observations; untouched E2 synthetic schema is not relabeled."""
+    """Bounded, fsynced transport observations, separate from synthetic capture storage."""
     def __init__(self, path, *, encoding=None):
         from .journal_encoding import VERSION
         if encoding not in (None, VERSION):raise ValueError('unsupported journal encoding')

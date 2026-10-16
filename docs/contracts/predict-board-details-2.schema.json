@@ -77,6 +77,12 @@
     "leg_quotes": {
       "type": "array",
       "maxItems": 2
+    },
+    "calculated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "not": {

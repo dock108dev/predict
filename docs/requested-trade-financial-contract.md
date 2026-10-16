@@ -14,7 +14,7 @@ identities bind those same inputs; see the [board contract](comparison-board-api
 ## Invoke the owners
 
 ```python
-from app.comparison.estimated_policy import DEFAULT_POLICY, RequestedTradePolicy, EstimatePolicy
+from app.comparison.estimated_policy import RequestedTradePolicy
 from app.comparison.source_inputs import produce_two_way_benchmark
 from app.comparison.estimated_ev import evaluate as single
 from app.comparison.estimated_pair import Leg, evaluate as pair
@@ -38,7 +38,7 @@ A benchmark can instead be attached as a content-addressed `reference` profile u
 
 ## Results and filters
 
-Use `financial_metrics`, not the predecessor conditional alias `buffered_profit_usd`, to select the financial meaning. Values are exact decimal/rational strings; percentage denominators are deployed capital. Rich and compact single/pair owners preserve these groups:
+Use the explicitly named fields in `financial_metrics` to select the financial meaning. The compatible `buffered_profit_usd` alias retains its conditional meaning. Values are exact decimal/rational strings; percentage denominators are deployed capital. Rich and compact single/pair owners preserve these groups:
 
 | Group/field | Meaning |
 |---|---|
@@ -61,10 +61,36 @@ Use `classification.main_positive_eligible` for the main positive list. Singles 
 
 ## Identity, storage and limits
 
-`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing mode and benchmark venue/method. Conflicting amount aliases reject. The implemented legacy saved-result endpoint accepts these fields. Its current-row replacement must bind calculation/cache/context identity to that policy revision without requiring a durable saved result. Attaching/changing either original reference changes the dependency/reference/result revision. The selected benchmark and shared model versions remain exact transient dependencies; any compact current cache and publication guard binds those revisions. Full saved combined profiles are not required.
+`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing mode and benchmark venue/method. Conflicting amount aliases reject. Current board, slate and Details reads bind their calculation context to that policy revision without a durable saved result. Attaching/changing either original reference changes the dependency/reference/result revision. The selected benchmark and shared model versions remain exact transient dependencies; the calculation context binds those revisions. Full saved combined profiles are not required.
 
-The engine binding includes the new sizing, policy, benchmark and metrics owners plus source/domain validation. If a legacy fixture/result is deliberately retained, its engine/policy meaning stays original. It need not survive a sports reset. Never relabel an old result as current or silently bind mutable current inputs to an old immutable snapshot ID.
+The engine binding includes sizing, policy, benchmark and metrics owners plus source/domain validation. If a legacy fixture/result is deliberately retained, its engine/policy meaning stays original. It need not survive a sports reset. Never relabel an old result as current or silently bind mutable current inputs to an old immutable snapshot ID.
 
 Requested pair sizing uses at most 24 local balance iterations / 192 balance probes and a 5×5 legal neighborhood. It balances allocation-specific net decisive cashflows and funding, then selects the closest balance, using greater funding to break equal balance. It retains the $25 exposure floor and 20% share constraint. It does not prove a global optimum for nonlinear fees/depth. A diagnostic continuous grid is expressly hypothetical; actual/native or declared grids are evaluated separately. Single sizing preserves the existing maximum-funded legal search and next-quantity proof or specific limitation. Observed depth is consumed before a labeled residual at its last price; no modeled remainder claims observed liquidity.
 
 Result schemas are [policy v3](contracts/predict-estimate-policy-3.schema.json), [generic result v2](contracts/predict-estimate-2.schema.json), [single v2](contracts/predict-funded-single-2.schema.json), [pair v2](contracts/predict-funded-pair-2.schema.json) and [benchmark v1](contracts/comparison-two-way-benchmark-1.schema.json). Older schemas remain readable under their declared versions.
+
+## Last-known evaluation and availability
+
+Requested-trade calculations separate retained-price calculability, current
+model/fee/rule applicability and current positive eligibility. They may consume
+aged original two-sided reference weights for labeled inspection. Missing
+originals, unknown/future/conflicting clocks, unresolved Short collateral and
+unsupported models or sizing remain unavailable. Strict benchmark consumers
+retain their default freshness refusal.
+
+For ordinary transient reads, `at` is the captured read/evaluation instant.
+`calculation_instant` checks original quote clocks and returns that boundary; it
+does not backdate a quote into an old model interval or advance into a future
+model. Content, selected fee/rule/quantity/identity/reference validity and
+occurrence/pregame guards apply at the same boundary. Models can expire while
+prices remain visible. A mixed-time dependency set does not establish a
+simultaneous historical trade.
+
+`evaluation_frame` records that boundary and the original clocks. The response's
+`calculated_at` records actual calculation completion. Structured result and
+metric `availability` distinguishes supported inspection values from current
+positive eligibility. A numeric pair margin can coexist with null complete EV
+when the probability partition is incomplete. Board and Details use the same
+server-derived percentage fields and deployed-capital denominators. See the
+[board availability contract](comparison-board-api-contract.md#calculation-availability)
+for transport states and summary semantics.

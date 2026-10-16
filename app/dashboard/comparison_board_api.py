@@ -9,6 +9,7 @@ from .query_policy import calculation_policy
 from .comparison_board import response, details, entries, quote_key
 from .local_security import PublicRequestError
 from .comparison_slate import MAX_BYTES
+from app.comparison.calculation_availability import result_availability
 
 
 def mount(app,provider):
@@ -78,10 +79,10 @@ def mount(app,provider):
                 out['storage']=provider.database.status()
                 if len(encoded(out))>MAX_BYTES:raise ValueError('board_response_byte_capacity')
             return web.json_response(out)
-        except ValueError as exc:return web.json_response(dict(error='current_inputs_unavailable',reason=str(exc),provider_requests=0),status=409)
+        except ValueError as exc:return web.json_response(dict(error='current_inputs_unavailable',reason=str(exc),availability=result_availability(dict(reasons=['calculation_read_failed'])),provider_requests=0),status=409)
         except Exception as exc:
             from app.comparison.calculation_control import CalculationStopped
             if isinstance(exc,CalculationStopped):return web.json_response(dict(error='current_read_stopped',reason='Updates stopped during calculation; reopen the current view.',provider_requests=0),status=409)
-            return web.json_response(dict(error='database_unavailable',reason=type(exc).__name__,provider_requests=0),status=503)
+            return web.json_response(dict(error='database_unavailable',reason=type(exc).__name__,availability=result_availability(dict(reasons=['calculation_read_failed'])),provider_requests=0),status=503)
         finally:pending_reads-=1
     app.router.add_get('/api/boards/{view}',handle)
