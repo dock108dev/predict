@@ -1,5 +1,6 @@
 """Authentic retained facts through actual SQL, selected depth and financial owners."""
 from unittest import TestCase
+from unittest.mock import patch
 from uuid import uuid4
 from psycopg import sql
 from app.storage.store import connect, Store
@@ -22,7 +23,7 @@ class CurrentRowFinancialRoundtrip(TestCase):
         with connect() as admin:
             admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
         try:
-            with connect(name) as db:
+            with connect(name) as db, patch('app.storage.current_rows.utc', return_value=AT):
                 Store(db).migrate()
                 original_bundle, expected = retained()
                 rows = original_bundle['records']
@@ -33,7 +34,7 @@ class CurrentRowFinancialRoundtrip(TestCase):
                          if (e['record']['source'], o['book']['raw']['ref']['event_id']) in members]
                 store = CurrentRowStore(db)
                 with db.transaction():
-                    store.upsert_records(rows)
+                    store.upsert_records(rows, now=AT)
                     store.replace_native_books(books)
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')

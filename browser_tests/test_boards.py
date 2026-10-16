@@ -7,13 +7,19 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
+
+from app.comparison.calculation_availability import (
+    combine,
+    result_availability,
+    summary,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def current_fixture():
-    """Bind retained financial examples to authored current transport identities."""
+    """Bind retained examples to the current transport contract at their saved clocks."""
     fixture = json.loads((ROOT / "tests/fixtures/ev09-u01-responses.json").read_text())
     game = fixture["ev"]["game_key"]
     identity = dict(
@@ -35,11 +41,22 @@ def current_fixture():
             quote["inputs_identity"].update(
                 context_id=identity["context_id"], game_key=game
             )
+        availability_items = []
         for row in value["rows"]:
+            if view != "odds":
+                row["availability"] = result_availability(row, pair=view == "arbs")
+                venues = (
+                    [leg["venue"] for leg in row["legs"]]
+                    if view == "arbs"
+                    else [row["venue"]]
+                )
+                if view != "arbs" or len(set(venues)) == 2:
+                    availability_items.append((game, venues, row["availability"]))
             if "details" in row:
                 for key in ("result_id", "snapshot_id"):
                     row["details"].pop(key, None)
                 row["details"]["context_id"] = identity["context_id"]
+        value["availability"] = summary(availability_items, evaluated=view != "odds")
     for kind in ("single", "pair"):
         value = fixture[kind]
         value.update(
@@ -144,6 +161,11 @@ def test_saved_board_journey(width):
                     if state["mode"] == "empty"
                     else fixture["catalog"]["games"],
                     boards=[] if state["mode"] == "empty" else [value],
+                    availability=combine(
+                        [] if state["mode"] == "empty" else [value["availability"]],
+                        games=0 if state["mode"] == "empty" else 1,
+                        evaluated=view != "odds",
+                    ),
                     stopped=state["stopped"],
                     as_of=value["read_at"],
                     bounds=dict(
@@ -195,7 +217,15 @@ def test_saved_board_journey(width):
             page.goto("http://board.invalid/arbs")
             page.wait_for_selector(".empty")
             page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".slate-arb .metric")
+            pair_key = fixture["arbs"]["game_key"] + ":" + fixture["pair"]["pair"]["id"]
+            pair_row = page.locator(f'.slate-arb[data-key="{pair_key}"]')
+            expect(pair_row).to_have_attribute(
+                "data-metric", "buffered_decisive_opposing_margin_usd"
+            )
+            expect(pair_row.locator(".metric small")).to_have_text(
+                "Margin · decisive outcomes only"
+            )
+            expect(pair_row.locator(".metric strong")).to_have_text("-2.32%")
             page.locator(
                 'button[data-key="'
                 + fixture["arbs"]["game_key"]

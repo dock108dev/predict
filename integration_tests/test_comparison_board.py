@@ -24,6 +24,10 @@ from tests.test_ev09_n01 import retained, envelopes, AT, SELECTED
 class ComparisonBoardSQL(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # SQL visibility and admission must use the same historical replay clock.
+        clock = patch('app.storage.current_rows.utc', return_value=AT)
+        clock.start()
+        cls.addClassCleanup(clock.stop)
         cls.name = 'prediction_arb_test_b01_' + uuid4().hex[:12]
         with connect() as db:
             db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
@@ -31,7 +35,8 @@ class ComparisonBoardSQL(unittest.TestCase):
         Store(cls.db).migrate()
         cls.rows = CurrentRowStore(cls.db)
         original, _ = retained()
-        cls.rows.upsert_records(original['records'])
+        # Admit retained facts at their replay time, not the date CI happens to run.
+        cls.rows.upsert_records(original['records'], now=AT)
         members = set(map(tuple, original['members']))
         cls.rows.replace_native_books([
             o['book'] for e in envelopes() if e['record']['kind'] == 'admitted_books'
@@ -105,7 +110,7 @@ class ComparisonBoardSQL(unittest.TestCase):
         row = deepcopy(next(r for r in retained()[0]['records'] if r['quote']['venue'] == 'novig'))
         original = row['quote']['times']['source_at']
         row['quote']['times']['received_at'] = '2026-10-14T01:16:00Z'
-        self.rows.upsert_records([row])
+        self.rows.upsert_records([row], now=AT)
         _, after = self.current()
         self.assertNotEqual(before['calculation_context'], after['calculation_context'])
         changed = next(r for r in after['records'] if contract_id(r) == contract_id(row))
@@ -119,7 +124,7 @@ class ComparisonBoardSQL(unittest.TestCase):
             row['quote']['source']['native_event_id'] = 'authored-other-event'
             row['event']['scheduled_start'] = '2026-10-18T20:15:00Z'
             row['market_identity']['scheduled_start'] = '2026-10-18T20:15:00Z'
-        self.rows.upsert_records(rows)
+        self.rows.upsert_records(rows, now=AT)
         _, after = self.current()
         self.assertEqual(before['calculation_context'], after['calculation_context'])
 
@@ -137,8 +142,18 @@ class ComparisonBoardSQL(unittest.TestCase):
         rows = deepcopy(retained()[0]['records'])
         rows[0]['quote']['original']['value'] = '9.9999'
         with self.assertRaisesRegex(ValueError, 'equal_clock'):
-            self.rows.upsert_records(rows)
+            self.rows.upsert_records(rows, now=AT)
         self.assertEqual(self.rows.capture(), before)
+
+    def test_replay_clock_is_explicit_and_default_ingress_still_expires(self):
+        with patch('app.storage.current_rows.utc', return_value='2030-01-01T00:00:00Z'):
+            self.rows.upsert_records(retained()[0]['records'], now=AT)
+            self.assertEqual(self.db.execute('SELECT count(*) n FROM current_offer').fetchone()['n'],
+                             len(retained()[0]['records']))
+            self.assertEqual(self.rows.capture()['records'], [])
+            # Ordinary ingress keeps its real-time expiry default.
+            self.rows.upsert_records([])
+            self.assertEqual(self.db.execute('SELECT count(*) n FROM current_event').fetchone()['n'], 0)
 
     def test_loopback_current_details_inputs_stop_and_fail_visible(self):
         # Independent committed fixture connection; no class rollback visibility issue.

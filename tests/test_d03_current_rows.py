@@ -97,7 +97,8 @@ class CurrentRows(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'equal_clock_price_conflict'):self.store.upsert_records(changed)
         self.assertEqual(before,self.store.capture())
 
-    def test_direct_sink_native_and_aggregate_are_atomic_without_archives(self):
+    @patch('app.storage.current_rows.utc', return_value=AT)
+    def test_direct_sink_native_and_aggregate_are_atomic_without_archives(self, storage_clock):
         from app.collection.current_database import DatabaseIngressSink
         from app.collection.current_policy import DEFAULT
         from app.dashboard.current_state import unavailable
@@ -110,13 +111,15 @@ class CurrentRows(unittest.TestCase):
         cats[source]=cat
         header=dict(source=source,session_id='d03-synthetic-offline',observed_at=AT)
         def owner_connect():return connect(self.name)
-        with patch('app.collection.current_database.connect',owner_connect):
+        with patch('app.collection.current_database.connect',owner_connect), \
+             patch('app.collection.current_database.utc',return_value=AT) as clock:
             sink.commit(dict(header,type='coverage_inventory',inventory=cats,generation=1,previous_generation=None),states)
             observation=deepcopy(next(o for e in envelopes() if e['record']['kind']=='admitted_books' and e['record']['source']==source for o in e['record']['value']['observations']))
             sink.commit(dict(observation,**header),states)
             native=self.store.records();self.assertTrue(any(r['quote'].get('depth') for r in native))
             one_sided=deepcopy(observation);one_sided['book']['outcomes'][0]['asks']=None
             one_sided['book']['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+            clock.return_value=storage_clock.return_value=one_sided['book']['raw']['received_at']
             sink.commit(dict(one_sided,**header),states)
             self.assertGreater(self.counts()['current_contract'],self.counts()['current_offer'])
             aggregate=next(e['record']['value'] for e in envelopes() if e['record']['kind']=='aggregate_batch')
