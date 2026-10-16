@@ -1,13 +1,14 @@
 # Development
 
-Use Python 3.11+ from a source checkout. Python 3.14 and Node 22 match primary CI.
+Use Python 3.11+ from a source checkout. Python 3.14 and Node 24 match primary CI.
 Run commands from the repository root. Native operation uses macOS Keychain;
 portable offline tests also run on Linux.
 
 ## Install tools
 
 ```sh
-python3 -m venv .venv
+python3.14 -m venv .venv
+nvm use
 .venv/bin/python -m pip install --require-hashes -r requirements-ci.txt
 .venv/bin/python scripts/ci/validate_lock.py
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[stream]'
@@ -50,7 +51,21 @@ use `.venv/bin/python scripts/ci/postgres.py`; it creates a disposable socket-on
 cluster, redirects the storage root, runs `integration_tests` and the registered
 current-row roundtrips, then tears down the cluster. Do not invoke those SQL
 modules directly against ordinary storage. The harness also keeps socket paths
-short enough for Unix limits and requires PostgreSQL's `pg_config` on PATH.
+short enough for Unix limits. Primary SQL qualification requires PostgreSQL 16;
+set `PG_CONFIG` to that installation's `pg_config` when PATH selects another
+major. `--report-dir` (or `PREDICT_CI_POSTGRES_REPORT_DIR`) preserves separate
+environment results, including a `toolchain.json` identity receipt. The explicit
+`--allow-other-postgres` flag labels intentional older-major diagnostics as
+compatibility runs. Python 3.11 remains a supported compatibility lane.
+
+```sh
+PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
+```
+
+The ordinary launcher selects tools matching its existing cluster's `PG_VERSION`
+even when PATH selects PostgreSQL 16. `PREDICT_PG_BIN` can select that matching
+installation explicitly. An existing database requires a separate data migration
+to change major versions; these test commands never migrate it.
 
 `PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci` runs the full portable manifest
 and writes ignored reports under `test-results/ci`. See [CI](CI.md) for browser,

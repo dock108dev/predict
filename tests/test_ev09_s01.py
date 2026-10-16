@@ -8,7 +8,7 @@ from pathlib import Path
 import unittest
 
 from app.comparison.benchmark import TwoWayBenchmark, SportsbookOutcome
-from app.comparison.current_dependencies import instant, references
+from app.comparison.current_dependencies import digest, instant, references
 from app.comparison.domain import EvidenceReference, ExactNumber, Price
 from app.comparison.estimated_policy import DEFAULT_POLICY, LEGACY_POLICY, EstimatePolicy, EstimateResult
 from app.comparison.estimated_ev import evaluate as single, compact as single_compact, _reference
@@ -70,7 +70,12 @@ class S01Tests(unittest.TestCase):
         old_legs=[Leg(x,g,p,e,at,policy=old_policy) for x in q]
         old=pair_eval(old_legs,policy=old_policy)
         new=pair_eval(legs,details=True)
-        self.assertEqual(old['revision'],saved['state']['events'][0]['funded_pairs'][0]['revision'])
+        # The retained v1 oracle predates B02's additive evaluation frame.
+        self.assertEqual(digest({k:v for k,v in old.items() if k not in ('revision','evaluation_frame')}),
+            saved['state']['events'][0]['funded_pairs'][0]['revision'])
+        self.assertEqual(old['revision'],digest({k:v for k,v in old.items() if k!='revision'}))
+        self.assertEqual(old['evaluation_frame']['evaluated_at'],at.isoformat())
+        self.assertEqual([row['times'] for row in old['evaluation_frame']['quotes']],[x['times'] for x in q])
         self.assertEqual(F(old['deployed_capital_usd']),F('25.155281'))
         self.assertGreater(F(new['deployed_capital_usd']),F('999.99'))
         self.assertLessEqual(F(new['deployed_capital_usd']),1000)
@@ -115,8 +120,10 @@ class S01Tests(unittest.TestCase):
         r=evaluate_single(q,p,c,benchmark=future)
         self.assertIsNone(r['financial_metrics']['net_modeled_ev_usd'])
         stale=evaluate_single(q,p,c,benchmark=ref,at=AT+timedelta(seconds=1801))
-        self.assertIsNone(stale['financial_metrics']['net_modeled_ev_usd'])
-        self.assertIn('expired',stale['benchmark']['reason'])
+        self.assertEqual(stale['financial_metrics'],evaluate_single(q,p,c,benchmark=ref)['financial_metrics'])
+        self.assertIn('reference_expired',stale['eligibility_reasons'])
+        self.assertFalse(stale['ranking_eligible'])
+        self.assertFalse(stale['classification']['main_positive_eligible'])
         event=replace(ref.outcomes[1].selection.event,away_id='NFL:SEA')
         with self.assertRaises(ValueError):replace(ref,outcomes=(ref.outcomes[0],replace(row,selection=replace(row.selection,event=event))))
 

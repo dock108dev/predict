@@ -6,21 +6,59 @@ DATA="$ROOT/.local/postgres"
 SOCKET="$ROOT/.local/pgsocket"
 PORT=55432
 case "${1:-}" in
+ start|stop|status) ;;
+ *) echo 'Usage: scripts/project-postgres start|stop|status' >&2; exit 2 ;;
+esac
+# An existing cluster must retain its matching tools even when PATH moves forward.
+MAJOR=16
+if [ -f "$DATA/PG_VERSION" ]; then
+ MAJOR=$(cat "$DATA/PG_VERSION")
+fi
+case "$MAJOR" in
+ ''|*[!0-9]*) echo 'Invalid project PostgreSQL major; no process changed.' >&2; exit 1 ;;
+esac
+matches_major() {
+ [ -x "$1/postgres" ] || return 1
+ VERSION=$("$1/postgres" --version)
+ case "$VERSION" in
+  "postgres (PostgreSQL) $MAJOR."*) ;;
+  *) return 1 ;;
+ esac
+ for TOOL in initdb pg_ctl psql createdb; do
+  [ -x "$1/$TOOL" ] || return 1
+ done
+}
+BIN=
+if [ -n "${PREDICT_PG_BIN:-}" ]; then
+ if matches_major "$PREDICT_PG_BIN"; then BIN=$PREDICT_PG_BIN; fi
+else
+ CONFIG_BIN=
+ if command -v pg_config >/dev/null 2>&1; then
+  CONFIG_BIN=$(pg_config --bindir 2>/dev/null || true)
+ fi
+ for CANDIDATE in "$CONFIG_BIN" "/opt/homebrew/opt/postgresql@$MAJOR/bin" "/usr/local/opt/postgresql@$MAJOR/bin" "/usr/lib/postgresql/$MAJOR/bin"; do
+  if matches_major "$CANDIDATE"; then BIN=$CANDIDATE; break; fi
+ done
+fi
+if [ -z "$BIN" ]; then
+ echo "PostgreSQL $MAJOR tools required for this project cluster; set PREDICT_PG_BIN to its bin directory. No process changed." >&2
+ exit 1
+fi
+case "${1:-}" in
  start)
   mkdir -p "$SOCKET"
   chmod 700 "$ROOT/.local" "$SOCKET"
   if [ ! -f "$DATA/PG_VERSION" ]; then
-   initdb -D "$DATA" -U prediction_arb --auth-local=trust --auth-host=reject --encoding=UTF8 --no-locale >/dev/null
+   "$BIN/initdb" -D "$DATA" -U prediction_arb --auth-local=trust --auth-host=reject --encoding=UTF8 --no-locale >/dev/null
   fi
-  if ! pg_ctl -D "$DATA" status >/dev/null 2>&1; then
-   pg_ctl -D "$DATA" -l "$ROOT/.local/postgres.log" -o "-k '$SOCKET' -p $PORT -c listen_addresses='' -c unix_socket_permissions=0700" start
+  if ! "$BIN/pg_ctl" -D "$DATA" status >/dev/null 2>&1; then
+   "$BIN/pg_ctl" -D "$DATA" -l "$ROOT/.local/postgres.log" -o "-k '$SOCKET' -p $PORT -c listen_addresses='' -c unix_socket_permissions=0700" start
   fi
-  DATABASE_EXISTS=$(psql -h "$SOCKET" -p "$PORT" -U prediction_arb -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname='prediction_arb'")
+  DATABASE_EXISTS=$("$BIN/psql" -h "$SOCKET" -p "$PORT" -U prediction_arb -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname='prediction_arb'")
   if [ "$DATABASE_EXISTS" != 1 ]; then
-   createdb -h "$SOCKET" -p "$PORT" -U prediction_arb prediction_arb
+   "$BIN/createdb" -h "$SOCKET" -p "$PORT" -U prediction_arb prediction_arb
   fi
   ;;
- stop) pg_ctl -D "$DATA" -m fast stop ;;
- status) pg_ctl -D "$DATA" status ;;
- *) echo 'Usage: scripts/project-postgres start|stop|status'; exit 2 ;;
+ stop) "$BIN/pg_ctl" -D "$DATA" -m fast stop ;;
+ status) "$BIN/pg_ctl" -D "$DATA" status ;;
 esac

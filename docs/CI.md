@@ -16,7 +16,7 @@ and manual dispatch. Four jobs feed the stable `CI readiness` gate:
 | `postgres` | Disposable socket-only PostgreSQL 16, migrations, current-row financial and occurrence roundtrips, transaction tests and teardown |
 | `browser` | Locked Playwright/Chromium journeys with intercepted responses: wide/narrow layouts, settings, Details, keyboard focus, Retry, empty states, Stop and enlarged text |
 
-Primary runners use Ubuntu 24.04, Python 3.14 and Node 22. Readiness requires all
+Primary runners use Ubuntu 24.04, Python 3.14 and Node 24 (`.nvmrc`). Readiness requires all
 four jobs to succeed in the same run; skipped, cancelled, missing or malformed
 results fail. Enable the `CI readiness` required check in GitHub branch rules
 separately. Pull-request concurrency cancels superseded runs; other event types
@@ -30,8 +30,8 @@ checks. CodeQL and Dependabot checks are independent of this readiness gate.
 
 ## Local reproduction
 
-Install the [development environment](development.md#install-tools), Node 22 and
-PostgreSQL tools, including `pg_config`. Run commands from the repository root.
+Install the [development environment](development.md#install-tools), Node 24 and
+PostgreSQL 16 tools, including `pg_config`. Run commands from the repository root.
 Use temporary test state; never point checks at ordinary data or credentials.
 
 ```sh
@@ -64,7 +64,10 @@ advisory data. Hosted Ubuntu installs Chromium's system libraries with
 but then the browser revision differs from the locked CI revision.
 
 SQL checks create and stop their own temporary cluster and require an ordinary
-user account. Browser requests are intercepted. Package smoke builds and installs
+user account. Set `PG_CONFIG` to select PostgreSQL 16 explicitly and `--report-dir`
+to keep local environments separate; the SQL runner records its Python and
+PostgreSQL identity and rejects other majors unless `--allow-other-postgres` is
+explicitly passed for compatibility diagnostics. Browser requests are intercepted. Package smoke builds and installs
 a fresh distribution with acquisition disabled. The Python and Node isolation
 guards reject private state, credential files, historical acquisition inputs and
 non-loopback connections; they are regression guards rather than an OS sandbox.

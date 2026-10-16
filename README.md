@@ -15,7 +15,9 @@ not place trades.
 ## Requirements and quickstart
 
 Requires macOS, Python 3.11+ and PostgreSQL tools (`pg_ctl`, `initdb`, `psql`,
-`createdb`) on your PATH. Node 22 is needed only for client tests. Run commands
+`createdb`) on your PATH. Use Python 3.14 and PostgreSQL 16 for new setups;
+existing databases keep tools matching their cluster major. Node 24 is needed
+only for client tests (`nvm use`). Run commands
 from the repository root:
 
 ```sh

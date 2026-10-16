@@ -1,6 +1,6 @@
-// Authentic candidate API values; mutations below are authored presentation cases.
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
-const {Element}=require('./ev07_dom.cjs'),f=JSON.parse(fs.readFileSync('/tmp/predict-u02-api-output.json')),copy=structuredClone;
+// Portable current-row owner values; mutations are authored presentation cases.
+const assert=require('node:assert/strict'),path=require('node:path'),{pathToFileURL}=require('node:url');
+const {Element}=require('./ev07_dom.cjs'),f=require('./availability_client_fixture.cjs'),copy=structuredClone;
 (async()=>{
  const {primaryComparisonMetric:primary,compareComparisonMetrics:compare,scopedComparisonAvailability:scope,comparisonWarning:warning,createComparisonSlate}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/comparison-slate-views.js')));
  const content=new Element('section'),selected=[];let all=0;
@@ -26,7 +26,7 @@ const {Element}=require('./ev07_dom.cjs'),f=JSON.parse(fs.readFileSync('/tmp/pre
  renderer.draw(ev,{view:'ev',filter:'all',search:first.title});assert(content.querySelector('.slate-summary').textContent.includes('1 matching games'));
  const failed=copy(ev);failed.boards=[];failed.errors=failed.games.map(g=>({game_key:g.game_key,availability:{state:'calculation_failed',reason_codes:['calculation_read_failed']}}));renderer.draw(failed,{view:'ev',filter:'positive'});assert(content.textContent.includes('Calculations unavailable'));assert(!content.textContent.includes('No positive EV found'));assert.equal(scope([],failed.errors,failed.games.length).counts.calculation_failed,failed.games.length);
  const ne=copy(ev);ne.boards.forEach(b=>{b.rows=[];b.availability={...b.availability,counts:{numeric_current:0,numeric_last_known:0,missing_reference:0,unsupported_inputs:0,calculation_failed:0,not_evaluated:1},positive_results:0,outcome:'not_evaluated',causes:[]};});renderer.draw(ne,{view:'ev',filter:'positive'});assert(content.textContent.includes('Calculations not evaluated'));
- if(fs.existsSync('/tmp/predict-u02-partial.json')){renderer.draw(JSON.parse(fs.readFileSync('/tmp/predict-u02-partial.json')),{view:'ev',filter:'all'});assert(content.querySelectorAll('.slate-result').length>0);assert(content.textContent.includes('Calculation read failed'));}
+ renderer.draw(f.partial,{view:'ev',filter:'all'});assert(content.querySelectorAll('.slate-result').length>0);assert(content.textContent.includes('Calculation read failed'));
  renderer.draw(odds,{view:'odds',filter:'all'});assert.equal(content.querySelectorAll('.slate-game').length,odds.games.length);for(const q of odds.boards.flatMap(b=>b.prices).filter(q=>q.native_side==='Short'))assert(content.querySelectorAll('button').some(n=>n.dataset.key.endsWith(q.quote_id)&&n.textContent.includes('Short')));
  console.log('PASS U02 supplied percentage/category sorting, zero/negative/conditional/null-EV cases, honest 80-pair count, filtered causes, explicit last-known action, partial/all-failed/not-evaluated scopes, exact identities and compact rows');
 })().catch(e=>{console.error(e);process.exitCode=1;});

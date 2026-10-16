@@ -17,6 +17,79 @@ def load(name):
 
 
 class ReportingTests(unittest.TestCase):
+    def test_primary_sql_rejects_accidental_older_postgres_selection(self):
+        from unittest.mock import patch
+
+        module = load("postgres")
+        for allow_other in (False, True):
+            with (
+                self.subTest(allow_other=allow_other),
+                patch.object(
+                    module.subprocess,
+                    "check_output",
+                    side_effect=[
+                        "/chosen/postgres/bin\n",
+                        "postgres (PostgreSQL) 14.20\n",
+                    ],
+                ) as invoke,
+            ):
+                if allow_other:
+                    binary, version, major = module.postgres_tools(
+                        "/chosen/pg_config", allow_other=True
+                    )
+                    self.assertEqual(binary, Path("/chosen/postgres/bin"))
+                    self.assertEqual(major, 14)
+                    self.assertIn("14.20", version)
+                else:
+                    with self.assertRaisesRegex(
+                        ValueError, "No cluster was initialized"
+                    ):
+                        module.postgres_tools("/chosen/pg_config")
+                self.assertEqual(
+                    invoke.call_args_list[0].args[0][0], "/chosen/pg_config"
+                )
+
+    def test_project_postgres_requires_tools_matching_existing_cluster(self):
+        import os
+        import shutil
+        import subprocess
+
+        source = Path(__file__).resolve().parents[1] / "scripts/project-postgres"
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "scripts").mkdir()
+            (root / ".local/postgres").mkdir(parents=True)
+            (root / ".local/postgres/PG_VERSION").write_text("14\n")
+            launcher = root / "scripts/project-postgres"
+            shutil.copyfile(source, launcher)
+            for major in (14, 16):
+                binary = root / str(major)
+                binary.mkdir()
+                for tool in ("postgres", "initdb", "pg_ctl", "psql", "createdb"):
+                    output = (
+                        f"postgres (PostgreSQL) {major}.1"
+                        if tool == "postgres"
+                        else f"{major}:{tool}"
+                    )
+                    executable = binary / tool
+                    executable.write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\n")
+                    executable.chmod(0o755)
+                result = subprocess.run(
+                    ["sh", str(launcher), "status"],
+                    env=os.environ | {"PREDICT_PG_BIN": str(binary)},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                with self.subTest(major=major):
+                    if major == 14:
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertEqual(result.stdout.strip(), "14:pg_ctl")
+                    else:
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertEqual(result.stdout, "")
+                        self.assertIn("No process changed", result.stderr)
+
     def test_empty_client_execution_cannot_qualify_as_a_passing_suite(self):
         module = load("run_checks")
         with tempfile.TemporaryDirectory() as folder:

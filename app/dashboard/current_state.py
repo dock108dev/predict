@@ -254,9 +254,9 @@ class CurrentStore:
         if clock<=stamp(self._state['clock_at']) and not policy_changed:return
         self._clear_comparison_body()
         self._clear_current_body();self._details_cache=None
-        # Incremental commits and clock ticks share one temporal policy. Only
-        # quote shells change until a dependency transition needs re-projection.
-        from .current_incremental import aged
+        # Eligibility transitions and clock-bound financial frames use the same
+        # projection policy as the asynchronous temporal owner.
+        from .current_incremental import aged, clock_bound
         state=dict(self._state,clock_at=clock.isoformat(),events=[]);changed=policy_changed
         old_clock=stamp(self._state['clock_at'])
         for event in self._state['events']:
@@ -265,9 +265,11 @@ class CurrentStore:
                 value,transition=aged(group,clock,old_clock,state.get('comparison_profiles'),event)
                 groups.append(value);changed=changed or transition
             state['events'].append(dict(event,groups=groups))
-        if changed:
-            self._calculation_epoch+=1;self.comparison_jobs.invalidate()
-            state['state_revision']+=1
+        refresh_frames=clock!=old_clock and any(clock_bound(g) for e in state['events'] for g in e['groups'])
+        if changed or refresh_frames:
+            if changed:
+                self._calculation_epoch+=1;self.comparison_jobs.invalidate()
+                state['state_revision']+=1
             # Every dependent result is rebuilt from its original bound inputs,
             # including engine legs whose other quote became stale. Leases stay frozen.
             from .current_incremental import project

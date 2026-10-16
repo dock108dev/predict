@@ -35,7 +35,11 @@ def first_difference(a,b,path='root'):
 class CompleteLifecycle(unittest.IsolatedAsyncioTestCase):
  async def test_all_adapters_ordinary_routes_history_download_and_fresh_reopening(self):
   with tempfile.TemporaryDirectory() as tmp:
-   root=Path(tmp);o=owner(root);client=TestClient(TestServer(create_app(owner=o,sessions={},watch_path=root/'watchlists.json')));await client.start_server();origin=str(client.make_url('')).rstrip('/')
+   root=Path(tmp);o=owner(root)
+   # This synthetic lifecycle owns only its disposable sessions. Ordinary
+   # historical review roots can contain unrelated, unavailable local captures.
+   o.history_paths=lambda:session_history.list_sessions([o.output,o.pilot_output])
+   client=TestClient(TestServer(create_app(owner=o,sessions={},watch_path=root/'watchlists.json')));await client.start_server();origin=str(client.make_url('')).rstrip('/')
    async def get(path):
     r=await client.get(path);self.assertEqual(r.status,200,await r.text());return await r.json()
    async def post(path,body):

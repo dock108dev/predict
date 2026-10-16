@@ -1,11 +1,11 @@
-// Authored availability mutations around authentic current-row API responses.
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+// Authored availability mutations around portable current-row owner responses.
+const assert=require('node:assert/strict'),path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const {Element}=require('./ev07_dom.cjs');
 (async()=>{
  const {checkAvailability,checkBoard,SlateAccumulator}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/board-client.js')));
  const {createComparisonSlate}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/comparison-slate-views.js')));
- const f=JSON.parse(fs.readFileSync(process.argv[2]||'/tmp/predict-u02-api-output.json'));
+ const f=require('./availability_client_fixture.cjs');
  const context=v=>({amount:v.policy.requested_amount_usd,buffer:v.policy.buffer_rate,benchmark_venue:v.policy.benchmark_venue,benchmark_method:v.policy.benchmark_method,view:v.view,filter:v.filter,game:v.game_key});
  checkAvailability(f.ev.availability,true);checkBoard(f.ev,context(f.ev));
  const r=f.ev.rows.find(r=>r.availability.state==='numeric_last_known');assert(r);

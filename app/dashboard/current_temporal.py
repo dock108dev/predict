@@ -8,7 +8,7 @@ NO_INDEX=object()
 
 def temporal_steps(previous, clock, policy_changed, known, sizes, allow_synthetic, *, indexed_deadline=NO_INDEX):
     """Age writable shells fairly, then drain the same financial projection."""
-    from .current_incremental import aged, project_steps
+    from .current_incremental import aged, clock_bound, project_steps
     state=dict(previous,clock_at=clock.isoformat(),events=[])
     old_clock=stamp(previous['clock_at']);changed=policy_changed
     events={e['id']:dict(e,groups=[]) for e in previous['events']}
@@ -23,8 +23,12 @@ def temporal_steps(previous, clock, policy_changed, known, sizes, allow_syntheti
         event=events[original['id']]
         event['groups']=[groups[(original['id'],g['id'])] for g in original['groups']]
         state['events'].append(event)
-    if changed:
-        state['state_revision']+=1
+    # A harmless tick can reuse the eligibility index, but funded allocation
+    # hashes and frames still need the actual evaluation instant. Reuse only
+    # groups whose financial output is independent of that clock.
+    refresh_frames=clock!=old_clock and any(clock_bound(g) for g in groups.values())
+    if changed or refresh_frames:
+        if changed:state['state_revision']+=1
         result=yield from project_steps(snapshot_inputs(state,copy_graph=False),previous,known,sizes,
             allow_synthetic=allow_synthetic,borrow_profiles=True)
     else:result=(state,known,sizes,set(),None)

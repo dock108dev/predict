@@ -6,6 +6,8 @@
     "test_public_resolution_ui.cjs": "Requires an ignored public-contract integration reopening report. Server-side portable contract tests cover the boundary; browser lineage fixture conversion is deferred."
   },
   "required": [
+    "test_b02_client.cjs",
+    "test_u02_client.cjs",
     "test_aggregate_assessment_ui.cjs",
     "test_aggregate_ui.cjs",
     "test_board_security.cjs",

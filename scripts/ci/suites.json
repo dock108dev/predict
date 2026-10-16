@@ -30,6 +30,13 @@
     ]
   },
   {
+    "name": "b02-availability",
+    "tests": [
+      "tests/test_b02_arithmetic.py",
+      "tests/test_b02_availability.py"
+    ]
+  },
+  {
     "name": "python-02",
     "tests": [
       "tests/test_current_service.py"

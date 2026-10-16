@@ -21,6 +21,17 @@ def signatures(raw,policy_revision=None):
     return {(e['id'],g['id']):signature(e,g,raw.get('comparison_profiles'),policy_revision) for e in raw['events'] for g in e['groups']}
 
 
+def clock_bound(group):
+    """Funded and typed net results bind frames and allocation hashes to time."""
+    for o in group['outcomes']:
+        for q in quotes_of(o):
+            calculations=q.get('calculations',{})
+            if 'evaluation_frame' in calculations.get('funded_estimate',{}):return True
+            natural=calculations.get('net_ev',{}).get('details',{}).get('natural',{})
+            if natural.get('dependency_revisions',{}).get('evaluated_at') is not None:return True
+    return False
+
+
 def aged(group,clock,old_clock,profiles=None,event=None):
     """Age scalar shells only; eligibility transitions require re-projection."""
     result=dict(group,outcomes=[]);changed=False
@@ -101,7 +112,7 @@ def project_steps(raw,previous,known,sizes,*,allow_synthetic=False,borrow_profil
             k=(event_id,group['id']);sig=signature(event,group,raw.get('comparison_profiles'),policy.revision);cached=old.get(k)
             if cached is not None and known.get(k)==sig:
                 calculated,transition=aged(cached,clock,old_clock,raw.get('comparison_profiles'),event)
-                if transition:cached=None
+                if transition or clock!=old_clock and clock_bound(cached):cached=None
             else:cached=None
             if cached is None:
                 from app.comparison.shared_templates import shared, subset
