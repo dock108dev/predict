@@ -1,0 +1,56 @@
+{
+  "version": "predict-scanner-readiness-policy-1",
+  "scope": {
+    "sport": "football",
+    "league": "NFL",
+    "market": "winner",
+    "period": "full_game",
+    "phase": "pregame"
+  },
+  "limits": {
+    "kalshi": {
+      "price_age_seconds": 30,
+      "book_age_seconds": 30,
+      "cross_leg_skew_seconds": 30,
+      "reference_age_seconds": 1800
+    },
+    "polymarket_us": {
+      "price_age_seconds": 30,
+      "book_age_seconds": 30,
+      "cross_leg_skew_seconds": 30,
+      "reference_age_seconds": 1800
+    },
+    "novig": {
+      "price_age_seconds": 900,
+      "book_age_seconds": null,
+      "cross_leg_skew_seconds": 30,
+      "reference_age_seconds": 1800
+    },
+    "prophetx": {
+      "price_age_seconds": 900,
+      "book_age_seconds": null,
+      "cross_leg_skew_seconds": 30,
+      "reference_age_seconds": 1800
+    },
+    "pinnacle": {
+      "price_age_seconds": 900,
+      "book_age_seconds": null,
+      "cross_leg_skew_seconds": 30,
+      "reference_age_seconds": 1800
+    }
+  },
+  "evidence": {
+    "app/collection/current_sink.py": "b57bd7c8cf935356385790f8df3857566925eef175770425b2ae2b54ccde0d95",
+    "app/fixtures/comparison-net-ev-v1.json": "88da7d51a924c739623a48e170eb73619e7a697501c39c0d2529e36278e8cc9a",
+    "app/comparison/costs.py": "99f30e460cc56485014b2ecb22f89f07518ae5cf56a33319d3191fdd1b8c1587",
+    "app/comparison/estimated_ev.py": "eebf9bba2ff41076adca99a11e31ff5a68189e1e112cdfb3713206da0c63baa2",
+    "app/comparison/benchmark.py": "2d4e5ebe438c18642047eafe880e16032d7768540fa4922b4338d211837ea319"
+  },
+  "review": {
+    "date": "2026-10-16",
+    "rationale": "Retain the native 30 second engineering admission window and the existing 900 second net-pregame / 1800 second reference maxima. Fixed cross-leg skew cap is one native admission window, a conservative new local coherence restriction, not empirically certified source cadence or simultaneous execution. Equality at expiry withdraws readiness. No fee/rule/probability horizon renewed.",
+    "source_qualification": "SC07 outstanding",
+    "adaptive_widening": false,
+    "clock_basis": "original price and book clocks only"
+  }
+}

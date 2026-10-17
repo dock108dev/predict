@@ -97,7 +97,11 @@
     "tests/test_segmented_collector.py": "Legacy winner-wire collector rehearsal supplies no supported material predicate terms and selects zero markets under current admission rules. Synthetic segmentation corruption/resource/crash tests remain required; current native and source_session suites cover discovery, bounded queues, Stop and isolation with current authored metadata.",
     "tests/test_d03_current_rows.py": "Requires a disposable PostgreSQL cluster with app.storage.store.ROOT redirected to its temporary socket; selected explicitly by scripts/ci/postgres.py, never against the installed owner database.",
     "tests/test_current_row_financial_roundtrip.py": "Requires a disposable PostgreSQL cluster with app.storage.store.ROOT redirected to its temporary socket; selected explicitly by scripts/ci/postgres.py, never against the installed owner database.",
-    "tests/test_current_row_occurrence_roundtrip.py": "Requires a disposable PostgreSQL cluster with app.storage.store.ROOT redirected to its temporary socket; selected explicitly by scripts/ci/postgres.py, never against the installed owner database."
+    "tests/test_current_row_occurrence_roundtrip.py": "Requires a disposable PostgreSQL cluster with app.storage.store.ROOT redirected to its temporary socket; selected explicitly by scripts/ci/postgres.py, never against the installed owner database.",
+    "tests/test_sc01_readiness_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_sc02_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_sc03_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_sc06_performance_sql.py": "Required in scripts/ci/postgres.py against its verified disposable PostgreSQL 16 cluster; missing socket is a failure and never SQL qualification. Exercises 500 authored active events through real current rows, financial evaluator and projection; browser_tests/test_sc06.py supplies SQL-to-Chromium coverage."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

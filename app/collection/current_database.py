@@ -80,7 +80,8 @@ class DatabaseIngressSink:
                 require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
                 if sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
                 rows=CurrentRowStore(db)
-                with db.transaction():
+                from app.storage.scanner_publication import transaction as published_transaction
+                with published_transaction(db):
                     changed=rows.upsert_records(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now)
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':

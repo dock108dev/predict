@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-scanner-transitions-1",
+  "type": "object",
+  "required": [
+    "version",
+    "server_id",
+    "epoch",
+    "scope",
+    "cursor",
+    "continuity",
+    "reason",
+    "events",
+    "unsupported_filters",
+    "coverage_complete",
+    "provider_requests",
+    "financial_evaluations",
+    "bounds",
+    "material_improvement"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-scanner-transitions-1"
+    },
+    "server_id": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "epoch": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "cursor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "continuity": {
+      "enum": [
+        "censored",
+        "continuous"
+      ]
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "unsupported_filters": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      }
+    },
+    "coverage_complete": {
+      "type": "boolean"
+    },
+    "provider_requests": {
+      "const": 0
+    },
+    "financial_evaluations": {
+      "const": 0
+    },
+    "bounds": {
+      "type": "object"
+    },
+    "material_improvement": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "required": [
+        "id",
+        "opportunity_id",
+        "pair_id",
+        "category",
+        "sport",
+        "league",
+        "market",
+        "period",
+        "dependency_revision",
+        "economic_revision",
+        "expires_at",
+        "edge",
+        "current",
+        "size",
+        "venues",
+        "source_clocks"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "opportunity_id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "pair_id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "sport": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "league": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "market": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "period": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "dependency_revision": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "economic_revision": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "expires_at": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "edge": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "current": {
+          "type": "boolean"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "venues": {
+          "type": "array",
+          "maxItems": 2,
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "source_clocks": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "cursor",
+        "episode_id",
+        "kind",
+        "observed_at",
+        "before",
+        "after",
+        "audible"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "cursor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "episode_id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "kind": {
+          "enum": [
+            "new",
+            "first_observation",
+            "improved",
+            "changed",
+            "matching",
+            "no_longer_matching",
+            "withdrawn",
+            "unavailable"
+          ]
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "audible": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

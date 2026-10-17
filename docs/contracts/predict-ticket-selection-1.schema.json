@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "predict-ticket-selection-1"
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "server_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "opportunity_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "row_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "dependency_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "economic_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "pair_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engine_binding": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "readiness_policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "discovery_policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "server_id",
+        "epoch",
+        "opportunity_id",
+        "row_id",
+        "dependency_revision",
+        "economic_revision",
+        "pair_id",
+        "engine_binding",
+        "readiness_policy_revision",
+        "discovery_policy_revision"
+      ],
+      "additionalProperties": false
+    },
+    "provider_requests": {
+      "const": 0
+    }
+  },
+  "required": [
+    "version",
+    "selection",
+    "provider_requests"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-ticket-selection-1"
+}

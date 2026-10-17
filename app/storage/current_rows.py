@@ -5,6 +5,7 @@ facts, one current offer and a shared ordered depth ladder. SQL transactions own
 publication; the record read adapter reconstructs only transient finance inputs.
 """
 from copy import deepcopy
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
 from psycopg.types.json import Jsonb
@@ -16,11 +17,29 @@ MAX_EVENTS=4096  # Source mappings: supports 500 games across aggregate + two na
 MAX_RECORDS=32768
 MAX_RECORD_BYTES=128*1024
 LOCK=901095
+MAX_PIPELINE_COMMANDS=128
 EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','home','away','participants','title',
     'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate')
 
 
 def utc():return datetime.now(timezone.utc).isoformat()
+
+
+@contextmanager
+def _ordered_writes(db):
+    """Batch ordered commands without moving any caller-owned read barrier."""
+    with db.pipeline() as pipeline:
+        pending=0
+        def execute(query,params=None):
+            nonlocal pending
+            cursor=db.execute(query,params)
+            pending+=1
+            if pending>=MAX_PIPELINE_COMMANDS:
+                pipeline.sync();pending=0
+            return cursor
+        yield execute
+        # Deliver delayed SQL errors before the transaction or publication hook.
+        pipeline.sync()
 
 def _clockless(value):
     """Dependency identity excludes local receipt/project clocks and body hashes."""
@@ -70,7 +89,12 @@ def prepare(record):
     if depth is not None:
         if len(depth)>4096:raise ValueError('current_row_depth_capacity')
         for level in depth:
-            if Decimal(level['price'])<0 or Decimal(level['price'])>1 or Decimal(level['quantity'])<=0:raise ValueError('current_row_depth_value')
+            price,quantity=Decimal(level['price']),Decimal(level['quantity'])
+            if not price.is_finite() or not quantity.is_finite():raise ValueError('current_row_depth_value')
+            # Decimal odds are stake observations; purchase-contract prices are
+            # dollar fractions. Preserve the native [0,1] boundary.
+            valid_price=price>=1 if original['units']=='decimal_odds' else 0<=price<=1
+            if not valid_price or quantity<=0:raise ValueError('current_row_depth_value')
     q.pop('id',None);q.pop('revision',None)
     q.pop('occurrence_match',None);q.pop('occurrence_link',None)
     q['times']={k:v for k,v in times.items() if k not in ('source_at','received_at')}
@@ -98,11 +122,11 @@ class CurrentRowStore:
         """
         if len(records)>MAX_RECORDS:raise ValueError('current_row_ingress_capacity')
         prepared=[prepare(r) for r in records];changed=0
-        with self.db.transaction():
-            self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
+        with self.db.transaction(), _ordered_writes(self.db) as execute:
+            execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             for p in prepared:
                 source=p['source'];event=p['event'];eid=p['event_id'];cid=p['contract_id']
-                old=self.db.execute('SELECT source_order,received_order,revision,price_value,price_units,quantity_units FROM current_offer WHERE contract_id=%s',(cid,)).fetchone()
+                old=execute('SELECT source_order,received_order,revision,price_value,price_units,quantity_units FROM current_offer WHERE contract_id=%s',(cid,)).fetchone()
                 if old:
                     original=p['quote']['original']
                     if not p['missing'] and (p['source_order'],p['received_order'])==(old['source_order'],old['received_order']) and (original['value'],original['units'],original['quantity_units'])!=(old['price_value'],old['price_units'],old['quantity_units']):
@@ -114,22 +138,22 @@ class CurrentRowStore:
                     elif p['received_order']<old['received_order']:continue
                     if p['received_order']<old['received_order'] and p['source_order']==old['source_order']:continue
                 ef=hashed(event);cf=hashed(p['contract'])
-                self.db.execute('''INSERT INTO current_event VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                execute('''INSERT INTO current_event VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                   ON CONFLICT(id) DO UPDATE SET facts=excluded.facts,revision=excluded.revision,
                     scheduled_start=excluded.scheduled_start,expires_order=excluded.expires_order
                   WHERE current_event.revision<>excluded.revision''',
                     (eid,source['provider'],source['native_event_id'],event['competition'],event['scheduled_start'],p['expires_order'],Jsonb(event),ef))
-                self.db.execute('''INSERT INTO current_contract VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                execute('''INSERT INTO current_contract VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                   ON CONFLICT(id) DO UPDATE SET facts=excluded.facts,revision=excluded.revision
                   WHERE current_contract.revision<>excluded.revision''',
                     (cid,eid,p['venue'],source['native_market_id'],source['native_outcome_id'],source.get('native_side',''),Jsonb(p['contract']),cf))
                 original=p['quote']['original']
                 if p['missing']:
-                    self.db.execute('DELETE FROM current_offer WHERE contract_id=%s',(cid,))
-                    self.db.execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
+                    execute('DELETE FROM current_offer WHERE contract_id=%s',(cid,))
+                    execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
                     changed+=int(old is not None)
                     continue
-                self.db.execute('''INSERT INTO current_offer VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                execute('''INSERT INTO current_offer VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                   ON CONFLICT(contract_id) DO UPDATE SET price_value=excluded.price_value,price_units=excluded.price_units,
                     quantity_units=excluded.quantity_units,source_at=excluded.source_at,source_order=excluded.source_order,
                     received_at=excluded.received_at,received_order=excluded.received_order,facts=excluded.facts,revision=excluded.revision
@@ -137,9 +161,9 @@ class CurrentRowStore:
                     (cid,original['value'],original['units'],original['quantity_units'],p['source_at'],p['source_order'],
                      p['received_at'],p['received_order'],Jsonb(p['quote']),p['revision']))
                 if old is None or old['revision']!=p['revision']:
-                    self.db.execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
+                    execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
                     for i,level in enumerate(p['depth'] or [] if p['venue'] not in ('kalshi','polymarket_us') else []):
-                        self.db.execute('INSERT INTO current_depth VALUES (%s,%s,%s,%s,%s,%s)',
+                        execute('INSERT INTO current_depth VALUES (%s,%s,%s,%s,%s,%s)',
                             (cid,'asks',i,str(level['price']),str(level['quantity']),original['quantity_units']))
                     changed+=1
             if authoritative:
@@ -147,32 +171,32 @@ class CurrentRowStore:
                 for scope in scopes:
                     receipt=exact_time(scope['received_at']);order=exact_time(scope.get('source_at') or scope['received_at'])
                     key=hashed({k:v for k,v in scope.items() if k not in ('source_at','received_at')})
-                    prior=self.db.execute('SELECT source_order,received_order FROM current_refresh_scope WHERE scope=%s',(key,)).fetchone()
+                    prior=execute('SELECT source_order,received_order FROM current_refresh_scope WHERE scope=%s',(key,)).fetchone()
                     if prior and (order,receipt)<(prior['source_order'],prior['received_order']):continue
                     condition=['c.venue=%s','e.competition=%s'];params=[scope['venue'],scope['competition']]
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
                         if name in scope:condition.append(owner+'.'+name+'=%s');params.append(scope[name])
-                    candidates=self.db.execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c
+                    candidates=execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c
                         JOIN current_event e ON e.id=c.event_id LEFT JOIN current_offer o ON o.contract_id=c.id
                         WHERE '''+' AND '.join(condition),params).fetchall()
                     for candidate in candidates:
                         if candidate['id'] in incoming:continue
                         if candidate['received_order'] is not None and candidate['received_order']>receipt:continue
                         if scope.get('source_at') and candidate['source_order'] is not None and candidate['source_order']>order:continue
-                        self.db.execute('DELETE FROM current_contract WHERE id=%s',(candidate['id'],));changed+=1
-                    self.db.execute('''INSERT INTO current_refresh_scope VALUES (%s,%s,%s) ON CONFLICT(scope)
+                        execute('DELETE FROM current_contract WHERE id=%s',(candidate['id'],));changed+=1
+                    execute('''INSERT INTO current_refresh_scope VALUES (%s,%s,%s) ON CONFLICT(scope)
                         DO UPDATE SET source_order=excluded.source_order,received_order=excluded.received_order''',(key,order,receipt))
             if source_status:
                 for venue,state in source_status.items():
-                    self.db.execute('''INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue)
+                    execute('''INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue)
                       DO UPDATE SET state=excluded.state,received_at=excluded.received_at WHERE current_source_status.state<>excluded.state''',
                       (venue,Jsonb(state),now or utc()))
             # Scope order guards are bounded by current work, never history.
-            self.db.execute('DELETE FROM current_refresh_scope WHERE received_order<%s', (exact_time(now or utc())-172800,))
-            if self.db.execute('SELECT count(*) AS n FROM current_refresh_scope').fetchone()['n']>MAX_RECORDS:
+            execute('DELETE FROM current_refresh_scope WHERE received_order<%s', (exact_time(now or utc())-172800,))
+            if execute('SELECT count(*) AS n FROM current_refresh_scope').fetchone()['n']>MAX_RECORDS:
                 raise ValueError('current_row_scope_capacity')
             self.expire(now=now)
-            count=self.db.execute('SELECT count(*) AS n FROM current_event').fetchone()['n']
+            count=execute('SELECT count(*) AS n FROM current_event').fetchone()['n']
             if count>MAX_EVENTS:raise ValueError('current_row_event_capacity')
         return changed
 
@@ -192,15 +216,15 @@ class CurrentRowStore:
 
     def replace_native_books(self,books):
         """Replace synchronized exact affected books atomically with the offers."""
-        with self.db.transaction():
-            self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
+        with self.db.transaction(), _ordered_writes(self.db) as execute:
+            execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             for book in books:
                 raw=book['raw'];ref=raw['ref'];venue=ref['venue'];eid=hashed([venue,ref['event_id']]);market=ref['market_id']
                 if book['sync']!='synchronized' or book['state']=='unknown':raise ValueError('current_row_incomplete_book')
-                if not self.db.execute('SELECT 1 FROM current_event WHERE id=%s',(eid,)).fetchone():continue
+                if not execute('SELECT 1 FROM current_event WHERE id=%s',(eid,)).fetchone():continue
                 at=raw.get('exchange_at');order=exact_time(at) if at else None;receipt=exact_time(raw['received_at'])
                 key=(venue,eid,market)
-                old=self.db.execute('SELECT source_order,received_order,revision FROM current_native_book WHERE venue=%s AND event_id=%s AND native_market_id=%s',key).fetchone()
+                old=execute('SELECT source_order,received_order,revision FROM current_native_book WHERE venue=%s AND event_id=%s AND native_market_id=%s',key).fetchone()
                 if old:
                     if order is None and old['source_order'] is not None:continue
                     if order is not None and old['source_order'] is not None and order<old['source_order']:continue
@@ -222,14 +246,14 @@ class CurrentRowStore:
                 revision=hashed([at,book['state'],book['sync'],outcomes,levels])
                 if old and (order,receipt)==(old['source_order'],old['received_order']) and old['revision']!=revision:
                     raise ValueError('current_row_equal_clock_book_conflict')
-                self.db.execute('''INSERT INTO current_native_book VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                execute('''INSERT INTO current_native_book VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT(venue,event_id,native_market_id) DO UPDATE SET source_at=excluded.source_at,source_order=excluded.source_order,
                     received_at=excluded.received_at,received_order=excluded.received_order,revision=excluded.revision,state=excluded.state,sync=excluded.sync,
                     sequence=excluded.sequence,outcomes=excluded.outcomes WHERE current_native_book.received_order<>excluded.received_order OR current_native_book.revision<>excluded.revision''',
                     (*key,at,order,raw['received_at'],receipt,revision,book['quantity_unit'],book['state'],book['sync'],str(book.get('sequence')),Jsonb(outcomes)))
                 if old and old['revision']==revision:continue
-                self.db.execute('DELETE FROM current_native_depth WHERE venue=%s AND event_id=%s AND native_market_id=%s',key)
-                for level in levels:self.db.execute('INSERT INTO current_native_depth VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',level)
+                execute('DELETE FROM current_native_depth WHERE venue=%s AND event_id=%s AND native_market_id=%s',key)
+                for level in levels:execute('INSERT INTO current_native_depth VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',level)
 
     def expire(self,*,now=None):
         now=now or utc()

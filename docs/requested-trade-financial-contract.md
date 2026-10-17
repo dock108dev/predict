@@ -94,3 +94,12 @@ when the probability partition is incomplete. Board and Details use the same
 server-derived percentage fields and deployed-capital denominators. See the
 [board availability contract](comparison-board-api-contract.md#calculation-availability)
 for transport states and summary semantics.
+
+## Scanner input readiness
+
+The isolated SC01 successor supplies a separate [typed readiness schema](contracts/predict-scanner-readiness-1.schema.json) for execution clocks/depth/source availability, mandatory identity/fee/quantity/payout/settlement facts, and optional EV reference/probability facts. A ready structural input pair is not an arb classification or an EV result. SC02 still owns cashflow-only pair qualification and the existing board freshness/classification boundary. Current financial interfaces and their wire versions retain their meanings; SC01 has not renewed any model or installed a new ordinary reader.
+
+
+## Scanner classification and discovery
+
+The isolated SC02 successor implements separate covered-outcome, conditional and EV categories in a new scanner protocol. Cashflow-only qualification uses current mandatory execution/contract facts independently from optional EV references, every required supported feasible state, observed legal allocations and one deployed-capital buffer. Neutral refunds and losing zero-probability states remain in the complete minimum. Bounded nonqualifying sizing searches cannot establish authoritative evaluated-zero unless exhaustive. Existing board/slate/Details wire meanings remain unchanged. Scanner contract: `docs/scanner-projection-contract.md`; qualification decisions: `docs/scanner-qualification-decisions.md`. The local engineering closeout is `sc02-closeout-20261016.md`. No ordinary installation or current source/model renewal is implied.

@@ -12,17 +12,20 @@ MAX_CAPTURE_BYTES = 96 * 1024 * 1024
 
 
 def _records(records, at):
-    """Admitted typed data only. Old envelope locators have no current meaning."""
+    """Private edited shells; the resolver fully detaches every output record."""
     out=[]
     for item in records:
-        r=deepcopy(item)
-        if r['event'].get('competition')!='NFL' or r['market_identity'].get('family')!='moneyline' or r['market_identity'].get('period')!='full_game':continue
-        if stamp(r['event']['scheduled_start'])<=stamp(at):continue
+        if item['event'].get('competition')!='NFL' or item['market_identity'].get('family')!='moneyline' or item['market_identity'].get('period')!='full_game':continue
+        if stamp(item['event']['scheduled_start'])<=stamp(at):continue
+        # Only these containers change before OccurrenceResolver's final copy.
+        # Other nested facts, including unknown fields, remain untouched here.
+        r=dict(item);r['quote']=dict(item['quote'])
         for key in ('_instrument','_fingerprint'):r.pop(key,None)
-        meta=r.setdefault('comparison_source_metadata',{})
+        meta=dict(r.get('comparison_source_metadata',{}));r['comparison_source_metadata']=meta
         meta.pop('combined_envelope_id',None)
-        native=meta.get('combined_native_binding',{})
-        for key in ('catalog_envelope_id','book_envelope_id'):native.pop(key,None)
+        if 'combined_native_binding' in meta:
+            native=dict(meta['combined_native_binding']);meta['combined_native_binding']=native
+            for key in ('catalog_envelope_id','book_envelope_id'):native.pop(key,None)
         if r['quote']['source']['provider']=='the_odds_api':
             r['comparison_scope']=dict(overtime='included')
             meta.update(phase='pregame',overtime='included',scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
@@ -32,10 +35,10 @@ def _records(records, at):
 
 class ReadContext:
     """One caller-owned repeatable SQL snapshot and bounded transient game data."""
-    def __init__(self, store, *, at=None):
+    def __init__(self, store, *, at=None, frame=None):
         from .current_rows import CurrentRowStore
         self.store=store;self.at=at or utc();self.engine=engine_binding()
-        frame=CurrentRowStore(store.db).capture(include_depth=False)
+        frame=frame if frame is not None else CurrentRowStore(store.db).capture(include_depth=False)
         self.epoch=str(frame['epoch']);self.revision=frame['revision']
         self.dependency_revisions=frame.get('dependency_revisions',{})
         self.native_dependency_revisions=frame.get('native_dependency_revisions',{})
@@ -55,12 +58,20 @@ class ReadContext:
         receipts=[(r['quote']['source'],r['quote']['times'].get('received_at'),r['quote'].get('provenance')) for r in records]
         self.read_revision=hashed(dict(epoch=self.epoch,revision=self.revision,engine=self.engine,availability=clocks,receipts=receipts,source_states={k:v.get('state') for k,v in statuses.items()}))
         self._catalog_bundles=None
+        self._normalization_registries=None
+
+    def normalization_registries(self):
+        """Share immutable fact registries only within this SQL read context."""
+        if self._normalization_registries is None:
+            from app.dashboard.current_normalized import NormalizationRegistries
+            self._normalization_registries=NormalizationRegistries.load()
+        return self._normalization_registries
 
     def guard(self,members):
         selected=set(map(tuple,members))
         rows=[r for group in self.prepared['groups'] for r in group if (r['quote']['source']['provider'],r['quote']['source']['native_event_id']) in selected]
         from .current_rows import contract_id, _clockless
-        revisions=[(contract_id(r),self.dependency_revisions.get(contract_id(r),hashed(_clockless(r)))) for r in rows]
+        revisions=[(contract_id(r),self.dependency_revisions[contract_id(r)] if contract_id(r) in self.dependency_revisions else hashed(_clockless(r))) for r in rows]
         native_keys={hashed([r['quote']['source']['provider'],r['quote']['source']['native_event_id'],r['quote']['source']['native_market_id']]) for r in rows}
         native=[(key,self.native_dependency_revisions[key]) for key in sorted(native_keys) if key in self.native_dependency_revisions]
         matches=[_clockless(r['quote'].get('occurrence_match')) for r in rows]
@@ -76,7 +87,8 @@ class ReadContext:
                 executions=[r for r in rows if r['quote']['venue']!='pinnacle']
                 if not executions:continue
                 raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
-                state=catalog_from_normalized(raw,executions,include_profiles=False)
+                state=catalog_from_normalized(raw,executions,include_profiles=False,
+                    registries=self.normalization_registries())
                 members=[list(v) for v in sorted({(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows})]
                 event=state['events'][0]
                 summary={k:event[k] for k in ('id','title','start_at','participants')}
@@ -89,18 +101,23 @@ class ReadContext:
     def catalog(self):
         return dict(catalog(self.catalog_bundles()),read_revision=self.read_revision,epoch=self.epoch)
 
-    def bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None, cache=True):
+    def bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None, cache=True, occurrence_rows=None, _readiness_only=False):
+        if _readiness_only and occurrence_rows is None:
+            raise ValueError('board_readiness_occurrence_required')
         groups=self.prepared['groups']
+        if occurrence_rows is not None:
+            if not any(occurrence_rows is rows for rows in groups):raise ValueError('board_read_context_occurrence_conflict')
+            groups=[occurrence_rows]
         if game is not None:selected=tuple(choose(self.catalog_bundles(),game)['members'][0])
         if selected is not None:groups=[rows for rows in groups if tuple(selected) in {(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows}]
         out=[]
         for rows in groups:
-            if self.store.db is not None and any(r['quote']['venue'] in ('kalshi','polymarket_us') and 'depth' not in r['quote'] for r in rows):
+            if self.store.db is not None and any('depth' not in r['quote'] for r in rows):
                 from .current_rows import CurrentRowStore
                 rows=CurrentRowStore(self.store.db).hydrate_records(rows)
-            values=build([],at=self.at,benchmark_venue=benchmark_venue,prepared=dict(self.prepared,groups=[rows]))
+            values=build([],at=self.at,benchmark_venue=benchmark_venue,prepared=dict(self.prepared,groups=[rows]),
+                registries=self.normalization_registries(),_current_guard=self.guard,_readiness_only=_readiness_only)
             for value in values:
-                value['input_version']=self.guard(value['members'])
                 value['epoch']=self.epoch
                 value['representation']='current typed event, exact native contracts, offers, depth and shared definitions; original source clocks retained'
                 value['envelope_ids']=[];value['envelopes']=[]

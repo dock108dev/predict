@@ -477,5 +477,44 @@
       "tests/test_domain_delta.py",
       "tests/test_domain_frame.py"
     ]
+  },
+  {
+    "name": "scanner-classification-projection",
+    "tests": [
+      "tests/test_sc01_readiness.py",
+      "tests/test_sc02_finance.py",
+      "tests/test_sc02_projection.py",
+      "tests/test_sc02_contract.py"
+    ]
+  },
+  {
+    "name": "scanner-selected-tickets",
+    "tests": [
+      "tests/test_sc03_finance.py",
+      "tests/test_sc03_tickets.py",
+      "tests/test_sc03_contract.py"
+    ]
+  },
+  {
+    "name": "scanner-client-contract",
+    "tests": [
+      "tests/test_sc04_contract.py"
+    ]
+  },
+  {
+    "name": "scanner-manual-ui-transitions",
+    "tests": [
+      "tests/test_sc05_transitions.py",
+      "tests/test_sc05_contract.py"
+    ]
+  },
+  {
+    "name": "scanner-bounded-summaries",
+    "tests": [
+      "tests/test_sc06_summaries.py",
+      "tests/test_sc06_contract.py",
+      "tests/test_sc06_readiness_cache.py",
+      "tests/test_sc06_normalization_registry.py"
+    ]
   }
 ]

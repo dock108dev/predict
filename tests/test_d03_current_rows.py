@@ -7,6 +7,7 @@ from uuid import uuid4
 from unittest.mock import patch
 from types import SimpleNamespace
 from psycopg import sql
+from psycopg.errors import CheckViolation
 from app.storage.store import connect,Store,hashed
 from app.storage.current_rows import CurrentRowStore,contract_id,prepare
 from app.comparison.combined_inputs import prepare as normalize
@@ -96,6 +97,132 @@ class CurrentRows(unittest.TestCase):
         changed=deepcopy(rows);changed[0]['quote']['original']['value']='3.99'
         with self.assertRaisesRegex(ValueError,'equal_clock_price_conflict'):self.store.upsert_records(changed)
         self.assertEqual(before,self.store.capture())
+
+    def test_ordered_duplicate_contract_reads_accepted_receipt_and_source_updates(self):
+        row=future_records()[0]
+        receipt=deepcopy(row);receipt['quote']['times']['received_at']='2026-10-15T12:01:00Z'
+        older_receipt=deepcopy(row);older_receipt['quote']['times']['received_at']='2026-10-15T12:00:30Z';older_receipt['quote']['original']['value']='8.01'
+        newer=deepcopy(row);newer['quote']['times'].update(source_at='2026-10-15T12:02:00Z',received_at='2026-10-15T12:02:01Z');newer['quote']['original']['value']='3.21'
+        older=deepcopy(row);older['quote']['times'].update(source_at='2026-10-15T12:01:00Z',received_at='2026-10-15T12:03:01Z');older['quote']['original']['value']='8.02'
+        unknown=deepcopy(row);unknown['quote']['times'].update(source_at=None,received_at='2026-10-15T12:04:01Z');unknown['quote']['original']['value']='8.03'
+        self.assertEqual(self.store.upsert_records([row,receipt,older_receipt,newer,older,unknown]),2)
+        saved=self.store.records()[0]['quote']
+        self.assertEqual(saved['original']['value'],'3.21')
+        self.assertEqual(saved['times']['source_at'],'2026-10-15T12:02:00Z')
+        self.assertEqual(saved['times']['received_at'],'2026-10-15T12:02:01Z')
+
+    def test_ordered_missing_then_older_readd_sees_deleted_offer_and_replaces_depth(self):
+        row=future_records()[0];row['quote']['depth']=[dict(price='2.1',quantity='7')]
+        self.store.upsert_records([row])
+        missing=deepcopy(row);missing['offer_missing']=True
+        missing['quote']['times'].update(source_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+        readd=deepcopy(row);readd['quote']['original']['value']='2.5';readd['quote']['depth']=[dict(price='2.5',quantity='9')]
+        self.assertEqual(self.store.upsert_records([missing,readd]),2)
+        saved=self.store.records()[0]['quote']
+        self.assertEqual(saved['original']['value'],'2.5')
+        self.assertEqual(saved['times']['received_at'],row['quote']['times']['received_at'])
+        self.assertEqual(saved['depth'],[dict(price='2.5',quantity='9')])
+        self.assertEqual(self.counts()['current_contract'],1)
+
+    def test_shared_event_facts_follow_accepted_input_order(self):
+        first,second=future_records();first['event']['title']='First accepted event';second['event']['title']='Last accepted event'
+        rejected=deepcopy(first);rejected['event']['title']='Rejected older event'
+        rejected['quote']['times'].update(source_at='2026-10-15T11:00:00Z',received_at='2026-10-15T12:10:00Z')
+        self.store.upsert_records([first,second,rejected])
+        self.assertEqual({r['event']['title'] for r in self.store.records()},{'Last accepted event'})
+
+    def test_later_equal_clock_conflict_rolls_back_prior_queued_updates(self):
+        rows=future_records();self.store.upsert_records(rows);before=self.store.capture()
+        prior=deepcopy(rows[1]);prior['quote']['times'].update(source_at='2026-10-15T12:02:00Z',received_at='2026-10-15T12:02:01Z');prior['quote']['original']['value']='2.88'
+        conflict=deepcopy(rows[0]);conflict['quote']['original']['value']='3.99'
+        with self.assertRaisesRegex(ValueError,'equal_clock_price_conflict'):self.store.upsert_records([prior,conflict])
+        self.assertEqual(before,self.store.capture())
+
+    def test_overlapping_scopes_preserve_all_incoming_ids_and_order_guards(self):
+        first,second=future_records();third=deepcopy(first);third['quote']['source']['native_outcome_id']='authored-third-outcome'
+        self.store.upsert_records([first,second,third])
+        stale=deepcopy(first);stale['quote']['times'].update(source_at='2026-10-15T11:00:00Z',received_at='2026-10-15T12:10:01Z');stale['quote']['original']['value']='9'
+        missing=deepcopy(second);missing['offer_missing']=True;missing['quote']['times'].update(source_at='2026-10-15T12:03:00Z',received_at='2026-10-15T12:03:01Z')
+        broad=dict(venue='novig',competition='NFL',source_at='2026-10-15T12:05:00Z',received_at='2026-10-15T12:05:01Z')
+        narrow=dict(broad,native_event_id=first['quote']['source']['native_event_id'],source_at='2026-10-15T12:06:00Z',received_at='2026-10-15T12:06:01Z')
+        older=dict(broad,source_at='2026-10-15T12:04:00Z',received_at='2026-10-15T12:04:01Z')
+        self.assertEqual(self.store.upsert_records([stale,missing],scopes=[broad,narrow,older],authoritative=True,now='2026-10-15T12:10:01Z'),2)
+        self.assertEqual(self.counts()['current_contract'],2);self.assertEqual(self.counts()['current_offer'],1)
+        saved=self.store.records()[0]
+        self.assertEqual(contract_id(saved),contract_id(first));self.assertEqual(saved['quote']['original'],first['quote']['original'])
+        guard=self.db.execute('SELECT source_order,received_order FROM current_refresh_scope WHERE scope=%s',(hashed(dict(venue='novig',competition='NFL')),)).fetchone()
+        from app.storage.store import exact_time
+        self.assertEqual(guard['source_order'],exact_time(broad['source_at']));self.assertEqual(guard['received_order'],exact_time(broad['received_at']))
+
+    def native_book(self,rows):
+        target=rows[0]['quote']['source']
+        book=deepcopy(next(o['book'] for e in envelopes() if e['record']['kind']=='admitted_books' for o in e['record']['value']['observations'] if o['book']['raw']['ref']['market_id']==target['native_market_id']))
+        book['raw'].update(exchange_at='2026-10-15T12:00:00Z',received_at='2026-10-15T12:00:01Z')
+        return book
+
+    def test_native_ordered_receipt_only_older_unknown_and_conflict_rollback(self):
+        rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows)
+        self.store.replace_native_books([book]);before=self.store.capture()
+        receipt=deepcopy(book);receipt['raw']['received_at']='2026-10-15T12:01:00Z'
+        older=deepcopy(book);older['raw'].update(exchange_at='2026-10-15T11:00:00Z',received_at='2026-10-15T12:02:00Z')
+        unknown=deepcopy(book);unknown['raw'].update(exchange_at=None,received_at='2026-10-15T12:03:00Z')
+        self.store.replace_native_books([receipt,older,unknown]);self.assertEqual(before['revision'],self.store.capture()['revision'])
+        saved=self.db.execute('SELECT received_at FROM current_native_book').fetchone()
+        self.assertEqual(saved['received_at'],receipt['raw']['received_at'])
+        valid=deepcopy(receipt);valid['raw']['received_at']='2026-10-15T12:04:00Z'
+        conflict=deepcopy(valid);next(o['asks'] for o in conflict['outcomes'] if o['asks'] and o['asks']['levels'])['levels'][0]['quantity']['value']='123.45'
+        stable=self.store.capture()
+        with self.assertRaisesRegex(ValueError,'equal_clock_book_conflict'):self.store.replace_native_books([valid,conflict])
+        self.assertEqual(stable,self.store.capture())
+        self.assertEqual(self.db.execute('SELECT received_at FROM current_native_book').fetchone()['received_at'],receipt['raw']['received_at'])
+
+    def test_native_withdraw_then_older_readd_preserves_event_and_current_order(self):
+        rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows);self.store.replace_native_books([book])
+        closed=deepcopy(book);closed['state']='closed';closed['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+        readd=deepcopy(book);readd['raw'].update(exchange_at='2026-10-15T11:00:00Z',received_at='2026-10-15T11:00:01Z')
+        self.store.replace_native_books([closed,readd])
+        self.assertEqual(self.counts()['current_offer'],0);self.assertEqual(self.counts()['current_event'],1)
+        self.assertEqual(self.db.execute('SELECT source_at FROM current_native_book').fetchone()['source_at'],readd['raw']['exchange_at'])
+        self.store.upsert_records(rows)
+        self.assertEqual(len(self.store.records()),2);self.assertTrue(any(r['quote'].get('depth') for r in self.store.records()))
+
+    def test_late_native_sql_error_rolls_back_before_publication(self):
+        from app.storage.scanner_publication import subscribe,transaction
+        rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows);self.store.replace_native_books([book])
+        before=self.store.capture();events=[];close=subscribe(events.append)
+        changed=deepcopy(book);changed['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+        ladder=next(o['asks'] for o in changed['outcomes'] if o['asks'] and o['asks']['levels'])
+        level=deepcopy(ladder['levels'][0]);ladder['levels']=[deepcopy(level) for _ in range(260)];ladder['levels'][-1]['quantity']['value']='123.456789'
+        self.db.execute("ALTER TABLE current_native_depth ADD CONSTRAINT authored_pipeline_late_failure CHECK(quantity_value<>'123.456789')")
+        try:
+            with self.assertRaises(CheckViolation):
+                with transaction(self.db):self.store.replace_native_books([changed])
+            self.assertEqual(events,[]);self.assertEqual(before,self.store.capture())
+        finally:
+            close();self.db.execute('ALTER TABLE current_native_depth DROP CONSTRAINT authored_pipeline_late_failure')
+
+    def test_nested_transaction_publishes_only_after_outer_commit_and_never_rollback(self):
+        from app.storage.scanner_publication import subscribe,transaction
+        rows=future_records();events=[];close=subscribe(events.append)
+        epoch=self.store.capture()['epoch']
+        try:
+            with transaction(self.db):
+                with transaction(self.db):self.store.upsert_records(rows)
+                self.assertEqual(events,[])
+                with connect(self.name) as reader:self.assertEqual(CurrentRowStore(reader).records(),[])
+            saved=self.store.capture();self.assertEqual(len(events),1)
+            self.assertEqual(events[0]['current_rows_revision'],saved['revision']);self.assertEqual(events[0]['epoch'],epoch)
+            changed=deepcopy(rows);changed[0]['quote']['times'].update(source_at='2026-10-15T12:02:00Z',received_at='2026-10-15T12:02:01Z');changed[0]['quote']['original']['value']='3.21'
+            with self.assertRaisesRegex(RuntimeError,'authored rollback'):
+                with transaction(self.db):
+                    self.store.upsert_records(changed)
+                    raise RuntimeError('authored rollback')
+            self.assertEqual(len(events),1);self.assertEqual(saved,self.store.capture())
+            with self.db.transaction():
+                with transaction(self.db):self.store.upsert_records(changed)
+            self.assertEqual(len(events),1);self.assertEqual(self.store.capture()['epoch'],epoch)
+            self.assertNotEqual(saved['revision'],self.store.capture()['revision'])
+        finally:close()
 
     @patch('app.storage.current_rows.utc', return_value=AT)
     def test_direct_sink_native_and_aggregate_are_atomic_without_archives(self, storage_clock):

@@ -27,6 +27,10 @@ def engine_binding():
     paths += ['app/comparison/calculation_availability.py','app/storage/current_rows.py','app/dashboard/comparison_slate.py']
     paths += ['app/comparison/combined_inputs.py','app/comparison/combined_native.py','app/comparison/occurrence_matching.py','app/collection/current_sink.py','app/collection/current_aggregate_admission.py','app/dashboard/current_normalized.py','app/collection/current_comparison_inputs.py','app/storage/current_games.py']
     paths += ['app/collection/current_aggregate.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
+    paths += ['app/comparison/scanner_readiness.py','app/comparison/readiness_inputs.py','app/storage/scanner_readiness.py','app/fixtures/scanner-readiness-policy-v1.json']
+    paths += ['app/comparison/scanner_finance.py','app/comparison/scanner_projection.py','app/storage/scanner_publication.py','app/dashboard/scanner_api.py']
+    paths += ['app/comparison/scanner_ticket_finance.py','app/comparison/scanner_tickets.py','app/comparison/scanner_destinations.py','app/dashboard/scanner_ticket_api.py','app/fixtures/scanner-destinations-v1.json']
+    paths += ['app/comparison/scanner_transitions.py','app/comparison/scanner_summaries.py','app/storage/scanner_preparation.py']
     return hashed({p:sha256((root/p).read_bytes()).hexdigest() for p in paths})
 
 

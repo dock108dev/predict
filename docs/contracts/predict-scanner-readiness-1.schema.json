@@ -1,0 +1,958 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-scanner-readiness-1.schema.json",
+  "title": "SC01 selected-universe input readiness, not arb classification",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "predict-scanner-readiness-1"
+    },
+    "policy": {
+      "const": "predict-scanner-readiness-policy-1"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "selection": {
+      "$ref": "#/$defs/selection"
+    },
+    "epoch": {
+      "type": "string"
+    },
+    "input_revision": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "ready",
+        "waiting",
+        "stale_only",
+        "partial",
+        "unsupported",
+        "failed",
+        "blocked",
+        "not_evaluated"
+      ]
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scope"
+      },
+      "maxItems": 256
+    },
+    "instruments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/instrument"
+      },
+      "maxItems": 16384
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pair"
+      },
+      "maxItems": 32768
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "selected_scopes": {
+          "$ref": "#/$defs/count"
+        },
+        "observed_occurrences": {
+          "$ref": "#/$defs/count"
+        },
+        "observed_instruments": {
+          "$ref": "#/$defs/count"
+        },
+        "compatible_pair_inputs": {
+          "$ref": "#/$defs/count"
+        },
+        "cashflow_pairs_ready": {
+          "$ref": "#/$defs/count"
+        },
+        "evaluated_pairs": {
+          "$ref": "#/$defs/count"
+        }
+      },
+      "required": [
+        "selected_scopes",
+        "observed_occurrences",
+        "observed_instruments",
+        "compatible_pair_inputs",
+        "cashflow_pairs_ready",
+        "evaluated_pairs"
+      ],
+      "additionalProperties": false
+    },
+    "pair_coverage": {
+      "enum": [
+        "no_compatible_pairs",
+        "unavailable",
+        "partially_evaluable",
+        "evaluable"
+      ]
+    },
+    "evaluation": {
+      "$ref": "#/$defs/evaluation"
+    },
+    "causes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "enum": [
+              "execution",
+              "contract",
+              "ev"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,159}$"
+          },
+          "count": {
+            "$ref": "#/$defs/count"
+          }
+        },
+        "required": [
+          "purpose",
+          "code",
+          "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "causes_overlap": {
+      "const": true
+    },
+    "provider_requests": {
+      "const": 0
+    },
+    "engine_binding": {
+      "type": "string"
+    },
+    "failed_occurrences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 500
+    },
+    "reference_sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reference_source"
+      },
+      "maxItems": 1
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/reference"
+      }
+    },
+    "policy_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "universe_basis": {
+      "const": "selected_current_admitted"
+    }
+  },
+  "required": [
+    "version",
+    "policy",
+    "as_of",
+    "selection",
+    "epoch",
+    "input_revision",
+    "revision",
+    "state",
+    "expires_at",
+    "scopes",
+    "instruments",
+    "pairs",
+    "counts",
+    "pair_coverage",
+    "evaluation",
+    "causes",
+    "causes_overlap",
+    "provider_requests",
+    "policy_revision",
+    "universe_basis"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "count": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unit": {
+          "enum": [
+            "instruments",
+            "pairs",
+            "venue_scopes",
+            "occurrences",
+            "contracts",
+            "originals"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "denominator",
+        "unit",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "check": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "ready",
+            "waiting",
+            "stale_only",
+            "partial",
+            "unsupported",
+            "failed",
+            "blocked",
+            "not_evaluated"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,159}$"
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "state",
+        "reason_codes"
+      ],
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "venues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "leagues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "markets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "venues",
+        "sports",
+        "leagues",
+        "markets",
+        "periods"
+      ],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "price_age_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "book_age_seconds": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cross_leg_skew_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reference_age_seconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "price_age_seconds",
+        "book_age_seconds",
+        "cross_leg_skew_seconds",
+        "reference_age_seconds"
+      ],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "league": {
+          "type": "string"
+        },
+        "market": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "authorized": {
+          "type": "boolean"
+        },
+        "supported": {
+          "type": "boolean"
+        },
+        "check": {
+          "$ref": "#/$defs/check"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "waiting",
+            "stale_only",
+            "partial",
+            "unsupported",
+            "failed",
+            "blocked",
+            "not_evaluated"
+          ]
+        },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "identity_bound": {
+              "$ref": "#/$defs/count"
+            },
+            "price_present": {
+              "$ref": "#/$defs/count"
+            },
+            "synchronized_depth": {
+              "$ref": "#/$defs/count"
+            },
+            "cashflow_inputs_ready": {
+              "$ref": "#/$defs/count"
+            }
+          },
+          "required": [
+            "identity_bound",
+            "price_present",
+            "synchronized_depth",
+            "cashflow_inputs_ready"
+          ],
+          "additionalProperties": false
+        },
+        "discovery": {
+          "type": "object",
+          "properties": {
+            "contracts": {
+              "$ref": "#/$defs/count"
+            },
+            "offered_contracts": {
+              "$ref": "#/$defs/count"
+            },
+            "provenance": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "contracts",
+            "offered_contracts",
+            "provenance"
+          ],
+          "additionalProperties": false
+        },
+        "source_status": {
+          "type": "object",
+          "maxProperties": 32
+        }
+      },
+      "required": [
+        "key",
+        "venue",
+        "sport",
+        "league",
+        "market",
+        "period",
+        "configured",
+        "authorized",
+        "supported",
+        "check",
+        "state",
+        "counts"
+      ],
+      "additionalProperties": false
+    },
+    "instrument": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "scope_key": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "league": {
+          "type": "string"
+        },
+        "market": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string"
+        },
+        "occurrence_id": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "home",
+            "away",
+            null
+          ]
+        },
+        "overtime": {
+          "enum": [
+            "included",
+            "excluded",
+            "unknown",
+            null
+          ]
+        },
+        "native_key": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5
+        },
+        "predicate": {
+          "type": "object",
+          "properties": {
+            "participant": {
+              "type": "string"
+            },
+            "predicate": {
+              "enum": [
+                "win",
+                "not_win",
+                "draw"
+              ]
+            },
+            "signed_line": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "participant",
+            "predicate",
+            "signed_line"
+          ]
+        },
+        "native_contract_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "units": {
+          "type": "string"
+        },
+        "terms_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity_bound": {
+          "type": "boolean"
+        },
+        "price_present": {
+          "type": "boolean"
+        },
+        "synchronized_depth": {
+          "type": "boolean"
+        },
+        "clocks": {
+          "type": "object",
+          "properties": {
+            "source_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "received_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "book_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "book_received_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "provider_book_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "provider_market_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ingress_projected_at": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sql_committed_at": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "source_at",
+            "received_at",
+            "book_at",
+            "book_received_at",
+            "provider_book_at",
+            "provider_market_at",
+            "ingress_projected_at",
+            "sql_committed_at"
+          ],
+          "additionalProperties": false
+        },
+        "model_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "execution": {
+              "$ref": "#/$defs/check"
+            },
+            "contract": {
+              "$ref": "#/$defs/check"
+            },
+            "ev": {
+              "$ref": "#/$defs/check"
+            }
+          },
+          "required": [
+            "execution",
+            "contract",
+            "ev"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "scope_key",
+        "venue",
+        "sport",
+        "league",
+        "market",
+        "period",
+        "occurrence_id",
+        "direction",
+        "overtime",
+        "native_key",
+        "predicate",
+        "native_contract_id",
+        "units",
+        "terms_sha256",
+        "identity_bound",
+        "price_present",
+        "synchronized_depth",
+        "clocks",
+        "model_versions",
+        "limits",
+        "expires_at",
+        "checks"
+      ],
+      "additionalProperties": false
+    },
+    "pair": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "legs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "occurrence_id": {
+          "type": "string"
+        },
+        "skew_seconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_check": {
+          "$ref": "#/$defs/check"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "legs",
+        "occurrence_id",
+        "skew_seconds",
+        "input_check",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "evaluation": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "not_evaluated",
+            "partial",
+            "evaluated_positive",
+            "evaluated_zero"
+          ]
+        },
+        "qualifying_pairs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "no_qualifying_opportunities": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "state",
+        "qualifying_pairs",
+        "no_qualifying_opportunities"
+      ],
+      "additionalProperties": false
+    },
+    "evaluation_receipt": {
+      "type": "object",
+      "properties": {
+        "pair_id": {
+          "type": "string"
+        },
+        "readiness_revision": {
+          "type": "string"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "qualifying": {
+          "type": "boolean"
+        },
+        "evaluator_revision": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pair_id",
+        "readiness_revision",
+        "evaluated_at",
+        "qualifying",
+        "evaluator_revision"
+      ],
+      "additionalProperties": false
+    },
+    "reference_source": {
+      "type": "object",
+      "properties": {
+        "venue": {
+          "const": "pinnacle"
+        },
+        "role": {
+          "const": "reference_only"
+        },
+        "source_status": {
+          "type": "object",
+          "maxProperties": 32
+        },
+        "observed_originals": {
+          "$ref": "#/$defs/count"
+        },
+        "fresh_originals": {
+          "$ref": "#/$defs/count"
+        }
+      },
+      "required": [
+        "venue",
+        "role",
+        "source_status",
+        "observed_originals",
+        "fresh_originals"
+      ],
+      "additionalProperties": false
+    },
+    "reference": {
+      "type": "object",
+      "properties": {
+        "venue": {
+          "type": "string"
+        },
+        "receipt_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "originals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "book_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "market_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "received_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "revision": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "book_at",
+              "market_at",
+              "received_at",
+              "revision"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "venue",
+        "receipt_sha256",
+        "originals"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

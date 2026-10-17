@@ -1,0 +1,165 @@
+{
+  "universe_basis": "selected_current_admitted",
+  "version": "predict-scanner-readiness-1",
+  "policy": "predict-scanner-readiness-policy-1",
+  "policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+  "as_of": "2026-10-14T01:15:09.650084+00:00",
+  "selection": {
+    "venues": [
+      "kalshi",
+      "polymarket_us"
+    ],
+    "sports": [
+      "football"
+    ],
+    "leagues": [
+      "NFL"
+    ],
+    "markets": [
+      "winner"
+    ],
+    "periods": [
+      "full_game"
+    ]
+  },
+  "epoch": "authored-epoch",
+  "input_revision": "authored-inputs",
+  "revision": "79832d32d85e831ddbe291943efcb30b778b0ecdb9db562730a5203ae77a5dd7",
+  "state": "waiting",
+  "expires_at": null,
+  "scopes": [
+    {
+      "key": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65",
+      "venue": "polymarket_us",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "configured": true,
+      "authorized": true,
+      "supported": true,
+      "check": {
+        "state": "ready",
+        "reason_codes": []
+      },
+      "state": "waiting",
+      "counts": {
+        "identity_bound": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "price_present": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "synchronized_depth": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "cashflow_inputs_ready": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        }
+      }
+    },
+    {
+      "key": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c",
+      "venue": "kalshi",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "configured": true,
+      "authorized": true,
+      "supported": true,
+      "check": {
+        "state": "ready",
+        "reason_codes": []
+      },
+      "state": "waiting",
+      "counts": {
+        "identity_bound": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "price_present": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "synchronized_depth": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "cashflow_inputs_ready": {
+          "value": 0,
+          "denominator": 0,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        }
+      }
+    }
+  ],
+  "instruments": [],
+  "pairs": [],
+  "counts": {
+    "selected_scopes": {
+      "value": 2,
+      "denominator": 2,
+      "unit": "venue_scopes",
+      "scope": "selected_universe"
+    },
+    "observed_occurrences": {
+      "value": 0,
+      "denominator": 0,
+      "unit": "occurrences",
+      "scope": "selected_observed"
+    },
+    "observed_instruments": {
+      "value": 0,
+      "denominator": 0,
+      "unit": "instruments",
+      "scope": "selected_observed"
+    },
+    "compatible_pair_inputs": {
+      "value": 0,
+      "denominator": 0,
+      "unit": "pairs",
+      "scope": "selected_exact_opposing_inputs"
+    },
+    "cashflow_pairs_ready": {
+      "value": 0,
+      "denominator": 0,
+      "unit": "pairs",
+      "scope": "selected_exact_opposing_inputs"
+    },
+    "evaluated_pairs": {
+      "value": 0,
+      "denominator": 0,
+      "unit": "pairs",
+      "scope": "selected_ready_inputs"
+    }
+  },
+  "pair_coverage": "no_compatible_pairs",
+  "evaluation": {
+    "state": "not_evaluated",
+    "qualifying_pairs": null,
+    "no_qualifying_opportunities": false
+  },
+  "causes": [],
+  "causes_overlap": true,
+  "provider_requests": 0
+}

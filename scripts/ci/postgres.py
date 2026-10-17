@@ -42,7 +42,19 @@ def main(argv=None):
         ),
     )
     parser.add_argument("--allow-other-postgres", action="store_true")
+    parser.add_argument(
+        "--sc06-browser",
+        action="store_true",
+        help="Run the integrated SC06 SQL-to-Chromium workload in this disposable cluster.",
+    )
+    parser.add_argument(
+        "--sc03-ticket-timing",
+        action="store_true",
+        help="Run the SC03 30-sample SQL ticket timing check in this disposable cluster.",
+    )
     args = parser.parse_args(argv)
+    if args.sc06_browser and args.sc03_ticket_timing:
+        parser.error("Select only one focused PostgreSQL qualification lane")
     if os.geteuid() == 0:
         raise ValueError(
             "Run as an ordinary user; never use a root-owned or owner cluster"
@@ -68,6 +80,13 @@ def main(argv=None):
             else "compatibility"
         ),
         "report_dir": str(output),
+        "suite": (
+            "sc03-ticket-timing"
+            if args.sc03_ticket_timing
+            else "sc06-browser"
+            if args.sc06_browser
+            else "registered-sql"
+        ),
     }
     (output / "toolchain.json").write_text(json.dumps(identity, indent=2) + "\n")
     print(json.dumps(identity, indent=2), flush=True)
@@ -126,8 +145,36 @@ def main(argv=None):
             )
             # The application connects only to its checkout-specific socket. Redirect
             # that root inside this test process, never alter application configuration.
-            code = 'from pathlib import Path; import app.storage.store as s; s.ROOT=Path(__import__("sys").argv[1]); import pytest; raise SystemExit(pytest.main(["-q", "integration_tests", "tests/test_d03_current_rows.py", "tests/test_current_row_financial_roundtrip.py", "tests/test_current_row_occurrence_roundtrip.py", "--junitxml="+__import__("sys").argv[2]]))'
+            tests = (
+                [
+                    "tests/test_sc03_sql.py::TicketSQL::test_authored_ready_http_timing_with_actual_disposable_sql_capture"
+                ]
+                if args.sc03_ticket_timing
+                else ["browser_tests/test_sc06.py"]
+                if args.sc06_browser
+                else [
+                    "integration_tests",
+                    "tests/test_d03_current_rows.py",
+                    "tests/test_current_row_financial_roundtrip.py",
+                    "tests/test_current_row_occurrence_roundtrip.py",
+                    "tests/test_sc01_readiness_sql.py",
+                    "tests/test_sc02_sql.py",
+                    "tests/test_sc03_sql.py",
+                    "tests/test_sc06_performance_sql.py",
+                ]
+            )
+            code = (
+                "from pathlib import Path; import app.storage.store as s; "
+                's.ROOT=Path(__import__("sys").argv[1]); import pytest; '
+                'raise SystemExit(pytest.main(["-q",*'
+                + repr(tests)
+                + ',"--junitxml="+__import__("sys").argv[2]]))'
+            )
             environment = os.environ.copy()
+            environment["SC01_TEST_PGSOCKET"] = str(socket)
+            environment["SC02_TEST_PGSOCKET"] = str(socket)
+            environment["SC06_TEST_PGSOCKET"] = str(socket)
+            environment["SC06_SQL_PROVISIONED"] = "1"
             # Tests also spawn pg_dump/pg_restore; they must match this server.
             environment["PATH"] = str(binary) + os.pathsep + environment.get("PATH", "")
             environment["PREDICT_CI_ISOLATED_ROOT"] = str(
@@ -143,7 +190,7 @@ def main(argv=None):
                 [sys.executable, "-c", code, str(root), str(output / "junit.xml")],
                 env=environment,
                 check=True,
-                timeout=300,
+                timeout=900,
             )
         finally:
             if running or (root / "db/postmaster.pid").exists():

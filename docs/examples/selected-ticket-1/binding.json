@@ -1,0 +1,16 @@
+{
+  "version": "predict-ticket-selection-1",
+  "selection": {
+    "server_id": "69c80c25-f22a-4a24-83ad-70c87369eba7",
+    "epoch": "authored-epoch",
+    "opportunity_id": "opportunity:53a3bba00ad22249825ea11b1ae364497ccbd1aac609f46e845e400855a4cc9c",
+    "row_id": "opportunity:53a3bba00ad22249825ea11b1ae364497ccbd1aac609f46e845e400855a4cc9c:conditional_hedge",
+    "pair_id": "c3ae6bc13630c796989a9b48eb5410ccb6ff7c0a8a76041fed30f40e1c064ac4",
+    "dependency_revision": "d3d8947877a1610da0ae3d102e15cebb0c4b82ab37e8821b7faae3338cade834",
+    "economic_revision": "536b5b8d15fc4fec72117c85881322bd178018b2519db46c73e72aafa2229530",
+    "engine_binding": "authored-SC03-engine",
+    "readiness_policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+    "discovery_policy_revision": "bffdc2989d5dd03d4629c0c2792d0e2c40776fb4c3e9d78d8583e2ac68bc3f82"
+  },
+  "provider_requests": 0
+}

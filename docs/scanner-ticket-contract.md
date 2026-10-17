@@ -1,0 +1,54 @@
+# SC03 selected manual ticket v1
+
+Implemented isolated backend contract. [Response schema](contracts/predict-selected-ticket-1.schema.json), [commands](contracts/predict-ticket-command-1.schema.json), [binding](contracts/predict-ticket-selection-1.schema.json), [authored examples](examples/selected-ticket-1/README.md). Scanner v1 remains unchanged. These local calculations do not establish current source, destination, installed or owner qualification.
+
+## Consumer sequence and identity
+
+1. Read scanner v1 and retain the exact row and page. Call `GET /api/scanner/ticket/binding` with `server_id`, `epoch`, `row_id`, `dependency_revision`, `economic_revision`. The server validates that exact category row and returns `predict-ticket-selection-1`. A changed selection returns HTTP 409. Binding is inexpensive, performs no finance and makes no provider request.
+2. `POST /api/scanner/ticket` with `operation=select`, a random 16–64 character alphanumeric/underscore/hyphen `client_id`, strictly increasing positive safe-integer `sequence`, and the complete returned `selection`. Optional `amount` is an exact numeric string; omit it for the shared default (normally $1,000). There is one combined funded budget. No client URL, financial inputs, receipts or rank is accepted.
+3. `GET /api/scanner/ticket?client_id=...&ticket_id=...` reads status without calculations or renewing the TTL. POST `revalidate` with those identities, a newer sequence and optional amount calculates a coherent replacement. Omitting amount restores the server default; pass the current amount explicitly to retain a nondefault request.
+4. POST `adopt` with `replacement_frame_id` and a newer sequence explicitly uses the replacement after another fresh dependency check. POST `close` releases the client's frames and cancels its work. A disconnected client expires after 120 seconds; cancellation of an HTTP calculation cancels its job cooperatively.
+
+Selection binds server, epoch, opportunity, category row, compatible pair, dependency/economic revisions, financial engine, readiness policy and discovery policy. Pair IDs bind stable native source identities, not quote rank. Rebound predicates/terms, ambiguous membership, old epochs and changed engine/policy cannot substitute another position. The separate binding read supplies fields absent from frozen scanner v1 without changing its schema. Consumers must reject responses from another client, ticket, selection, epoch or a lower sequence, including a response delivered after a later local selection.
+
+## Coherent frames and transitions
+
+`selected_frame` is the calculation selected or explicitly adopted. `latest` describes the latest coherent opportunity dependency and discovery state. `replacement_frame` is a newly calculated proposed replacement. Ordinary arrival never edits selected prices, quantities, amounts, original clocks or totals in place. `changes` compares exact policy/dependency, funding, metrics, compact manual legs, categories and outcome cashflows. Source clocks retain original observations. Calculation start/completion remain distinct from top-level `revalidated_at`; reusing identical economics preserves original frame ID and calculation clocks.
+
+| State | Consumer meaning |
+| --- | --- |
+| `unchanged` | Selected frame matches latest inputs and requested policy; action controls also require `ready_for_manual_action=true` |
+| `revised` | Latest inputs or requested amount changed, or a replacement awaits adoption; keep previous frame marked previous and withhold allocation copy |
+| `no_longer_qualifying` | The final requested allocation no longer supports the selected category/current EV basis; retain exact calculations and loss conditions |
+| `temporarily_unavailable` | Checking failed, required facts/link evidence are missing, dependencies moved during work, or resources/deadline prevented publication |
+| `withdrawn` | Exact position removed/rebound or server/epoch/engine/policy is obsolete; no substitute selection |
+| `expired` | Source/model/frame expiry at equality; remove action authority immediately even without another packet |
+| `stopped` | Collection Stop or shutdown; old results cannot restore authority |
+
+A client can show its own transient checking indicator while a POST is pending. New commands supersede older work; HTTP 409 errors distinguish obsolete selection, supersession, capacity and validation. Previous arithmetic remains inspectable after withdrawal. Its `ready` field describes the originally calculated frame; **only top-level `ready_for_manual_action` grants present action authority**. A replacement never authorizes action before explicit adoption. A failed revalidation stays unavailable until a successful retry. Missing optional reference facts appear separately in `result.ev_reference` and do not disable independently supported cashflow categories. Non-current EV cannot become actionable from an unrelated cashflow result.
+
+## Financial ownership and manual information
+
+The requested solver and allocation consumer own quantities, depth, native grids, nonlinear acquisition/pooled settlement fees, independent collateral/holds and cost refunds. SC03 adds optional observed bounds to that solver; its default legacy behavior is preserved. Numerical probes and final quantities stay inside observed supported depth. Local balance search admits at most 192 probes and 25 final allocations, checks cancellation between probes, retains $25 minimum decisive exposure and 20% combined exposure share, and refuses duplicated/shared liquidity. One combined budget funds both independently funded venues; capital cannot be reused between them. Residual cash is explicit. Depth exhaustion can leave most of a large request undeployed.
+
+After sizing, SC02's supported joint-state owner and classifier run on that final allocation. Unknown/incomparable completion clauses retain decisive/tie scenarios and unknown complete minimum, with no fabricated asymmetric settlements. Explicit nested clauses admit only their feasible joint grades. Mandatory unknown admitted-state cashflows/fees/holds fail. Probabilities never exclude feasible losses. One 0.5% default buffer is applied to actual deployed funding, including refundable holds, without consuming additional cash. Metrics name complete minimum, decisive minimum and separate probability-based EV; the denominator is actual deployed capital. Acquisition, state fees and refunded capital reconcile separately. Discovery's supported example and requested sizing remain separate and need not have equal percentages.
+
+`result.context` retains event/market/period; `manual_legs` gives exactly two native venue actions, predicates, quantities, units, original prices, American comparison odds and per-leg funding. `legs` adds exact consumed fills, grids, independent funding components/hold returns, native source IDs, clocks, model/provider references and allocation reconciliation. American odds describe observed fill price equivalence before fees and are never a native order limit price. `funding` reconciles requested/deployed/residual, costs, holds and one buffer. `states`, `metrics`, `risks`, `search`, exact source/model inputs and frame expiry support expansion. No fill, reservation, realized gain or order is implied.
+
+## Verified destinations
+
+The server-owned `scanner-destinations-v1.json` catalog is deliberately empty: retained supported evidence does not yet qualify either exact market route. Missing destinations have a reason and null URL and prevent manual-action readiness. No homepage, inferred slug, client URL or account action is substituted.
+
+A future reviewed catalog must bind exact venue/native key/native contract/terms/predicate to a retained observed URL and a separately retained documented route template. Both retained payload hashes, route venue, exact expanded URL and matching position are checked. Only HTTPS and explicit venue hosts are allowed; credentials, ports, queries, fragments, homepages, unsafe paths and mismatched/ambiguous bindings are refused. Catalog entries require source review and candidate rebinding; authored entries cannot grant production readiness. Authored injection in tests is an internal constructor option, never an HTTP setting. URL fixtures establish only implementation behavior and are labeled accordingly.
+
+## Capture, causality and bounds
+
+Ticket capture deep-copies only the exact two legs under the projection lock. Financial work and fresh repeatable-read SQL capture run outside that lock, in a separate two-worker executor. SQL transactions/connections close before finance/publication. Before publishing, exact selected dependencies, generation, Stop, deadlines, policy and identities are checked again. Unrelated-event churn does not invalidate an unchanged pair. Fresh SQL capture currently uses the bounded readiness reader; the full reader's cost must be measured at the integrated workload. Authored one-event latency does not qualify 500-event capture or initialization.
+
+Limits are 64 client slots, 128 selected/replacement frames, 16 MiB serialized retained ticket data including metadata, 256 KiB per frame, 2 MiB detached selected capture, 1 MiB response, 4 KiB request and 120-second TTL. At most two calculations/captures run and four jobs queue, including adoption reads. Superseded requests cancel cooperatively; late jobs cannot replace a newer sequence or reinsert an expired/disconnected slot. A one-second sweep and every request remove expired frames; active work is additionally bounded by a two-second cooperative deadline. No persistent report archive or per-poll full financial recomputation is added. The existing projection's bounded inputs remain shared; selected expansions do not acquire its SQL/ingress lock for finance. Oversized data returns unavailable, never a truncated ready ticket.
+
+The 2 GiB SQL, 1 GiB free disk and 768 MiB process limits remain. Fresh ticket publication/adoption refuses oversized SQL; calculation submission checks free disk and process high-water memory. Current-row/ordinary collectors retain their guards. Post-commit observation is copied only from exact retained causal evidence and remains null otherwise; no clock is labeled PostgreSQL's precise commit instant.
+
+## Evidence and next actors
+
+Authored financial/state/link examples, race/resource/Stop checks, disposable SQL verification, clean export and measured selected-ticket HTTP timing accompany the SC03 closeout. These do not qualify actual sources, reviewed market destinations, browser render time, installed propagation, hosted CI or owner acceptance. SC04 can continue frozen scanner v1. SC05 integrates this ticket contract and SC04 frontend; SC06 owns episodes and integrated instrumentation; SC07 owns installation/current source/finite genuine propagation and combined performance; SC08/Q04 remains the owner's actual decision.

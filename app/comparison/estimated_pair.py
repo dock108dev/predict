@@ -199,16 +199,24 @@ def pool_charge(gains,policy,pool=None):
     return min(amount,F(pool['cap_usd'])) if pool and pool.get('cap_usd') is not None else amount
 
 
-def economics(components,basis):
+def economics(components,basis,*,_profit_only=False):
+    """Keep public state detail; scanner search privately needs wired profits only."""
+    if type(_profit_only) is not bool:raise ValueError('pair_profit_only_flag_invalid')
     capital=sum(F(c['deployed_capital_usd']) for c in components);states={}
     for state,row in basis.items():
-        gains=[];pools={};separate=F(0);unknown=False;parts=[]
+        gains=[];pools={};separate=F(0);unknown=False;parts=None if _profit_only else []
         for index,(component,c) in enumerate(zip(components,row['cells'])):
             receipt=cell(component,'payout','receipt_usd:'+c);held=cell(component,'payout','hold_return_usd:'+c)
             refund=cell(component,'fee','fee_refund_usd:'+c);old_fee=cell(component,'fee','settlement_fee_usd:'+c)
             gain=None if any(v is None for v in (receipt,held,refund,old_fee)) else receipt+held+refund-F(component['deployed_capital_usd'])
-            gains.append(gain);parts.append(dict(receipt_usd=ws(receipt),returned_hold_usd=ws(held),fee_refund_usd=ws(refund),
-                receipt_charge_treatment='attached_net_receipt' if component['settlement_already_withheld'] else 'gross_receipt'))
+            gains.append(gain)
+            if _profit_only:
+                # Keep the original required field access/truth test even when
+                # its presentation string is not needed by the scanner.
+                _ = bool(component['settlement_already_withheld'])
+            else:
+                parts.append(dict(receipt_usd=ws(receipt),returned_hold_usd=ws(held),fee_refund_usd=ws(refund),
+                    receipt_charge_treatment='attached_net_receipt' if component['settlement_already_withheld'] else 'gross_receipt'))
             if gain is None:unknown=True;continue
             for n,term in enumerate(component['settlement_terms']):
                 if term['policy']['basis']!='net_gain':
@@ -219,8 +227,14 @@ def economics(components,basis):
                 target=pools.setdefault(key,dict(policy=term['policy'],pool=pool,gains=[]));target['gains'].append(gain)
         charge=None if unknown else separate+sum((pool_charge(x['gains'],x['policy'],x['pool']) for x in pools.values()),F(0))
         profit=None if unknown else sum(gains,F(0))-charge
-        states[state]=dict(profit_usd=ws(profit),settlement_charge_usd=ws(charge),legs=parts,
-            cells=row['cells'],terminal=row['terminal'])
+        if _profit_only:
+            value=dict(profit_usd=ws(profit))
+            # A malformed basis must not gain acceptance by omitting details.
+            _ = row['terminal']
+            states[state]=value
+        else:
+            states[state]=dict(profit_usd=ws(profit),settlement_charge_usd=ws(charge),legs=parts,
+                cells=row['cells'],terminal=row['terminal'])
     return capital,states
 
 

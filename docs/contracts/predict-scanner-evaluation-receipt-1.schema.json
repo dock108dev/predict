@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Trusted SC02 evaluation receipt; exact current readiness membership required",
+  "type": "object",
+  "properties": {
+    "pair_id": {
+      "type": "string"
+    },
+    "readiness_revision": {
+      "type": "string"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "qualifying": {
+      "type": "boolean"
+    },
+    "evaluator_revision": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pair_id",
+    "readiness_revision",
+    "evaluated_at",
+    "qualifying",
+    "evaluator_revision"
+  ],
+  "additionalProperties": false
+}

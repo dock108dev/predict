@@ -1,0 +1,616 @@
+{
+  "version": "predict-opportunity-scanner-1",
+  "mode": "snapshot",
+  "server_id": "e944c94d-8ec6-4e64-976c-14385f209d77",
+  "epoch": "authored-epoch",
+  "publication_revision": 3,
+  "query_id": "32fc9cdfd6dc72e80146c96a2702a5a6994792dbb8dbe683e0de3bf9797d3052",
+  "policy": {
+    "version": "predict-estimate-policy-3",
+    "capital_ceiling_usd": "1000",
+    "buffer_rate": "0.005",
+    "tie": "0.005",
+    "terminal_noncompletion": "0.001",
+    "sizing_mode": "requested_trade",
+    "benchmark_venue": "pinnacle",
+    "benchmark_method": "proportional_no_vig",
+    "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+    "execution_role": "taker",
+    "execution_channel": "direct_site",
+    "portfolio_basis": "standalone",
+    "funding_basis": "already_funded",
+    "holding_period": "to_settlement",
+    "denominator": "actual_deployed_capital",
+    "funding_components": [
+      "acquisition_or_stake",
+      "unavoidable_upfront_fees",
+      "independent_funded_collateral"
+    ],
+    "buffer": {
+      "rate": "0.005",
+      "basis": "actual_deployed_capital",
+      "treatment": "model_haircut",
+      "applications_per_opportunity": 1,
+      "consumes_funding": false
+    },
+    "probability_defaults": {
+      "scope": [
+        "NFL",
+        "regular_season",
+        "pregame",
+        "full_game",
+        "winner",
+        "including_overtime"
+      ],
+      "basis": "provisional_prior",
+      "measured_rate": false,
+      "states": [
+        "a_wins",
+        "b_wins",
+        "tie",
+        "terminal_noncompletion"
+      ],
+      "tie": {
+        "central": "0.005",
+        "low": "0",
+        "high": "0.01"
+      },
+      "terminal_noncompletion": {
+        "central": "0.001",
+        "low": "0",
+        "high": "0.005"
+      }
+    },
+    "size_statuses": [
+      "supported_size",
+      "modeled_size",
+      "size_unverified"
+    ],
+    "input_bases": [
+      "observed_fact",
+      "published_template",
+      "provisional_assumption",
+      "unknown_actual"
+    ],
+    "input_version": "predict-estimate-input-1",
+    "result_version": "predict-estimate-result-2",
+    "legacy_sensitivity": "adverse_price_stress",
+    "buffer_applied_to_existing_metrics": false,
+    "requested_amount_usd": "1000"
+  },
+  "readiness_policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+  "filters": {
+    "venues": [],
+    "sports": [],
+    "leagues": [],
+    "markets": [],
+    "periods": [],
+    "category": "covered_outcome_arb",
+    "minimum_edge": null,
+    "minimum_size": null
+  },
+  "metric_basis": "net_complete_minimum_return_percent",
+  "filter_options": {
+    "venues": [
+      "kalshi",
+      "polymarket_us"
+    ],
+    "sports": [
+      "football"
+    ],
+    "leagues": [
+      "NFL"
+    ],
+    "markets": [
+      "winner"
+    ],
+    "periods": [
+      "full_game"
+    ]
+  },
+  "unsupported_filters": [],
+  "rows": [
+    {
+      "id": "opportunity:cb5c2795b65a153b3777f9e79bdd3bd1beeef12a76a5f6e2d7fa16fcbda3353d:covered_outcome_arb",
+      "opportunity_id": "opportunity:cb5c2795b65a153b3777f9e79bdd3bd1beeef12a76a5f6e2d7fa16fcbda3353d",
+      "pair_id": "965f7562a12e4b566df990f75c3ba4e0fffcf45b1938f910dac6a1237fa53b73",
+      "dependency_revision": "5d1e5f031ab82244369f7ef79b7bf3b013ba1966a4cbd04fd3cda4d5771dc1a1",
+      "economic_revision": "325f7535acbf720ab7e8c4a92905c4842aefbf87ca572a8ab103f15f71aaac99",
+      "evaluated_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_started_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_ms": 0.03254198236390948,
+      "expires_at": "2026-10-14T01:15:39.650084+00:00",
+      "occurrence_id": "occurrence:0002",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "venues": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "positions": [
+        {
+          "native_key": [
+            "polymarket_us",
+            "136265:2",
+            "1155064",
+            "2309610",
+            "Long"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "3"
+          },
+          "common_odds": null
+        },
+        {
+          "native_key": [
+            "kalshi",
+            "authored-event:2",
+            "authored-market",
+            "no",
+            "no"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "not_win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "3"
+          },
+          "common_odds": null
+        }
+      ],
+      "event_context": {},
+      "source_clocks": [
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        },
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        }
+      ],
+      "search": null,
+      "category": "covered_outcome_arb",
+      "metric": {
+        "value": "3",
+        "display": "+3.00"
+      },
+      "metric_basis": "net_complete_minimum_return_percent",
+      "conditioning": "all_required_feasible_states",
+      "current": true,
+      "metrics": {
+        "complete_minimum_usd": {
+          "value": "3.09",
+          "display": "+3.09"
+        },
+        "decisive_minimum_usd": {
+          "value": "3.09",
+          "display": "+3.09"
+        },
+        "expected_profit_usd": null,
+        "deployed_capital_usd": "103",
+        "buffer_usd": "103/200",
+        "buffer_applications": 1
+      },
+      "allocation": [],
+      "settlement_complete": true,
+      "state_profits": {},
+      "reasons": [],
+      "size_basis": "observed_legal_allocation",
+      "size_status": "supported_size",
+      "supported_capital_usd": "103"
+    },
+    {
+      "id": "opportunity:794957b34a4cce0e33f86a5d49eb4562179df04f33455416f4c79daa677a80bc:covered_outcome_arb",
+      "opportunity_id": "opportunity:794957b34a4cce0e33f86a5d49eb4562179df04f33455416f4c79daa677a80bc",
+      "pair_id": "2fa9952e24b4feb263c931f1bec5e656c34328cacd0a2b92cca7d34afbfcdb17",
+      "dependency_revision": "4f2deda4e7cb95899ac83be9b5c491cfff0840a1e4456179e0a4056454691979",
+      "economic_revision": "8244336b600326c5bebb9c741f99906ba5699ccea813a8dd6f6e277a986eccea",
+      "evaluated_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_started_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_ms": 0.03995798761025071,
+      "expires_at": "2026-10-14T01:15:39.650084+00:00",
+      "occurrence_id": "occurrence:0001",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "venues": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "positions": [
+        {
+          "native_key": [
+            "polymarket_us",
+            "136265:1",
+            "1155064",
+            "2309610",
+            "Long"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "2"
+          },
+          "common_odds": null
+        },
+        {
+          "native_key": [
+            "kalshi",
+            "authored-event:1",
+            "authored-market",
+            "no",
+            "no"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "not_win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "2"
+          },
+          "common_odds": null
+        }
+      ],
+      "event_context": {},
+      "source_clocks": [
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        },
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        }
+      ],
+      "search": null,
+      "category": "covered_outcome_arb",
+      "metric": {
+        "value": "2",
+        "display": "+2.00"
+      },
+      "metric_basis": "net_complete_minimum_return_percent",
+      "conditioning": "all_required_feasible_states",
+      "current": true,
+      "metrics": {
+        "complete_minimum_usd": {
+          "value": "2.04",
+          "display": "+2.04"
+        },
+        "decisive_minimum_usd": {
+          "value": "2.04",
+          "display": "+2.04"
+        },
+        "expected_profit_usd": null,
+        "deployed_capital_usd": "102",
+        "buffer_usd": "51/100",
+        "buffer_applications": 1
+      },
+      "allocation": [],
+      "settlement_complete": true,
+      "state_profits": {},
+      "reasons": [],
+      "size_basis": "observed_legal_allocation",
+      "size_status": "supported_size",
+      "supported_capital_usd": "102"
+    },
+    {
+      "id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285:covered_outcome_arb",
+      "opportunity_id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285",
+      "pair_id": "e7510fd77cb0f9f5a792e44dd199317b6cd8f343165620409fd61424aa667409",
+      "dependency_revision": "eb4e8c6dc899275cbae886848b7d7fe9ce59a296f9e40396861727ea8bfce6dc",
+      "economic_revision": "486eabbbdeacca58afe833f886bf9c030b18f9d4050f3fbd307b161c28fc03a6",
+      "evaluated_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_started_at": "2026-10-14T01:15:09.650084+00:00",
+      "calculation_ms": 0.07287500193342566,
+      "expires_at": "2026-10-14T01:15:39.650084+00:00",
+      "occurrence_id": "occurrence:0000",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "venues": [
+        "kalshi",
+        "polymarket_us"
+      ],
+      "positions": [
+        {
+          "native_key": [
+            "polymarket_us",
+            "136265:0",
+            "1155064",
+            "2309610",
+            "Long"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "1"
+          },
+          "common_odds": null
+        },
+        {
+          "native_key": [
+            "kalshi",
+            "authored-event:0",
+            "authored-market",
+            "no",
+            "no"
+          ],
+          "predicate": {
+            "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+            "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+            "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+            "participant": "NFL:SEA",
+            "predicate": "not_win",
+            "signed_line": null,
+            "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+            "outcome_cardinality": 2,
+            "result_interpretation": "normal_win"
+          },
+          "units": "usd_per_contract",
+          "original_price": {
+            "value": "1"
+          },
+          "common_odds": null
+        }
+      ],
+      "event_context": {},
+      "source_clocks": [
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        },
+        {
+          "source_at": "2026-10-14T01:15:09.650084+00:00",
+          "received_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_at": "2026-10-14T01:15:09.650084+00:00",
+          "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+          "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+          "sql_committed_at": null,
+          "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+          "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+        }
+      ],
+      "search": null,
+      "category": "covered_outcome_arb",
+      "metric": {
+        "value": "1",
+        "display": "+1.00"
+      },
+      "metric_basis": "net_complete_minimum_return_percent",
+      "conditioning": "all_required_feasible_states",
+      "current": true,
+      "metrics": {
+        "complete_minimum_usd": {
+          "value": "1.01",
+          "display": "+1.01"
+        },
+        "decisive_minimum_usd": {
+          "value": "1.01",
+          "display": "+1.01"
+        },
+        "expected_profit_usd": null,
+        "deployed_capital_usd": "101",
+        "buffer_usd": "101/200",
+        "buffer_applications": 1
+      },
+      "allocation": [],
+      "settlement_complete": true,
+      "state_profits": {},
+      "reasons": [],
+      "size_basis": "observed_legal_allocation",
+      "size_status": "supported_size",
+      "supported_capital_usd": "101"
+    }
+  ],
+  "ranked_ids": [
+    "opportunity:cb5c2795b65a153b3777f9e79bdd3bd1beeef12a76a5f6e2d7fa16fcbda3353d:covered_outcome_arb",
+    "opportunity:794957b34a4cce0e33f86a5d49eb4562179df04f33455416f4c79daa677a80bc:covered_outcome_arb",
+    "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285:covered_outcome_arb"
+  ],
+  "total_matching": 3,
+  "offset": 0,
+  "limit": 50,
+  "next_offset": null,
+  "expires_at": "2026-10-14T01:15:39.650084+00:00",
+  "published_at": "2026-10-14T01:15:09.650084+00:00",
+  "coverage": {
+    "state": "evaluated_positive",
+    "complete": true,
+    "compatible_pairs": 3,
+    "evaluated_pairs": 3,
+    "qualifying_pairs": 3,
+    "no_qualifying_opportunities": false,
+    "readiness_state": "ready",
+    "errors": [],
+    "scopes": [
+      {
+        "key": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65",
+        "venue": "polymarket_us",
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "configured": true,
+        "authorized": true,
+        "supported": true,
+        "check": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "state": "ready",
+        "counts": {
+          "identity_bound": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "price_present": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "synchronized_depth": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "cashflow_inputs_ready": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          }
+        }
+      },
+      {
+        "key": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c",
+        "venue": "kalshi",
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "configured": true,
+        "authorized": true,
+        "supported": true,
+        "check": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "state": "ready",
+        "counts": {
+          "identity_bound": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "price_present": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "synchronized_depth": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "cashflow_inputs_ready": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          }
+        }
+      }
+    ]
+  },
+  "causal": {
+    "readiness_revision": "4517640ed96af616ea88b8881bb4f596b8d2c5e38276f24160393570d82095cf",
+    "input_revision": "authored-inputs",
+    "sql_post_commit_observation": null,
+    "capture_ms": null,
+    "projection_published_at": "2026-10-14T01:15:09.650084+00:00"
+  },
+  "bounds": {
+    "pairs": 2048,
+    "rows": 4096,
+    "cache_bytes": 16777216,
+    "input_bytes": 67108864,
+    "payload_bytes": 2097152,
+    "journal_entries": 128,
+    "journal_bytes": 4194304,
+    "workers": 1,
+    "work_per_turn": 16,
+    "maximum_page": 100
+  },
+  "provider_requests": 0
+}

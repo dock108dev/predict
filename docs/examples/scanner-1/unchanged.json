@@ -1,0 +1,240 @@
+{
+  "version": "predict-opportunity-scanner-1",
+  "mode": "unchanged",
+  "server_id": "e944c94d-8ec6-4e64-976c-14385f209d77",
+  "epoch": "authored-epoch",
+  "publication_revision": 3,
+  "query_id": "32fc9cdfd6dc72e80146c96a2702a5a6994792dbb8dbe683e0de3bf9797d3052",
+  "policy": {
+    "version": "predict-estimate-policy-3",
+    "capital_ceiling_usd": "1000",
+    "buffer_rate": "0.005",
+    "tie": "0.005",
+    "terminal_noncompletion": "0.001",
+    "sizing_mode": "requested_trade",
+    "benchmark_venue": "pinnacle",
+    "benchmark_method": "proportional_no_vig",
+    "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+    "execution_role": "taker",
+    "execution_channel": "direct_site",
+    "portfolio_basis": "standalone",
+    "funding_basis": "already_funded",
+    "holding_period": "to_settlement",
+    "denominator": "actual_deployed_capital",
+    "funding_components": [
+      "acquisition_or_stake",
+      "unavoidable_upfront_fees",
+      "independent_funded_collateral"
+    ],
+    "buffer": {
+      "rate": "0.005",
+      "basis": "actual_deployed_capital",
+      "treatment": "model_haircut",
+      "applications_per_opportunity": 1,
+      "consumes_funding": false
+    },
+    "probability_defaults": {
+      "scope": [
+        "NFL",
+        "regular_season",
+        "pregame",
+        "full_game",
+        "winner",
+        "including_overtime"
+      ],
+      "basis": "provisional_prior",
+      "measured_rate": false,
+      "states": [
+        "a_wins",
+        "b_wins",
+        "tie",
+        "terminal_noncompletion"
+      ],
+      "tie": {
+        "central": "0.005",
+        "low": "0",
+        "high": "0.01"
+      },
+      "terminal_noncompletion": {
+        "central": "0.001",
+        "low": "0",
+        "high": "0.005"
+      }
+    },
+    "size_statuses": [
+      "supported_size",
+      "modeled_size",
+      "size_unverified"
+    ],
+    "input_bases": [
+      "observed_fact",
+      "published_template",
+      "provisional_assumption",
+      "unknown_actual"
+    ],
+    "input_version": "predict-estimate-input-1",
+    "result_version": "predict-estimate-result-2",
+    "legacy_sensitivity": "adverse_price_stress",
+    "buffer_applied_to_existing_metrics": false,
+    "requested_amount_usd": "1000"
+  },
+  "readiness_policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+  "filters": {
+    "venues": [],
+    "sports": [],
+    "leagues": [],
+    "markets": [],
+    "periods": [],
+    "category": "covered_outcome_arb",
+    "minimum_edge": null,
+    "minimum_size": null
+  },
+  "metric_basis": "net_complete_minimum_return_percent",
+  "filter_options": {
+    "venues": [
+      "kalshi",
+      "polymarket_us"
+    ],
+    "sports": [
+      "football"
+    ],
+    "leagues": [
+      "NFL"
+    ],
+    "markets": [
+      "winner"
+    ],
+    "periods": [
+      "full_game"
+    ]
+  },
+  "unsupported_filters": [],
+  "rows": [],
+  "ranked_ids": [
+    "opportunity:cb5c2795b65a153b3777f9e79bdd3bd1beeef12a76a5f6e2d7fa16fcbda3353d:covered_outcome_arb",
+    "opportunity:794957b34a4cce0e33f86a5d49eb4562179df04f33455416f4c79daa677a80bc:covered_outcome_arb",
+    "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285:covered_outcome_arb"
+  ],
+  "total_matching": 3,
+  "offset": 0,
+  "limit": 50,
+  "next_offset": null,
+  "expires_at": "2026-10-14T01:15:39.650084+00:00",
+  "published_at": "2026-10-14T01:15:09.650084+00:00",
+  "coverage": {
+    "state": "evaluated_positive",
+    "complete": true,
+    "compatible_pairs": 3,
+    "evaluated_pairs": 3,
+    "qualifying_pairs": 3,
+    "no_qualifying_opportunities": false,
+    "readiness_state": "ready",
+    "errors": [],
+    "scopes": [
+      {
+        "key": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65",
+        "venue": "polymarket_us",
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "configured": true,
+        "authorized": true,
+        "supported": true,
+        "check": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "state": "ready",
+        "counts": {
+          "identity_bound": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "price_present": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "synchronized_depth": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          },
+          "cashflow_inputs_ready": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+          }
+        }
+      },
+      {
+        "key": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c",
+        "venue": "kalshi",
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "configured": true,
+        "authorized": true,
+        "supported": true,
+        "check": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "state": "ready",
+        "counts": {
+          "identity_bound": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "price_present": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "synchronized_depth": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          },
+          "cashflow_inputs_ready": {
+            "value": 3,
+            "denominator": 3,
+            "unit": "instruments",
+            "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+          }
+        }
+      }
+    ]
+  },
+  "causal": {
+    "readiness_revision": "4517640ed96af616ea88b8881bb4f596b8d2c5e38276f24160393570d82095cf",
+    "input_revision": "authored-inputs",
+    "sql_post_commit_observation": null,
+    "capture_ms": null,
+    "projection_published_at": "2026-10-14T01:15:09.650084+00:00"
+  },
+  "bounds": {
+    "pairs": 2048,
+    "rows": 4096,
+    "cache_bytes": 16777216,
+    "input_bytes": 67108864,
+    "payload_bytes": 2097152,
+    "journal_entries": 128,
+    "journal_bytes": 4194304,
+    "workers": 1,
+    "work_per_turn": 16,
+    "maximum_page": 100
+  },
+  "provider_requests": 0
+}

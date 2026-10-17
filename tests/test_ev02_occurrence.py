@@ -78,6 +78,39 @@ class OccurrenceCases(unittest.TestCase):
         self.assertEqual({self.audit(r)['occurrence_id'] for r in joined},{'authored-game'})
         self.assertEqual(len(joined[0]['quote']['occurrence_link']['edges']),2)
 
+    def test_500_distinct_shared_occurrences_bound_metadata_candidate_checks(self):
+        records=[]
+        for index in range(500):
+            shared={'sportradar':f'authored-shared-{index}'}
+            records.extend([rows('kalshi',f'k-{index}',shared=shared)[0],
+                            rows('polymarket_us',f'u-{index}',shared=shared)[0]])
+        original=deepcopy(records);resolver=self.resolver()
+        with patch.object(resolver,'_metadata',wraps=resolver._metadata) as metadata:
+            joined=self.resolve(records,resolver)
+        self.assertEqual(len({self.audit(row)['occurrence_id'] for row in joined}),500)
+        self.assertTrue(all(self.audit(row)['status']=='matched' for row in joined))
+        self.assertTrue(all(len(self.audit(row)['members'])==2 for row in joined))
+        self.assertLessEqual(metadata.call_count,2*len(records))
+        self.assertEqual(records,original)
+
+    def test_missing_namespace_remains_candidate_and_preserves_ambiguous_fact_order(self):
+        first=rows('kalshi','first',shared={'sportradar':'one'})[0]
+        missing=rows('the_odds_api','missing',venue='novig')[0]
+        other=rows('polymarket_us','other',shared={'different-vendor':'one'})[0]
+        result=self.resolve([other,missing,first])
+        audit=self.audit(result[1])
+        self.assertEqual(audit['status'],'unresolved')
+        self.assertIn('ambiguous_metadata_candidates',audit['conflicts'])
+        self.assertEqual(audit['candidate_members'],[['polymarket_us','other'],['kalshi','first']])
+        self.assertTrue(all(self.audit(result[i])['status']=='matched' for i in (0,2)))
+
+    def test_shared_peer_union_keeps_any_matching_witness_despite_other_conflict(self):
+        first=rows('kalshi','first',shared={'sportradar':'one','second-vendor':'same'})[0]
+        other=rows('polymarket_us','other',shared={'sportradar':'two','second-vendor':'same'})[0]
+        result=self.resolve([first,other])
+        self.assertTrue(all(self.audit(row)['status']=='unresolved' for row in result))
+        self.assertTrue(all('shared_id_metadata_conflict' in self.audit(row)['conflicts'] for row in result))
+
     def test_unattributed_vendor_id_does_not_invent_shared_provider_membership(self):
         a=rows();b=rows('polymarket_us','u')
         for r in a:r['event']['observed_identity_facts']=[dict(source_id='coincident-id')]

@@ -1,0 +1,980 @@
+{
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "predict-opportunity-scanner-1"
+    },
+    "mode": {
+      "enum": [
+        "snapshot",
+        "resync",
+        "replace_page",
+        "unchanged"
+      ]
+    },
+    "server_id": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "epoch": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "publication_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "query_id": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "policy": {
+      "type": "object"
+    },
+    "readiness_policy_revision": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "filters": {
+      "type": "object",
+      "properties": {
+        "venues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "leagues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "markets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "category": {
+          "enum": [
+            "covered_outcome_arb",
+            "conditional_hedge",
+            "ev"
+          ]
+        },
+        "minimum_edge": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minimum_size": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "venues",
+        "sports",
+        "leagues",
+        "markets",
+        "periods",
+        "category",
+        "minimum_edge",
+        "minimum_size"
+      ],
+      "additionalProperties": false
+    },
+    "metric_basis": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "filter_options": {
+      "type": "object",
+      "properties": {
+        "venues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "leagues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "markets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 16
+        }
+      },
+      "required": [
+        "venues",
+        "sports",
+        "leagues",
+        "markets",
+        "periods"
+      ],
+      "additionalProperties": false
+    },
+    "unsupported_filters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "maxItems": 80
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "opportunity_id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "pair_id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "dependency_revision": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "economic_revision": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calculation_started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calculation_ms": {
+            "type": "number",
+            "minimum": 0
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "occurrence_id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "sport": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "league": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "market": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "period": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "venues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "maxItems": 2
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "native_key": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "maxItems": 5
+                },
+                "predicate": {
+                  "type": "object"
+                },
+                "units": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "original_price": {
+                  "type": "object"
+                },
+                "common_odds": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "native_key",
+                "predicate",
+                "units",
+                "original_price",
+                "common_odds"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2
+          },
+          "event_context": {
+            "type": "object"
+          },
+          "source_clocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "received_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "book_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "book_received_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "ingress_projected_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sql_committed_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "provider_book_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "provider_market_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_at",
+                "received_at",
+                "book_at",
+                "book_received_at",
+                "ingress_projected_at",
+                "sql_committed_at",
+                "provider_book_at",
+                "provider_market_at"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "enum": [
+              "covered_outcome_arb",
+              "conditional_hedge",
+              "ev"
+            ]
+          },
+          "metric": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+              },
+              "display": {
+                "type": "string",
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "value",
+              "display"
+            ],
+            "additionalProperties": false
+          },
+          "metric_basis": {
+            "enum": [
+              "net_complete_minimum_return_percent",
+              "net_decisive_minimum_return_percent",
+              "net_expected_return_percent"
+            ]
+          },
+          "conditioning": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "complete_minimum_usd": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+                      },
+                      "display": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "display"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "decisive_minimum_usd": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+                      },
+                      "display": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "display"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expected_profit_usd": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+                      },
+                      "display": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "display"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "deployed_capital_usd": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+              },
+              "buffer_usd": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+              },
+              "buffer_applications": {
+                "const": 1
+              }
+            },
+            "required": [
+              "complete_minimum_usd",
+              "decisive_minimum_usd",
+              "expected_profit_usd",
+              "deployed_capital_usd",
+              "buffer_usd",
+              "buffer_applications"
+            ],
+            "additionalProperties": false
+          },
+          "allocation": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "maxItems": 2
+          },
+          "settlement_complete": {
+            "type": "boolean"
+          },
+          "state_profits": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "maxItems": 32
+          },
+          "size_basis": {
+            "const": "observed_legal_allocation"
+          },
+          "size_status": {
+            "const": "supported_size"
+          },
+          "supported_capital_usd": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[0-9]+)?$"
+          }
+        },
+        "required": [
+          "id",
+          "opportunity_id",
+          "pair_id",
+          "dependency_revision",
+          "economic_revision",
+          "evaluated_at",
+          "calculation_started_at",
+          "calculation_ms",
+          "expires_at",
+          "occurrence_id",
+          "sport",
+          "league",
+          "market",
+          "period",
+          "venues",
+          "positions",
+          "event_context",
+          "source_clocks",
+          "search",
+          "category",
+          "metric",
+          "metric_basis",
+          "conditioning",
+          "current",
+          "metrics",
+          "allocation",
+          "settlement_complete",
+          "state_profits",
+          "reasons",
+          "size_basis",
+          "size_status",
+          "supported_capital_usd"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "ranked_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "maxItems": 100
+    },
+    "total_matching": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "next_offset": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "published_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "not_evaluated",
+            "partial",
+            "unavailable",
+            "incomplete",
+            "stopped",
+            "evaluated_positive",
+            "evaluated_zero"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "compatible_pairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluated_pairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "qualifying_pairs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "no_qualifying_opportunities": {
+          "type": "boolean"
+        },
+        "readiness_state": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 32
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "state",
+        "complete",
+        "compatible_pairs",
+        "evaluated_pairs",
+        "qualifying_pairs",
+        "no_qualifying_opportunities",
+        "readiness_state",
+        "errors",
+        "scopes"
+      ],
+      "additionalProperties": false
+    },
+    "causal": {
+      "type": "object",
+      "properties": {
+        "readiness_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sql_post_commit_observation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "epoch": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "current_rows_revision": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "sql_committed_observed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "monotonic_observed": {
+                  "type": "number"
+                },
+                "meaning": {
+                  "const": "observed_after_successful_top_level_commit"
+                }
+              },
+              "required": [
+                "epoch",
+                "current_rows_revision",
+                "sql_committed_observed_at",
+                "monotonic_observed",
+                "meaning"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capture_ms": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "projection_published_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "readiness_revision",
+        "input_revision",
+        "sql_post_commit_observation",
+        "capture_ms",
+        "projection_published_at"
+      ],
+      "additionalProperties": false
+    },
+    "bounds": {
+      "type": "object",
+      "properties": {
+        "pairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "payload_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "journal_entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "journal_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "work_per_turn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum_page": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "pairs",
+        "rows",
+        "cache_bytes",
+        "input_bytes",
+        "payload_bytes",
+        "journal_entries",
+        "journal_bytes",
+        "workers",
+        "work_per_turn",
+        "maximum_page"
+      ],
+      "additionalProperties": false
+    },
+    "provider_requests": {
+      "const": 0
+    }
+  },
+  "required": [
+    "version",
+    "mode",
+    "server_id",
+    "epoch",
+    "publication_revision",
+    "query_id",
+    "policy",
+    "readiness_policy_revision",
+    "filters",
+    "metric_basis",
+    "filter_options",
+    "unsupported_filters",
+    "rows",
+    "ranked_ids",
+    "total_matching",
+    "offset",
+    "limit",
+    "next_offset",
+    "expires_at",
+    "published_at",
+    "coverage",
+    "causal",
+    "bounds",
+    "provider_requests"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-opportunity-scanner-1.schema.json",
+  "title": "SC02 coherent global ranked scanner and bounded page replacements"
+}

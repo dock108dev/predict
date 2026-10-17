@@ -5,10 +5,42 @@ journal, invents a native outcome correspondence, or obtains provider data.
 Native labels are retained in quotes; display selection semantics are explicit.
 """
 from copy import deepcopy
+from dataclasses import dataclass
+import json
+from pathlib import Path
 from .current_contract import identity, stamp, line, binding_context, fields, event_identity
 
 
-def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True):
+@dataclass(frozen=True)
+class NormalizationRegistries:
+    """One read context's validated registry snapshot, stored as immutable bytes.
+
+    Each occurrence receives detached dictionaries. The selected retail/event
+    registry still passes its existing validator once when this context loads;
+    quote-specific applicability remains with the ordinary producer on every use.
+    """
+    source_rules: bytes
+    selected_applicability: bytes
+    binding: str
+
+    @classmethod
+    def load(cls):
+        from app.comparison.current_dependencies import digest, encoded
+        from app.comparison.public_retail import registry
+        root = Path(__file__).resolve().parents[1] / 'fixtures'
+        rules = json.loads((root / 'comparison-source-rules-v1.json').read_text())
+        selected = registry(json.loads((root / 'comparison-selected-applicability-v1.json').read_text()))
+        raw_rules = encoded(rules)
+        if len(raw_rules) > 512 * 1024:
+            raise ValueError('Source rule registry capacity')
+        raw_selected = encoded(selected)
+        return cls(raw_rules, raw_selected, digest(dict(source_rules=rules, selected_applicability=selected)))
+
+    def detached(self):
+        return json.loads(self.source_rules), json.loads(self.selected_applicability)
+
+
+def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True, source_rules=None, registries=None):
     from app.resolution.core import event_key
     from app.comparison.event_links import provider_key, current_event_key, ordinary_event_key
     if occurrence_resolver is not None:
@@ -17,9 +49,12 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
     from app.comparison.current_dependencies import encoded
     from app.comparison.shared_templates import ProfilePool, ProfileFactory
     from app.comparison.source_inputs import produce
-    import json
-    from pathlib import Path
-    source_rules=json.loads((Path(__file__).resolve().parents[1]/'fixtures/comparison-source-rules-v1.json').read_text())
+    if registries is not None:
+        if not isinstance(registries, NormalizationRegistries) or source_rules is not None or selected_applicability is not None:
+            raise ValueError('Exact normalization registry snapshot required')
+        source_rules, selected_applicability = registries.detached()
+    if source_rules is None:
+        source_rules=json.loads((Path(__file__).resolve().parents[1]/'fixtures/comparison-source-rules-v1.json').read_text())
     if selected_applicability is None:
         selected_applicability=json.loads((Path(__file__).resolve().parents[1]/'fixtures/comparison-selected-applicability-v1.json').read_text())
         from app.comparison.public_retail import registry

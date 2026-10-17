@@ -1,0 +1,71 @@
+{
+  "version": "predict-opportunity-summaries-1",
+  "server_id": "authored-summary-server",
+  "epoch": "authored-epoch-1",
+  "scope": "authored-selected-scope",
+  "observed_at": "2026-10-16T14:01:00+00:00",
+  "filters": {
+    "venues": [],
+    "sports": [],
+    "leagues": [],
+    "markets": [],
+    "periods": [],
+    "category": "covered_outcome_arb",
+    "minimum_edge": null,
+    "minimum_size": null
+  },
+  "state": "available",
+  "observation_window": {
+    "from": "2026-10-16T14:00:00+00:00",
+    "to": "2026-10-16T14:01:00+00:00"
+  },
+  "counts": {
+    "observed_episodes": 0,
+    "observed_new": 0,
+    "left_censored": 0,
+    "ended": 0,
+    "open": 0,
+    "gap_censored": 0
+  },
+  "edge_percent": {
+    "minimum": null,
+    "maximum": null
+  },
+  "supported_capital_usd": {
+    "minimum": null,
+    "maximum": null
+  },
+  "duration_seconds": {
+    "minimum_observed": null,
+    "maximum_observed": null,
+    "complete_episodes": 0
+  },
+  "coverage": {
+    "state": "evaluated_zero",
+    "complete": true,
+    "observed_complete_publications": 5,
+    "gaps": 0,
+    "checked_zero": true,
+    "evaluated_pairs": 3,
+    "compatible_pairs": 3
+  },
+  "history": {
+    "complete": true,
+    "evicted_episodes": 0,
+    "continuity_lost": false,
+    "threshold_history_complete": true
+  },
+  "bounds": {
+    "retention_seconds": 604800,
+    "episode_limit": 10000,
+    "storage_limit_bytes": 10485760,
+    "physical_bytes": 10485760,
+    "physical_high_water_bytes": 10485760,
+    "queue_observations": 0,
+    "response_bytes": 65536
+  },
+  "notes": [],
+  "unsupported_filters": [],
+  "provider_requests": 0,
+  "financial_evaluations": 0
+}

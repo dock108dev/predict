@@ -1,0 +1,12 @@
+[
+ {"name":"complete_positive","capital":"100","profits":{"a_wins":"3","b_wins":"2","tie":"1","terminal_noncompletion":"1"},"categories":["covered_outcome_arb"],"minimum":"0.5","minimum_display":"+0.50"},
+ {"name":"decisive_positive_adverse_tie","capital":"100","profits":{"a_wins":"3","b_wins":"2","tie":"-10","terminal_noncompletion":"0"},"categories":["conditional_hedge"],"minimum":"-10.5","minimum_display":"-10.50"},
+ {"name":"neutral_refund_is_capital_not_profit","capital":"100","profits":{"a_wins":"3","b_wins":"2","tie":"1","terminal_noncompletion":"0"},"categories":["conditional_hedge"],"minimum":"-0.5","minimum_display":"-0.50"},
+ {"name":"asymmetric_cancellation_exact_cost","capital":"102","profits":{"a_wins":"8","b_wins":"8","tie":"0","terminal_noncompletion":"-2","terminal_grade_0_a_wins":"-42"},"categories":["conditional_hedge"],"minimum":"-42.51","minimum_display":"-42.51"},
+ {"name":"unknown_mandatory_cost","capital":"100","profits":{"a_wins":null,"b_wins":"2","tie":"1","terminal_noncompletion":"1"},"categories":[],"minimum":null},
+ {"name":"unknown_terminal_with_favorable_decisive","capital":"100","profits":{"a_wins":"3","b_wins":"2","tie":"1","terminal_noncompletion":null},"categories":["conditional_hedge"],"minimum":null},
+ {"name":"zero_after_exactly_one_buffer","capital":"100","profits":{"a_wins":"0.5","b_wins":"0.5","tie":"0.5","terminal_noncompletion":"0.5"},"categories":[],"minimum":"0","minimum_display":"0.00"},
+ {"name":"negative","capital":"100","profits":{"a_wins":"-1","b_wins":"-1","tie":"-1","terminal_noncompletion":"-1"},"categories":[],"minimum":"-1.5","minimum_display":"-1.50"},
+ {"name":"zero_probability_cannot_erase_feasible_loss","capital":"100","profits":{"a_wins":"4","b_wins":"4","tie":"-20","terminal_noncompletion":"-10"},"probabilities":{"a_wins":"1/2","b_wins":"1/2","tie":"0","terminal_noncompletion":"0"},"categories":["conditional_hedge","ev"],"minimum":"-20.5","minimum_display":"-20.50"},
+ {"name":"unsupported_joint_meaning","capital":"100","profits":{"a_wins":"3","b_wins":"2","tie":"1"},"settlement_complete":false,"categories":["conditional_hedge"],"minimum":null}
+]

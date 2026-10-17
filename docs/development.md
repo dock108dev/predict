@@ -4,6 +4,14 @@ Use Python 3.11+ from a source checkout. Python 3.14 and Node 24 match primary C
 Run commands from the repository root. Native operation uses macOS Keychain;
 portable offline tests also run on Linux.
 
+## One local working copy
+
+Develop, integrate, build and run directly in the primary repository on `main`.
+Do not create successor repositories or candidate workspaces unless explicitly
+requested. Use disposable test fixtures/databases in place. Older isolated
+closeouts are historical evidence, not a requirement to defer local integration.
+Keep credentials, settings and account/quota/hold state intact.
+
 ## Install tools
 
 ```sh
@@ -62,6 +70,18 @@ compatibility runs. Python 3.11 remains a supported compatibility lane.
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
 ```
 
+The SQL lane includes SC06's varied financial current-row roundtrip. The actual
+500-event SQL-to-Chromium workload uses the same disposable PostgreSQL owner:
+
+```sh
+PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --sc06-browser --report-dir test-results/postgres-sc06-browser
+```
+
+It requires the locked browser tooling and matching Chromium. A missing socket,
+database or browser does not establish qualification. The browser CI wrapper
+provisions this PostgreSQL lane rather than replacing financial work with scalar
+fixtures. The retained timing report preserves waiting, failures and timeouts.
+
 The ordinary launcher selects tools matching its existing cluster's `PG_VERSION`
 even when PATH selects PostgreSQL 16. `PREDICT_PG_BIN` can select that matching
 installation explicitly. An existing database requires a separate data migration
@@ -94,7 +114,17 @@ separate tests.
 
 The authored frontend is under `app/dashboard/opportunity_static/current/`:
 
-- `stored-controller.js` owns settings, selection, polling, cancellable reads,
+- `scanner-client.js` validates scanner v1, bounded page reads and compatibility;
+  `scanner-controller.js`, `scanner-style.css` and `scanner-shell.html` own the
+  compact landing scanner. `ticket-client.js` and `ticket-view.js` own selected
+  commands, persistent panel/sheet and exact frame presentation;
+  `scanner-arrivals.js` consumes filter-wide server transition observations;
+  `scanner-summaries.js` validates the optional bounded observed-summary disclosure. The generator
+  also produces scanner.js/css/html and scanner-runtime.json. See the
+  [client contract](scanner-client-contract.md) for bounds and SC05/SC06 seams.
+- [Readiness preparation reuse](scanner-preparation-contract.md) documents the
+  bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
+- `stored-controller.js` owns auxiliary Odds/EV settings, selection, polling, cancellable reads,
   dialogs and Stop.
 - `board-client.js` validates settings and response identities; `board-elements.js`
   provides shared formatting and display primitives.

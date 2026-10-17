@@ -163,12 +163,19 @@ def prepare(envelopes, *, at, resolver=None, associations=None, admitted_records
     return dict(at=at,originals=originals,groups=list(groups.values()),excluded=excluded)
 
 
-def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None, admitted_records=None, prepared=None):
+def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None, admitted_records=None, prepared=None, source_rules=None, selected_applicability=None, registries=None, _current_guard=None, _readiness_only=False):
     """Hydrate only selected resolved occurrences; preserve original clocks.
 
     A read context may supply one verified prepared frame across several boards.
     Legacy retained replay without admitted rows uses its unchanged admission.
+    Private current reads install their exact context guard directly; readiness
+    alone may omit the unused raw-record copy. Ordinary bundle identity and
+    defensive copies remain unchanged.
     """
+    if _current_guard is not None and not callable(_current_guard):
+        raise ValueError('combined_current_guard_required')
+    if _readiness_only and _current_guard is None:
+        raise ValueError('combined_readiness_guard_required')
     if benchmark_venue not in SPORTSBOOKS:raise ValueError('unsupported_selected_benchmark')
     prepared=prepared or prepare(envelopes,at=at,resolver=resolver,associations=associations,admitted_records=admitted_records)
     if prepared['at']!=at:raise ValueError('combined_prepared_clock_conflict')
@@ -182,7 +189,8 @@ def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=
         if not executions:continue
         raw=unavailable();raw.update(clock_at=at,projected_at=at,state='available',runtime_id='retained-combined-input')
         for status in raw['source_status'].values():status.update(state='available',reason_code='retained_input',reason='Retained observations; original clocks apply.')
-        state=catalog_from_normalized(raw,deepcopy(executions),reference_records=deepcopy(references_rows))
+        state=catalog_from_normalized(raw,deepcopy(executions),reference_records=deepcopy(references_rows),
+            source_rules=source_rules,selected_applicability=selected_applicability,registries=registries)
         # Legacy producer/fallback identities used different occurrence aliases.
         # Bind a combined-input identity consistently and retain the complete parent.
         pool=ProfilePool(state['comparison_profiles'])
@@ -240,12 +248,13 @@ def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=
             meta=r.get('comparison_source_metadata',{});native=meta.get('combined_native_binding',{})
             used.update(x for x in (meta.get('combined_envelope_id'),native.get('catalog_envelope_id'),native.get('book_envelope_id')) if x)
         value=dict(version=VERSION,adapter_version='predict-combined-native-1',as_of=at,
-            members=[list(x) for x in sorted(members)],records=deepcopy(rows),state_inputs=state,
+            members=[list(x) for x in sorted(members)],records=[] if _readiness_only else deepcopy(rows),state_inputs=state,
             envelope_ids=sorted(used),envelopes=[originals[eid] for eid in sorted(used)],
             benchmark_venue=benchmark_venue,benchmark=benchmark,benchmark_reason=benchmark_reason,
             benchmark_originals=benchmark_originals,excluded=deepcopy(excluded),
             representation='authentic retained parsed/redacted observations and reconstructed books; not original wire bytes')
-        value['input_version']=hashed(value);value['game_key']='combined:'+state['events'][0]['id']
+        value['input_version']=hashed(value) if _current_guard is None else _current_guard(value['members'])
+        value['game_key']='combined:'+state['events'][0]['id']
         result.append(value)
     return result
 

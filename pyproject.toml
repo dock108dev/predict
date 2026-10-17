@@ -16,6 +16,7 @@ build-backend = "setuptools.build_meta"
 include = ["app*"]
 
 [tool.setuptools.package-data]
+"app" = ["reviews/native/*.json"]
 "app.fixtures" = ["*.json"]
 "app.normalization" = ["*.json"]
 

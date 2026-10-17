@@ -13,11 +13,25 @@ from app.comparison.calculation_availability import result_availability
 
 
 def mount(app,provider):
+    from .scanner_api import mount as mount_scanner
+    mount_scanner(app,provider)
     def stopped():return provider.closed or provider.closing or not provider.dispatch
     read_lock=asyncio.Lock()
     pending_reads=0
     def read(req,p):
         view=req.match_info['view']
+        if view=='readiness':
+            from copy import deepcopy
+            from app.comparison.scanner_readiness import Selection
+            from app.storage.scanner_readiness import read as readiness_read
+            from app.storage.current_games import utc
+            selected=Selection(**{k:tuple(req.query[k].split(',')) for k in req.query})
+            states=deepcopy(provider.states)
+            if stopped():
+                states={v:dict(state='stopped') for v in selected.venues}
+            with connect() as db:
+                return readiness_read(db,config=deepcopy(provider.config),authority=provider.config.get('authority'),
+                                      at=utc(),selection=selected,source_status=states)
         with connect() as db:
             if view=='slate':
                 from .comparison_slate import read as slate_read
@@ -57,14 +71,19 @@ def mount(app,provider):
             return web.json_response(dict(error='sports_history_unavailable',reason='Ordinary sports history was retired; select a current comparison.',provider_requests=0),status=410)
         allowed={'game','amount','ceiling','buffer','sizing_mode','benchmark_venue','benchmark_method','filter','context_id','quote','pair'}
         if view=='slate':allowed=(allowed-{'game','context_id','quote','pair'})|{'view','offset','limit','expected_revision'}
-        if view not in ('games','slate','odds','ev','arbs','details','inputs') or set(req.query)-allowed:raise PublicRequestError('Unsupported current comparison query')
+        if view=='readiness':allowed={'venues','sports','leagues','markets','periods'}
+        if view not in ('readiness','games','slate','odds','ev','arbs','details','inputs') or set(req.query)-allowed:raise PublicRequestError('Unsupported current comparison query')
         if view=='games' and req.query:raise PublicRequestError('Catalog does not accept calculation settings')
-        if view not in ('games','slate') and not 1<=len(req.query.get('game',''))<=256:raise PublicRequestError('Exact bounded occurrence required')
+        if view not in ('readiness','games','slate') and not 1<=len(req.query.get('game',''))<=256:raise PublicRequestError('Exact bounded occurrence required')
         if view=='slate' and req.query.get('view','odds') not in ('odds','ev','arbs'):raise PublicRequestError('Unsupported slate view')
         if req.query.get('filter','positive') not in ('positive','all','hedges'):raise PublicRequestError('Unsupported comparison filter')
         if view in ('details','inputs') and not req.query.get('context_id'):raise PublicRequestError('Expected current context required')
         if any(len(v)>256 for v in req.query.values()):raise PublicRequestError('Comparison query value capacity')
-        p=calculation_policy(req.query,load())
+        if view=='readiness':
+            from app.comparison.scanner_readiness import Selection
+            try:Selection(**{k:tuple(req.query[k].split(',')) for k in req.query})
+            except ValueError as exc:raise PublicRequestError(str(exc)) from None
+        p=None if view=='readiness' else calculation_policy(req.query,load())
         if pending_reads>=5:return web.json_response(dict(error='current_read_busy',reason='Current comparison read capacity; retry shortly.',provider_requests=0),status=429)
         pending_reads+=1
         try:

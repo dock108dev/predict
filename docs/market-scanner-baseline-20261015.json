@@ -78,5 +78,54 @@
   "active_plan": "docs/usability-sprint-plan.md",
   "required_next_action": "SC01 rederive actual checkout/runtime/loaded source/assets/engine/model baseline; preserve concurrent edits. Recorded D04 pass remains historical.",
   "checkout_head_at_planning": "d104b1b0a8f55bf08feee5cf7233c9ad44ac7517",
-  "concurrent_checkout_note": "Source and repository documentation cleanup advanced independently during this documentation task. Preserve its changes; the recorded D04 digest remains a historical binding, not proof of the loaded runtime."
+  "concurrent_checkout_note": "Source and repository documentation cleanup advanced independently during this documentation task. Preserve its changes; the recorded D04 digest remains a historical binding, not proof of the loaded runtime.",
+  "subsequent_ci_verification": {
+    "checked_at_utc": "2026-10-16T13:25:52.348460+00:00",
+    "evidence_class": "read-only GitHub run/job metadata and local recorded-source hash comparison; not installed or scanner qualification",
+    "checkout_head": "232bb95efa30035bc79a47f6f0f799cfe1d3b1d1",
+    "checkout_clean_before_this_documentation_update": true,
+    "local_repair_record": "test-results/ci-offline-fix-20261015/repair-validation.json",
+    "local_evidence": "247 checks passed in retained full invocation; final affected 4-test suite passed after isolation correction. Original full-run failure retained.",
+    "recorded_repair_source_hashes_match_current": 11,
+    "application_clock_cache_changes": [
+      "app/dashboard/current_incremental.py",
+      "app/dashboard/current_state.py",
+      "app/dashboard/current_temporal.py"
+    ],
+    "hosted_ci": {
+      "run_id": 38839832606,
+      "url": "https://github.com/dock108dev/predict/actions/runs/38839832606",
+      "head_sha": "232bb95efa30035bc79a47f6f0f799cfe1d3b1d1",
+      "status": "completed",
+      "conclusion": "success",
+      "all_five_jobs_passed": [
+        "Ordinary browser journey",
+        "Source, security and package",
+        "PostgreSQL storage / SQL migrations and boards",
+        "Offline checks",
+        "CI readiness"
+      ],
+      "completed_at_utc": "2026-10-16T02:37:36Z"
+    },
+    "next_action": "SC01 remains first. Use the actual current baseline preserving this repair; rederive loaded source/assets/engine and then-current model/authority state."
+  },
+  "sc01_implementation_closeout": {
+    "date": "2026-10-16",
+    "implementation": "complete",
+    "isolated_verification": "complete",
+    "current_readiness": "blocked",
+    "closeout": "docs/sc01-closeout-20261016.md",
+    "successor": "/Users/michaelfuscoletti/Desktop/predict-sc01-20261016",
+    "manifest": "/Users/michaelfuscoletti/Desktop/predict-sc01-20261016/test-results/sc01/manifest.json",
+    "application_files": 833,
+    "operational_digest": "abc2b6edf69d515e3fc0979a1c1c5b31d40410d35e770fe898edaa502fefea66",
+    "engine_binding": "2f8a803a7f8b7b93643e0cd34ed4cb68943b2f6c45e65a6a4002bf6a85859af3",
+    "policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+    "actual_inventory_as_of": "2026-10-16T14:25:16.538971+00:00",
+    "loaded_module_boundary": "Ordinary startup digest/served assets bound; full current in-memory module map not proved without supported exact-candidate handover",
+    "next_implementation": "SC02 from complete SC01 successor",
+    "provider_requests": 0,
+    "model_renewals": 0,
+    "installed": false
+  }
 }

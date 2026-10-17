@@ -120,6 +120,16 @@ class OccurrenceResolver:
                 conflicts[k] = ['source_role_or_identity_conflict']
         if len(facts) > MAX_MEMBERS:
             raise ValueError('Occurrence membership capacity')
+        # Necessary-condition indexes only: the existing consistency/metadata
+        # predicates still decide every candidate. Preserve original fact order
+        # in audit output and retain peers sharing any (even conflicting) ID.
+        order = {key: index for index, key in enumerate(facts)}
+        shared_index, namespaces, role_groups = {}, {}, {}
+        for key, fact in facts.items():
+            role_groups.setdefault((fact['league'], frozenset(fact['roles'].values())), set()).add(key)
+            for namespace, value in fact['shared'].items():
+                shared_index.setdefault((namespace, value), set()).add(key)
+                namespaces.setdefault(namespace, set()).add(key)
         assigned = {}; methods = {}; intervals = {}; edge_ids = {}
         # Shared provider identifiers outrank reviewed edges; disagreements fail.
         for k, f in sorted(facts.items()):
@@ -149,7 +159,8 @@ class OccurrenceResolver:
                 conflicts.setdefault(k, []).append(reason)
         # Reconcile shared identifiers even if one member has a reviewed alias.
         for k, f in sorted(facts.items()):
-            peers = [p for p,g in facts.items() if p != k and set(f['shared'].items()) & set(g['shared'].items())]
+            peers = set().union(*(shared_index[(name, value)] for name, value in f['shared'].items()))
+            peers = sorted(peers - {k}, key=order.get)
             if any(not self._consistent(f, facts[p]) for p in peers):
                 for p in [k, *peers]:conflicts.setdefault(p, []).append('shared_id_metadata_conflict')
             ids = {assigned[p] for p in [k, *peers] if p in edge_ids}
@@ -163,8 +174,15 @@ class OccurrenceResolver:
                 oid=min(previous) if previous else min(assigned[p] for p in [k,*peers] if p in assigned)
                 for p in [k,*peers]:assigned[p]=oid
         # Mutual unique candidates only. This rejects repeated games and forks.
-        candidates = {k: [p for p,g in facts.items() if p[0] != k[0] and p not in conflicts
-                          and self._metadata(f,g)] for k,f in facts.items()}
+        candidates = {}
+        for k, f in facts.items():
+            possible = set(role_groups[(f['league'], frozenset(f['roles'].values()))])
+            for namespace, value in f['shared'].items():
+                # A different value in any common namespace necessarily fails
+                # _consistent. Missing namespaces remain candidates as before.
+                possible.difference_update(namespaces[namespace] - shared_index[(namespace, value)])
+            candidates[k] = [p for p in sorted(possible, key=order.get)
+                if p[0] != k[0] and p not in conflicts and self._metadata(f, facts[p])]
         for k in sorted(facts):
             if k in conflicts or k in assigned and methods[k]!='shared_provider_event':continue
             peers = candidates[k]
@@ -194,18 +212,23 @@ class OccurrenceResolver:
                     edge_ids[k] = [edge.id]
         # An occurrence cannot contain two distinct IDs from one provider unless
         # explicit reviewed continuity associates both with that occurrence.
-        for oid in set(assigned.values()):
-            members = [k for k in assigned if assigned[k] == oid]
+        by_occurrence = {}
+        for key, oid in assigned.items():by_occurrence.setdefault(oid, []).append(key)
+        for members in by_occurrence.values():
             for k in members:
                 if any(not self._consistent(facts[k],facts[p]) for p in members):
                     conflicts.setdefault(k, []).append('occurrence_membership_conflict')
         output = []
         next_members = {}
+        valid_members = {oid:sorted(key for key in members if key not in conflicts)
+                         for oid,members in by_occurrence.items()}
+        prior_occurrences = {}
+        for prior in self.members.values():prior_occurrences.setdefault(prior['occurrence_id'], prior)
         for r in records:
             original = deepcopy(r); k = (r['quote']['source']['provider'],r['quote']['source']['native_event_id'])
             f = facts[k]; unresolved = k in conflicts or k not in assigned
             oid = None if unresolved else assigned[k]
-            members = sorted(p for p in assigned if assigned[p] == oid and p not in conflicts) if oid else [k]
+            members = valid_members[oid] if oid else [k]
             audit = dict(version=VERSION, occurrence_id=oid, method='source_local' if unresolved else methods[k],
                          estimated=not unresolved and any(methods[p] == 'unique_metadata' for p in members),
                          status='unresolved' if unresolved else 'matched',
@@ -227,7 +250,7 @@ class OccurrenceResolver:
                     source=k[0] if aggregate else original['quote']['venue'],native_event_id=k[1])
                 original['verified'] = verified
             if not unresolved:
-                prior=next((m for m in self.members.values() if m['occurrence_id']==oid),None)
+                prior=prior_occurrences.get(oid)
                 canonical_roles=prior['canonical_roles'] if prior else facts[members[0]]['roles']
                 mapping = {r['event'][role]:f['roles'][role] for role in ('home','away')}
                 e = original['event']

@@ -1,0 +1,122 @@
+{
+  "version": "predict-scanner-transitions-1",
+  "server_id": "85cf6b92-7a71-4d9e-af09-d92b55ee7cb4",
+  "epoch": "authored-epoch",
+  "scope": "27c10a043714467f07dafb98b4c42db8208475f99e3b47f15b0fd47f30a6e01d",
+  "cursor": 4,
+  "continuity": "continuous",
+  "reason": null,
+  "events": [
+    {
+      "id": "01bffc50aa1cd4b647e0f351877b502add250df728e48c2b958b9eb0782afd4d",
+      "cursor": 4,
+      "episode_id": "0b6920a2b707ca20476c9db2f6ebe059e342e843eee857ba7b685d8e61d7af7f",
+      "kind": "improved",
+      "observed_at": "2026-10-14T01:15:09.650084+00:00",
+      "before": {
+        "id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285:covered_outcome_arb",
+        "opportunity_id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285",
+        "pair_id": "e7510fd77cb0f9f5a792e44dd199317b6cd8f343165620409fd61424aa667409",
+        "category": "covered_outcome_arb",
+        "current": true,
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "venues": [
+          "kalshi",
+          "polymarket_us"
+        ],
+        "dependency_revision": "eb4e8c6dc899275cbae886848b7d7fe9ce59a296f9e40396861727ea8bfce6dc",
+        "economic_revision": "486eabbbdeacca58afe833f886bf9c030b18f9d4050f3fbd307b161c28fc03a6",
+        "expires_at": "2026-10-14T01:15:39.650084+00:00",
+        "source_clocks": [
+          {
+            "source_at": "2026-10-14T01:15:09.650084+00:00",
+            "received_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+            "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+            "sql_committed_at": null,
+            "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+            "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+          },
+          {
+            "source_at": "2026-10-14T01:15:09.650084+00:00",
+            "received_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+            "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+            "sql_committed_at": null,
+            "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+            "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+          }
+        ],
+        "edge": "1",
+        "size": "101"
+      },
+      "after": {
+        "id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285:covered_outcome_arb",
+        "opportunity_id": "opportunity:ff24472b07faaedabef95c74a953a001fddf0c7256f9cdaad5164b7105491285",
+        "pair_id": "e7510fd77cb0f9f5a792e44dd199317b6cd8f343165620409fd61424aa667409",
+        "category": "covered_outcome_arb",
+        "current": true,
+        "sport": "football",
+        "league": "NFL",
+        "market": "winner",
+        "period": "full_game",
+        "venues": [
+          "kalshi",
+          "polymarket_us"
+        ],
+        "dependency_revision": "authored-new",
+        "economic_revision": "authored-new",
+        "expires_at": "2026-10-14T01:15:39.650084+00:00",
+        "source_clocks": [
+          {
+            "source_at": "2026-10-14T01:15:09.650084+00:00",
+            "received_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+            "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+            "sql_committed_at": null,
+            "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+            "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+          },
+          {
+            "source_at": "2026-10-14T01:15:09.650084+00:00",
+            "received_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_at": "2026-10-14T01:15:09.650084+00:00",
+            "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+            "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+            "sql_committed_at": null,
+            "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+            "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+          }
+        ],
+        "edge": "100",
+        "size": "101"
+      },
+      "audible": true
+    }
+  ],
+  "unsupported_filters": [],
+  "coverage_complete": true,
+  "provider_requests": 0,
+  "financial_evaluations": 0,
+  "bounds": {
+    "events": 256,
+    "response_bytes": 528384,
+    "retained_bytes": 2097152,
+    "batches": 128,
+    "consumer_state": 0,
+    "baseline_rows": 4096,
+    "baseline_bytes": 8388608
+  },
+  "material_improvement": {
+    "edge_percentage_points": "1/4",
+    "size_ratio": "11/10",
+    "minimum_size_increase_usd": "10",
+    "cooldown_seconds": 30
+  }
+}

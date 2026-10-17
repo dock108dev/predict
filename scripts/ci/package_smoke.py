@@ -92,11 +92,13 @@ def main():
 from pathlib import Path
 import app.dashboard.current_contract, app.collection.current_service
 import app.dashboard.multi_game_server, app.normalization, app.storage
+import app.comparison.scanner_summaries
 import app.dashboard
 root = Path(app.dashboard.__file__).parent
 for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', 'admin.js',
              'ev.html', 'ev.js', 'coverage.html', 'coverage.js', 'comparison-board.js',
-             'comparison-view.js', 'comparison.css'):
+             'comparison-view.js', 'comparison.css', 'scanner.html', 'scanner.js',
+             'scanner.css', 'scanner-runtime.json'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 import asyncio, aiohttp
@@ -116,7 +118,9 @@ async def smoke():
         await site.start()
         url='http://127.0.0.1:'+str(site._server.sockets[0].getsockname()[1])
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
-            for path in ('/','/ev','/arbs','/admin',
+            for path in ('/','/odds','/ev','/arbs','/admin','/api/scanner/client',
+                         '/api/scanner/summaries',
+                         '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
                          '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js'):
                 async with client.get(url+path) as response:

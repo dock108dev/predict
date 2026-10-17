@@ -1,0 +1,195 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "operation": {
+          "const": "select"
+        },
+        "selection": {
+          "type": "object",
+          "properties": {
+            "server_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "epoch": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "opportunity_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "row_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "dependency_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "economic_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "pair_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "engine_binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "readiness_policy_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "discovery_policy_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "server_id",
+            "epoch",
+            "opportunity_id",
+            "row_id",
+            "dependency_revision",
+            "economic_revision",
+            "pair_id",
+            "engine_binding",
+            "readiness_policy_revision",
+            "discovery_policy_revision"
+          ],
+          "additionalProperties": false
+        },
+        "amount": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "client_id",
+        "sequence",
+        "operation",
+        "selection"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "operation": {
+          "const": "revalidate"
+        },
+        "ticket_id": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "client_id",
+        "sequence",
+        "operation",
+        "ticket_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "operation": {
+          "const": "adopt"
+        },
+        "ticket_id": {
+          "type": "string"
+        },
+        "replacement_frame_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id",
+        "sequence",
+        "operation",
+        "ticket_id",
+        "replacement_frame_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "operation": {
+          "const": "close"
+        },
+        "ticket_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id",
+        "sequence",
+        "operation",
+        "ticket_id"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-ticket-command-1"
+}

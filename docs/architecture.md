@@ -7,6 +7,20 @@ full feed archives or expanded calculation snapshots.
 
 ## Ordinary current data flow
 
+Collection is currently independent of browser tabs but still owned by the web
+server. The shared scanner worker starts on HTTP access and keeps its projection
+in process memory; legacy board/slate routes also calculate on read. This is
+the implementation described below, not completed process separation.
+
+The next local change separates a background data runtime from the app process.
+It reuses this PostgreSQL/current-row design, moves shared affected-input
+calculations into that runtime and publishes compact replaceable latest results.
+The app reads those results; selected Amount-specific sizing may remain explicit
+bounded backend work. One background process may own collection and calculation.
+App-only restarts must leave collection and data epochs intact, while explicit
+collection Stop and original source expiry still remove current-action authority.
+No message broker, separate repository or feed/report archive is required.
+
 1. Existing source adapters validate bounded responses and reconstruct native
    books in bounded memory. Provider response bodies/websocket messages are
    discarded after normalization rather than archived on every receipt.

@@ -1,0 +1,341 @@
+{
+  "universe_basis": "selected_current_admitted",
+  "version": "predict-scanner-readiness-1",
+  "policy": "predict-scanner-readiness-policy-1",
+  "policy_revision": "d1376d324851acd4d5f18f5ec7b57d58256767c1b8a7c635164e7411301d142f",
+  "as_of": "2026-10-14T01:15:09.650084+00:00",
+  "selection": {
+    "venues": [
+      "kalshi",
+      "polymarket_us"
+    ],
+    "sports": [
+      "football"
+    ],
+    "leagues": [
+      "NFL"
+    ],
+    "markets": [
+      "winner"
+    ],
+    "periods": [
+      "full_game"
+    ]
+  },
+  "epoch": "authored-epoch",
+  "input_revision": "authored-inputs",
+  "revision": "4c717efbed0dbd4dc377a7158ec430e652d55eb79e1c64d99cffd696c98b73ff",
+  "state": "ready",
+  "expires_at": "2026-10-14T01:15:39.650084+00:00",
+  "scopes": [
+    {
+      "key": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65",
+      "venue": "polymarket_us",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "configured": true,
+      "authorized": true,
+      "supported": true,
+      "check": {
+        "state": "ready",
+        "reason_codes": []
+      },
+      "state": "ready",
+      "counts": {
+        "identity_bound": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "price_present": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "synchronized_depth": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        },
+        "cashflow_inputs_ready": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        }
+      }
+    },
+    {
+      "key": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c",
+      "venue": "kalshi",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "configured": true,
+      "authorized": true,
+      "supported": true,
+      "check": {
+        "state": "ready",
+        "reason_codes": []
+      },
+      "state": "ready",
+      "counts": {
+        "identity_bound": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "price_present": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "synchronized_depth": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        },
+        "cashflow_inputs_ready": {
+          "value": 1,
+          "denominator": 1,
+          "unit": "instruments",
+          "scope": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c"
+        }
+      }
+    }
+  ],
+  "instruments": [
+    {
+      "id": "authored-second-leg",
+      "scope_key": "61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c",
+      "venue": "kalshi",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "occurrence_id": "event:46c3e0f070946dca65945fb93584ba51",
+      "direction": "home",
+      "overtime": "included",
+      "native_key": [
+        "kalshi",
+        "authored-event",
+        "authored-market",
+        "no",
+        "no"
+      ],
+      "predicate": {
+        "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+        "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+        "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+        "participant": "NFL:SEA",
+        "predicate": "not_win",
+        "signed_line": null,
+        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+        "outcome_cardinality": 2,
+        "result_interpretation": "normal_win"
+      },
+      "native_contract_id": "native-contract:1395ef152ead16b106691ddb3ac3fb5b33f7ec9d00ef3b54ae78f0df7d2e374b",
+      "units": "usd_per_contract",
+      "terms_sha256": "83e9b3d92e45ca1fb27c227fda50b34730b4ef5e91c536d5f57481c2fc3d4949",
+      "identity_bound": true,
+      "price_present": true,
+      "synchronized_depth": true,
+      "clocks": {
+        "source_at": "2026-10-14T01:15:09.650084+00:00",
+        "received_at": "2026-10-14T01:15:09.650084+00:00",
+        "book_at": "2026-10-14T01:15:09.650084+00:00",
+        "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+        "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+        "sql_committed_at": null,
+        "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+        "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+      },
+      "model_versions": {
+        "execution_template": "7d8e88b7ea1a1497d76351c4ac4e934416763d63986eb36b74cbdb17429e22b9"
+      },
+      "limits": {
+        "price_age_seconds": 30,
+        "book_age_seconds": 30,
+        "cross_leg_skew_seconds": 30,
+        "reference_age_seconds": 1800
+      },
+      "expires_at": "2026-10-14T01:15:39.650084+00:00",
+      "checks": {
+        "execution": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "contract": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "ev": {
+          "state": "ready",
+          "reason_codes": []
+        }
+      }
+    },
+    {
+      "id": "b2dd81accf277866d9110828528f44f626b2cfc3e16ac035dd8ba2a0835911d4",
+      "scope_key": "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65",
+      "venue": "polymarket_us",
+      "sport": "football",
+      "league": "NFL",
+      "market": "winner",
+      "period": "full_game",
+      "occurrence_id": "event:46c3e0f070946dca65945fb93584ba51",
+      "direction": "away",
+      "overtime": "included",
+      "native_key": [
+        "polymarket_us",
+        "136265",
+        "1155064",
+        "2309610",
+        "Long"
+      ],
+      "predicate": {
+        "event_id": "event:46c3e0f070946dca65945fb93584ba51",
+        "group_id": "group:d91775d6e5006c604c6cc28941bc2795",
+        "outcome_id": "outcome:4c7c1c0a582bcb5b4ecc31c7b1c1644e",
+        "participant": "NFL:SEA",
+        "predicate": "win",
+        "signed_line": null,
+        "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified | native-moneyline-normal-predicate-1:1a05244024f0d0dc1ebddd8a897b22c7faf475e83a5a037ac0b8a98f424d1c64 | Scoring overtime: included",
+        "outcome_cardinality": 2,
+        "result_interpretation": "normal_win"
+      },
+      "native_contract_id": "native-contract:885154c03a2204425965fcc7bdce6a47545dbfc5955e44f885a488d44b9d8dc9",
+      "units": "usd_per_contract",
+      "terms_sha256": "2fdf20db35982026cb0fa1a5b28c4d841606a097dc8aff8dde0f28185d606de8",
+      "identity_bound": true,
+      "price_present": true,
+      "synchronized_depth": true,
+      "clocks": {
+        "source_at": "2026-10-14T01:15:09.650084+00:00",
+        "received_at": "2026-10-14T01:15:09.650084+00:00",
+        "book_at": "2026-10-14T01:15:09.650084+00:00",
+        "book_received_at": "2026-10-14T01:15:09.650084+00:00",
+        "ingress_projected_at": "2026-10-14T01:15:09.650084+00:00",
+        "sql_committed_at": null,
+        "provider_book_at": "2026-10-14T01:15:09.650084+00:00",
+        "provider_market_at": "2026-10-14T01:15:09.650084+00:00"
+      },
+      "model_versions": {
+        "identity": "8f00da7ab23342fdb401c986eeeefb9f5ad668f6eae53d0afaa2a778a9cb5667",
+        "payout": "c3e5c2e86413e3c782d09894968a7185e236b05271ddaa6ca955dd025376fa02",
+        "reference": "dae470083384ce571e00315beb3b198c12d3491748b2b870f45b3a69c2a9b731",
+        "fee": "445fda53d340adafc2287f4108772d4d139fc5babcb3cebc699421ebfd49965a",
+        "quantity": "824095a7869a7cf7a52b06ebc3d4e1bd0636af595cc8ec789efea18d8242ac28",
+        "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+        "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9",
+        "execution_template": "1f1c6feb0c018a5ee1b0b112e631d4b34f2ce82fa5bf7eee970b26ba35056271"
+      },
+      "limits": {
+        "price_age_seconds": 30,
+        "book_age_seconds": 30,
+        "cross_leg_skew_seconds": 30,
+        "reference_age_seconds": 1800
+      },
+      "expires_at": "2026-10-14T01:15:39.650084+00:00",
+      "checks": {
+        "execution": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "contract": {
+          "state": "ready",
+          "reason_codes": []
+        },
+        "ev": {
+          "state": "unsupported",
+          "reason_codes": [
+            "reference_missing"
+          ]
+        }
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "id": "4f7c800952e29308393a9699898723625edf534856df0b808d2060d59789182c",
+      "legs": [
+        "authored-second-leg",
+        "b2dd81accf277866d9110828528f44f626b2cfc3e16ac035dd8ba2a0835911d4"
+      ],
+      "occurrence_id": "event:46c3e0f070946dca65945fb93584ba51",
+      "skew_seconds": 0.0,
+      "input_check": {
+        "state": "ready",
+        "reason_codes": []
+      },
+      "expires_at": "2026-10-14T01:15:39.650084+00:00"
+    }
+  ],
+  "counts": {
+    "selected_scopes": {
+      "value": 2,
+      "denominator": 2,
+      "unit": "venue_scopes",
+      "scope": "selected_universe"
+    },
+    "observed_occurrences": {
+      "value": 1,
+      "denominator": 1,
+      "unit": "occurrences",
+      "scope": "selected_observed"
+    },
+    "observed_instruments": {
+      "value": 2,
+      "denominator": 2,
+      "unit": "instruments",
+      "scope": "selected_observed"
+    },
+    "compatible_pair_inputs": {
+      "value": 1,
+      "denominator": 1,
+      "unit": "pairs",
+      "scope": "selected_exact_opposing_inputs"
+    },
+    "cashflow_pairs_ready": {
+      "value": 1,
+      "denominator": 1,
+      "unit": "pairs",
+      "scope": "selected_exact_opposing_inputs"
+    },
+    "evaluated_pairs": {
+      "value": 0,
+      "denominator": 1,
+      "unit": "pairs",
+      "scope": "selected_ready_inputs"
+    }
+  },
+  "pair_coverage": "evaluable",
+  "evaluation": {
+    "state": "not_evaluated",
+    "qualifying_pairs": null,
+    "no_qualifying_opportunities": false
+  },
+  "causes": [
+    {
+      "purpose": "ev",
+      "code": "reference_missing",
+      "count": {
+        "value": 1,
+        "denominator": 2,
+        "unit": "instruments",
+        "scope": "selected_observed"
+      }
+    }
+  ],
+  "causes_overlap": true,
+  "provider_requests": 0
+}

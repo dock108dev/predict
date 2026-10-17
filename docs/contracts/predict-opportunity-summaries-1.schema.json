@@ -1,0 +1,509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-opportunity-summaries-1",
+  "title": "Bounded selected-scope observed opportunity episode summaries",
+  "type": "object",
+  "required": [
+    "version",
+    "server_id",
+    "epoch",
+    "scope",
+    "observed_at",
+    "filters",
+    "state",
+    "observation_window",
+    "counts",
+    "edge_percent",
+    "supported_capital_usd",
+    "duration_seconds",
+    "coverage",
+    "history",
+    "bounds",
+    "notes",
+    "unsupported_filters",
+    "provider_requests",
+    "financial_evaluations"
+  ],
+  "properties": {
+    "version": {
+      "const": "predict-opportunity-summaries-1"
+    },
+    "server_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "epoch": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "observed_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "filters": {
+      "type": "object",
+      "required": [
+        "venues",
+        "sports",
+        "leagues",
+        "markets",
+        "periods",
+        "category",
+        "minimum_edge",
+        "minimum_size"
+      ],
+      "properties": {
+        "venues": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "sports": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "leagues": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "markets": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "periods": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "category": {
+          "enum": [
+            "covered_outcome_arb",
+            "conditional_hedge",
+            "ev"
+          ]
+        },
+        "minimum_edge": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minimum_size": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "enum": [
+        "available",
+        "unavailable",
+        "stopped"
+      ]
+    },
+    "observation_window": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "observed_episodes",
+        "observed_new",
+        "left_censored",
+        "ended",
+        "open",
+        "gap_censored"
+      ],
+      "properties": {
+        "observed_episodes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "observed_new": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "left_censored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "ended": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "open": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "gap_censored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "edge_percent": {
+      "type": "object",
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?\\d{1,80}(?:/\\d{1,80}|\\.\\d{1,80})?$",
+              "maxLength": 162
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?\\d{1,80}(?:/\\d{1,80}|\\.\\d{1,80})?$",
+              "maxLength": 162
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "supported_capital_usd": {
+      "type": "object",
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?\\d{1,80}(?:/\\d{1,80}|\\.\\d{1,80})?$",
+              "maxLength": 162
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?\\d{1,80}(?:/\\d{1,80}|\\.\\d{1,80})?$",
+              "maxLength": 162
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "duration_seconds": {
+      "type": "object",
+      "required": [
+        "minimum_observed",
+        "maximum_observed",
+        "complete_episodes"
+      ],
+      "properties": {
+        "minimum_observed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "maximum_observed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "complete_episodes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "state",
+        "complete",
+        "observed_complete_publications",
+        "gaps",
+        "checked_zero",
+        "evaluated_pairs",
+        "compatible_pairs"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "observed_complete_publications": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "gaps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "checked_zero": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "evaluated_pairs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 2048
+        },
+        "compatible_pairs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 2048
+        }
+      },
+      "additionalProperties": false
+    },
+    "history": {
+      "type": "object",
+      "required": [
+        "complete",
+        "evicted_episodes",
+        "continuity_lost",
+        "threshold_history_complete"
+      ],
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "evicted_episodes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "continuity_lost": {
+          "type": "boolean"
+        },
+        "threshold_history_complete": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bounds": {
+      "type": "object",
+      "required": [
+        "retention_seconds",
+        "episode_limit",
+        "storage_limit_bytes",
+        "physical_bytes",
+        "physical_high_water_bytes",
+        "queue_observations",
+        "response_bytes"
+      ],
+      "properties": {
+        "retention_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "episode_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "storage_limit_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10485760
+        },
+        "physical_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10485760
+        },
+        "physical_high_water_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10485760
+        },
+        "queue_observations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "response_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        }
+      },
+      "additionalProperties": false
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    "unsupported_filters": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      }
+    },
+    "provider_requests": {
+      "const": 0
+    },
+    "financial_evaluations": {
+      "const": 0
+    }
+  },
+  "additionalProperties": false
+}

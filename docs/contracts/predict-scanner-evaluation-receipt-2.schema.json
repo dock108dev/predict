@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "predict-scanner-evaluation-receipt-2"
+    },
+    "pair_id": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "readiness_revision": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "dependency_revision": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revalidated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "qualifying": {
+      "type": "boolean"
+    },
+    "evaluator_revision": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "original_readiness_revision": {
+      "type": "string",
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "version",
+    "pair_id",
+    "readiness_revision",
+    "dependency_revision",
+    "evaluated_at",
+    "revalidated_at",
+    "qualifying",
+    "evaluator_revision",
+    "original_readiness_revision"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict-scanner-evaluation-receipt-2.schema.json",
+  "title": "Trusted internal exact-dependency revalidation proof; never accepted from HTTP"
+}

@@ -1,0 +1,29 @@
+{
+  "version": "predict-scanner-transitions-1",
+  "server_id": "85cf6b92-7a71-4d9e-af09-d92b55ee7cb4",
+  "epoch": "authored-epoch",
+  "scope": "27c10a043714467f07dafb98b4c42db8208475f99e3b47f15b0fd47f30a6e01d",
+  "cursor": 3,
+  "continuity": "censored",
+  "reason": "baseline_or_cursor_resync",
+  "events": [],
+  "unsupported_filters": [],
+  "coverage_complete": true,
+  "provider_requests": 0,
+  "financial_evaluations": 0,
+  "bounds": {
+    "events": 256,
+    "response_bytes": 528384,
+    "retained_bytes": 2097152,
+    "batches": 128,
+    "consumer_state": 0,
+    "baseline_rows": 4096,
+    "baseline_bytes": 8388608
+  },
+  "material_improvement": {
+    "edge_percentage_points": "1/4",
+    "size_ratio": "11/10",
+    "minimum_size_increase_usd": "10",
+    "cooldown_seconds": 30
+  }
+}

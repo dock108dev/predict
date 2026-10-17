@@ -1,0 +1,11 @@
+{
+  "version": "predict-scanner-evaluation-receipt-2",
+  "pair_id": "2fa9952e24b4feb263c931f1bec5e656c34328cacd0a2b92cca7d34afbfcdb17",
+  "readiness_revision": "4517640ed96af616ea88b8881bb4f596b8d2c5e38276f24160393570d82095cf",
+  "dependency_revision": "4f2deda4e7cb95899ac83be9b5c491cfff0840a1e4456179e0a4056454691979",
+  "evaluated_at": "2026-10-14T01:15:09.650084+00:00",
+  "revalidated_at": "2026-10-14T01:15:09.650084+00:00",
+  "original_readiness_revision": "4517640ed96af616ea88b8881bb4f596b8d2c5e38276f24160393570d82095cf",
+  "qualifying": true,
+  "evaluator_revision": "afc0eb7e8cc3eaa9d11fce0533df27b414a844251dd9a602f96b85025d24fa07"
+}
