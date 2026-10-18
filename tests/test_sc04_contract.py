@@ -2,9 +2,11 @@
 import importlib.util
 from hashlib import sha256
 import json
+import re
 from pathlib import Path
 import unittest
 from unittest.mock import patch
+from urllib.parse import urljoin
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from app.dashboard.scanner_client_api import mount
@@ -14,6 +16,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ClientBinding(unittest.IsolatedAsyncioTestCase):
+    async def test_browser_previews_serve_the_complete_scanner_module_graph(self):
+        from tests.sc05_preview import create_app as ticket_app
+        for factory in (create_app, ticket_app):
+            with self.subTest(preview=factory.__module__):
+                async with TestClient(TestServer(factory())) as client:
+                    pending = ['/current/assets/scanner.js']
+                    seen = set()
+                    while pending:
+                        path = pending.pop()
+                        if path in seen:
+                            continue
+                        seen.add(path)
+                        response = await client.get(path)
+                        self.assertEqual(response.status, 200, path)
+                        self.assertIn('javascript', response.content_type)
+                        source = await response.text()
+                        self.assertEqual(source, (ROOT / 'app/dashboard/opportunity_static/current' / Path(path).name).read_text())
+                        pending.extend(urljoin(path, name) for name in re.findall(r'from\s+[\'"]([^\'"]+)[\'"]', source))
+                    self.assertIn('/current/assets/board-read.js', seen)
+                    self.assertEqual((await client.get('/current/assets/unknown.js')).status, 404)
+
     async def test_actual_served_asset_identity_and_no_cache(self):
         app = web.Application()
         mount(app)
