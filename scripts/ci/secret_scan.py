@@ -24,17 +24,18 @@ def verify_rules(binary, config):
         source.write_text(
             f'PUBLIC = ("the_odds_api", "{public_id}")\napi_key = "{credential}"\n'
         )
-        repository = Path(__file__).resolve().parents[2]
         example_name = "docs/examples/scanner-readiness-1/waiting.json"
-        scopes = json.loads((repository / example_name).read_text())["scopes"]
+        # Authored public values exercise the allowlist without local retained data.
+        scope_digest = (
+            "293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65"
+        )
         example = root / "source" / example_name
         example.parent.mkdir(parents=True)
         example.write_text(
-            '"key": "' + scopes[0]["key"] + '"\napi_key = "' + credential + '"\n'
+            '"key": "' + scope_digest + '"\napi_key = "' + credential + '"\n'
         )
         review_name = "app/reviews/native/retained-1694c5363a2386593b8c44f1-v1.json"
-        review = json.loads((repository / review_name).read_text())
-        team = review["sources"]["kalshi"]["metadata"]["custom_strike"]["hockey_team"]
+        team = "f61f9daa-407b-4c46-96e8-feee19cd6f51"
         native = root / "source" / review_name
         native.parent.mkdir(parents=True)
         native.write_text(

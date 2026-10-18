@@ -13,6 +13,19 @@ from tests.test_sc03_finance import AT
 
 
 class DepthUnits(TestCase):
+    def test_authored_identity_does_not_transplant_retained_confirmation(self):
+        from copy import deepcopy
+        from tests.test_d03_current_rows import fixture_records
+        authored = records(1)[0]
+        self.assertNotIn('book_confirmation', authored['quote'])
+        self.assertEqual(authored['quote']['times']['source_at'], AT.isoformat())
+        prepare(authored)
+        retained = next(row for row in fixture_records()
+                        if row['quote']['venue'] == authored['quote']['venue'])
+        authored['quote']['book_confirmation'] = deepcopy(retained['quote']['book_confirmation'])
+        with self.assertRaisesRegex(ValueError, 'Confirmation market mismatch'):
+            prepare(authored)
+
     def test_stake_depth_keeps_decimal_odds_and_native_bounds(self):
         stake=records(2)[2];self.assertGreater(float(stake['quote']['depth'][0]['price']),1)
         self.assertEqual(prepare(stake)['depth'],stake['quote']['depth'])

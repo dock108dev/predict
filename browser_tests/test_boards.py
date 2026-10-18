@@ -193,7 +193,17 @@ def test_saved_board_journey(width):
         try:
             page.goto("http://board.invalid/")
             page.wait_for_selector(".team")
-            assert page.locator(".team").count() == 2
+            # Same participants have distinct settlement scopes: aggregate,
+            # Polymarket and Kalshi win/not-win must remain separate cards.
+            headings = page.locator(".team .slate-team-name strong").all_text_contents()
+            from collections import Counter
+
+            assert Counter(headings) == {
+                "Denver Broncos": 3,
+                "Seattle Seahawks": 3,
+                "Denver Broncos · does not win": 1,
+                "Seattle Seahawks · does not win": 1,
+            }
             page.goto("http://board.invalid/ev")
             page.wait_for_selector(".empty")
             page.get_by_role("button", name="Show all comparisons", exact=True).click()

@@ -159,3 +159,20 @@ installed/live acceptance and independent new-user testing were not run. The
 working source assets were rebuilt; no ordinary process restart, publication,
 commit or release was performed. Visual conclusions apply to the inspected
 synthetic states and remain provisional for owner/customer use.
+
+### Follow-up browser regression repair
+
+The maintained SC04 and SC05 journeys now pass locally with authored loopback
+inputs. Desktop scanner rows retain their 64px minimum and 44px controls while
+fitting eight complete rows at 1440×900. Narrow navigation wraps when text is
+enlarged to a 24px root size, keeping every destination within the viewport.
+Generated scanner assets were rebuilt and matched screenshots inspected.
+
+The Odds journey expects separate aggregate/native settlement scopes and distinct
+win/not-win positions, rather than assuming one card per team. The two widths
+1280 and 390 pass their full Details, keyboard, retry and Stop journeys. Evidence:
+`test-results/browser-repair-20261017/first-four.json` and matched screenshots.
+SC06's 500-event campaign failed in its retained final run. Formal stress
+qualification was already deferred and nonblocking under the October 16 owner
+decision; its executable campaign was removed at the owner's request on October
+17. These four journey passes do not qualify that historical stress workload.

@@ -117,17 +117,13 @@ compatibility runs. Python 3.11 remains a supported compatibility lane.
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
 ```
 
-The SQL lane includes SC06's varied financial current-row roundtrip. The actual
-500-event SQL-to-Chromium workload uses the same disposable PostgreSQL owner:
-
-```sh
-PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --sc06-browser --report-dir test-results/postgres-sc06-browser
-```
-
-It requires the locked browser tooling and matching Chromium. A missing socket,
-database or browser does not establish qualification. The browser CI wrapper
-provisions this PostgreSQL lane rather than replacing financial work with scalar
-fixtures. The retained timing report preserves waiting, failures and timeouts.
+The SQL lane includes SC06's small financial current-row roundtrip, ready ticket,
+original-clock expiry and missing-depth refusal checks. Formal 500-event,
+30-ticket and burst stress qualification is deferred under the October 16 owner
+priority decision. Its campaign implementation and launcher were removed at the
+owner's request on October 17. Historical results remain in the
+[responsiveness evidence](sc06-performance-20261016.md); they are not passing
+performance qualification or a routine CI prerequisite.
 
 The ordinary launcher selects tools matching its existing cluster's `PG_VERSION`
 even when PATH selects PostgreSQL 16. `PREDICT_PG_BIN` can select that matching

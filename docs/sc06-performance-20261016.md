@@ -7,13 +7,15 @@ workload, actual results and unperformed checks as evidence, not a current local
 development gate. Historical failures are not relabeled as passes. Data/app
 separation and the remaining actual-source/customer work proceed next.
 
-The maintained qualification is `browser_tests/sc06_browser.cjs`, invoked by
-`browser_tests/test_sc06.py`. The wrapper provisions PostgreSQL 16 through
-`scripts/ci/postgres.py --sc06-browser`; it has no socket-missing success or scalar
-fallback. `tests/test_sc06_performance_sql.py` verifies the three position types,
-SQL depth reconstruction, a real ready selected ticket, genuine post-commit
-observation, preserved expiry and missing-depth refusal. Timing qualification is
-separate from this small smoke test.
+October 17 owner correction: remove the deferred stress campaign from active
+source. The former browser timing/burst harnesses, dedicated SQL/HTTP diagnostic
+server, profiler and campaign launcher have been removed. The sections below
+record the historical workload and results at their original revisions; references
+to those campaign files and commands are historical, not current instructions.
+`tests/test_sc06_performance_sql.py` remains required and verifies three position
+types, SQL depth reconstruction, a real ready selected ticket, genuine post-commit
+observation, preserved expiry and missing-depth refusal. Product summary and
+ordinary browser checks also remain required. No stress pass is claimed.
 
 ## Workload and evidence class
 

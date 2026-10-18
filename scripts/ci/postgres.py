@@ -63,17 +63,12 @@ def main(argv=None):
         help="Include the small desktop/390px DA browser walkthrough; requires --da-separation.",
     )
     parser.add_argument(
-        "--sc06-browser",
-        action="store_true",
-        help="Run the integrated SC06 SQL-to-Chromium workload in this disposable cluster.",
-    )
-    parser.add_argument(
         "--sc03-ticket-timing",
         action="store_true",
         help="Run the SC03 30-sample SQL ticket timing check in this disposable cluster.",
     )
     args = parser.parse_args(argv)
-    if sum((args.da_separation, args.sc06_browser, args.sc03_ticket_timing)) > 1:
+    if args.da_separation and args.sc03_ticket_timing:
         parser.error("Select only one focused PostgreSQL qualification lane")
     if args.da_browser and not args.da_separation:
         parser.error("--da-browser requires --da-separation")
@@ -109,8 +104,6 @@ def main(argv=None):
             if args.da_separation
             else "sc03-ticket-timing"
             if args.sc03_ticket_timing
-            else "sc06-browser"
-            if args.sc06_browser
             else "registered-sql"
         ),
     }
@@ -191,8 +184,6 @@ def main(argv=None):
                     "tests/test_sc03_sql.py::TicketSQL::test_authored_ready_http_timing_with_actual_disposable_sql_capture"
                 ]
                 if args.sc03_ticket_timing
-                else ["browser_tests/test_sc06.py"]
-                if args.sc06_browser
                 else [
                     "integration_tests",
                     "tests/test_d03_current_rows.py",
@@ -227,8 +218,6 @@ def main(argv=None):
             environment = os.environ.copy()
             environment["SC01_TEST_PGSOCKET"] = str(socket)
             environment["SC02_TEST_PGSOCKET"] = str(socket)
-            environment["SC06_TEST_PGSOCKET"] = str(socket)
-            environment["SC06_SQL_PROVISIONED"] = "1"
             environment["DA_TEST_PGSOCKET"] = str(socket)
             environment["DA_BROWSER"] = "1" if args.da_browser else "0"
             # Tests also spawn pg_dump/pg_restore; they must match this server.

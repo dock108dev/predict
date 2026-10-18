@@ -313,56 +313,16 @@ class ReadinessUniverseBounds(TestCase):
 
 
 class AuthoredOriginals(TestCase):
-    def test_all1000_authored_originals_match_native_identity_and_depth(self):
+    def test_varied_authored_originals_match_native_identity_and_depth(self):
         from tests.sc06_fixture import records
-        values = records(500, at=clock())
-        self.assertEqual(len(values), 1000)
+        values = records(3, at=clock())
+        self.assertEqual(len(values), 6)
         for row in values:
             original = row['quote']['original']
             self.assertEqual(original['transformation'], 'identity')
             self.assertEqual(original['native_value'], original['value'])
             self.assertEqual(original['native_units'], original['units'])
             self.assertEqual(row['quote']['depth'][0]['price'], original['value'])
-
-
-class ProductHTTPRecording(TestCase):
-    def test_only_exact_product_paths_consume_http_proof(self):
-        from tests.sc06_server import product_http_path
-        for path in ('/api/scanner','/api/scanner/client','/api/scanner/ticket',
-                     '/api/scanner/ticket/binding','/api/scanner/summaries','/api/scanner/transitions'):
-            self.assertTrue(product_http_path(path),path)
-        for path in ('/__test/state','/__test/clock','/__test/update','/api/scanner-lookalike','/other'):
-            self.assertFalse(product_http_path(path),path)
-
-    def test_product_get_never_reads_response_body_and_post_retains_compact_frame(self):
-        from tests.sc06_server import product_http_entry
-        class BodyMustNotBeRead:
-            status=200
-            @property
-            def body(self):raise AssertionError('GET response body must not be decoded')
-        req=SimpleNamespace(path='/api/scanner/ticket',method='GET')
-        entry=product_http_entry(req,BodyMustNotBeRead(),1.0,2.0)
-        self.assertEqual(entry,dict(path=req.path,method='GET',started=1.0,completed=2.0,status=200))
-        req.method='POST'
-        response=web.json_response(dict(state='unchanged',ready_for_manual_action=True,
-            selection={'row_id':'exact-row'},selected_frame=dict(id='exact-frame',
-                dependency_revision='exact-dependency',expires_at=clock(20),result={'large_raw_probe':'must not persist'}),
-            raw_probe='must not persist'))
-        entry=product_http_entry(req,response,1.0,2.0)
-        self.assertEqual(entry['ticket']['selected_frame'],dict(id='exact-frame',dependency_revision='exact-dependency',expires_at=clock(20)))
-        self.assertTrue(entry['ticket']['ready_for_manual_action'])
-        self.assertNotIn('must not persist',json.dumps(entry))
-
-    def test_failed_and_cancelled_product_requests_remain_explicit(self):
-        from tests.sc06_server import product_http_entry
-        req=SimpleNamespace(path='/api/scanner/ticket',method='POST')
-        response=web.Response(status=503,body=b'invalid JSON')
-        entry=product_http_entry(req,response,1.0,2.0)
-        self.assertEqual(entry['status'],503)
-        self.assertIn('ticket_decode_error',entry)
-        cancelled=product_http_entry(req,None,1.0,2.0,'CancelledError')
-        self.assertEqual(cancelled['error'],'CancelledError')
-        self.assertIsNone(cancelled['status'])
 
 
 class TemporalEconomics(TestCase):

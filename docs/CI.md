@@ -134,8 +134,8 @@ license in package metadata; dependency licenses do not supply a project license
 | Reporting and gate failures | CI / `quality` / `pytest tests/test_ci_reporting.py`; readiness / `gate.py` | Same | Required | Passing, failed, cancelled, missing, malformed, all-skipped and intentional assurance N/A samples |
 | Distribution completeness and installed HTTP startup | CI / `quality` / `package_smoke.py` | Same | Required | Fresh sdist/wheel, exact package file inventory including reviewed scoring PDFs, hash-locked new environment, imports/routes outside source tree; no SQL owner or acquisition |
 | Persistent boundaries and migrations | CI / `postgres`, reusable storage / `postgres.py` | Same / PostgreSQL 16 | Required | Disposable cluster, selected migration/transaction/read tests and teardown; never ordinary state |
-| Browser journey, focus, enlargement and finite Stop | CI / `browser` / `pytest -q browser_tests` | Same / locked Chromium | Required | Intercepted boards, authored loopback SC04/SC05 and actual disposable-SQL SC06; automated evidence does not establish owner or installed-device acceptance |
-| Representative UI performance and resource budgets | Browser SC04/SC05/SC06 harnesses and retained JSON | Same | Required existing budgets; measurements environment-specific | Authored bounded workloads, including the 500-event SC06 workload. Do not replace actual SQL/browser qualification with portable substitutes |
+| Browser journey, focus, enlargement and finite Stop | CI / `browser` / `pytest -q browser_tests` | Same / locked Chromium | Required | Intercepted boards and authored loopback SC04/SC05; automated evidence does not establish owner or installed-device acceptance |
+| Representative UI performance and resource budgets | Browser SC04/SC05 harnesses and retained JSON | Same | Required existing SC04/SC05 budgets; measurements environment-specific | Formal SC06 500-event/30-ticket/burst stress qualification is deferred under the October 16 owner priority decision. Its executable campaign was removed at the owner’s request on October 17; historical failures remain failures |
 | Secrets | CI / `quality` / `secret_scan.py` | Same | Required | Redacted current publishable-tree scan; exact public identifiers/digests have dated, path-scoped exceptions and credential negative controls. History is outside scan scope |
 | Dependency vulnerabilities and inventory | CI / `quality` / locked `pip_audit`; package metrics | Same; advisory data refreshed per run | Required audit; informational license inventory | Findings and scanner outage fail. Unknown licenses stay null; no invented legal approval |
 | Broader runtime compatibility | Scheduled assurance / `compatibility` | Monday 07:23 UTC or typed manual / macOS 15, Python 3.11 and 3.14 | Scheduled/requested required | Portable suite and fresh package; each matrix result remains visible |
@@ -162,11 +162,12 @@ repository workflow-dispatch permission. A selected scope's cancelled/failed/mis
 job fails its summary; deliberately unselected scopes show N/A. An old scheduled
 pass never qualifies a newer PR. No tag, environment or release publishing is added.
 
-The browser job explicitly selects PostgreSQL 16 and allows 25 minutes for the
-SC06 inner timeout plus other journeys and tooling setup. Its SC06 reports live
-inside the uploaded browser artifact. Job timeouts are outer safety bounds, not
-performance acceptance thresholds. A cancelled runner may prevent final uploads;
-job cancellation remains a failed readiness input even when no report survives.
+The ordinary browser job has a 15-minute outer timeout for tooling setup and
+SC04/SC05 journeys. The required PostgreSQL job retains the small SC06 financial
+roundtrip, ready-ticket, original-clock expiry and missing-depth checks. The
+removed stress campaign has no manual workflow, schedule or launcher flag.
+Historical stress reports are evidence of their failed runs, not current CI gates.
+A cancelled runner may prevent final uploads; cancellation still fails readiness.
 
 ## Metrics and integration policy
 
@@ -225,3 +226,18 @@ workflow implements readiness but cannot enforce merging by itself. Recommended
 owner setting: require `CI readiness` on `main` after resolving current failures;
 choose freshness/up-to-date rules with the owner's merge policy. This is a
 recommendation, not an applied repository setting.
+
+### Browser harness freshness and scheduling
+
+The SC06 authored workload uses its own original source clocks. Cloning a retained
+quote into a different authored market must drop the old market's confirmation;
+it must not reseal or reuse that provider proof. Production confirmation validation
+is unchanged, and a regression verifies that a transplanted proof is rejected.
+
+The former 500-event, 30-sample timing and burst campaign was removed from active
+source at the owner's request. Its dedicated browser harness, diagnostic SQL/HTTP
+server, profiler and harness-only tests are removed together. Product summary,
+financial, stale-input, missing-depth and ordinary browser checks remain required.
+This implements the existing October 16 deferral; it does not claim the stress
+campaign passed or establish a new performance baseline. Prior failure reports
+remain retained under `test-results/browser-repair-20261017/`.

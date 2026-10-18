@@ -968,3 +968,34 @@ class AssuranceArtifactTests(unittest.TestCase):
                 self.assertEqual(
                     text, Path("test-results/assurance/summary.md").read_text()
                 )
+
+
+class SecretControlIsolationTests(unittest.TestCase):
+    def test_controls_do_not_read_application_or_retained_fixture_files(self):
+        import sys
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        with patch.dict(sys.modules, {"export": SimpleNamespace(export=None)}):
+            module = load("secret_scan")
+        original_read = Path.read_text
+
+        def read_report_only(path, *args, **kwargs):
+            self.assertEqual(path.name, "report.json")
+            return original_read(path, *args, **kwargs)
+
+        def scan(command, **kwargs):
+            source = Path(command[2])
+            files = sorted(p for p in source.rglob("*") if p.is_file())
+            self.assertEqual(len(files), 3)
+            report = Path(command[command.index("--report-path") + 1])
+            report.write_text(
+                json.dumps([dict(File=str(p), StartLine=2) for p in files])
+            )
+            return SimpleNamespace(returncode=1)
+
+        with (
+            patch.object(module.subprocess, "run", side_effect=scan),
+            patch.object(Path, "read_text", read_report_only),
+        ):
+            module.verify_rules(Path("gitleaks"), Path(".gitleaks.toml"))

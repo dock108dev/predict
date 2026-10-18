@@ -57,51 +57,5 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const stats=diagnostic.read();assert.equal(stats.timings.length,Math.min(256,Math.floor(2097152/size)));
   assert.equal(stats.droppedSamples,256-stats.timings.length);assert.equal(stats.emittedSamples,256);assert.equal(events.length,256);
   assert.equal(stats.droppedBytes,stats.droppedSamples*size);assert(stats.timingBytes<=2097152);assert(stats.droppedSamples>0,'large pages disclose diagnostic eviction');
-  // Product HTTP proofs come from the durable checkpoint, independently of
-  // the small latest-request ring and unrelated trace/poll activity.
-  {
-    const crypto=require('node:crypto'),os=require('node:os'),path=require('node:path');
-    const {Harness}=require('../browser_tests/sc06_support.cjs');
-    const folder=fs.mkdtempSync(path.join(os.tmpdir(),'predict-sc06-http-proof-'));
-    try {
-      const entries=[],expectedTickets=[];
-      for(let i=0;i<3300;i++){
-        entries.push({stage:'fixture_non_http',index:i,path:'/__test/state',note:'Original Unicode 雪 and escaped\nline'});
-        if(i<30){
-          const ticket={state:'unchanged',ready_for_manual_action:true,
-            selection:{row_id:'row:'+i,dependency_revision:'dependency:'+i,economic_revision:'economic:'+i},
-            timing:{validation_ms:i},error:null,
-            selected_frame:{id:'early-ticket-frame:'+i,dependency_revision:'dependency:'+i,expires_at:'2030-01-01T00:00:00Z'}};
-          expectedTickets.push(ticket);
-          entries.push({stage:'product_http',path:'/api/scanner/ticket',method:'POST',started:i+.1,completed:i+.2,status:200,ticket});
-        }
-      }
-      const prefix=Buffer.from(entries.map(entry=>JSON.stringify(entry)).join('\n')+'\n');
-      const file=path.join(folder,'raw.jsonl');
-      fs.writeFileSync(file,prefix);
-      // Orderly shutdown may append after the final benchmark checkpoint.
-      fs.appendFileSync(file,JSON.stringify({stage:'after_checkpoint',must_not_join:true})+'\n');
-      const final={requests:[{path:'/__test/state',method:'GET'},entries.findLast(entry=>entry.stage==='product_http')],
-        recorder:{product_http:{product_entries:30,durable_enqueued:30,durable_enqueue_failed:0},
-          stream:{path:file,written_bytes:prefix.length,written_entries:entries.length,dropped:0,error:null}}};
-      const harness=Object.create(Harness.prototype);harness.resources=()=>{};
-      await harness.loadTraces(final);
-      assert.equal(final.requests.length,30,'all early HTTP proofs survive the latest-request ring');
-      assert.deepEqual(final.requests.map(entry=>entry.ticket),expectedTickets);
-      assert.equal(final.requests[0].ticket.selected_frame.id,'early-ticket-frame:0');
-      assert(final.requests.every(entry=>entry.stage==='product_http'&&entry.path==='/api/scanner/ticket'));
-      assert(!final.requests.some(entry=>entry.path.startsWith('/__test/')),'test polls cannot become product request proofs');
-      assert.deepEqual(final.request_proof_source,{kind:'durable_product_http_stream',entries:30});
-      assert.equal(final.traces.length,entries.length);
-      assert(final.traces.every((entry,index)=>entry.raw_trace_line===index+1));
-      assert(!final.traces.some(entry=>entry.stage==='after_checkpoint'));
-      assert.equal(final.trace_stream_checkpoint.entries,entries.length);
-      assert.equal(final.trace_stream_checkpoint.bytes,prefix.length);
-      assert.equal(final.trace_stream_checkpoint.sha256_prefix,crypto.createHash('sha256').update(prefix).digest('hex'));
-      assert(fs.statSync(file).size>final.trace_stream_checkpoint.bytes,'checkpoint excludes later shutdown bytes');
-      const missingProof={recorder:clone(final.recorder)};missingProof.recorder.product_http.durable_enqueued=31;
-      await assert.rejects(harness.loadTraces(missingProof),/all durable product HTTP entries reconstructed/);
-    } finally {fs.rmSync(folder,{recursive:true,force:true});}
-  }
-  console.log('PASS SC06 scope validation, coverage-backed zero, censoring, rational extrema, bounded optional reads, abort/late scope isolation, causal diagnostic bounds and durable early HTTP ticket proofs');
+  console.log('PASS SC06 scope validation, coverage-backed zero, censoring, rational extrema, bounded optional reads, abort/late scope isolation, causal diagnostic bounds');
 })().catch(e=>{console.error(e);process.exitCode=1;});

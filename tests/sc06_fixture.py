@@ -78,6 +78,10 @@ def records(count=EVENTS, at=None):
                 "native_metadata",
             ):
                 e.pop(key, None)
+            # The cloned retained confirmation belongs to its original market.
+            # These authored observations use their own source clocks, not a
+            # transplanted provider confirmation for another event/book.
+            q.pop("book_confirmation", None)
             q.pop("occurrence_match", None)
             q.pop("occurrence_link", None)
             for key in ("native_event_id", "native_market_id", "native_outcome_id"):

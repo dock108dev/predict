@@ -22,10 +22,10 @@ const root=path.resolve(__dirname,'..'),out=process.env.PREDICT_SC04_REPORT||pat
  });
  const waitRevision=async rev=>page.waitForFunction(rev=>window.predictScannerObservations?.().identity?.publication_revision===rev,rev);
  const shot=async name=>page.screenshot({path:path.join(out,'screenshots',name+'.png')});
- const overflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow');
+ const overflow=async()=>{const bad=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(n=>{const r=n.getBoundingClientRect();return r.width&&getComputedStyle(n).visibility!=='hidden'&&(r.right>innerWidth+1||r.left< -1);}).slice(0,12).map(n=>({tag:n.tagName,id:n.id,cls:n.className,width:n.getBoundingClientRect().width,right:n.getBoundingClientRect().right})));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow: '+JSON.stringify(bad));};
  const tick=async()=>{await page.waitForTimeout(900);};
  await page.goto(base);await page.waitForSelector('.scanner-row');await page.waitForTimeout(50);assert.equal(await page.locator('.scanner-row').count(),100);
- const visible=await page.locator('.scanner-row').evaluateAll(ns=>ns.filter(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}).length);await shot('desktop');assert(visible>=8,'desktop eight-row density: '+visible);await overflow();
+ const visible=await page.locator('.scanner-row').evaluateAll(ns=>ns.filter(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}).length);await shot('desktop');assert(visible>=8,'desktop eight-row density: '+visible+'; '+JSON.stringify(await page.locator('.scanner-row').first().evaluate(n=>({top:n.getBoundingClientRect().top,height:n.getBoundingClientRect().height}))));await overflow();
  const first=await page.locator('.scanner-row').first().getAttribute('data-row-id');assert(first.includes('0129')||first.includes('0128'),'best later event globally first');
  await page.locator('#scanner-next').click();await page.waitForFunction(()=>window.predictScannerObservations().identity.offset===100);assert.equal(await page.locator('.scanner-row').count(),30);await page.locator('#scanner-prev').click();await page.waitForFunction(()=>window.predictScannerObservations().identity.offset===0);
  // Server filters the complete universe before paging; never first-page filtering.

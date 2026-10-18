@@ -115,7 +115,7 @@ label input,label select { font-size:.9375rem }
 #scanner-disclosure[open] { flex-basis:100%; padding:14px; background:white; border:1px solid #d9e1ec; border-radius:10px }
 @media(min-width:1001px) {
   .scanner-heading { margin:16px 0 12px }
-  .scanner-row { padding:8px 14px; min-height:64px }
+  .scanner-row { padding:4px 14px; min-height:64px }
   .scanner-row .leg strong { font-size:.8125rem; line-height:1.35 }
   .scanner-row .leg small { line-height:1.35 }
   .scanner-row .edge { font-size:1.05rem; line-height:1.2 }
@@ -134,3 +134,6 @@ label input,label select { font-size:.9375rem }
 @media(min-width:1001px) {
   .scanner-row .leg>div { font-size:.8125rem; line-height:1.35 }
 }
+
+/* Enlarged navigation keeps every destination within the narrow viewport. */
+@media(max-width:760px) { nav { flex-wrap:wrap } }
