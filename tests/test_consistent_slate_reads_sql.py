@@ -28,6 +28,9 @@ from tests.multisport_fixtures import SPORTS, FAMILIES, current_book, fake_disco
 
 
 VENUES = ('kalshi', 'polymarket_us')
+# This lane verifies read identity, paging and eviction, not a machine's speed.
+# Production response deadlines are exercised in test_selected_read_work.py.
+SEMANTIC_READ_SECONDS = 30
 
 
 @skipUnless(sql_fixtures.SOCKET, 'Explicit disposable consistent-read PostgreSQL lane required')
@@ -38,18 +41,22 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
     asyncSetUp = multisport_sql.AutomaticMultisportSQL.asyncSetUp
 
     async def api(self):
-        from app.dashboard.comparison_board_api import mount
+        from app.dashboard.comparison_board_api import mount, READ_WORK
         app = web.Application()
         mount(app, RuntimeClient(connector=self.connect))
+        app[READ_WORK].work_seconds = SEMANTIC_READ_SECONDS
         client = TestClient(TestServer(app))
         await client.start_server()
         self.addAsyncCleanup(client.close)
         return client, app
 
     async def publication(self, count, *, accepts=None):
-        for _ in range(300):
+        def capture():
             with self.connect() as db:
-                frame = latest.snapshot(db)
+                return latest.snapshot(db)
+        for _ in range(300):
+            # Polling must not block HTTP completion or the runtime heartbeat.
+            frame = await asyncio.to_thread(capture)
             games = frame['status'].get('games', [])
             if len(games) == count and len(frame['rows']) == count and (accepts is None or accepts(frame)):
                 return frame
