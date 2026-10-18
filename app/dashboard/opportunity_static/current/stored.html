@@ -9,29 +9,32 @@
 <body><a class="skip-link" href="#content">Skip to comparisons</a><main>
 <header>
 <a class="brand" href="/" aria-label="Predict home">Predict<span class="brand-mark" aria-hidden="true">↗</span></a>
-<nav aria-label="Views"><a href="/">Scanner</a><a href="/odds">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/admin">Admin</a></nav>
+<nav aria-label="Views"><a href="/">Scanner</a><a href="/odds">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/current/coverage">Coverage</a><a href="/admin">Admin</a></nav>
 <button id="stop" class="secondary">Stop collection</button>
 </header>
-<div class="heading"><div class="view-title"><h1 id="title">Odds</h1><span class="scope">NFL · Full game, including overtime</span></div>
-<details class="view-help"><summary>About this view</summary><div><p>American odds make prices comparable. Open a price for its original contract; use Details in EV and Arbs to inspect funding, costs and modeled outcomes.</p></div></details></div>
-<p id="purpose" class="view-purpose">Odds compares available prices across sites. EV shows estimated return against a reference. Arbs compares opposing bets across sites.</p>
-<div class="board-controls">
-<section class="selection slate-selection" aria-label="Game filters">
-<label>Games<select id="game"><option value="">All games</option></select></label>
-<label>Search teams<input id="search" type="search" placeholder="Find any team" autocomplete="off"></label>
-<label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Return / margin %</option><option value="start">Kickoff time</option></select></label>
-</section>
-<form id="settings" aria-label="Calculation settings">
-<details class="calculation-settings"><summary><span><strong>Amount (optional)</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
-<label>Amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
+<div class="heading"><div class="view-title"><h1 id="title">Odds</h1><span class="scope">Multi-sport · Winner, spread &amp; total</span></div>
+<div class="heading-actions"><form id="settings" aria-label="Calculation settings">
+<details class="calculation-settings"><summary><span><strong>Details settings</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
+<label>Details amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
 <label>Buffer (%)<input id="buffer" type="text" inputmode="decimal" value="0.5"></label>
 <label class="benchmark-setting">Reference<select id="benchmark"><option value="pinnacle">Pinnacle</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
 <button type="submit" class="primary">Apply</button><button id="restore" type="button" class="secondary">Restore defaults</button>
-</div><p class="settings-help">Compare immediately using the defaults. Amount includes modeled fees; the buffer applies once to deployed capital.</p></div></details></form>
+</div><p class="settings-help">Shared comparisons use the displayed server defaults. These settings size only the item opened in Details. Amount includes modeled fees; the buffer applies once to deployed capital.</p></div></details></form><details class="view-help"><summary>About this view</summary><div><p>Collected prices remain visible when an estimate is unavailable. American odds express the supported price conversion; each native side retains its own meaning. Open a price for original clocks, observed depth and its exact source frame. Gross differences exclude costs and EV.</p></div></details></div></div>
+<div class="board-controls">
+<section class="selection slate-selection" aria-label="Game filters">
+<label>League<select id="league"><option value="">All leagues</option></select></label>
+<label>Source<select id="venue"><option value="">All sources</option></select></label>
+<label>Market<select id="family"><option value="">All markets</option></select></label>
+<label>Period<select id="period"><option value="">All periods</option></select></label>
+<label>Games<select id="game"><option value="">All games</option></select></label>
+<label class="search-field">Search games or teams<input id="search" type="search" placeholder="Team, game or league" autocomplete="off"></label>
+<label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Return / margin %</option><option value="start">Start time</option></select></label>
+</section>
+
 </div>
 <div class="context-bar"><p id="status" role="status">Loading current games…</p><button id="retry" hidden>Retry current reads</button><details id="read-diagnostics" hidden><summary>Technical details</summary><p id="read-error"></p></details></div>
 <div id="filters" hidden role="group" aria-label="Results"><button data-filter="positive" aria-pressed="true">Positive</button><button data-filter="all" aria-pressed="false">All comparisons</button><button data-filter="hedges" aria-pressed="false" hidden>Rule-sensitive hedges</button></div>
 <section id="content" aria-label="Comparison results" tabindex="-1"></section>
 <dialog id="details" aria-labelledby="details-title"><div class="dialog-head"><h2 id="details-title">Details</h2><button id="close-details">Close</button></div><div id="detail-content"></div></dialog>
-<footer>Modeled estimates. Actual fills, fees and venue grades remain unknown. <a href="/admin">Source status &amp; collection</a></footer>
+<footer>Source observations and modeled estimates have separate availability. Actual fills, fees and venue grades remain unknown. <a href="/admin">Source status &amp; collection</a></footer>
 </main></body></html>

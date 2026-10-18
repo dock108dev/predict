@@ -146,7 +146,7 @@ def us_type(native, *, competition):
     row=load()['us_types'].get(key)
     result=dict(version=VERSION,native_type=key,status='UNBOUND',original=deepcopy(native),
                 collection_authorized=False)
-    expected_sport={'NFL':'FOOTBALL','NCAAF':'FOOTBALL','NBA':'BASKETBALL','NCAAB':'BASKETBALL','MLB':'BASEBALL'}.get(competition)
+    expected_sport={'NFL':'FOOTBALL','NCAAF':'FOOTBALL','NBA':'BASKETBALL','NCAAB':'BASKETBALL','MLB':'BASEBALL','NHL':'HOCKEY'}.get(competition)
     if expected_sport is not None and metadata.get('event_subcategory') is not None and metadata['event_subcategory']!=expected_sport:
         result['reason']='Explicit provider sport conflicts with requested competition';return result
     if not row or competition not in row['competitions']:
@@ -158,6 +158,14 @@ def us_type(native, *, competition):
             result['missing_scope']=['Exact sport/league, period or award horizon, category and season']
         result['reason']='No documented requested sport/period type; generic types require separate period evidence'
         return result
+    alternate=native.get('sportsMarketType')
+    if metadata.get('market_sport_type') and alternate in load()['us_types'] and load()['us_types'][alternate]!=row:
+        result['reason']='Explicit native market types conflict on family, period or sport';return result
+    coarse={'moneyline':'moneyline','spreads':'spread','spread':'spread','totals':'total','total':'total',
+            'SPORTS_MARKET_TYPE_MONEYLINE':'moneyline','SPORTS_MARKET_TYPE_SPREAD':'spread',
+            'SPORTS_MARKET_TYPE_TOTAL':'total'}
+    if any(coarse.get(native.get(key)) not in (None,row['family']) for key in ('marketType','sportsMarketTypeV2')):
+        result['reason']='Explicit native coarse and full market families conflict';return result
     result.update(status='DOCUMENTED_LOCATOR',competition=competition,period=row['period'],family=row['family'],
         total_scope=row['total_scope'],strike_magnitude=metadata.get('outcome_strike'),
         long_participant_id=metadata.get('long_participant_id'),source=load()['sources']['us-schema'],

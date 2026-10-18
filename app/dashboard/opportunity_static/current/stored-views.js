@@ -1,4 +1,5 @@
 import { createComparisonSlate } from "./comparison-slate-views.js";
+import { appendComparisonCoverage } from "./comparison-coverage.js";
 import { numeric, money, percent, quantity } from "./board-client.js";
 import {
   el,
@@ -14,6 +15,10 @@ import {
   price,
   benchmark,
   labelsFor,
+  observationSummary,
+  marketFamily,
+  marketCaption,
+  outcomeDisplayKey,
 } from "./board-elements.js";
 
 export function createBoardViews({
@@ -32,26 +37,21 @@ export function createBoardViews({
   function odds(v) {
     const board = el("div", undefined, "odds-board");
     content.append(board);
-    const prices = v.prices,
-      teams =
-        participants ||
-        [...new Set(prices.map((q) => q.selection.participant))].map((id) => ({
-          id,
-          name: id,
-        }));
-    for (const team of teams) {
+    const prices = v.prices, instruments = new Map();
+    for (const q of prices) {
+      const key = outcomeDisplayKey(q);
+      if (!instruments.has(key)) instruments.set(key, []);
+      instruments.get(key).push(q);
+    }
+    for (const quotes of instruments.values()) {
+      const first = quotes[0];
       const section = el("article", undefined, "team");
-      section.append(el("h2", team.name));
+      section.append(el("h2", selection(first, false)), el("small", marketCaption(first)));
       const grid = el("div", undefined, "quotes");
       for (const book of ["novig", "prophetx", "kalshi", "polymarket_us"]) {
         const box = el("div", undefined, "quote");
         box.append(el("small", venue(book)));
-        const qs = prices.filter(
-          (q) =>
-            q.selection.participant === team.id &&
-            q.venue === book &&
-            q.selection.predicate === "win",
-        );
+        const qs = quotes.filter(q => q.venue === book);
         if (!qs.length)
           box.append(el("strong", "—"), el("small", "Price unavailable"));
         for (const q of qs) {
@@ -60,7 +60,7 @@ export function createBoardViews({
             el(
               "small",
               q.native_side === "bookmaker_outcome"
-                ? "Winner price"
+                ? marketCaption(q)
                 : side(q.native_side) +
                     " · " +
                     quantity(q.original.value) +
@@ -68,7 +68,7 @@ export function createBoardViews({
                     words(q.original.units),
             ),
           );
-          freshness(box, q.freshness);
+          observationSummary(box, q);
           const b = el("button", "Original price");
           b.dataset.key = q.quote_id;
           b.onclick = () => onOriginal(q, b);
@@ -77,45 +77,11 @@ export function createBoardViews({
         grid.append(box);
       }
       const fair = el("div", undefined, "quote fair");
-      benchmark(fair, v.benchmark, team.id);
+      if (marketFamily(first) === "winner" && first.selection.predicate === "win") benchmark(fair, v.benchmark, first.selection.participant);
+      else fair.append(el("small", "No matching reference"));
       grid.append(fair);
       section.append(grid);
       board.append(section);
-    }
-    const alternatives = prices.filter(
-      (q) =>
-        q.selection.predicate !== "win",
-    );
-    if (alternatives.length) {
-      const d = el("details", undefined, "native-alternatives");
-      d.dataset.key = "alternatives";
-      d.append(
-        el(
-          "summary",
-          "Native alternatives · " +
-            alternatives.length +
-            " original instruments",
-        ),
-      );
-      for (const q of alternatives) {
-        const p = el("article", undefined, "card");
-        p.append(
-          el("h3", selection(q)),
-          el("p", venue(q.venue) + " · " + price(q)),
-        );
-        textLine(
-          p,
-          "Native price",
-          quantity(q.original.value) + " " + words(q.original.units),
-        );
-        freshness(p, q.freshness);
-        const b = el("button", "Original contract");
-        b.dataset.key = q.quote_id;
-        b.onclick = () => onOriginal(q, b);
-        p.append(b);
-        d.append(p);
-      }
-      content.append(d);
     }
   }
   function adverse(root, c) {
@@ -323,7 +289,10 @@ export function createBoardViews({
       }
       content.append(empty);
     }
-    if (view === "odds") odds(v);
+    if (view === "odds") {
+      appendComparisonCoverage(content, [v]);
+      odds(v);
+    }
     else if (view === "ev") ev(v);
     else arbs(v);
     if (v.delivery_state === "pending" && view !== "odds") {

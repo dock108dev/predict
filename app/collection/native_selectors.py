@@ -45,25 +45,29 @@ def validate_probe(value, *, transport=None):
     if value!={'policy':POLICY,'sports':list(SPORTS),'discovery_only':True,'generations':1}:
         raise ValueError('Exact six-sport native discovery-only contract required')
 
-def query(venue,sport,at=None):
+def query(venue,sport,at=None,*,families=None):
     if venue=='kalshi':
         return '/trade-api/v2/events',dict(series_ticker=SERIES[sport],status='open',with_milestones='true',with_nested_markets='false')
     slug=LEAGUES.get(sport)
     if not slug:return None
     q=dict(tagSlug=slug,active='true',closed='false',orderBy='startTime',orderDirection='asc')
-    if sport=='NFL':q['sportsMarketTypes']='football_team_full_game_winner'
+    if families is not None:
+        from app.adapters.polymarket_us import full_game_types
+        kinds=full_game_types(slug,families)
+        q['sportsMarketTypes']=kinds[0] if len(kinds)==1 else list(kinds)
+    elif sport=='NFL':q['sportsMarketTypes']='football_team_full_game_winner'
     else:q['tagSlugsAll']='games'  # observed games tag; documented AND filter
     if at:
         q.update(startTimeMin=(at+timedelta(minutes=5)).isoformat(),startTimeMax=(at+timedelta(days=7)).isoformat())
     return '/v1/events',q
 
-def candidates(pages,venue,sport,at):
+def candidates(pages,venue,sport,at,*,families=None):
     """Native game findings with explicit exclusions; no canonical identity needed.
 
     US filtered events endpoint bounds time on the server and locally. Unknown Kalshi milestone kinds stay schedule-unknown, but a game
     series listing can still justify bounded market metadata retrieval.
     """
-    target=query(venue,sport)
+    target=query(venue,sport,families=families)
     if not target:return [],[dict(reason='selector_unestablished',sport=sport)]
     path,q=target
     relevant=[p for p in pages if p['source']==venue and p['path']==path and all(str(coverage.params(p).get(k, 'false' if k=='with_nested_markets' else ''))==str(v) for k,v in q.items())]
@@ -98,7 +102,13 @@ def candidates(pages,venue,sport,at):
             if start and not at+timedelta(minutes=5)<start<=at+timedelta(days=7):reason='outside_game_window'
             if eid in found:reason='duplicate_game_identity'
             if reason:excluded.append(dict(id=eid,reason=reason));continue
-            found[eid]=dict(id=eid,sport=sport,scheduled_start=start.isoformat() if start else None,
+            canonical_key=None
+            if venue=='polymarket_us' and start:
+                from .admission_enrichment import resolve_team
+                participants=[resolve_team(t,sport,venue) for t in binding.get('teams',[])]
+                if len(participants)==2 and None not in participants and len(set(participants))==2:
+                    canonical_key=[start.isoformat(),sorted(participants)]
+            found[eid]=dict(id=eid,sport=sport,competition=sport,canonical_key=canonical_key,scheduled_start=start.isoformat() if start else None,
                 schedule_status='observed' if start else 'unestablished',game_id=e.get('gameId'),
                 response_sha256=page['body_sha256'],market_bindings=binding.get('markets',[]),participant_binding=binding.get('basis'),metadata_locator='embedded_slug' if binding.get('markets') else ('game_id' if type(e.get('gameId')) is int and e['gameId']>0 else 'unavailable'),qualification='native listing only; period, settlement and cross-source identity separate')
     return sorted(found.values(),key=lambda e:(e['scheduled_start'] is None,e['scheduled_start'] or '',e['id'])),excluded

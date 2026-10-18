@@ -33,11 +33,8 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8783)
     p.add_argument('--current-config',help='Bounded native operational configuration JSON')
     a=p.parse_args()
-    from app.collection.current_service import CurrentService
-    from app.collection.current_policy import load
-    application=create_app(current_provider=CurrentService(config=load(a.current_config), config_loader=lambda:load(a.current_config),
-        retained_directory=ROOT/'.local/predict-odds/diagnostics',
-        database_mode=True))
-    web.run_app(application,host='127.0.0.1',port=a.port,access_log=None)
+    from app.collection.runtime_client import RuntimeClient
+    application=create_app(current_provider=RuntimeClient())
+    web.run_app(application,host='127.0.0.1',port=a.port,access_log=None,handler_cancellation=True)
 
 if __name__=='__main__':main()

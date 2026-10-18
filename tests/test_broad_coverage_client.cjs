@@ -1,0 +1,84 @@
+// Captured local coverage: the full configured matrix, ratios and disjoint units.
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {pathToFileURL} = require('node:url');
+const {Element} = require('./ev07_dom.cjs');
+const {fixture, board, copy} = require('./current_board_fixture.cjs');
+const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current', name)).href;
+let reads = 0, dispatches = 0;
+global.fetch = async url => {if (url !== '/api/coverage') {dispatches++; throw Error('Only captured local coverage may be read');} reads++; return {ok:true,json:async()=>copy(payload)};};
+const sports = ['NFL','NCAAF','NBA','NCAAB','MLB','NHL'], sources = ['kalshi','polymarket_us','novig','prophetx','pinnacle'], families = ['moneyline','spread','total'];
+const zero = {retained_observations:0,retained_comparison_observations:0,retained_reference_observations:0,displayed_observations:0,displayed_comparison_directions:0,displayed_current_comparison_directions:0,current_observations:0,last_known_observations:0,unknown_age_observations:0,matched_occurrences:0,supported_comparison_observations:0,current_comparison_observations:0,comparable_outcomes:0,underlying_pairs:0,signed_comparison_directions:0,gap_observations:0};
+const at = '2026-10-17T20:00:00Z', cells = [];
+for(const sport of sports) for(const venue of sources) for(const family of families) cells.push({id:[sport,venue,family,'full_game'].join('|'),sport,venue,family,period:'full_game',configured:true,configuration_state:'enabled',provider:['kalshi','polymarket_us'].includes(venue)?venue:'the_odds_api',role:venue==='pinnacle'?'reference':'comparison',capability:{state:venue==='pinnacle'?'reference_only':'implemented'},discovery:{checked_at:null,status:'not_checked',completeness:'unmeasured',games:null,markets:null,native_outcomes:null,scope:'exact_query'},counts:{...zero},reasons:[],examples:[]});
+const find = (sport, venue, family) => cells.find(c=>c.sport===sport&&c.venue===venue&&c.family===family);
+const a=find('NFL','kalshi','moneyline'), b=find('NFL','polymarket_us','moneyline'), c=find('NFL','novig','moneyline');
+for(const [cell,n] of [[a,2],[b,1],[c,1]]) Object.assign(cell.counts,{retained_observations:n,retained_comparison_observations:n,displayed_observations:n,displayed_comparison_directions:n,displayed_current_comparison_directions:n,current_observations:n,supported_comparison_observations:n,current_comparison_observations:n,matched_occurrences:1,comparable_outcomes:1,underlying_pairs:n*(4-n),signed_comparison_directions:n*(4-n)});
+a.discovery={checked_at:at,status:'ok',completeness:'partial',games:1,markets:2,native_outcomes:2,scope:'exact_query'};
+a.examples=[{quote_id:'native-exact',event:{title:'Authored visitors at hosts'},venue:'kalshi',native_side:'yes',original:{value:'0.53',units:'usd_per_contract'},times:{source_at:'2026-10-17T19:59:55Z',received_at:at},missing_fields:['season_context'],failed_conditions:[{event_start:at,market_start:'2026-10-17T19:50:00Z',missing_fact:'Ordered schedule witness'}],captured_inputs:{context_id:'frozen'},provider_requests:0}];
+const stale = find('NHL','kalshi','spread');Object.assign(stale.counts,{retained_observations:3,retained_comparison_observations:3,displayed_observations:3,last_known_observations:3,gap_observations:3});stale.reasons=[{code:'stale_inputs',label:'Last-known prices',category:'freshness',count:3,primary_count:3,overlapping:true,condition:'Original source clocks prevent a current comparison.',examples:a.examples},{code:'cross_source_peer_missing',label:'No supported cross-source peer',category:'matching',count:3,primary_count:0,overlapping:true,examples:[]}];
+const unknown = find('MLB','polymarket_us','total');Object.assign(unknown.counts,{retained_observations:1,retained_comparison_observations:1,unknown_age_observations:1,gap_observations:1});
+const reference=find('NFL','pinnacle','moneyline');Object.assign(reference.counts,{retained_observations:2,retained_reference_observations:2,current_observations:2});
+find('NFL','prophetx','total').configuration_state='held';find('NCAAF','kalshi','total').configuration_state='disabled';find('NCAAB','polymarket_us','spread').configuration_state='paused';find('NBA','novig','spread').configuration_state='not_configured';
+cells.push({...copy(a),id:'NFL|kalshi|team_total|first_half',family:'team_total',period:'first_half',capability:{state:'unsupported'},counts:{...zero},examples:[],reasons:[{code:'period_unsupported',label:'Period unsupported',category:'implementation',count:0,primary_count:0,overlapping:true,condition:'The encountered period has no implemented contract.',examples:[]} ]});
+const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:at,publication_state:'published',provider_requests:0,cells,global_totals:{...zero,retained_observations:10,retained_comparison_observations:8,retained_reference_observations:2,displayed_comparison_directions:4,displayed_current_comparison_directions:4,current_observations:6,last_known_observations:3,unknown_age_observations:1,supported_comparison_observations:4,current_comparison_observations:4,comparable_outcomes:1,underlying_pairs:5,signed_comparison_directions:10,gap_observations:4,matched_occurrences:1},aggregation:{outcomes:[{cells:{[a.id]:2,[b.id]:1,[c.id]:1}}],occurrences:[[a.id,b.id,c.id]]}};
+(async()=>{
+ const m=await import(asset('coverage-model.js')), v=await import(asset('coverage-view.js'));
+ const before=JSON.stringify(payload);
+ assert.equal(cells.length,91);
+ assert.equal(m.coveragePercent(m.coverageRatio(0,0)),'N/A');assert.equal(m.coveragePercent(m.coverageRatio(null,10)),'N/A');assert.equal(m.coveragePercent(m.coverageRatio(0,10)),'0%');assert.equal(m.coveragePercent(m.coverageRatio(2,3)),'66.7%');
+ assert.equal(m.cellRatio(reference).denominator,0,'reference prices are excluded from comparison denominator');
+ assert.equal(m.coveragePercent(m.cellRatio(reference)),'N/A');
+ assert.equal(m.cellRatio({...a,ratios:{supported_peer:{numerator:null,denominator:null,scope:'unmeasured exact cell'}}}).value,null,'unknown authored ratio is never replaced by a count fallback');
+ assert.deepEqual(m.filteredCoverageTotals(payload,[a]).underlying_pairs,4,'each incident underlying pair once');
+ const partial=m.filteredCoverageTotals(payload,[a,b]);assert.equal(partial.underlying_pairs,5,'pair joining selected sources never duplicated');assert.equal(partial.comparable_outcomes,1);assert.equal(partial.signed_comparison_directions,7);assert.equal(partial.matched_occurrences,1);
+ assert.equal(m.filteredCoverageTotals(payload,[stale]).underlying_pairs,0);assert.equal(m.filteredCoverageTotals(payload,cells).underlying_pairs,5);
+ const pending=copy(payload);pending.captured_at=null;pending.publication_state='pending';pending.aggregation={outcomes:[],occurrences:[]};for(const key of Object.keys(pending.global_totals))pending.global_totals[key]=null;for(const cell of pending.cells){cell.measured=false;for(const key of Object.keys(cell.counts))cell.counts[key]=null;}
+ for(const selected of [[pending.cells[0]],[]]) {const counts=m.filteredCoverageTotals(pending,selected);for(const key of ['retained_observations','underlying_pairs','comparable_outcomes','signed_comparison_directions','matched_occurrences','displayed_comparison_directions'])assert.equal(counts[key],null,'absent publication remains unknown after local filtering: '+key);}
+ for(const state of ['held','disabled','paused','not_configured']) assert(cells.some(cell=>cell.configuration_state===state&&m.coverageCellState(cell)!=='No retained prices'));
+ assert.equal(m.coverageCellState(cells.at(-1)),'Unsupported capability');
+ assert.equal(m.filterCoverageCells(cells,{league:'NFL',venue:'kalshi',market:'winner'}).length,1);
+ assert.equal(m.filterCoverageCells(cells,{period:'first_half'}).length,1);
+ assert.equal(m.filterCoverageCells(cells,{attention:'stale'}).length,1);
+ assert.equal(m.filterCoverageCells(cells,{attention:'low'}).length,2,'only measured low denominators, excluding unmeasured zero');
+ assert.equal(m.coverageRows(cells,'stale')[0].sport,'NHL');
+ assert(m.coverageOddsHref(cells.at(-1)).includes('family=team_total'));assert(m.coverageOddsHref(cells.at(-1)).includes('period=first_half'));
+ const root=new Element('section'), totals=new Element('section'), filtered=new Element('section'), details=new Element('section');let selected;
+ v.renderCoverageMatrix(root,payload,{},cell=>selected=cell);assert.equal(root.querySelectorAll('.coverage-cell').length,91);assert.equal(root.querySelectorAll('.coverage-row').length,30);
+ const unconfigured=new Element('section');v.renderCoverageMatrix(unconfigured,{cells:[{...cells.at(-1),configuration_state:'not_configured'}]}, {},()=>{});assert(unconfigured.textContent.includes('Not configured'));assert(unconfigured.textContent.includes('Comparison capability unsupported'));
+ v.renderCoverageTotals(totals,payload.global_totals);assert(totals.textContent.includes('50%'),'global comparison denominator excludes reference retained data');assert(totals.textContent.includes('4 / 8'));
+ v.renderFilteredCoverage(filtered,payload,[a]);assert(filtered.textContent.includes('Filtered: 1 / 91 cells · 2 retained observations · Global: 10'));assert(filtered.textContent.includes('90 cells are hidden'));
+ assert(filtered.textContent.includes('2 displayed comparison directions · 2 displayed current comparison directions'));assert(filtered.textContent.includes('4 signed directions from this scope'),'all eligible directions stay separate from displayed selections');
+ root.querySelectorAll('button').find(button=>button.dataset.cellId===stale.id).onclick();assert.equal(selected,stale);
+ v.renderCoverageDetails(details,stale,payload);assert(details.textContent.includes('3 affected observations · 3 primary'));assert(details.textContent.includes('3 affected observations · 0 primary'));assert(details.textContent.includes('Original source clocks prevent a current comparison.'));assert(details.textContent.includes('0.53 usd per contract'));assert(details.textContent.includes('Missing fields: season context'));assert(details.textContent.includes('Missing fact: Ordered schedule witness'));assert(details.textContent.includes('Captured game start:'));
+ assert(details.querySelectorAll('details').every(node=>!node.open),'native codes and identifiers begin behind disclosures');
+ const frozen=details.textContent;v.renderCoverageMatrix(root,{...payload,captured_at:'2026-10-17T21:00:00Z'}, {league:'NBA'},()=>{});assert.equal(details.textContent,frozen,'open drilldown stays captured when view publication changes');
+ assert.equal(JSON.stringify(payload),before,'all filters/rendering preserve captured originals and clocks');assert.equal(reads,0);assert.equal(dispatches,0);
+ // Execute the ordinary controller: initial read only; filters/open/close do
+ // not read again and cannot dispatch a provider. Background reads remain separate.
+ const ids=['league','venue','market','period','attention','sort','global-totals','filtered-totals','coverage','coverage-details','cell-title','cell-content','close-coverage-details','pause-coverage','retry-coverage','filters','test-notice','flow','clear-filters'];
+ document.body.replaceChildren();
+ for(const id of ids){const node=new Element(['league','venue','market','period','attention','sort'].includes(id)?'select':id==='coverage-details'?'dialog':'div');node.id=id;if(id==='sort')node.value='scope';document.body.append(node);}
+ const handlers={};global.window={addEventListener:(type,fn)=>handlers[type]=fn};
+ const dialog=document.getElementById('coverage-details');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.onclose?.();};
+ await import(asset('coverage.js'));await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(reads,1);
+ assert.equal(document.getElementById('period').value,'full_game','first dataset opens the ordinary full-game scope');assert.equal(document.getElementById('coverage').querySelectorAll('button').length,90);
+ document.getElementById('league').value='NFL';document.getElementById('league').onchange();
+ document.getElementById('venue').value='kalshi';document.getElementById('venue').onchange();
+ document.getElementById('coverage').querySelector('button').onclick();assert(dialog.open);const frame=document.getElementById('cell-content').textContent;
+ document.getElementById('market').value='spread';document.getElementById('market').onchange();assert.equal(document.getElementById('cell-content').textContent,frame);
+ document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(dispatches,0);
+ document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
+ handlers.pagehide();
+ // A source filter retains exact peer snapshots for Original Details.
+ document.createTextNode=text=>{const node=new Element('span');node.textContent=text;return node;};
+ const {createComparisonSlate}=await import(asset('comparison-slate-views.js'));
+ const slate=board(fixture.odds,fixture.odds.game_key), game=copy(fixture.catalog.games[0]);
+ slate.prices[0].venue='kalshi';const peer=copy(slate.prices[0]);peer.venue='polymarket_us';peer.quote_id='other-source';slate.prices.push(peer);slate.rows=slate.prices;
+ const pricesBefore=JSON.stringify(slate), output=new Element('section');let original;
+ const renderer=createComparisonSlate({content:output,onOriginal:q=>original=q,onDetails:()=>{}});
+ renderer.draw({games:[game],boards:[slate],policy:slate.policy,read_at:at},{view:'odds',filter:'all',source:'kalshi'});
+ assert(output.textContent.includes('Source display filter: Kalshi'));output.querySelector('button').onclick();assert.equal(original.venue,'kalshi');assert.equal(JSON.stringify(slate),pricesBefore);assert.equal(dispatches,0);
+ console.log('PASS broad Coverage 91-cell matrix, exact cohort/ref denominators, zero/unknown N/A, incident pair/outcome/occurrence dedup, original clocks, overlapping primary causes, local filters, frozen drilldown and source-scoped Odds with zero provider dispatches');
+})().catch(error=>{console.error(error);process.exitCode=1;});

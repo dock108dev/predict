@@ -32,12 +32,18 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        id: setup
         with:
           python: ${{ matrix.python }}
       - run: sh scripts/check-ci
+      - name: Report interrupted compatibility execution
+        if: always()
+        env:
+          CHECK_OUTCOMES: ${{ toJSON(steps) }}
+        run: python3 scripts/ci/interrupted.py
       - name: Build and install compatibility package
         id: package
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: python scripts/ci/package_smoke.py
       - name: Compatibility package summary
         if: always()
@@ -112,5 +118,29 @@ jobs:
         with:
           name: assurance-health-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/health/
+          if-no-files-found: error
+          retention-days: 14
+
+  summary:
+    name: Assurance result
+    needs: [compatibility, postgres, security, health]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Report requested checks and intentional scope skips
+        env:
+          ASSURANCE_SCOPE: ${{ inputs.scope || 'all' }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/assurance_report.py
+      - name: Retain assurance result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: assurance-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/assurance/
           if-no-files-found: error
           retention-days: 14

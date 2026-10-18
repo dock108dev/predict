@@ -8,7 +8,9 @@ are unsupported. Browser protections do not authenticate other local processes.
 ## HTTP and browser boundary
 
 `local_security.py` validates Host, Origin and Fetch Metadata and supplies response
-security headers, including CSP. Mutating routes require JSON. Strict streamed
+security headers, including CSP. Mutating routes require JSON. The HTTP parser rejects duplicate Content-Type
+headers with HTTP 400 before application control dispatch; regression tests cover
+conflicting orders and identical duplicates. This is an existing parser protection. Strict streamed
 parsing rejects duplicate keys and non-finite numbers, with 4 KiB control and
 1 MiB import limits. Body consumption has a ten-second total deadline, including
 chunked uploads; partial progress does not reset it. Timeout returns a fixed HTTP
@@ -28,6 +30,15 @@ Only explicit `PublicRequestError` validation messages are returned verbatim by
 the shared router. These must be authored messages, never provider text, parser
 errors, user values or messages copied from another exception. Other `ValueError`
 subclasses, including JSON and text decoding errors, receive a fixed 422 response.
+Current comparison reads return only an explicit set of authored recovery/refusal
+codes; arbitrary ValueError text and decoding errors use the fixed
+`current_inputs_unavailable` reason. Scanner reads likewise preserve their explicit
+filter/revision codes and use `scanner_query_invalid` for other caught failures.
+Selected fee control failures use a fixed refusal message before their result can
+enter a persisted acknowledgment. Diagnostic operations are
+`comparison_read_refused`, `scanner_query` and `selected_fee_control_refused`.
+No prefix or message-shape test grants public-message authority.
+
 Safe diagnostics record the operation, exception class and traceback locations;
 they omit messages, chains, source lines and locals. Structured calculation
 refusals and `SelectionError` responses retain their separate existing contracts.
@@ -78,6 +89,13 @@ without masking the primary write failure. Parent directories remain trusted;
 this is not a symlink-safe importer for arbitrary capture directories, nor a
 cross-process watchlist locking/directory-fsync durability guarantee.
 
+New launcher role directories request mode 0700 and new `data.log`/`server.log`
+files request mode 0600. Log appends use O_NOFOLLOW and reject non-regular files
+or files owned by another user. Nonblocking open prevents a substituted FIFO
+from hanging startup. Existing regular logs retain their contents and permissions;
+this change does not inspect or chmod historical owner files. Process records and
+parent directories remain trusted local state, not an authenticated sidecar channel.
+
 Failures use sanitized operation names, exception classes and traceback locations;
 raw provider content and credentials must not enter logs. See
 [failure handling](error-handling.md) for cleanup and incomplete packages.
@@ -99,3 +117,86 @@ Hash-locked dependencies, dependency consistency checks and hosted static analys
 are complementary checks, not proof that no vulnerable dependency exists. Keychain
 ACLs, provider permissions and platform behavior require separate verification.
 See [development](development.md#focused-checks) for the actual CI checks.
+
+## October 17 source hardening findings
+
+Scope: the dirty `main` working copy based on
+`1fa3822d6d6c9b22f1c4d8028e43c666f8edac69`, including the newer independent
+runtime and SQL comparison paths. The source findings below do not qualify a
+running installation or provider account.
+
+### Confirmed vulnerability fixed
+
+**Internal failure text crossing into browser/control results** — information
+disclosure; medium severity, high confidence; fixed. Affected areas:
+`app/dashboard/comparison_board_api.py`, `app/dashboard/scanner_api.py` and
+`app/collection/data_runtime.py`. The selected read and scanner handlers copied
+`str(exc)` into JSON; the finite fee control copied it into SelectionError and
+therefore a command acknowledgment. A decoder, provider or storage error carrying
+private content could expose that text through ordinary local UI diagnostics or
+persist it with a control result. Existing HTML escaping prevents this from being
+an XSS finding. Exact authored public reason allowlists and fixed fallback messages
+now protect these boundaries; safe operation/class/frame logs retain debugging
+locations. Injected secret-bearing errors, decoder errors and prefix lookalikes
+exercise the actual HTTP handlers, while recovery codes and revision-conflict
+HTTP 409 remain supported.
+
+### Hardening opportunities implemented
+
+**Launcher log creation and append targets** — local files/privacy; low severity,
+high confidence; fixed for new files. `scripts/opportunity-board` previously used
+ordinary text append, which followed symlinks and requested default file
+permissions. Under a permissive umask new logs could be readable by other OS
+users; a substituted path could redirect log output. New logs request private
+permissions, reject symlink/non-regular/wrong-owner targets, and preserve append
+behavior. Tests use disposable files and a FIFO, with no process launch or owner
+state. Trusted parent directories and preexisting permissions remain explicit
+limits; this does not authenticate hostile code running as the same OS user.
+
+### Intentional acceptable patterns
+
+The patterns in this section are informational, high confidence and accepted for
+the supported single-user loopback deployment.
+
+The service has no remote accounts, sessions, tenants, password-reset flows,
+public callbacks or trading endpoints. Admin means local acquisition controls,
+not a separate authenticated role. Same-origin JSON controls, fixed outbound
+provider endpoints, disabled redirects/decompression in ordinary native transport,
+bounded JSON parsing and current-row dependency checks remain in place. CSP,
+no-store, framing, referrer and noindex headers remain; no HSTS header is added to
+the supported plain-HTTP loopback service. Local display preferences contain no
+provider credentials. Internal pickle IPC remains restricted to trusted local
+workers and is not a browser import format. No hosted authentication stack or
+new retry/collection authority is introduced.
+
+### Prioritized follow-up and manual verification
+
+1. **Historical log/file permissions** — low, high confidence in the scope limit;
+   manual verification outside this source pass. Existing files were neither read
+   nor chmodded. If shared OS access matters, inspect permissions locally and
+   explicitly authorize a bounded permission migration that retains evidence.
+2. **Broader request/header resource bounds** — medium hardening opportunity,
+   high confidence; deferred. Body deadlines and bounded read lanes exist, but
+   global connection/header limits remain outside the current app policy. A
+   follow-up should define concurrency/idle-header budgets with Stop availability
+   tests and disposable socket fixtures before changing server-wide limits.
+3. **Platform, dependencies and deployment trust** — informational, high
+   confidence; manual verification/needs decision. Keychain ACLs and provider
+   permissions need platform evidence. Dependency vulnerability status was not
+   assessed by these source tests; use the existing locked CI dependency/static
+   checks for a separately bounded review. There is no claimed package
+   vulnerability from version inspection. Remote/proxy or hostile-local-client
+   support requires an explicit authentication/transport design; it remains
+   unsupported rather than implicitly approved by these browser protections.
+
+Validation: 65 focused tests plus 22 subtests passed, including injected failure
+privacy, actual HTTP rejection/compatibility, current-board behavior and runtime
+controls. Affected Python compilation, lint, all 43 maintained-document references
+and whitespace checks pass. The focused JUnit report is
+`test-results/security-hardening-20261017/focused.xml` (local ignored evidence).
+The first run exposed an incorrect new expectation for parser rejection status
+and an existing unrestricted Mock that invented a synchronous Stop method. The
+expectation now matches HTTP 400 and the fixture has an explicit provider spec;
+production Stop behavior was preserved. The auxiliary synthetic router still emits
+existing AppKey/deprecation warnings. No dependency vulnerability scan, provider
+operation, ordinary process restart, owner-state migration or release was run.

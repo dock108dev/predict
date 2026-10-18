@@ -29,6 +29,7 @@ const root=path.resolve(__dirname,'..'),out=process.env.PREDICT_SC04_REPORT||pat
  const first=await page.locator('.scanner-row').first().getAttribute('data-row-id');assert(first.includes('0129')||first.includes('0128'),'best later event globally first');
  await page.locator('#scanner-next').click();await page.waitForFunction(()=>window.predictScannerObservations().identity.offset===100);assert.equal(await page.locator('.scanner-row').count(),30);await page.locator('#scanner-prev').click();await page.waitForFunction(()=>window.predictScannerObservations().identity.offset===0);
  // Server filters the complete universe before paging; never first-page filtering.
+ await page.locator('#scanner-advanced>summary').click();
  await page.locator('#scanner-minimum_edge').fill('6.5');await page.locator('#scanner-minimum_edge').press('Tab');await page.waitForFunction(()=>document.querySelectorAll('.scanner-row').length===2);assert((await page.locator('#scanner-count').innerText()).startsWith('2 matching'));
  await page.getByRole('button',{name:'Reset filters',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.scanner-row').length===100);
  await page.locator('input[name=venue][value=kalshi]').uncheck();await page.waitForFunction(()=>document.querySelectorAll('.scanner-row').length===0);assert(!(await page.locator('#scanner-health').innerText()).includes('no qualifying'));

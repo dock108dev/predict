@@ -1,44 +1,166 @@
 #!/usr/bin/env python3
-"""Manage the ordinary read-only board with a minimal credential-free environment."""
-import argparse,json,os,signal,socket,subprocess,time
+"""Manage the independent local data and app processes without credential output."""
+import argparse
+import fcntl
+import json
+import os
 from pathlib import Path
-root=Path(__file__).resolve().parents[1]
-p=argparse.ArgumentParser();p.add_argument('action',choices=['start','stop','status']);p.add_argument('--port',type=int,default=8783);p.add_argument('--instance',choices=['poc','beta'],default='beta');a=p.parse_args()
-runtime=root/('.local/opportunity-board' if a.instance=='poc' else '.local/opportunity-board-beta');runtime.mkdir(parents=True,exist_ok=True)
-state=runtime/'process.json'
+import signal
+import socket
+import stat
+import subprocess
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def owned(record):
-    cmd=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','command='],capture_output=True,text=True).stdout.strip()
-    birth=subprocess.run(['/bin/ps','-p',str(record['pid']),'-o','lstart='],capture_output=True,text=True).stdout.strip()
-    return cmd==record['command'] and birth==record.get('started')
-record=json.loads(state.read_text()) if state.exists() else None
-if a.action in ('stop','status'):
-    if not record or not owned(record): print('No matching opportunity board process. No process changed.');raise SystemExit(0)
-    if a.action=='stop':
-        os.kill(record['pid'],signal.SIGTERM)
-        for _ in range(100):
-            if not owned(record): break
-            time.sleep(0.1)
-        if owned(record): raise SystemExit('opportunity board is still stopping; no other process changed.')
-        state.unlink(missing_ok=True)
-        print('Stopped only the verified opportunity board process.')
-    else: print(json.dumps(record,indent=2))
-    raise SystemExit(0)
-if record and owned(record): print(record['url']);raise SystemExit(0)
-port=a.port
-while port<65536:
-    with socket.socket() as probe:
-        probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        try: probe.bind(('127.0.0.1',port));break
-        except OSError: port+=1
-else: raise SystemExit('No free loopback port')
-postgres=subprocess.run([str(root/'scripts/project-postgres'),'start'],cwd=root,capture_output=True,text=True)
-if postgres.returncode:raise SystemExit('Project database unavailable: '+postgres.stderr[:300])
-cmd=[str(root/'.venv/bin/python'),'-m','app.dashboard.opportunity_board','--port',str(port)]
-with (runtime/'server.log').open('a') as log:
-    proc=subprocess.Popen(cmd,cwd=root,env={'PATH':'/usr/bin:/bin','PYTHONUNBUFFERED':'1','PYTHONDONTWRITEBYTECODE':'1'},stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
-time.sleep(1)
-if proc.poll() is not None: raise SystemExit(f"Board failed to start; inspect {runtime / 'server.log'}")
-actual=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','command=']).decode().strip()
-started=subprocess.check_output(['/bin/ps','-p',str(proc.pid),'-o','lstart=']).decode().strip()
-record={'pid':proc.pid,'command':actual,'started':started,'url':f'http://127.0.0.1:{port}','port':port}
-state.write_text(json.dumps(record,indent=2));print(record['url'])
+    if not record or type(record.get('pid')) is not int:
+        return False
+    command = subprocess.run(['/bin/ps', '-p', str(record['pid']), '-o', 'command='], capture_output=True, text=True).stdout.strip()
+    birth = subprocess.run(['/bin/ps', '-p', str(record['pid']), '-o', 'lstart='], capture_output=True, text=True).stdout.strip()
+    return bool(command and command == record.get('command') and birth == record.get('started'))
+
+
+def read_record(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def save_record(path, record):
+    temporary = path.with_suffix('.tmp')
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(record, stream, indent=2)
+    os.replace(temporary, path)
+
+
+def data_health():
+    program = '''import json
+from app.storage.store import connect
+from app.collection.runtime_status import read_runtime
+with connect() as db:
+    value=read_runtime(db)
+print(json.dumps({k:value.get(k) for k in ('healthy','active','runtime_id','revision','heartbeat_at','reason_code','calculations')}))
+'''
+    result = subprocess.run([str(ROOT / '.venv/bin/python'), '-c', program], cwd=ROOT,
+                            capture_output=True, text=True)
+    try:
+        return json.loads(result.stdout) if result.returncode == 0 else dict(healthy=False, reason_code='data_runtime_unavailable')
+    except ValueError:
+        return dict(healthy=False, reason_code='data_runtime_unavailable')
+
+
+def stop_role(role, folder):
+    state = folder / 'process.json'
+    record = read_record(state)
+    if not owned(record):
+        print(f'{role}: no matching process; no process changed.')
+        return
+    os.kill(record['pid'], signal.SIGTERM)
+    for _ in range(150):
+        if not owned(record):
+            state.unlink(missing_ok=True)
+            print(f'{role}: stopped the verified process.')
+            return
+        time.sleep(.1)
+    raise SystemExit(f'{role}: cleanup is still in progress; no process was force-killed.')
+
+
+def open_log(path):
+    """New logs are private; reject redirected or non-regular append targets."""
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+            raise ValueError('Private regular launcher log required')
+        return os.fdopen(fd, 'a')
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def start_role(role, folder, args):
+    folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+    state = folder / 'process.json'
+    record = read_record(state)
+    if owned(record):
+        print(f"{role}: already running · " + (record.get('url') or str(record['pid'])))
+        return
+    command = [str(ROOT / '.venv/bin/python'), '-m']
+    if role == 'data':
+        command += ['app.collection.data_runtime']
+        if args.current_config:
+            command += ['--current-config', str(Path(args.current_config).resolve())]
+    else:
+        port = args.port
+        while port < 65536:
+            with socket.socket() as probe:
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                try:
+                    probe.bind(('127.0.0.1', port))
+                    break
+                except OSError:
+                    port += 1
+        else:
+            raise SystemExit('No free loopback port')
+        command += ['app.dashboard.opportunity_board', '--port', str(port)]
+    with open_log(folder / ('data.log' if role == 'data' else 'server.log')) as log:
+        process = subprocess.Popen(command, cwd=ROOT,
+            env={'PATH': '/usr/bin:/bin', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'},
+            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+    time.sleep(1)
+    if process.poll() is not None:
+        raise SystemExit(f'{role}: failed to start; inspect {folder}.')
+    actual = subprocess.check_output(['/bin/ps', '-p', str(process.pid), '-o', 'command='], text=True).strip()
+    started = subprocess.check_output(['/bin/ps', '-p', str(process.pid), '-o', 'lstart='], text=True).strip()
+    record = dict(role=role, pid=process.pid, command=actual, started=started)
+    if role == 'app':
+        record.update(url=f'http://127.0.0.1:{port}', port=port)
+    save_record(state, record)
+    print(f"{role}: " + (record.get('url') or f"started · {process.pid}"))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['start', 'stop', 'status'])
+    parser.add_argument('--role', choices=['app', 'data', 'both'], default='both',
+                        help='Manage one role independently; default: both')
+    parser.add_argument('--port', type=int, default=8783)
+    parser.add_argument('--instance', choices=['poc', 'beta'], default='beta')
+    parser.add_argument('--current-config', help='Existing data-runtime configuration (start data/both only)')
+    args = parser.parse_args()
+    if not 1 <= args.port <= 65535:
+        parser.error('Loopback port must be between 1 and 65535')
+    app_folder = ROOT / ('.local/opportunity-board' if args.instance == 'poc' else '.local/opportunity-board-beta')
+    data_folder = ROOT / '.local/predict-data-runtime'
+    roles = [('data', data_folder), ('app', app_folder)]
+    if args.role != 'both':
+        roles = [(role, folder) for role, folder in roles if role == args.role]
+    (ROOT / '.local').mkdir(parents=True, exist_ok=True)
+    # Serialize process-record inspection and creation across racing launchers.
+    fd = os.open(ROOT / '.local/opportunity-launcher.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'r+') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if args.action == 'start':
+            result = subprocess.run([str(ROOT / 'scripts/project-postgres'), 'start'], cwd=ROOT, capture_output=True, text=True)
+            if result.returncode:
+                raise SystemExit('Project database is unavailable; inspect its local status.')
+            for role, folder in roles:
+                start_role(role, folder, args)
+        elif args.action == 'stop':
+            for role, folder in reversed(roles):
+                stop_role(role, folder)
+        else:
+            for role, folder in roles:
+                record = read_record(folder / 'process.json')
+                running = owned(record)
+                value = dict(role=role, running=running, process=record if running else None)
+                if role == 'data':value['runtime'] = data_health()
+                print(json.dumps(value, indent=2))
+
+
+if __name__ == '__main__':
+    main()

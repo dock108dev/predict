@@ -250,7 +250,9 @@ class OccurrenceCases(unittest.TestCase):
         self.assertEqual(packed(full),packed(incremental));validate_snapshot(full,allow_synthetic=True)
         event=full['events'][0];self.assertEqual(len(full['events']),1)
         self.assertEqual(len(event['groups']),3)  # distinct payout/predicate policies
-        self.assertEqual(len({g['display_group']['id'] for g in event['groups']}),1)
+        # These authored native stubs omit original source/type scope evidence;
+        # their unknown scope stays distinct from the declared aggregate scope.
+        self.assertEqual(len({g['display_group']['id'] for g in event['groups']}),2)
         qs=[q for g in event['groups'] for o in g['outcomes'] for q in quotes_of(o)]
         self.assertEqual(len(qs),6);self.assertEqual({q['source']['native_side'] for q in qs},{'YES','NO','LONG','SHORT','win'})
         self.assertEqual({q['revision'] for q in qs},{1})

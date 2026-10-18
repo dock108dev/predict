@@ -12,9 +12,9 @@ POLICY='native-score-predicate-1'
 def bind(native, binding, *, revised=False):
     sport,period,family=(binding[k] for k in ('sport','period','family'))
     if family=='futures':return championship(native,binding)
-    if family not in ('moneyline','spread','total') or sport not in (('NFL','MLB','NCAAF','NBA','NHL') if revised else ('NFL','MLB')):
+    if family not in ('moneyline','spread','total') or sport not in (('NFL','MLB','NCAAF','NBA','NCAAB','NHL') if revised else ('NFL','MLB')):
         return None
-    if period not in ({'full_game','first_half'} if sport in ('NFL','NCAAF','NBA') else {'full_game','first_3','first_5'} if sport=='MLB' and revised else {'first_3','first_5'} if sport=='MLB' else {'full_game'}):
+    if period not in ({'full_game','first_half'} if sport in ('NFL','NCAAF','NBA','NCAAB') else {'full_game','first_3','first_5'} if sport=='MLB' and revised else {'first_3','first_5'} if sport=='MLB' else {'full_game'}):
         return None
     text=native.get('rules_primary')
     if family=='moneyline' and period!='full_game':
@@ -38,7 +38,7 @@ def bind(native, binding, *, revised=False):
     if not text.startswith('If ') or not text.endswith(', then the market resolves to Yes.'):return None
     participant='combined';native_team=None
     if family=='spread':
-        key={'NFL':'football_team','NCAAF':'football_team','NBA':'basketball_team','MLB':'baseball_team','NHL':'hockey_team'}[sport]
+        key={'NFL':'football_team','NCAAF':'football_team','NBA':'basketball_team','NCAAB':'basketball_team','MLB':'baseball_team','NHL':'hockey_team'}[sport]
         native_team=(native.get('custom_strike') or {}).get(key)
         if not isinstance(native_team,str):return None
         from app.normalization.native_registry import native_registry
@@ -56,7 +56,7 @@ def bind(native, binding, *, revised=False):
     return dict(policy=POLICY,status='EXPLICIT_PREDICATE_ONLY',competition=sport,
         period=period,family=family,participant=participant,native_team_id=native_team,
         line=line,unit=unit,source_threshold=format(threshold,'f'),native_metadata_sha256=stable(native),
-        rules_primary=text,outcomes=[dict(native_id='yes',operator='gt'),dict(native_id='no',operator='le')],
+        rules_primary=text,equality_treatment='predicate',outcomes=[dict(native_id='yes',operator='gt',equality='predicate'),dict(native_id='no',operator='le',equality='predicate')],
         missing=['Exact shared event/season/stage and home/away review',
                  'Effective completion, exceptional payout, amendments and correction terms',
                  'Pitcher/action and reschedule conditions' if sport=='MLB' else 'Applicable overtime or explicit completed first-half scope',
@@ -72,7 +72,7 @@ def winner(native,binding,text,*,revised=False):
     match=re.match(r'If (.+?) (wins |tie in )'+(phrase if revised and period=='first_half' else re.escape(phrase)),text)
     if match is None:return None
     tied=' tie in '+phrase in text or (match[1]=='neither team' and native.get('yes_sub_title')=='Tie')
-    label=native.get('yes_sub_title');key={'NFL':'football_team','NCAAF':'football_team','NBA':'basketball_team','MLB':'baseball_team','NHL':'hockey_team'}[sport]
+    label=native.get('yes_sub_title');key={'NFL':'football_team','NCAAF':'football_team','NBA':'basketball_team','NCAAB':'basketball_team','MLB':'baseball_team','NHL':'hockey_team'}[sport]
     native_team=(native.get('custom_strike') or {}).get(key)
     if revised:
         if period=='first_half':

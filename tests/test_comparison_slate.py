@@ -12,6 +12,7 @@ from aiohttp.test_utils import TestClient, TestServer
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.dashboard import comparison_slate as slate
 from app.dashboard.multi_game_server import create_app
+from app.storage.store import hashed
 from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
@@ -42,9 +43,9 @@ class Database:
 class SlateRead(TestCase):
     def read(self,**options):
         from contextlib import nullcontext
-        from tests.test_current_board_reads import context
-        c=context();db=MagicMock();db.transaction.return_value=nullcontext()
-        with patch.object(slate,'ReadContext',return_value=c):
+        from tests.test_current_board_reads import latest_frame
+        db=MagicMock();db.transaction.return_value=nullcontext()
+        with patch('app.storage.latest_board.snapshot',return_value=latest_frame()),patch('app.storage.latest_board.slate_authority',return_value=hashed(['authored-authority',False])),patch('app.storage.latest_board.calculate_current',side_effect=AssertionError('request finance forbidden')):
             return slate.read(db,DEFAULT_POLICY,view='odds',filter='all',stopped=False,**options)
 
     def test_current_rows_produce_v2_page_without_saved_queue(self):
@@ -127,7 +128,10 @@ class SlateLoopback(IsolatedAsyncioTestCase):
         self.assertEqual(policy.benchmark_venue, "novig")
         self.assertFalse(hasattr(self.provider.database,'request'))
         self.provider.acquire.assert_not_called()
-        self.db.execute.assert_not_called()  # The slate reader owns its SQL transaction.
+        # The API configures only bounded SQL deadlines; the slate reader owns
+        # all data queries and its transaction.
+        self.assertEqual(self.db.execute.call_count,2)
+        self.assertTrue(all(call.args[0].startswith("SELECT set_config('") for call in self.db.execute.call_args_list))
 
     async def test_invalid_crossed_or_duplicate_queries_refuse_before_sql(self):
         for query in (

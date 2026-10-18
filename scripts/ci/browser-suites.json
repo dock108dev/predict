@@ -39,10 +39,18 @@
     "test_stored_views.cjs",
     "test_slate_ui.cjs",
     "test_slate_polling.cjs",
+    "test_consistent_slate_reads.cjs",
     "test_comparison_usability.cjs",
     "test_d03_current_client.cjs",
     "test_sc04_client.cjs",
     "test_sc05_client.cjs",
-    "test_sc06_client.cjs"
+    "test_sc06_client.cjs",
+    "test_odds_freshness_clarity.cjs",
+    "test_current_comparison_ui.cjs",
+    "test_current_comparison_coverage.cjs",
+    "test_multisport_market_ui.cjs",
+    "test_selected_input_reads.cjs",
+    "test_broad_coverage_client.cjs",
+    "test_shared_current_comparisons.cjs"
   ]
 }

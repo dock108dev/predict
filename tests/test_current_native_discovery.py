@@ -50,7 +50,7 @@ class FirstPageSelection(unittest.IsolatedAsyncioTestCase):
             return SimpleNamespace(raw=SimpleNamespace(ref=SimpleNamespace(market_id=native['id'],event_id=event)))
         with patch('app.collection.current_native.coverage.decode_page',side_effect=lambda p:(b'{}',{})), \
              patch('app.collection.current_native.coverage.event_record',side_effect=lambda v,p,r,e,i,a:deepcopy(e)), \
-             patch('app.collection.current_native.candidates',side_effect=lambda pages,v,s,a:(deepcopy(pages[0]['rows']),[])), \
+             patch('app.collection.current_native.candidates',side_effect=lambda pages,v,s,a,**kwargs:(deepcopy(pages[0]['rows']),[])), \
              patch('app.collection.current_native.coverage.catalog',side_effect=catalog), \
              patch('app.collection.current_native.coverage.response',return_value=None), \
              patch('app.collection.continuous.select_inventory',side_effect=lambda c,a,n:([m['id'] for m in c['markets']],[])), \
@@ -86,15 +86,16 @@ class FirstPageSelection(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual({m['event_id'] for m in published[0]['markets']},set(expected))
                 self.assertEqual(len(worker.markets),3)
                 listings=[c for c in calls if c['kind']=='events'];self.assertEqual(len(listings),2)
-                if venue=='polymarket_us':self.assertEqual([c['params']['limit'] for c in listings],[3,1])
+                if venue=='polymarket_us':self.assertEqual([c['params']['limit'] for c in listings],[5,5])
                 self.assertEqual(len(calls)-len(listings),3)
 
-    async def test_full_global_cap_does_not_request_another_sport(self):
+    async def test_listing_opportunities_precede_shared_event_cap_selection(self):
         for venue in ('kalshi','polymarket_us'):
             with self.subTest(venue=venue):
                 worker,calls,_,_=await self.discover(venue,['NFL','NBA'],{'NFL':5,'NBA':4},cap=2)
-                self.assertEqual(len(worker.findings),1)
-                self.assertTrue(all(c['sport']!='NBA' for c in calls))
+                self.assertEqual(len(worker.findings),2)
+                self.assertEqual({c['sport'] for c in calls if c['kind']=='events'},{'NFL','NBA'})
+                self.assertEqual({m['event_id'].split('-')[0] for m in worker.catalog['markets']},{'NFL','NBA'})
                 self.assertEqual(len(worker.markets),2)
 
 

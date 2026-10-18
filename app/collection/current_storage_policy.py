@@ -19,17 +19,20 @@ JOURNAL_BYTE_CAP = 8 * GIB
 JOURNAL_RECORD_BYTE_CAP = 8 * MIB
 SQL_BYTE_CAP = 2 * GIB
 FREE_DISK_BYTE_FLOOR = GIB
+LATEST_WORKING_TABLES = ('data_runtime', 'data_runtime_command', 'scanner_latest',
+                        'latest_board', 'latest_board_status', 'coverage_latest')
 
 
 def sql_usage(db):
     """Read current heap/index/TOAST/history and owned sequence backing pages."""
     row = db.execute(
         "SELECT sum(bytes) AS n FROM ("
-        "SELECT pg_total_relation_size(format('%I.%I',schemaname,tablename)) AS bytes "
-        "FROM pg_tables WHERE schemaname='public' AND left(tablename,8)='current_' "
+        "SELECT pg_total_relation_size(format('%%I.%%I',schemaname,tablename)) AS bytes "
+        "FROM pg_tables WHERE schemaname='public' AND (left(tablename,8)='current_' OR tablename=ANY(%s)) "
         "UNION ALL SELECT pg_relation_size(c.oid) AS bytes FROM pg_class c "
         "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' "
-        "AND c.relkind='S' AND left(c.relname,8)='current_') owned"
+        "AND c.relkind='S' AND left(c.relname,8)='current_') owned",
+        (list(LATEST_WORKING_TABLES),),
     ).fetchone()
     value = row['n']
     if value is None:

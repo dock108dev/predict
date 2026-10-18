@@ -45,22 +45,30 @@ scripts/opportunity-board status
 scripts/opportunity-board stop
 ```
 
-`start` starts PostgreSQL, reuses a verified existing app process or chooses a
-free loopback port starting at 8783. Use `--port PORT` to select the first port
-to try. `--instance beta` (the default) and `--instance poc` have separate process
-records and logs under `.local/opportunity-board-beta` and
-`.local/opportunity-board`; both share ordinary data and acquisition ownership.
+`start` starts PostgreSQL and the independent data/app processes, reusing verified
+existing processes. Add `--role app`, `--role data` or `--role both` (default).
+App-only restart leaves the collector identity, epoch and shared calculations
+intact. `--port PORT` selects the first free loopback app port to try.
+`--instance beta` (default) and `--instance poc` have separate app records under
+`.local/opportunity-board-beta` and `.local/opportunity-board`; both share the
+single data owner under `.local/predict-data-runtime`.
 
-Starting an existing process does not reload it. Stop and start after backend,
-source configuration or credential changes. There is no operating-system service
-or automatic restart. For foreground operation:
+Starting an existing process does not reload it. Restart data after source
+configuration/credential changes; restart affected processes after backend
+changes. Source pauses, explicit global Stop and uncertain accounting survive a
+data restart. Admin controls require the owning runtime's acknowledgment; a
+failed or timed-out command stays explicit. The runtime heartbeat expires after
+eight seconds. [Runtime contract](data-app-runtime-contract.md).
+There is no operating-system service or automatic restart. For foreground use,
+start PostgreSQL, then run these in separate terminals:
 
 ```sh
-scripts/project-postgres start
-.venv/bin/python -m app.dashboard --port 8783
+.venv/bin/python -m app.collection.data_runtime
+.venv/bin/python -m app.dashboard.opportunity_board --port 8783
 ```
 
-Ctrl-C stops the foreground app. App Stop leaves PostgreSQL running; use
+Ctrl-C stops that foreground role. Stopping the app leaves data running; stopping
+data ends acquisition. Both leave PostgreSQL running; use
 `scripts/project-postgres stop` when no app needs the cluster. Do not delete
 `.local` as a troubleshooting step: it contains data and accounting state.
 

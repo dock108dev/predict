@@ -120,3 +120,108 @@ full commit SHAs. Gitleaks exceptions are narrow public-ID/digest rules with exp
 and a negative control; the scan covers the current tree rather than Git history.
 Dependabot covers runtime and Actions updates. The project currently has no chosen
 license in package metadata; dependency licenses do not supply a project license.
+
+## Check map and event policy
+
+| Area / product risk | Exact workflow / job / command | Event / platform | Policy | Reason / evidence |
+| --- | --- | --- | --- | --- |
+| Portable behavior, API contracts, financial calculations and cleanup | CI / `offline` / `sh scripts/check-ci` | PR, main push, merge group, manual / Ubuntu 24.04, Python 3.14, Node 24 | Required | Registered Python and client suites; isolation forbids private inputs and non-loopback network |
+| Omitted tests, missing reports and generated drift | `validate_contract.py`, `run_checks.py`; frontend builders invoked by `check-ci` | Same | Required | Every discovered test must have an explicit classification; required zero/all-skipped suites fail |
+| Lint, compilation and formatting | CI / `quality` / Ruff commands above; compile and JS syntax in offline | Same | Required | Whole maintained Python lint scope; formatting covers CI support and browser harnesses. Legacy application-wide reformatting is outside this change |
+| Broad static type checking | No declared type-checker configuration | N/A | Not claimed | Dynamic legacy application has no established typing gate; compilation, schemas, lint and behavioral contracts remain required. A broad annotation migration is outside this CI change |
+| Workflow and shell correctness | CI / `quality` / `actionlint -shellcheck=''`, `sh -n scripts/check-ci` | Same | Required | Actions-aware expression/input validation plus shell syntax; ShellCheck analysis is not enabled |
+| Documentation references and executable examples | CI / `quality` / `python scripts/ci/docs.py`; example modules selected in `suites.json` | Same | Required | Maintained shipped guides and authored executable examples only; live provider examples are excluded |
+| Reporting and gate failures | CI / `quality` / `pytest tests/test_ci_reporting.py`; readiness / `gate.py` | Same | Required | Passing, failed, cancelled, missing, malformed, all-skipped and intentional assurance N/A samples |
+| Distribution completeness and installed HTTP startup | CI / `quality` / `package_smoke.py` | Same | Required | Fresh sdist/wheel, exact package file inventory including reviewed scoring PDFs, hash-locked new environment, imports/routes outside source tree; no SQL owner or acquisition |
+| Persistent boundaries and migrations | CI / `postgres`, reusable storage / `postgres.py` | Same / PostgreSQL 16 | Required | Disposable cluster, selected migration/transaction/read tests and teardown; never ordinary state |
+| Browser journey, focus, enlargement and finite Stop | CI / `browser` / `pytest -q browser_tests` | Same / locked Chromium | Required | Intercepted boards, authored loopback SC04/SC05 and actual disposable-SQL SC06; automated evidence does not establish owner or installed-device acceptance |
+| Representative UI performance and resource budgets | Browser SC04/SC05/SC06 harnesses and retained JSON | Same | Required existing budgets; measurements environment-specific | Authored bounded workloads, including the 500-event SC06 workload. Do not replace actual SQL/browser qualification with portable substitutes |
+| Secrets | CI / `quality` / `secret_scan.py` | Same | Required | Redacted current publishable-tree scan; exact public identifiers/digests have dated, path-scoped exceptions and credential negative controls. History is outside scan scope |
+| Dependency vulnerabilities and inventory | CI / `quality` / locked `pip_audit`; package metrics | Same; advisory data refreshed per run | Required audit; informational license inventory | Findings and scanner outage fail. Unknown licenses stay null; no invented legal approval |
+| Broader runtime compatibility | Scheduled assurance / `compatibility` | Monday 07:23 UTC or typed manual / macOS 15, Python 3.11 and 3.14 | Scheduled/requested required | Portable suite and fresh package; each matrix result remains visible |
+| Service/security refresh | Scheduled assurance / `postgres`, `security` | Weekly or selected manual scope / Ubuntu | Scheduled/requested required | Reuses storage policy and refreshes locked dependency advisories |
+| Reliability, queue, elapsed and resource telemetry | Scheduled assurance / `health` / `health.py` | Weekly/manual; Actions read API | Advisory | At most 30 completed CI runs from 30 days; optional API failures retain other samples |
+| Scoped assurance outcomes | Scheduled assurance / `summary` / `assurance_report.py` | Weekly/manual | Requested checks required; other scopes N/A | Only intentionally unrequested jobs may skip. Health availability cannot overwrite correctness outcomes |
+| Language static security analysis | Existing GitHub CodeQL default setup | GitHub-managed | Independent; not asserted by readiness | Read-only API inspection confirmed Actions, JavaScript/TypeScript and Python configured; no activation performed |
+| Windows, native device, other browsers and expanded architecture matrices | No workflow | N/A | Not claimed | No Windows product support or native-device executor is established by this repository. Local Apple silicon evidence and hosted matrix evidence remain separate |
+| Container/IaC scanning; signing/deploy/publish | No workflow | N/A | Outside ordinary PR CI | No maintained container/IaC deployment target was found; release/environment authorization is separate |
+
+PR and main runs have distinct value: the PR candidate can be a generated merge
+commit; the main push checks integrated state. `merge_group` handles a future queued
+candidate, but no active merge queue was observed. There are no path filters that
+can strand readiness. No privileged `pull_request_target`, `workflow_run`, secret
+inheritance, persistent self-hosted runner or PR comment publisher is introduced.
+Fork checks receive no application credentials. External Actions use full SHAs;
+checkout credential persistence is disabled. Cache correctness follows hash-locked
+installs and does not rely on warm contents.
+
+The weekly schedule is Monday at 07:23 UTC on the default branch. GitHub can delay
+or omit scheduled execution; inspect the run date and SHA before relying on it.
+Manual scopes are validated choice inputs, default to `all`, and require normal
+repository workflow-dispatch permission. A selected scope's cancelled/failed/missing
+job fails its summary; deliberately unselected scopes show N/A. An old scheduled
+pass never qualifies a newer PR. No tag, environment or release publishing is added.
+
+The browser job explicitly selects PostgreSQL 16 and allows 25 minutes for the
+SC06 inner timeout plus other journeys and tooling setup. Its SC06 reports live
+inside the uploaded browser artifact. Job timeouts are outer safety bounds, not
+performance acceptance thresholds. A cancelled runner may prevent final uploads;
+job cancellation remains a failed readiness input even when no report survives.
+
+## Metrics and integration policy
+
+Each applicable report retains tested SHA, event/run identity and environment.
+Local dirty-tree evidence is not hosted evidence for that SHA. JUnit durations
+must be finite and nonnegative. Required missing or malformed reports fail rather
+than becoming zero findings. Package metrics retain wheel bytes, elapsed
+seconds and installed dependency/license inventory. Fresh local report directories
+preserve prior diagnostics; use `package_smoke.py --report-dir EMPTY_DIRECTORY`.
+
+Coverage line/branch measurements describe the executed scope, with archival
+exclusions in `python-policy.json`. Changed-line coverage and comparable deltas
+remain unavailable without an identified matching baseline. No arbitrary universal
+coverage threshold is introduced. Performance deltas require the same workload,
+runtime, browser, machine class and measurement boundary; otherwise report only
+the new measurement. The health report's baseline is null; its rolling sample may
+contain different historical suite scopes and is reliability telemetry, not a
+product-performance comparison.
+
+Health first-attempt rates exclude cancellations and explicitly retrieve attempt 1
+for rerun runs. Missing first attempts remain unavailable. Recovery never implies
+flakiness. Elapsed samples use run start to final completed job; nearest-rank p95
+requires at least 20 samples. Queue time is creation to first job start. Summed job
+seconds are observed runner minutes, not elapsed time or billing. Incomplete job
+samples and individual API outages remain explicit. Failed-step categories can
+include downstream report/gate failures and must not be treated as independent root
+causes. Critical-path dependency reconstruction, account quota and suspected flakes
+remain unavailable. Artifact metadata is a bounded sample, not total billed storage.
+
+Native summaries and artifacts are the reporting surface; no new reporting service,
+account, token, paid tier or notification integration is activated. Official
+eligibility was checked on 2026-10-17:
+
+| Option / status | Eligibility and limits | Data, permission, retention and failure behavior |
+| --- | --- | --- |
+| GitHub summaries/artifacts/read API: existing, configured | Repository observed public. Standard hosted runners are free for public repositories; larger runners are charged. Private GitHub Free includes 2,000 minutes/month, 500 MB artifact storage; cache allowance is 10 GB/repository. Actual owner billing plan/quota was not read | Existing GitHub account and ephemeral workflow token; contents read, Actions read only for telemetry. Source executes on GitHub; synthetic/redacted reports upload to GitHub for 14 days. No separate LOC/user/upload service limit applies to these CLI reports; GitHub platform/storage limits apply. Required upload/report failures remain visible; telemetry outage is advisory. Usage without payment can block at quota; paid budgets are owner-controlled |
+| actionlint CLI: existing, locally executed | Open-source local executable, public/private eligible; no account, token, LOC, seat or upload quota | Workflow source stays in the job; no external analysis upload. Version/checksum-pinned installer. Missing tool or failed validation fails quality |
+| Gitleaks CLI: existing, locally executed | Open-source CLI; no account, seat, LOC or scan-upload quota. This does not adopt the separately licensed wrapper Action | Current publishable-tree files stay in the job; redacted JSON retained for 14 days. Negative controls protect the narrow exceptions. Findings or tool failure fail quality |
+| pip-audit/coverage: existing, locally executed | No new SaaS subscription, upload or user quota | Dependency names/versions go to the vulnerability advisory service; source/coverage has no external dashboard upload. Advisory-service outage fails the required audit; coverage/report outage fails its applicable gate |
+| CodeQL: existing default setup observed | Repository is public; API confirmed configured languages and weekly schedule | Existing GitHub integration, no new setup or permissions applied; results remain separate from this readiness gate. Its latest result does not qualify dirty local source |
+
+Sources: [GitHub billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions),
+[job summaries](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-job-summary),
+[actionlint](https://github.com/rhysd/actionlint),
+[Gitleaks CLI and Action distinction](https://github.com/gitleaks/gitleaks).
+Codecov, SonarQube Cloud, OSV-Scanner and Lighthouse CI are not recommended for
+activation in this pass: native coverage, existing CodeQL, pip-audit and workload
+browser measurements already cover the immediate needs. Their account eligibility
+and commercial limits were not evaluated, and no claim of free private access is
+made. Dedicated changed-code coverage is a future need only after a trustworthy
+baseline exists. The package license inventory is informational; the missing
+project license decision and null dependency licenses remain owner review items.
+
+Read-only repository inspection found `main` unprotected and no rulesets. The
+workflow implements readiness but cannot enforce merging by itself. Recommended
+owner setting: require `CI readiness` on `main` after resolving current failures;
+choose freshness/up-to-date rules with the owner's merge policy. This is a
+recommendation, not an applied repository setting.

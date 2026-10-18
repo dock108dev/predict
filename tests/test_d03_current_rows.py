@@ -24,6 +24,7 @@ def future_records(venue='novig'):
     start=(datetime.now(timezone.utc)+timedelta(days=3)).isoformat()
     for r in rows:
         r['event']['scheduled_start']=r['market_identity']['scheduled_start']=start
+        r['quote'].pop('book_confirmation',None)  # Authored original-clock ordering, no renewed confirmation.
         r['quote']['times']['source_at']='2026-10-15T12:00:00Z'
         r['quote']['times']['received_at']='2026-10-15T12:00:01Z'
     return rows
@@ -80,6 +81,7 @@ class CurrentRows(unittest.TestCase):
     def test_exact_shared_native_depth_bid_change_and_missing_side(self):
         native=future_records('polymarket_us');self.store.upsert_records(native)
         target=native[0]['quote']['source'];book=deepcopy(next(o['book'] for e in envelopes() if e['record']['kind']=='admitted_books' for o in e['record']['value']['observations'] if o['book']['raw']['ref']['market_id']==target['native_market_id']))
+        book.pop('book_confirmation',None)
         book['raw'].update(exchange_at='2026-10-15T12:00:00Z',received_at='2026-10-15T12:00:01Z')
         self.store.replace_native_books([book]);before=self.store.capture()
         self.assertTrue(any(r['quote'].get('depth') for r in before['records']))
@@ -157,6 +159,7 @@ class CurrentRows(unittest.TestCase):
     def native_book(self,rows):
         target=rows[0]['quote']['source']
         book=deepcopy(next(o['book'] for e in envelopes() if e['record']['kind']=='admitted_books' for o in e['record']['value']['observations'] if o['book']['raw']['ref']['market_id']==target['native_market_id']))
+        book.pop('book_confirmation',None)
         book['raw'].update(exchange_at='2026-10-15T12:00:00Z',received_at='2026-10-15T12:00:01Z')
         return book
 
@@ -242,6 +245,7 @@ class CurrentRows(unittest.TestCase):
              patch('app.collection.current_database.utc',return_value=AT) as clock:
             sink.commit(dict(header,type='coverage_inventory',inventory=cats,generation=1,previous_generation=None),states)
             observation=deepcopy(next(o for e in envelopes() if e['record']['kind']=='admitted_books' and e['record']['source']==source for o in e['record']['value']['observations']))
+            observation['book'].pop('book_confirmation',None)
             sink.commit(dict(observation,**header),states)
             native=self.store.records();self.assertTrue(any(r['quote'].get('depth') for r in native))
             one_sided=deepcopy(observation);one_sided['book']['outcomes'][0]['asks']=None
@@ -316,7 +320,7 @@ class CurrentRows(unittest.TestCase):
             self.assertEqual(before,self.store.capture(include_depth=False))
         self.assertNotEqual(before['revision'],self.store.capture(include_depth=False)['revision'])
 
-    def test_reopen_changes_runtime_epoch_without_changing_prices_or_clocks(self):
+    def test_reopen_preserves_epoch_prices_and_clocks(self):
         from app.collection.current_database import DatabasePipeline
         from app.collection.current_policy import DEFAULT
         import asyncio
@@ -331,7 +335,9 @@ class CurrentRows(unittest.TestCase):
         with patch('app.collection.current_database.connect',lambda:connect(self.name)):
             first=asyncio.run(reopen());second=asyncio.run(reopen())
         after=self.store.capture()
-        self.assertEqual(len({before['epoch'],first,second}),3)
+        # Routine data-process restarts preserve the owner data epoch. Runtime
+        # identity and result bindings separately revoke old selected authority.
+        self.assertEqual(len({before['epoch'],first,second}),1)
         self.assertEqual(before['records'],after['records'])
         self.assertEqual(before['source_status'],after['source_status'])
         self.assertEqual(counts,self.counts())

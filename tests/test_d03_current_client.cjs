@@ -26,5 +26,16 @@ const {fixture,board,coverage,bounds,copy}=require('./current_board_fixture.cjs'
  const q=b.prices[0],identity={...q.inputs_identity,policy_revision:b.policy.revision},inputs={version:'predict-board-inputs-2',game_key:b.game_key,quote_id:q.quote_id,calculation_context:b.calculation_context,evidence:{original:q.original}};
  checkInputs(inputs,ev,identity);
  for(const mutate of [x=>x.quote_id='crossed',x=>x.game_key='other-game',x=>x.calculation_context.context_id='after-reset',x=>x.evidence=null,x=>x.version='predict-board-inputs-1']){const broken=copy(inputs);mutate(broken);assert.throws(()=>checkInputs(broken,ev,identity));}
+ const observed={...identity,observation_revision:'source-frame-a',quote_revision:7},observedInputs={...inputs,observation_revision:'source-frame-a',quote_revision:7};
+ checkInputs(observedInputs,ev,observed);
+ for(const mutate of [x=>x.observation_revision='source-frame-b',x=>x.quote_revision=8,x=>delete x.observation_revision]){const broken=copy(observedInputs);mutate(broken);assert.throws(()=>checkInputs(broken,ev,observed),/Original price changed/);}
+ const sourceBoard=copy(fixture.odds);delete sourceBoard.calculation_context.policy_revision;
+ for(const q of sourceBoard.prices){q.observation_revision='authored-frame:'+q.quote_id;q.inputs_identity.observation_revision=q.observation_revision;}
+ checkBoard(sourceBoard,{...c,game:sourceBoard.game_key});
+ const sourceIdentity={...sourceBoard.prices[0].inputs_identity,quote_revision:7,policy_revision:sourceBoard.policy.revision};
+ const sourceInputs={version:'predict-board-inputs-2',game_key:sourceBoard.game_key,quote_id:sourceBoard.prices[0].quote_id,observation_revision:sourceIdentity.observation_revision,quote_revision:7,calculation_context:sourceBoard.calculation_context,evidence:{original:sourceBoard.prices[0].original}};
+ checkInputs(sourceInputs,{...c,game:sourceBoard.game_key},sourceIdentity);
+ sourceBoard.view='ev';sourceBoard.rows=[];checkBoard(sourceBoard,{...c,view:'ev',game:sourceBoard.game_key});
+ const incompleteSource=copy(sourceBoard);delete incompleteSource.prices[0].observation_revision;assert.throws(()=>checkBoard(incompleteSource,{...c,view:'ev',game:sourceBoard.game_key}),/identity unavailable/);
  console.log('PASS D03 500-event/50-per-page complete coverage, omitted/crossed pages, v2 current identities, reset/restart/removed Details and selected Original guards');
 })().catch(e=>{console.error(e);process.exitCode=1;});

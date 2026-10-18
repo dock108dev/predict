@@ -1,5 +1,6 @@
 import { numeric, percent } from "./board-client.js";
-import { el, side, venue, words, time, price, metric, americanDecimal, labelsFor } from "./board-elements.js";
+import { appendComparisonCoverage } from "./comparison-coverage.js";
+import { el, side, venue, words, time, price, metric, americanDecimal, labelsFor, observationSummary, observationState, estimateSummary, clockedText, matchesGameSearch, marketFamily, marketCaption, outcomeDisplayKey, matchesMarketFilter } from "./board-elements.js";
 
 const comparisonStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "calculation_failed", "not_evaluated"];
 const comparisonMetrics = {
@@ -85,6 +86,19 @@ export function scopedComparisonAvailability(boards, errors, games) {
 export function crossVenue(row) {
   return row.legs?.length === 2 && row.legs.every(l => typeof l.venue === "string" && l.venue.length) && row.legs[0].venue !== row.legs[1].venue;
 }
+export function scopedObservationCoverage(boards, now = Date.now()) {
+  const counts = {current: 0, pending: 0, last_known: 0, unknown: 0}, reasons = new Map(), venues = new Map(), seen = new Set(), games = new Set();
+  for (const b of boards) for (const q of b.prices) {
+    const key = b.game_key + ":" + q.quote_id;
+    if (seen.has(key)) continue;
+    seen.add(key); games.add(b.game_key);
+    const state = observationState(q, now); counts[state]++;
+    const book = venues.get(q.venue) || {total: 0, current: 0, pending: 0, last_known: 0, unknown: 0, games: new Set()};
+    book.total++; book[state]++; book.games.add(b.game_key); venues.set(q.venue, book);
+    for (const code of new Set(q.observation_display?.reason_codes || q.freshness?.reasons || [])) reasons.set(code, (reasons.get(code) || 0) + 1);
+  }
+  return {total: seen.size, games: games.size, counts, reasons, venues};
+}
 export function createComparisonSlate({ content, onDetails, onOriginal }) {
   function action(root, label, key, callback) {
     const button = el("button", label, "slate-action");
@@ -95,41 +109,52 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
   }
   function heading(root, g) {
     const h = el("div", undefined, "slate-game-heading");
-    h.append(el("h2", g.title), el("small", "Kickoff " + time(g.start_at)));
+    h.append(el("h2", g.title), el("small", [g.league || g.sport, "Starts " + time(g.start_at)].filter(Boolean).join(" · ")));
     root.append(h);
   }
-  function delivery(b, paused) {
-    return b.delivery_state === "pending" ? paused ? "Current updates paused" : "Calculation pending · prices available" : b.delivery_state === "stopped" ? "Collection stopped" : "";
+  function delivery(b, paused, sourceOnly = false) {
+    return b.delivery_state === "pending" ? paused ? "Current updates paused" : sourceOnly ? "Updating stored observations · original prices remain available" : "Calculation pending · prices available" : b.delivery_state === "stopped" ? "Collection stopped" : "";
   }
   function referenceEvidence(root, g, b) {
     const d = el("details", undefined, "reference-evidence");
     d.dataset.key = g.game_key + ":reference";
     d.append(el("summary", "Reference originals & method"));
     const { participant } = labelsFor(g.participants);
-    d.append(el("p", words(b.benchmark.method) + " · " + words(b.benchmark.conditioning) + " · " + (b.benchmark.freshness === "current" ? "Current benchmark inputs" : "As-of benchmark")));
-    for (const f of b.benchmark.fair || []) d.append(el("p", participant(f.participant) + " · fair decimal " + f.fair_decimal_odds + " · decisive probability " + f.decisive_probability));
-    for (const o of b.benchmark.originals || []) d.append(el("p", participant(o.selection?.participant_id) + " · offered decimal " + o.decimal_odds + " · Source " + (o.book_at || o.market_at || "Unknown") + " · Received " + (o.received_at || "Unknown")));
-    if (!b.benchmark.available) d.append(el("p", "Selected benchmark unavailable · " + words(b.benchmark.reason)));
+    const benchmark = b.benchmark || {};
+    d.append(el("p", words(benchmark.method) + " · " + words(benchmark.conditioning) + " · " + (benchmark.freshness === "current" ? "Current benchmark inputs" : "As-of benchmark")));
+    for (const f of benchmark.fair || []) d.append(el("p", participant(f.participant) + " · fair decimal " + f.fair_decimal_odds + " · decisive probability " + f.decisive_probability));
+    for (const o of benchmark.originals || []) d.append(el("p", participant(o.selection?.participant_id) + " · offered decimal " + o.decimal_odds + " · Source " + (o.book_at || o.market_at || "Unknown") + " · Received " + (o.received_at || "Unknown")));
+    if (!benchmark.available) d.append(el("p", "Selected benchmark unavailable · " + words(benchmark.reason)));
     root.append(d);
   }
   function odds(g, b, paused) {
     const root = el("article", undefined, "slate-game slate-odds");
     root.dataset.key = g.game_key;
     heading(root, g);
-    if (delivery(b, paused)) root.append(el("small", delivery(b, paused), "pending-label"));
+    if (delivery(b, paused, true)) root.append(el("small", delivery(b, paused, true), "pending-label"));
     const table = el("div", undefined, "slate-prices");
     const books = ["novig", "prophetx", "kalshi", "polymarket_us"];
-    for (const team of g.participants) {
+    const instruments = new Map();
+    if (!b.prices.length) root.append(el("p", "No retained prices for this market scope."));
+    for (const q of b.prices) {
+      const key = outcomeDisplayKey(q);
+      if (!instruments.has(key)) instruments.set(key, []);
+      instruments.get(key).push(q);
+    }
+    for (const quotesForOutcome of instruments.values()) {
+      const first = quotesForOutcome[0], team = g.participants.find(p => p.id === first.selection.participant);
       const row = el("div", undefined, "slate-price-row team");
-      row.append(el("strong", team.name, "slate-team-name"));
+      const name = el("div", undefined, "slate-team-name");
+      name.append(el("strong", labelsFor(g.participants).selection(first, false)), el("small", marketCaption(first)));
+      row.append(name);
       for (const book of books) {
         const cell = el("div", undefined, "slate-price-cell");
         cell.append(el("small", venue(book), "mobile-price-label"));
         // Use the supplied participant/predicate. Short is NOT opponent YES.
-        const quotes = b.prices.filter(q => q.selection.participant === team.id && q.venue === book && q.selection.predicate === "win");
+        const quotes = quotesForOutcome.filter(q => q.venue === book);
         if (!quotes.length) {
           const absent = el("span", "—", "unavailable-price");
-          absent.title = venue(book) + " price unavailable for " + team.name;
+          absent.title = venue(book) + " price unavailable for " + labelsFor(g.participants).selection(first, false);
           absent.setAttribute("aria-label", absent.title);
           cell.append(absent);
         }
@@ -140,28 +165,19 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
           const meaning = labelsFor(g.participants).selection(q) + " · " + venue(book) + " · original " + q.original.value + " " + words(q.original.units) + " · " + (q.freshness?.status === "current" ? "Current inputs" : "As-of inputs") + " · Source " + (q.freshness?.source_at || "Unknown") + " · Received " + (q.freshness?.received_at || "Unknown");
           button.title = meaning;
           button.setAttribute("aria-label", meaning + " · Open original price");
-          const age = el("small", q.freshness?.status === "current" ? "Current" : "Last-known", "compact-source-clock");
-          age.title = meaning;
-          cell.append(age);
+          observationSummary(cell, q);
         }
         row.append(cell);
       }
       const fair = el("div", undefined, "slate-price-cell slate-fair");
-      const f = b.benchmark.fair?.find(f => f.participant === team.id);
-      fair.append(el("strong", f ? "Fair " + americanDecimal(f.fair_decimal_odds) : "Fair unavailable"));
-      if (b.benchmark.available && b.benchmark.freshness !== "current") fair.append(el("small", "Last-known"));
+      const winner = marketFamily(first) === "winner" && first.selection.predicate === "win";
+      const f = winner && b.benchmark?.fair?.find(f => f.participant === team?.id);
+      fair.append(el("strong", f ? "Fair " + americanDecimal(f.fair_decimal_odds) : winner ? "Fair unavailable" : "No matching reference"));
+      if (b.benchmark?.available && b.benchmark.freshness !== "current") fair.append(el("small", "Last-known"));
       row.append(fair);
       table.append(row);
     }
     root.append(table);
-    const alternatives = b.prices.filter(q => q.selection.predicate !== "win" || !g.participants.some(p => p.id === q.selection.participant));
-    if (alternatives.length) {
-      const d = el("details", undefined, "slate-alternatives");
-      d.dataset.key = g.game_key + ":alternatives";
-      d.append(el("summary", "Other native instruments · " + alternatives.length));
-      for (const q of alternatives) action(d, labelsFor(g.participants).selection(q) + " · " + venue(q.venue) + " " + price(q), g.game_key + ":" + q.quote_id, button => onOriginal(q, button, g));
-      root.append(d);
-    }
     referenceEvidence(root, g, b);
     content.append(root);
   }
@@ -201,12 +217,12 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
   }
   function gameReference(root, g, b) {
     const line = el("p", undefined, "game-reference");
-    line.append(el("span", venue(b.benchmark.venue) + " fair American · "));
+    line.append(el("span", venue(b.benchmark?.venue) + " fair American · "));
     line.append(el("span", g.participants.map(p => {
-      const f = b.benchmark.fair?.find(f => f.participant === p.id);
+      const f = b.benchmark?.fair?.find(f => f.participant === p.id);
       return p.name + " " + (f ? americanDecimal(f.fair_decimal_odds) : "unavailable");
     }).join(" · ")));
-    if (b.benchmark.freshness !== "current" && b.benchmark.available) line.append(el("small", "Last-known reference"));
+    if (b.benchmark?.freshness !== "current" && b.benchmark?.available) line.append(el("small", "Last-known reference"));
     root.append(line);
   }
   function availabilityNotice(scope, filter, onShowAll) {
@@ -248,37 +264,74 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     for (const { row, g } of saved) action(d, g.title + " · " + row.legs.map(l => labelsFor(g.participants).selection(l) + " / " + venue(l.venue)).join(" + ") + " · Details", g.game_key + ":" + row.pair_id, button => onDetails(row, button, g));
     content.append(d);
   }
-  function draw(v, { view, filter, game = "", search = "", sort = "best", onShowAll }) {
+  function draw(v, { view, filter, game = "", search = "", league = "", family = "", period = "", source = "", sort = "best", onShowAll }) {
     content.replaceChildren();
     content.classList.toggle("compact-odds", view === "odds");
     content.classList.toggle("compact-comparisons", view !== "odds");
-    const visible = new Map(v.games.filter(g => (!game || g.game_key === game) && g.title.toLowerCase().includes(search.toLowerCase())).map(g => [g.game_key, g]));
-    const boards = v.boards.filter(b => visible.has(b.game_key)), paused = v.storage?.state === "unavailable";
+    const visible = new Map(v.games.filter(g => (!game || g.game_key === game) && (!league || (g.league || g.scope?.split("/")[0]) === league) && matchesGameSearch(g, search)).map(g => [g.game_key, g]));
+    const boards = v.boards.filter(b => visible.has(b.game_key)).map(b => ({...b,
+      prices:b.prices.filter(q => (!source || q.venue === source) && matchesMarketFilter(q, family, period)),
+      rows:b.rows.filter(q => q.legs ? (!source || q.legs.some(leg => leg.venue === source)) && q.legs.every(leg => matchesMarketFilter(leg, family, period)) : (!source || q.venue === source) && matchesMarketFilter(q, family, period))})).filter(b => (!family && !period && !source) || b.prices.length || source === v.policy.benchmark_venue && (!family || family === "winner") && (!period || period === "full_game") && b.benchmark?.originals?.length), paused = v.storage?.state === "unavailable";
+    if (family || period || source) for (const key of visible.keys()) if (!boards.some(b => b.game_key === key)) visible.delete(key);
     const rows = boards.flatMap(b => b.rows.filter(row => view !== "arbs" || crossVenue(row)).map(row => ({ g: visible.get(b.game_key), b, row })));
     rows.sort((a, b) => compareComparisonMetrics(a.row, b.row, view) || (a.g.start_at || "").localeCompare(b.g.start_at || "") || a.g.game_key.localeCompare(b.g.game_key) || String(a.row.quote_id || a.row.pair_id).localeCompare(String(b.row.quote_id || b.row.pair_id)));
     const scope = scopedComparisonAvailability(boards, (v.errors || []).filter(e => visible.has(e.game_key)), visible.size);
     const shared = new Set(scope.causes.filter(c => c.affected_results > 1).map(c => c.code));
     const summary = el("div", undefined, "slate-summary");
-    summary.append(el("strong", visible.size + " matching games · " + v.games.length + " in covered catalog"));
+    summary.append(el("strong", visible.size + (visible.size === 1 ? " game shown" : " games shown") + " · " + v.games.length + " in catalog"));
     if (view !== "odds") summary.append(el("span", rows.length + (view === "arbs" ? " cross-venue comparisons" : " comparisons") + " · " + (filter === "all" ? "all returned results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
     const overview = el("div", undefined, "slate-overview");
     overview.append(summary);
+    if (view === "odds") appendComparisonCoverage(overview, boards);
+    const observationOverview = view === "odds" ? el("details", undefined, "observation-coverage-details") : overview;
+    if (view === "odds") {
+      observationOverview.dataset.key = "observation-coverage-details";
+      observationOverview.append(el("summary", "Retained observation status & source coverage"));
+    }
+    const observed = scopedObservationCoverage(boards), catalog = scopedObservationCoverage(v.boards), errors = (v.errors || []).filter(e => visible.has(e.game_key));
+    observationOverview.append(el("p", "Shown scope: " + observed.total + " price observations in " + observed.games + " matching games · Catalog: " + catalog.total + " returned price observations" + ((v.errors || []).length ? " (board errors exclude unknown observations)" : ""), "observation-counts"));
+    if (source) observationOverview.append(el("p", "Source display filter: " + venue(source) + ". " + (catalog.total - observed.total) + " returned observations remain outside this shown scope. Captured peer inputs and the global catalog remain available.", "source-filter-counts"));
+    observationOverview.append(clockedText("p", now => { const states = scopedObservationCoverage(boards, now).counts; return states.current + " current · " + states.pending + " pending publication · " + states.last_known + " last-known · " + states.unknown + " unknown/unavailable observations"; }, "observation-states"));
+    observationOverview.append(el("small", "Each price observation is counted once. Read as of " + time(v.read_at || v.as_of) + ".", "observation-read-time"));
+    if (v.coverage?.complete) observationOverview.append(el("small", "Requested pages retrieved" + (v.coverage.page_count ? " · " + v.coverage.page_count + " pages" : "") + ". Source currentness and comparison availability are shown separately.", "page-completion"));
     const coverage = el("div", undefined, "slate-coverage");
-    coverage.append(el("small", "Observed coverage"));
-    for (const book of ["novig", "prophetx", "kalshi", "polymarket_us", "pinnacle"]) coverage.append(el("span", venue(book) + " " + boards.filter(b => b.prices.some(q => q.venue === book) || (b.benchmark.venue === book && b.benchmark.available)).length + "/" + visible.size));
-    overview.append(coverage);
-    if (v.games.length) content.append(overview);
+    coverage.append(el("small", "Price observations by venue (current / retained)"));
+    for (const book of new Set(["novig", "prophetx", "kalshi", "polymarket_us", ...observed.venues.keys()])) {
+      const count = observed.venues.get(book) || {total: 0, current: 0, pending: 0, last_known: 0, unknown: 0, games: new Set()};
+      coverage.append(clockedText("span", now => { const live = scopedObservationCoverage(boards, now).venues.get(book) || count; return venue(book) + " " + live.current + "/" + live.total + " observations current · " + live.games.size + "/" + visible.size + " matching games with observations · " + live.pending + " pending, " + live.last_known + " last-known, " + live.unknown + " unknown"; }));
+    }
+    coverage.append(el("small", "Fair reference: " + venue(v.policy.benchmark_venue) + " available in " + boards.filter(b => b.benchmark?.available).length + "/" + visible.size + " matching games; reference inputs are separate from price-observation counts."));
+    observationOverview.append(coverage);
+    if (observed.reasons.size) {
+      const reasons = el("details", undefined, "observation-reasons"); reasons.dataset.key = "observation-reasons";
+      reasons.append(el("summary", "Observation status reasons"), el("small", "Reasons can overlap; these counts are not added to primary states."));
+      for (const [code, count] of observed.reasons) reasons.append(el("p", words(code) + " · " + count + " observations · " + code));
+      observationOverview.append(reasons);
+    }
+    if (view === "odds") overview.append(observationOverview);
+    if (errors.length) {
+      const missing = el("div", undefined, "missing-board-errors");
+      missing.append(el("strong", errors.length + " matching games have unavailable boards; their observation counts are unknown."));
+      for (const error of errors) missing.append(el("p", visible.get(error.game_key).title + " · " + words(error.reason) + " · " + error.reason));
+      overview.append(missing);
+    }
+    if (v.games.length || errors.length) content.append(overview);
     if (!visible.size) {
       const empty = el("div", undefined, "empty");
-      empty.append(el("h2", v.games.length ? "No games match this filter" : "No current games yet"), el("p", v.games.length ? "Clear the team search or choose All games." : "Check source status in Admin. Available games appear here after an observation is received."));
+      empty.append(el("h2", v.games.length ? "No games match this filter" : "No current games yet"), el("p", v.games.length ? "Clear the search or adjust the league, market and game filters." : "Check source status in Admin. Available games appear here after an observation is received."));
       if (!v.games.length) { const a = el("a", "Check sources in Admin"); a.href = "/admin"; empty.append(a); }
       content.append(empty);
       return;
     }
     if (view === "odds") {
+      const estimates = boards.map(b => b.estimate_availability).filter(Boolean);
+      if (estimates.length) {
+        const states = new Set(estimates.map(e => e.state));
+        estimateSummary(content, {state: states.size === 1 ? estimates[0].state : "partially_available", reason_codes: estimates.flatMap(e => e.reason_codes || [])}, "odds-estimate-reasons");
+      }
       if (boards.some(b => b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome"))) content.append(el("small", "Native sides have their own tie and refund terms. Open a price to inspect its contract.", "native-meaning"));
       const h = el("div", undefined, "slate-price-headings slate-shared-headings");
-      h.append(el("span", "Game / team"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
+      h.append(el("span", "Game / outcome"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
       content.append(h);
       for (const g of visible.values()) {
         const b = boards.find(b => b.game_key === g.game_key);
@@ -333,7 +386,6 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
       content.append(root);
     }
     const missing = boards.filter(b => !b.rows.length && (b.delivery_state === "pending" || filter === "all"));
-    const errors = (v.errors || []).filter(e => visible.has(e.game_key));
     if (missing.length || errors.length) {
       const d = el("details", undefined, "slate-pending");
       d.dataset.key = "pending-games";

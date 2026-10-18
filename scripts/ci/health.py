@@ -40,10 +40,12 @@ def analyze(runs, now):
     for event in ("pull_request", "push", "workflow_dispatch", "merge_group"):
         selected = [r for r in rows if r["event"] == event]
         first = [
-            r
+            r["conclusion"]
+            if r["run_attempt"] == 1
+            else r.get("first_attempt_conclusion")
             for r in selected
-            if r["run_attempt"] == 1 and r["conclusion"] in ("success", "failure")
         ]
+        first = [value for value in first if value in ("success", "failure")]
         durations = []
         for r in selected:
             if r["conclusion"] in ("success", "failure") and r.get("job_completed_at"):
@@ -57,11 +59,21 @@ def analyze(runs, now):
         result["events"][event] = {
             "runs": len(selected),
             "first_attempt_observed": len(first),
-            "first_attempt_pass_rate": sum(r["conclusion"] == "success" for r in first)
+            "first_attempt_pass_rate": sum(value == "success" for value in first)
             / len(first)
             if first
             else None,
             "rerun_runs": sum(r["run_attempt"] > 1 for r in selected),
+            "observed_rerun_recoveries": sum(
+                r.get("first_attempt_conclusion") == "failure"
+                and r["conclusion"] == "success"
+                for r in selected
+                if r["run_attempt"] > 1
+            ),
+            "unavailable_first_attempts": sum(
+                r["run_attempt"] > 1 and r.get("first_attempt_conclusion") is None
+                for r in selected
+            ),
             "cancelled": sum(r["conclusion"] == "cancelled" for r in selected),
             "median_elapsed_seconds": statistics.median(durations)
             if durations
@@ -86,10 +98,28 @@ def collect(fetch, now):
     observed_jobs = 0
     incomplete = 0
     for run in selected_runs(runs, now):
-        response = fetch(
-            f"/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100"
-        )
-        jobs = response["jobs"]
+        if run["run_attempt"] > 1:
+            try:
+                first = fetch(f"/actions/runs/{run['id']}/attempts/1")
+                if (
+                    first.get("id") != run["id"]
+                    or first.get("run_attempt") != 1
+                    or run.get("head_sha")
+                    and first.get("head_sha") != run["head_sha"]
+                ):
+                    raise ValueError("First attempt identity mismatch")
+                run["first_attempt_conclusion"] = first["conclusion"]
+            except Exception as error:
+                run["first_attempt_unavailable"] = type(error).__name__
+        try:
+            response = fetch(
+                f"/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100"
+            )
+            jobs = response["jobs"]
+        except Exception as error:
+            run["jobs_unavailable"] = type(error).__name__
+            incomplete += 1
+            continue
         for job in jobs:
             for step in job.get("steps", []):
                 if step.get("conclusion") == "failure":
@@ -97,6 +127,7 @@ def collect(fetch, now):
                     failure_steps[label] = failure_steps.get(label, 0) + 1
         completed = [j for j in jobs if j.get("completed_at") and j.get("started_at")]
         if completed and len(completed) == len(jobs) == response["total_count"]:
+            run["first_job_started_at"] = min(j["started_at"] for j in completed)
             run["job_completed_at"] = max(j["completed_at"] for j in completed)
             observed_jobs += len(completed)
             runner_seconds += sum(
@@ -109,6 +140,23 @@ def collect(fetch, now):
         else:
             incomplete += 1
     metrics = analyze(runs, now)
+    queues = [
+        (
+            datetime.fromisoformat(r["first_job_started_at"].replace("Z", "+00:00"))
+            - datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
+        ).total_seconds()
+        for r in selected_runs(runs, now)
+        if r.get("first_job_started_at")
+    ]
+    metrics["queue_seconds"] = (
+        dict(
+            sample=len(queues),
+            median=statistics.median(queues),
+            meaning="run creation to first job start; not billing time",
+        )
+        if queues
+        else None
+    )
     metrics["failed_step_categories"] = failure_steps
     metrics.update(
         runner_minutes=runner_seconds / 60 if observed_jobs else None,
@@ -219,6 +267,9 @@ def main():
                         "created_at",
                         "run_started_at",
                         "job_completed_at",
+                        "first_job_started_at",
+                        "first_attempt_conclusion",
+                        "jobs_unavailable",
                         "html_url",
                     )
                 }
@@ -230,7 +281,7 @@ def main():
         + "\n"
     )
     summary = (
-        "## CI health (advisory)\n\nUp to 30 completed CI workflow runs from 30 days; separate events. No comparable performance baseline, no flake claim. Elapsed uses last completed job minus workflow start; p95 requires 20 durations. Queue/critical path/quota unavailable; runner minutes are observed job time, not a bill. Reruns without first-attempt evidence are excluded from pass rate.\n\n```json\n"
+        "## CI health (advisory)\n\nUp to 30 completed CI workflow runs from 30 days; separate events. No comparable performance baseline, no flake claim. Elapsed uses last completed job minus workflow start; p95 requires 20 durations. Queue measures creation to first job start when available; critical path/quota unavailable. Runner minutes are observed job time, not a bill. Reruns without first-attempt evidence are excluded from pass rate.\n\n```json\n"
         + json.dumps(metrics, indent=2).replace("`", "\\u0060").replace("<", "\\u003c")
         + "\n```\n"
     )

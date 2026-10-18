@@ -5,47 +5,45 @@ product needs current event/contract/price rows, shared depth and calculation
 rules. Ordinary operation replaces and expires sports working data rather than retaining
 full feed archives or expanded calculation snapshots.
 
+## Product boundary
+
+Predict collects supported source observations and presents read-only comparisons.
+Observation visibility is independent of financial-estimate completeness: source
+prices, identities, original clocks and available depth remain useful when a
+particular estimate is unknown. Personal-website execution rules and exact order
+routes are outside collection/display requirements. Financial claims retain
+their own model applicability and uncertainty. Separating the current latest-board
+price publication from calculation success is the next implementation step.
+
 ## Ordinary current data flow
 
-Collection is currently independent of browser tabs but still owned by the web
-server. The shared scanner worker starts on HTTP access and keeps its projection
-in process memory; legacy board/slate routes also calculate on read. This is
-the implementation described below, not completed process separation.
+The ordinary launcher runs an independent background data process and an app
+process against the existing PostgreSQL database. The data runtime owns
+collection, expiry, the shared scanner, Odds/EV calculations and compact episode
+summaries. The app reads bounded latest database publications. Opening a page is
+not necessary to start calculation. App-only restart preserves the data identity
+and epoch; explicit collection Stop has acknowledged cross-process semantics.
+[Runtime and latest-result contract](data-app-runtime-contract.md).
 
-The next local change separates a background data runtime from the app process.
-It reuses this PostgreSQL/current-row design, moves shared affected-input
-calculations into that runtime and publishes compact replaceable latest results.
-The app reads those results; selected Amount-specific sizing may remain explicit
-bounded backend work. One background process may own collection and calculation.
-App-only restarts must leave collection and data epochs intact, while explicit
-collection Stop and original source expiry still remove current-action authority.
-No message broker, separate repository or feed/report archive is required.
+1. Existing bounded adapters normalize source observations and upsert stable
+   current events/contracts/offers/shared depth with original clocks.
+2. Background workers discover committed database revisions, capture coherent
+   typed facts, then calculate affected economics outside SQL transactions.
+   Unrelated economics retain original calculation times.
+3. Final publication compares exact dependencies and runtime authority under the
+   current-writer lock, replacing compact latest rows and scope status.
+4. Scanner, Odds and EV reads filter/page stored results without acquisition or
+   whole-slate finance. Selected tickets/Details may calculate the selected amount
+   from exact fresh database inputs. Expanded reports remain transient.
+5. Original expiry, Stop, configuration/model/policy/epoch changes and an
+   eight-second missing heartbeat withdraw current action eligibility. Stored
+   observations remain last-known where useful; reading never renews freshness.
 
-1. Existing source adapters validate bounded responses and reconstruct native
-   books in bounded memory. Provider response bodies/websocket messages are
-   discarded after normalization rather than archived on every receipt.
-2. A direct SQL ingress owner upserts events, exact native contracts and current
-   offers by stable identities. Current depth is replaced atomically. Original
-   source and receipt clocks stay separate; a partial refresh is not a complete
-   scope deletion.
-3. The read/calculation adapter builds coherent typed inputs from current rows
-   and shared fee/payout/reference policies. Financial owners calculate requested
-   funding, EV and opposing allocations per read. Details expands only the selected
-   item; calculation reports are not persisted.
-4. Expiry removes completed/out-of-scope sports rows and dependent caches. Default
-   history is off. Account/quota/attempt/due records, credentials and settings have
-   separate lifetimes and are not sports cache data.
-5. Collection remains independent of tabs. Reads, filters, settings and Details
-   do not dispatch providers or mutate quota. Stop revokes acquisition/publication;
-   calculation or receipt time never renews source freshness.
-
-`DatabaseIngressSink` commits directly through
-`CurrentRowStore` and the current-row schema. Ordinary collection does not construct a
-journal or import diagnostics. The v2 board/slate reader captures typed current
-facts, hydrates selected depth and calculates transiently. Details requires the
-clicked context revision. There is no persistent calculation cache. The
-[storage guide](current-row-storage.md) describes tables, ordering, expiry and
-retired paths.
+`DatabaseIngressSink` commits directly through `CurrentRowStore`; ordinary
+collection does not construct a journal or import old diagnostics. Migrations
+013–015 add bounded runtime controls and latest results to the current-row schema.
+Protected accounts, quota, reservations, settings and financial records retain
+their separate owners. No sports reset is part of separation.
 
 `AggregateScheduler.admit_response` sends admitted `current_aggregate_records`
 through that SQL sink. Shared strict frame parsing and independent venue/reference
@@ -54,18 +52,19 @@ wrappers and unknown observation types fail at the ordinary SQL boundary rather
 than being normalized again. Explicit injected `LatestStateSink` fixtures retain
 their separate raw-response adapter.
 
-The ordinary CLI explicitly selects `CurrentService(database_mode=True)` and
-current SQL boards. It does not accept a historical `--game` selector or an
+The data CLI selects `CurrentService(database_mode=True)`; the app CLI selects
+`RuntimeClient` and current SQL result readers. It does not accept a historical `--game` selector or an
 observation-archive directory. `DatabasePipeline` owns startup, expiry and Stop;
 it has no journal catch-up, diagnostic bootstrap or saved-calculation request queue.
-Board/slate reads call the transient financial owners directly.
+The data runtime calls shared financial owners; selected Details/tickets retain
+bounded transient sizing.
 
 ## HTTP surfaces
 
 | Surface | Responsibility |
 | --- | --- |
 | `/`, `/ev`, `/arbs` | Current comparison presentation and v2 transport |
-| `/api/boards/{view}` | Current facts, transient calculations, revision-bound Details and typed Original |
+| `/api/boards/{view}` | Latest shared results, revision-bound selected Details and typed Original |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
 | `/admin`, `/api/admin/status`, `/api/admin/current` | Sources, quota, storage, pause, Stop and guarded recovery |
 | `/api/current` and its subroutes | HTTP 410 in ordinary SQL mode; validated state and bounded notices in explicitly injected mode |
@@ -134,13 +133,15 @@ Paths are relative to `app/`.
 | Domain | Authoritative modules |
 | --- | --- |
 | Entry points and routes | `dashboard/opportunity_board.py`, `dashboard/multi_game_server.py`, `dashboard/comparison_board_api.py` |
+| Background lifecycle/status/controls | `collection/data_runtime.py`, `collection/runtime_status.py`, `collection/runtime_client.py` |
 | Configuration and lifecycle | `collection/current_policy.py`, `collection/current_service.py`, `collection/local_ownership.py`, `collection/current_native.py` |
 | Aggregate schedule and accounting | `collection/current_aggregate_policy.py`, `collection/current_schedule.py`, `collection/current_quota.py`, `collection/current_conservative.py` |
 | Credentials and recovery | `collection/credential_handoff.py`, `collection/current_account_recovery.py`, `collection/venue_access.py` |
 | Native HTTP transport | `collection/native_http_transport.py`; `collection/continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
 | Direct admitted-only current ingress and guards | `collection/current_database.py`, `collection/current_storage_policy.py` |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
-| Current reads and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `dashboard/comparison_slate.py` |
+| Shared latest publications and readers | `storage/scanner_latest.py`, `storage/latest_board.py`, `dashboard/scanner_api.py` |
+| Selected current inputs and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `dashboard/comparison_slate.py` |
 | Occurrence and native adaptation | `comparison/occurrence_matching.py`, `comparison/event_links.py`, `comparison/combined_inputs.py`, `comparison/combined_native.py`, `comparison/domain.py`, `comparison/source_inputs.py` |
 | Policy and request overrides | `comparison/estimated_policy.py`, `comparison/effective_policy.py`, `dashboard/query_policy.py` |
 | Named benchmark | `comparison/benchmark.py`; retained gross references use `collection/current_benchmark.py` |

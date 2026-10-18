@@ -30,7 +30,7 @@ export const quantity = (v) =>
 export function followGame(previous, games, key) {
   if (games.some((g) => g.game_key === key) || !previous) return key;
   const matched = (g) =>
-    g.scope === "NFL/full_game/winner" &&
+    typeof g.scope === "string" &&
     Array.isArray(g.participants) &&
     Array.isArray(g.members) &&
     g.matches?.length &&
@@ -46,6 +46,9 @@ export function followGame(previous, games, key) {
   const candidates = games.filter(
     (g) =>
       matched(g) &&
+      g.scope === previous.scope &&
+      g.league === previous.league &&
+      g.sport === previous.sport &&
       g.start_at === previous.start_at &&
       roles(g) === roles(previous) &&
       g.members.some((m) =>
@@ -119,6 +122,63 @@ export function checkPolicy(policy, context) {
     throw Error("Settings identity crossed; response withheld.");
 }
 const availabilityStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "calculation_failed", "not_evaluated"];
+const observationStates = ["current", "pending", "last_known", "unknown"];
+const validTime = value => typeof value === "string" && Number.isFinite(Date.parse(value));
+const reasonList = value => Array.isArray(value) && value.every(code => typeof code === "string" && code.length > 0);
+function checkObservationDisplay(value) {
+  if (value === undefined) return;
+  if (!value || !observationStates.includes(value.state) || !validTime(value.read_at) ||
+      !["reason_codes", "source_reason_codes", "publication_reason_codes"].every(key => reasonList(value[key])) ||
+      !["source_age_seconds", "received_age_seconds"].every(key => value[key] === null || typeof value[key] === "number" && Number.isFinite(value[key])) ||
+      !(value.current_until === null || validTime(value.current_until)))
+    throw Error("Observation display status crossed; response withheld.");
+}
+function checkSameOutcome(value) {
+  if (value === undefined) return;
+  if (!value || typeof value.supported !== "boolean" || !reasonList(value.missing_fields) ||
+      (value.supported ? !Array.isArray(value.key) || value.reason !== null : value.key !== null || typeof value.reason !== "string" || !value.reason) ||
+      JSON.stringify(value).length > 16384)
+    throw Error("Same-outcome identity crossed; response withheld.");
+}
+function checkObservationComparison(q) {
+  checkSameOutcome(q.same_outcome);
+  checkObservationDisplay(q.observation_display);
+  for (const gross of [q.gross_comparison, q.current_comparison]) checkCapturedComparison(q, gross);
+}
+function checkCapturedComparison(q, gross) {
+  // Older compatible source frames have no additive display metadata.
+  if (!gross || gross.display_status === undefined) return;
+  if (typeof gross.available !== "boolean" || ![...observationStates, "unavailable"].includes(gross.display_status) ||
+      gross.available === (gross.display_status === "unavailable") || !validTime(gross.read_at) || !reasonList(gross.reason_codes) ||
+      !(gross.source_time_skew_seconds === null || typeof gross.source_time_skew_seconds === "number" && Number.isFinite(gross.source_time_skew_seconds) && gross.source_time_skew_seconds >= 0) || !Array.isArray(gross.inputs))
+    throw Error("Gross comparison display status crossed; response withheld.");
+  if (gross.selection_valid_until !== undefined && gross.selection_valid_until !== null && !validTime(gross.selection_valid_until))
+    throw Error("Current comparison selection boundary crossed; response withheld.");
+  if (!gross.available) return;
+  if (gross.inputs.length !== 2 || numeric(gross.value) === null || gross.unit !== "cents")
+    throw Error("Gross comparison inputs crossed; response withheld.");
+  if (typeof gross.exact?.numerator !== "string" || !/^-?\d+$/.test(gross.exact.numerator) ||
+      typeof gross.exact?.denominator !== "string" || !/^[1-9]\d*$/.test(gross.exact.denominator))
+    throw Error("Gross comparison exact value missing; response withheld.");
+  const [selected, peer] = gross.inputs;
+  for (const input of gross.inputs) {
+    if (!input || !input.quote_id || !input.venue || !input.native_side || !input.original || !input.times || !input.selection)
+      throw Error("Gross comparison original inputs missing; response withheld.");
+    checkObservationDisplay(input.observation_display);
+    checkSameOutcome(input.same_outcome);
+    if (!["source_at", "received_at"].every(key => input.times[key] === null || validTime(input.times[key])))
+      throw Error("Gross comparison original clocks crossed; response withheld.");
+  }
+  if (q.same_outcome && gross.inputs.every(input => input.same_outcome) &&
+      (!q.same_outcome.supported || gross.inputs.some(input => !input.same_outcome.supported || JSON.stringify(input.same_outcome.key) !== JSON.stringify(q.same_outcome.key))))
+    throw Error("Captured comparison same-outcome identity crossed; response withheld.");
+  if (selected.quote_id !== q.quote_id || selected.quote_revision !== q.quote_revision || selected.venue !== q.venue || selected.native_side !== q.native_side ||
+      JSON.stringify(selected.selection) !== JSON.stringify(q.selection) ||
+      JSON.stringify(selected.original) !== JSON.stringify(q.original) || JSON.stringify(selected.times) !== JSON.stringify(q.times) ||
+      peer.quote_id !== gross.comparison_quote_id || peer.venue !== gross.comparison_venue || peer.venue === selected.venue ||
+      (gross.display_status === "current" && gross.inputs.some(input => input.observation_display?.state !== "current")))
+    throw Error("Gross comparison selected frame crossed; response withheld.");
+}
 export function checkAvailability(value, summary = false) {
   if (!value || value.version !== "predict-calculation-availability-1") throw Error("Calculation availability missing; response withheld.");
   if (summary) {
@@ -138,7 +198,50 @@ export function checkAvailability(value, summary = false) {
     throw Error("Calculation availability state crossed; response withheld.");
   return value;
 }
+function inflateCapturedInputs(v) {
+  if (v.comparison_input_encoding === undefined) return;
+  if (v.comparison_input_encoding !== "same-board-price-refs-1") throw Error("Unknown comparison input encoding");
+  const prices = new Map(v.prices.map(q => [q.quote_id,q]));
+  const fields = ["quote_id","quote_revision","venue","native_side","selection","original","times","source","native_contract_id","native_contract_summary","same_outcome","market","source_state","source_health","captured_source_state","captured_source_health","freshness_policy","event","freshness","observation_display"];
+  for (const q of v.prices) {
+    q.captured_source_health ??= JSON.parse(JSON.stringify(q.source_health || {}));
+    const summary = q.native_contract_summary;
+    if (summary?.wording_refs) {
+      if (!Array.isArray(v.native_wordings)) throw Error("Captured native wording pool missing");
+      summary.wording ??= Object.fromEntries(summary.wording_refs.map(([label,index]) => {
+        if (typeof label !== "string" || !Number.isSafeInteger(index) || index < 0 || index >= v.native_wordings.length) throw Error("Captured native wording reference crossed");
+        return [label,JSON.parse(JSON.stringify(v.native_wordings[index]))];
+      }));
+    }
+  }
+  for (const q of v.prices) for (const value of [q.gross_comparison,q.current_comparison]) {
+    if (!value?.available) continue;
+    if (!value.input_refs && value.inputs?.length === 2) continue;
+    if (!Array.isArray(value.input_refs) || value.input_refs.length !== 2) throw Error("Captured price reference coverage crossed");
+    if (value.inputs?.length) {
+      if (value.inputs.length !== 2 || value.input_refs.some((ref,index) => ref.quote_id !== value.inputs[index].quote_id || ref.quote_revision !== value.inputs[index].quote_revision)) throw Error("Captured expanded price reference crossed");
+      continue;
+    }
+    value.inputs = value.input_refs.map(ref => {
+      const original = prices.get(ref.quote_id);
+      if (!original || ref.quote_revision !== original.quote_revision) throw Error("Captured price reference crossed");
+      return JSON.parse(JSON.stringify(Object.fromEntries(fields.filter(key => original[key] !== undefined).map(key => [key,original[key]]))));
+    });
+  }
+}
+function inflateFinancialPrices(v) {
+  if (v.view === "odds" || !Array.isArray(v.rows)) return;
+  const prices = new Map(v.prices.map(q => [q.quote_id,q]));
+  for (const row of v.rows) for (const item of row.legs || [row]) {
+    if (item.price_ref === undefined) continue;
+    const q = prices.get(item.price_ref);
+    if (!q || q.quote_id !== item.quote_id || q.quote_revision !== item.quote_revision || q.venue !== item.venue) throw Error("Financial original price reference crossed");
+    const original = JSON.parse(JSON.stringify(q));
+    const saved = {...item}; Object.assign(item, original, saved);
+  }
+}
 export function checkBoard(v, c) {
+  if (Array.isArray(v.prices)) { inflateCapturedInputs(v); inflateFinancialPrices(v); }
   checkPolicy(v.policy, c);
   if (v.availability !== undefined) checkAvailability(v.availability, true);
   if (
@@ -152,12 +255,15 @@ export function checkBoard(v, c) {
     v.benchmark?.venue !== c.benchmark_venue
   )
     throw Error("Game or view identity crossed; response withheld.");
-  checkCalculationContext(v.calculation_context, v.policy.revision);
+  const observationContext = (v.view === "odds" || !v.rows.length) && v.calculation_context?.policy_revision === undefined &&
+    v.prices.every(q => typeof q.observation_revision === "string" && q.observation_revision.length > 0);
+  checkCalculationContext(v.calculation_context, observationContext ? undefined : v.policy.revision);
   if (v.calculation_context.dependency_revision !== v.input_version)
     throw Error("Current dependency identity crossed; response withheld.");
   if (v.result_id != null || v.snapshot_id != null)
     throw Error("Legacy saved identity is unavailable; reopen the current view.");
   for (const q of v.prices) {
+    checkObservationComparison(q);
     if (
       !q.quote_id ||
       !q.original ||
@@ -168,6 +274,18 @@ export function checkBoard(v, c) {
       q.inputs_identity?.context_id !== v.calculation_context.context_id
     )
       throw Error("Original price identity crossed; response withheld.");
+  }
+  if (c.view === "odds" && v.rows.some(row => row.price_ref !== undefined)) {
+    const originals = new Map(v.prices.map(q => [q.quote_id,q])), seen = new Set();
+    for (const row of v.rows) {
+      const q = originals.get(row.price_ref);
+      if (!q || seen.has(row.price_ref) || row.quote_id !== q.quote_id || row.quote_revision !== q.quote_revision || row.venue !== q.venue ||
+          !["participant","predicate","signed_line","result_interpretation"].every(key => (row.selection?.[key] ?? null) === (q.selection?.[key] ?? null)) ||
+          !["market","period"].every(key => (row.market?.[key] ?? null) === (q.market?.[key] ?? null)))
+        throw Error("Odds row reference crossed; response withheld.");
+      seen.add(row.price_ref);
+    }
+    if (seen.size !== originals.size) throw Error("Odds row reference coverage crossed; response withheld.");
   }
   for (const row of v.rows) {
     if (c.view === "odds") continue;
@@ -214,7 +332,15 @@ export function checkBoard(v, c) {
   return v;
 }
 export function checkSlate(v, c) {
-  checkPolicy(v.policy, c);
+  if (v.read_at !== undefined && !validTime(v.read_at)) throw Error("Slate read time crossed; response withheld.");
+  if (v.read_token !== undefined && (typeof v.read_token !== "string" || !/^[A-Za-z0-9_-]{16,256}$/.test(v.read_token) ||
+      !validTime(v.read_at) || !validTime(v.read_expires_at) || Date.parse(v.read_expires_at) <= Date.parse(v.read_at)))
+    throw Error("Slate captured-read identity crossed; response withheld.");
+  const shared = v.sizing_scope === "shared_default_selected_details";
+  const boardContext = shared ? { ...c, amount: v.policy?.requested_amount_usd,
+    buffer: v.policy?.buffer_rate, benchmark_venue: v.policy?.benchmark_venue,
+    benchmark_method: v.policy?.benchmark_method, sizing_mode: v.policy?.sizing_mode } : c;
+  checkPolicy(v.policy, boardContext);
   if (v.availability !== undefined) checkAvailability(v.availability, true);
   if (
     v.version !== "predict-comparison-slate-2" ||
@@ -252,7 +378,7 @@ export function checkSlate(v, c) {
   for (const b of v.boards) {
     if (!expected.has(b.game_key) || seen.has(b.game_key) || b.policy?.revision !== v.policy.revision)
       throw Error("Slate board occurrence crossed; response withheld.");
-    checkBoard(b, { ...c, game: b.game_key });
+    checkBoard(b, { ...boardContext, game: b.game_key });
     if (b.calculation_context.epoch !== v.epoch)
       throw Error("Current reset identity crossed; response withheld.");
     seen.add(b.game_key);
@@ -274,6 +400,8 @@ export function checkCalculationContext(value, policyRevision) {
 }
 export function checkDetails(v, c, d) {
   checkPolicy(v.policy, c);
+  const selection = v.selection_context || v.calculation_context;
+  checkCalculationContext(selection, d.policy_revision);
   checkCalculationContext(v.calculation_context, v.policy.revision);
   if (
     v.version !== "predict-board-details-2" ||
@@ -281,9 +409,11 @@ export function checkDetails(v, c, d) {
     v.original_inputs_identity?.game_key !== c.game ||
     v.original_inputs_identity?.context_id !== d.context_id ||
     v.original_inputs_identity?.policy_revision !== d.policy_revision ||
-    v.calculation_context.context_id !== d.context_id ||
+    selection.context_id !== d.context_id ||
+    v.calculation_context.epoch !== selection.epoch ||
+    v.calculation_context.dependency_revision !== selection.dependency_revision ||
+    v.calculation_context.engine_binding !== selection.engine_binding ||
     v.result_id != null || v.snapshot_id != null ||
-    v.policy.revision !== d.policy_revision ||
     (d.quote_id
       ? v.quote?.id !== d.quote_id || v.pair != null
       : v.pair?.id !== d.pair_id || v.quote != null)
@@ -294,9 +424,13 @@ export function checkDetails(v, c, d) {
   return v;
 }
 export function checkInputs(v, c, identity) {
-  checkCalculationContext(v.calculation_context, identity.policy_revision);
+  const observationContext = v.calculation_context?.policy_revision === undefined &&
+    typeof identity.observation_revision === "string" && identity.observation_revision.length > 0;
+  checkCalculationContext(v.calculation_context, observationContext ? undefined : identity.policy_revision);
   if (v.version !== "predict-board-inputs-2" || v.game_key !== c.game ||
       v.calculation_context.context_id !== identity.context_id || v.quote_id !== identity.quote_id ||
+      (identity.observation_revision !== undefined && v.observation_revision !== identity.observation_revision) ||
+      (identity.quote_revision !== undefined && v.quote_revision !== identity.quote_revision) ||
       !v.evidence || typeof v.evidence !== "object" || Array.isArray(v.evidence))
     throw Error("Original price changed; reopen its current identity.");
   return v;
@@ -306,13 +440,14 @@ export function checkInputs(v, c, identity) {
 // slate claiming that 500 boards fit within one 8 MiB response.
 export class SlateAccumulator {
   constructor(context) {
-    this.context = context;
+    this.context = { ...context };
     this.value = null;
     this.nextOffset = 0;
     this.pageCount = 0;
     this.totalBytes = 0;
   }
   get expectedRevision() { return this.value?.read_revision; }
+  get readToken() { return this.value?.read_token; }
   get complete() { return this.value !== null && this.nextOffset === null; }
   append(page, bytes) {
     if (this.complete || this.pageCount >= 10 || !Number.isSafeInteger(bytes) || bytes < 0 || bytes > 8388608 || this.totalBytes + bytes > 83886080)
@@ -320,10 +455,14 @@ export class SlateAccumulator {
     checkSlate(page, this.context);
     if (page.coverage.offset !== this.nextOffset || page.coverage.limit !== 50 || this.value &&
         (page.read_revision !== this.value.read_revision || page.epoch !== this.value.epoch ||
-         JSON.stringify(page.games) !== this.catalogIdentity || page.policy.revision !== this.value.policy.revision))
+         page.read_token !== this.value.read_token || page.read_expires_at !== this.value.read_expires_at ||
+         page.read_at !== this.value.read_at || page.as_of !== this.value.as_of || page.stopped !== this.value.stopped ||
+         page.sizing_scope !== this.value.sizing_scope || JSON.stringify(page.games) !== this.catalogIdentity ||
+         JSON.stringify(page.policy) !== this.policyIdentity))
       throw Error("Current slate changed while reading its pages. Retry the current view.");
     if (!this.value) {
       this.catalogIdentity = JSON.stringify(page.games);
+      this.policyIdentity = JSON.stringify(page.policy);
       this.value = { ...page, version: "predict-comparison-slate-view-2", boards: [], errors: [],
         bounds: { maximum_games: 500, maximum_page_games: 50, maximum_page_bytes: 8388608, maximum_read_bytes: 83886080, maximum_pages: 10 } };
     }
@@ -379,7 +518,8 @@ export class LatestRead {
     const token = this.generation,
       controller = (this.controller = new AbortController());
     const active = (this.active = { token, controller });
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
     try {
       const response = await this.fetcher(url, { signal: controller.signal });
       // Read bounded bytes even when the peer omits Content-Length.
@@ -396,7 +536,11 @@ export class LatestRead {
         }
         chunks.push(value);
       }
-      if (token !== this.generation || controller.signal.aborted) return null;
+      if (token !== this.generation) return null;
+      if (controller.signal.aborted) {
+        if (timedOut) throw Error("Current data read timed out. Retry the current view.");
+        return null;
+      }
       const bytes = new Uint8Array(length);
       let at = 0;
       for (const chunk of chunks) {
@@ -404,12 +548,64 @@ export class LatestRead {
         at += chunk.length;
       }
       const value = JSON.parse(new TextDecoder().decode(bytes));
-      if (!response.ok)
-        throw Error(value.reason || value.error || "Current data unavailable.");
+      if (!response.ok) {
+        const error = Error(value.reason || value.error || "Current data unavailable.");
+        error.code = value.error;
+        error.reason = value.reason;
+        error.status = response.status;
+        throw error;
+      }
       return validate(value, { bytes: length });
+    } catch (error) {
+      // User cancellation supersedes the generation. A deadline on the still
+      // current request must reach the controller's warning/failure budget.
+      if (timedOut && token === this.generation) {
+        const timeoutError = Error("Current data read timed out. Retry the current view.");
+        timeoutError.code = "current_read_timeout";
+        throw timeoutError;
+      }
+      throw error;
     } finally {
       clearTimeout(timeout);
       if (this.active === active) this.active = undefined;
+    }
+  }
+}
+
+// Tokens live only within this invocation. A fresh read (including the one
+// allowed recovery) starts at zero and never reuses a partial frame or token.
+// Existing completed values stay with the controller until this returns a
+// wholly validated result. Cancellation cannot start a recovery or next page.
+export async function readSlate(reader, context, { isCurrent = () => true, onRecovery = () => {} } = {}) {
+  context = { ...context };
+  let generation = reader.generation;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const pages = new SlateAccumulator(context);
+    const query = new URLSearchParams({ view: context.view, filter: context.filter, limit: "50" });
+    try {
+      do {
+        if (!isCurrent() || reader.generation !== generation) return null;
+        query.set("offset", String(pages.nextOffset));
+        if (pages.readToken) {
+          query.set("read_token", pages.readToken);
+          query.set("expected_revision", pages.expectedRevision);
+        }
+        const request = reader.read("/api/boards/slate?" + query, (page, metadata) => {
+          if (!page.read_token) throw Error("Current slate read token unavailable; response withheld.");
+          pages.append(page, metadata.bytes);
+          return true;
+        }, 8388608);
+        generation = reader.generation;
+        const completed = await request;
+        if (!completed || !isCurrent() || reader.generation !== generation) return null;
+      } while (!pages.complete);
+      return pages.result();
+    } catch (error) {
+      if (!isCurrent() || reader.generation !== generation || error.name === "AbortError") return null;
+      const recoverable = ["current_slate_read_expired", "current_slate_read_capacity", "current_slate_read_authority_changed"]
+        .includes(error.reason) || error.code === "current_read_busy";
+      if (attempt || !recoverable) throw error;
+      onRecovery(error);
     }
   }
 }

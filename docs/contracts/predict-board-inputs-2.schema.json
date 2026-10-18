@@ -26,7 +26,6 @@
         "context_id",
         "epoch",
         "dependency_revision",
-        "policy_revision",
         "engine_binding"
       ],
       "properties": {
@@ -81,11 +80,27 @@
         "native_contract": {},
         "provenance": {},
         "benchmark": {},
-        "representation": {}
+        "representation": {},
+        "depth": {},
+        "observed_depth": {},
+        "provider_clocks": {},
+        "source_state": {},
+        "quote_revision": {},
+        "observation_revision": {},
+        "freshness": {},
+        "estimate_availability": {},
+        "benchmark_reason": {}
       }
     },
     "provider_requests": {
       "const": 0
+    },
+    "quote_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "observation_revision": {
+      "type": "string"
     }
   },
   "additionalProperties": false

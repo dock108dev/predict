@@ -43,13 +43,16 @@ def junit_counts(path):
     cases = list(root.iter("testcase"))
     if not cases:
         raise ValueError("Required test report contains zero test cases")
+    durations = [float(c.get("time", "0")) for c in cases]
+    if any(not math.isfinite(value) or value < 0 for value in durations):
+        raise ValueError("Invalid JUnit duration")
     return {
         "tests": len(cases),
         "failed": sum(
             c.find("failure") is not None or c.find("error") is not None for c in cases
         ),
         "skipped": sum(c.find("skipped") is not None for c in cases),
-        "seconds": sum(float(c.get("time", "0")) for c in cases),
+        "seconds": sum(durations),
     }
 
 

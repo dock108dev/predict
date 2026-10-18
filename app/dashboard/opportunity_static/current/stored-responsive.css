@@ -57,7 +57,8 @@
   }
   nav a {
     flex:1;
-    padding:8px 12px
+    min-width:0;
+    padding:8px 7px
   }
   #stop {
     font-size:.8125rem;
@@ -417,4 +418,39 @@ opposing comparisons have four. */
   .availability-notice>button { max-width:100%; white-space:normal }
   .game-reference { font-size:.75rem }
   .game-reference small { display:block; margin-left:0 }
+}
+
+/* Keep controls readable while bringing prices into the first screen. */
+@media(min-width:761px) and (max-width:1050px) {
+  .board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(3,minmax(0,1fr)) }
+  .board-controls #sort-setting { grid-column:auto }
+  .heading-actions #settings { width:290px }
+  .view-title .scope { flex-basis:100% }
+}
+@media(max-width:760px) {
+  .heading { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0 }
+  .view-title { flex:1; min-width:0 }
+  .heading-actions { display:contents }
+  .heading-actions .view-help { margin-left:auto; font-size:.8125rem }
+  .heading-actions .view-help summary { font-size:.8125rem }
+  .heading-actions #settings { order:3; width:100%; margin:0 }
+  .heading-actions .calculation-settings>summary { min-height:52px }
+  .board-controls,.board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { gap:10px 12px }
+  .board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .board-controls #sort-setting { grid-column:auto }
+  .board-controls .search-field { grid-column:1/-1 }
+  .board-controls .slate-selection:has(#sort-setting[hidden]) .search-field { grid-column:auto }
+  .comparison-coverage { gap:0 12px }
+  .comparison-coverage .current-comparison-counts { flex-basis:100% }
+  .observation-coverage-details { width:100% }
+  .slate-overview { gap:0 12px }
+  #status,#applied,.scope { font-size:.8125rem }
+  .detail-funding small { min-height:0 }
+}
+
+@media(max-width:760px) {
+  .heading-actions #settings { display:block }
+  .heading-actions #settings .settings-fields label { grid-column:auto }
+  .heading-actions #settings .settings-fields .benchmark-setting { grid-column:1/-1 }
+  .heading-actions .settings-body { text-align:left }
 }

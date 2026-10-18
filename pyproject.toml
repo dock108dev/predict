@@ -17,7 +17,7 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 "app" = ["reviews/native/*.json"]
-"app.fixtures" = ["*.json"]
+"app.fixtures" = ["*.json", "native-scoring-scope/*"]
 "app.normalization" = ["*.json"]
 
 "app.collection" = ["static/*"]

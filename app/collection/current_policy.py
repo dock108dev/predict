@@ -12,7 +12,7 @@ MIB = 1024 * 1024
 APP_RUNNING_DURATION = 31536000  # Existing configuration sentinel for process lifetime.
 SPORTS = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL']
 DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True,
-    sports=['NFL'], aggregate_sports=[],
+    sports=['NFL'], aggregate_sports=[], native_sports=[], native_families=[],
     families=['moneyline', 'spread', 'total'], duration_seconds=APP_RUNNING_DURATION,
     rediscovery_seconds=120, markets_per_source=20, events_per_source=24,
     requests_per_source=10000, connections_per_source=240,
@@ -23,8 +23,10 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
 
 
 def validate(value):
-    if isinstance(value,dict) and 'aggregate_sports' not in value:
-        value=dict(value,aggregate_sports=[])
+    if isinstance(value,dict):
+        value=dict(value)
+        for key in ('aggregate_sports','native_sports','native_families'):
+            value.setdefault(key,[])
     if not isinstance(value, dict) or set(value) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
@@ -36,6 +38,10 @@ def validate(value):
     scope=value['aggregate_sports']
     if not isinstance(scope,list) or len(set(scope))!=len(scope) or set(scope)-set(SPORTS):
         raise ValueError('Unsupported aggregate acquisition scope')
+    for key,allowed in (('native_sports',SPORTS),('native_families',DEFAULT['families'])):
+        scope=value[key]
+        if not isinstance(scope,list) or len(set(scope))!=len(scope) or set(scope)-set(allowed):
+            raise ValueError('Unsupported independent native acquisition scope')
     if value['backoff_seconds'] != DEFAULT['backoff_seconds']:
         raise ValueError('Exact native backoff policy required')
     for k, ceiling in DEFAULT.items():
@@ -48,6 +54,15 @@ def validate(value):
 
 def aggregate_scope(config):
     return list(config.get('aggregate_sports') or config['sports'])
+
+
+def native_scope(config):
+    """Explicit native scope, with the unchanged legacy fallback when absent."""
+    return list(config.get('native_sports') or config['sports'])
+
+
+def native_markets(config):
+    return list(config.get('native_families') or config['families'])
 
 
 def aggregate_markets(config):

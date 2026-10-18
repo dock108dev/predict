@@ -20,7 +20,7 @@ PARTS = ('below', 'equal', 'above', 'noncompleted')
 def _contract(value, native_key):
     fields = {'version', 'id', 'source', 'predicate', 'wording', 'result_policy',
               'scope', 'material_sha256'}
-    if (not isinstance(value, dict) or set(value) != fields or
+    if (not isinstance(value, dict) or not fields <= set(value) or set(value) - fields - {'scope_evidence','same_outcome'} or
             value['version'] != 'predict-native-contract-1' or
             value['id'] != 'native-contract:' + digest({k: v for k, v in value.items() if k != 'id'})):
         raise ValueError('Exact versioned native contract required')

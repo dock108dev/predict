@@ -7,7 +7,7 @@ import json
 import os
 import time
 from uuid import uuid4
-from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION, aggregate_scope
+from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION, aggregate_scope, native_scope, native_markets
 from .local_ownership import LocalOwnership
 from .current_sink import LatestStateSink, utc
 from app.dashboard.current_state import unavailable
@@ -17,12 +17,14 @@ from app.dashboard.current_contract import packed
 class CurrentService:
     allow_synthetic = False
 
-    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, database_mode=False):
+    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, database_mode=False, paused_sources=(), globally_stopped=False):
         self.config = load() if config is None else validate(config)
         from app.comparison.coverage import CoverageLedger
-        self.coverage = CoverageLedger({v: self.config['sports'] if v in ('kalshi','polymarket_us') else
+        self.coverage = CoverageLedger({v: native_scope(self.config) if v in ('kalshi','polymarket_us') else
             aggregate_scope(self.config) if self.config['aggregate_enabled'] else []
-            for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}, self.config['families'])
+            for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')},
+            {v:native_markets(self.config) if v in ('kalshi','polymarket_us') else self.config['families']
+             for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')})
         self.directory = Path(directory) if directory else ROOT/'.local/predict-current'
         self.ownership = ownership or LocalOwnership()
         self.worker_factory = worker_factory
@@ -37,6 +39,8 @@ class CurrentService:
         self.database = None
         if type(database_mode) is not bool:raise ValueError('Explicit current database mode required')
         self.database_mode = database_mode
+        self.paused_sources = set(paused_sources)
+        self.globally_stopped = globally_stopped
         self.runtime_id = str(uuid4())
         self.store = self.sink = None
         self.workers = {}
@@ -91,6 +95,10 @@ class CurrentService:
             try:self.issues=retained_issues(self)
             except (ValueError,OSError,TypeError,RecursionError):
                 self.issue('service','local_defect','issue_retention_invalid')
+        if self.globally_stopped:
+            for venue in ('kalshi','polymarket_us','novig','prophetx'):
+                self.source_state(venue,'stopped','Collection explicitly stopped. Inspect Admin before guarded recovery.')
+            return
         if not self.config['enabled']:
             # Retained prices remain inspectable while all dispatch is disabled.
             for venue in ('kalshi','polymarket_us'): self.source_state(venue,'unavailable','Acquisition is disabled in operational configuration; retained observations remain historical.')
@@ -109,12 +117,18 @@ class CurrentService:
         from .current_native import NativeWorker
         factory = self.worker_factory or NativeWorker
         for venue in ('kalshi','polymarket_us'):
+            if venue in self.paused_sources:
+                self.source_state(venue,'stopped','Source explicitly paused. This pause survives app and data restarts.')
+                continue
             self.workers[venue] = factory(self,venue)
             self.tasks[venue] = asyncio.create_task(self.run_worker(venue), name='predict-current-'+venue)
-        if self.config['aggregate_enabled']:
+        if self.config['aggregate_enabled'] and 'the_odds_api' not in self.paused_sources:
             from .current_aggregate import AggregateScheduler
             self.workers['the_odds_api']=(self.aggregate_factory or AggregateScheduler)(self)
             self.tasks['the_odds_api']=asyncio.create_task(self.run_worker('the_odds_api'),name='predict-current-aggregate')
+        elif 'the_odds_api' in self.paused_sources:
+            for venue in ('novig','prophetx'):
+                self.source_state(venue,'stopped','Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
         self.watchdog = asyncio.create_task(self.watch(), name='predict-current-resources')
 
     async def run_worker(self, venue):
@@ -215,6 +229,7 @@ class CurrentService:
             from .v1_comparison import annotate
             share_games(cats['polymarket_us'],cats['kalshi'])
             annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2')
+            occurrence(cats['polymarket_us'],'polymarket_us')
         generation=(self.sink.reducer.generation or 0)+1
         prior_books=set(self.sink.reducer.books)
         self.sink.commit(self.row('coverage_inventory',venue,inventory=cats,generation=generation,
@@ -291,7 +306,7 @@ class CurrentService:
             return
         if venue=='the_odds_api':
             self.workers[venue].state('stopped','aggregate_paused','Shared aggregate acquisition paused. Persisted quota and next-due survive reopening.')
-        else:self.source_state(venue,'stopped','Native source paused. Reopen the app for a fresh recorded runtime.')
+        else:self.source_state(venue,'stopped','Native source paused. This pause survives app and data restarts.')
 
     async def cleanup_clients(self, venues):
         # Cancellation-resistant closures must never keep the operator request

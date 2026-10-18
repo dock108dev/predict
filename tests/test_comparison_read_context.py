@@ -146,7 +146,7 @@ class ComparisonReadContext(TestCase):
         bundle['records'][0]['quote']['original']['value'] = 'changed by caller'
         self.assertEqual(self.selected(self.context()), expected)
 
-    def test_nonwinner_changes_do_not_revoke_winner_guard(self):
+    def test_added_same_game_market_family_revokes_selected_guard(self):
         before = self.context()
         members = self.members(before)
         guard = before.guard(members)
@@ -154,7 +154,9 @@ class ComparisonReadContext(TestCase):
         row['market_identity']['family'] = 'spread'
         self.frame['records'].append(row)
         row['quote']['original']['value'] = '9.99'
-        self.assertEqual(self.context().guard(members), guard)
+        # Ordinary selected games now include every admitted market family.
+        # Adding another family must revoke the exact selected input identity.
+        self.assertNotEqual(self.context().guard(members), guard)
 
     def test_native_clock_and_predicate_changes_revoke_selected_guard(self):
         before = self.context()

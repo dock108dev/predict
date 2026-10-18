@@ -4,6 +4,7 @@ import html
 import importlib.metadata
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -67,6 +68,9 @@ def render(
                 cases = list(ET.parse(path).getroot().iter("testcase"))
                 if not cases:
                     raise ValueError("zero tests")
+                durations = [float(c.get("time", "0")) for c in cases]
+                if any(not math.isfinite(value) or value < 0 for value in durations):
+                    raise ValueError("Invalid JUnit duration")
                 record["measurements"] = {
                     "tests": len(cases),
                     "failed": sum(
@@ -74,8 +78,13 @@ def render(
                         for c in cases
                     ),
                     "skipped": sum(c.find("skipped") is not None for c in cases),
-                    "seconds": sum(float(c.get("time", "0")) for c in cases),
+                    "seconds": sum(durations),
                 }
+                record["measurements"]["passed"] = (
+                    len(cases)
+                    - record["measurements"]["failed"]
+                    - record["measurements"]["skipped"]
+                )
                 if record["measurements"]["failed"] or record["measurements"][
                     "skipped"
                 ] == len(cases):

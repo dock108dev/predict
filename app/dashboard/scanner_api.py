@@ -1,9 +1,7 @@
-"""SC02 GET scanner snapshots/compact incremental page replacements.
-
-One shared process projection, one capture/evaluator worker, no settings loads,
-provider calls or user/filter-specific financial caches. Started lazily by GET.
-"""
+"""Shared background scanner owner and database-only app reader."""
 import asyncio
+from app.diagnostics import failure
+from .local_security import public_reason
 from copy import deepcopy
 from threading import Event
 from time import perf_counter
@@ -22,11 +20,13 @@ INTERVAL_SECONDS = .25
 
 
 class Scanner:
-    def __init__(self, provider, *, connector=connect, clock=utc, summary_path=None):
+    def __init__(self, provider, *, connector=connect, clock=utc, summary_path=None, durable=False):
         self.provider=provider; self.connector=connector; self.clock=clock
         self.projection=Projection(clock=clock); self.task=None; self.wake=Event()
         self.closed=False; self.unsubscribe=None; self.marker=None; self.deadline=None
         self.continuation=None
+        self.durable=durable; self.restored=False; self.persisted=None; self.error=None
+        self.admission_status=None
         from app.storage.scanner_preparation import PreparationCache
         self.preparation=PreparationCache()
         self.ticket_preparation=PreparationCache(max_entries=32,max_bytes=4*1024*1024)
@@ -47,10 +47,12 @@ class Scanner:
 
     def _capture(self):
         start=perf_counter()
+        config=deepcopy(self.capture_config if self.durable else self.provider.config)
         with self.connector() as db:
-            frame,inputs,metadata=capture(db,config=deepcopy(self.provider.config),
-                authority=self.provider.config.get('authority'),at=self.clock(),
-                source_status=deepcopy(self.provider.states),cache=self.preparation,_shared_facts=True)
+            frame,inputs,metadata=capture(db,config=config,
+                authority=config.get('authority'),at=self.clock(),
+                source_status=None if self.durable else deepcopy(self.provider.states),
+                cache=self.preparation,_shared_facts=True)
         # Both connection and repeatable-read transaction are closed before finance.
         return frame,inputs,metadata,(perf_counter()-start)*1000
 
@@ -63,9 +65,11 @@ class Scanner:
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 if db.execute('SELECT pg_database_size(current_database()) n').fetchone()['n']>=2*1024**3:
                     raise ValueError('ticket_sql_storage_guard')
-                frame,inputs,_=capture(db,config=deepcopy(self.provider.config),
-                    authority=self.provider.config.get('authority'),at=self.clock(),
-                    source_status=deepcopy(self.provider.states),members=members,cache=self.ticket_preparation)
+                remote=getattr(self.provider,'remote_runtime',False)
+                config=deepcopy(self.capture_config if remote else self.provider.config)
+                frame,inputs,_=capture(db,config=config,
+                    authority=config.get('authority'),at=self.clock(),
+                    source_status=None if remote else deepcopy(self.provider.states),members=members,cache=self.ticket_preparation)
         return frame,inputs
 
     def _probe(self):
@@ -74,10 +78,18 @@ class Scanner:
             with db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 rows=current_revision(db)
+                if self.durable:
+                    from app.collection.runtime_status import read_runtime
+                    runtime=read_runtime(db)
+                    self.runtime_revision=runtime['revision']
+                    self.database_proof=rows
+                    self.capture_config=runtime['config']
+                    self.capture_states=runtime['states']
         policy=load()
         from dataclasses import replace
         if hasattr(policy,'sizing_mode'):policy=replace(policy,sizing_mode='ceiling')
-        marker=digest(dict(rows=rows,config=self.provider.config,states=self.provider.states,
+        marker=digest(dict(rows=rows,config=self.capture_config if self.durable else self.provider.config,
+                           states=self.capture_states if self.durable else self.provider.states,
                            engine=engine_binding(),policy=policy.to_dict(),
                            registry=self.preparation.registry(at=self.clock())))
         return marker,policy
@@ -97,6 +109,52 @@ class Scanner:
         else:self.projection.ingest(frame,inputs,**kwargs)
 
     def once(self):
+        # The independent durable data owner shares its capture budget with
+        # boards and coverage. Fixture/local readers keep their existing lane.
+        if not self.durable or self.stopped():return self._once_worker()
+        from app.collection.background_work import BACKGROUND
+        with self.connector() as db:
+            size=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
+                SELECT octet_length(facts::text) n FROM current_event
+                UNION ALL SELECT octet_length(facts::text) FROM current_contract
+                UNION ALL SELECT octet_length(facts::text) FROM current_offer
+                UNION ALL SELECT octet_length(payload::text) FROM scanner_latest) inputs''').fetchone()['n']
+            depth=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
+                SELECT octet_length(price_value)+octet_length(quantity_value)+256 n FROM current_native_depth WHERE side='asks'
+                UNION ALL SELECT octet_length(price_value)+octet_length(quantity_value)+256 FROM current_depth WHERE side='asks') levels''').fetchone()['n']
+        required=int(size)*8+int(depth)+16*1024*1024
+        with BACKGROUND.claim('scanner',required) as lease:
+            self.admission_status=dict(state='admitted' if lease else 'deferred',reason=lease.reason,
+                reserved_bytes=required,resident_bytes=lease.resident_bytes)
+            if not lease:
+                self.projection.expire()
+                return lease.deferred()
+            return self._once_worker()
+
+    def _once_worker(self):
+        if self.durable and not self.restored:
+            from app.storage.scanner_latest import restore
+            with self.connector() as db:
+                old=db.execute('SELECT payload FROM scanner_latest WHERE singleton').fetchone()
+            if old:restore(self.projection,old['payload'],economics_only=True)
+            self.restored=True
+        self._once()
+        if self.durable and self.stopped():
+            # Stopped publications carry only withdrawal/censored history. They
+            # cannot restore action authority, but must reach app-absent readers.
+            from app.storage.scanner_latest import publish
+            self.marker,_=self._probe()
+            with self.connector() as db:
+                publish(db,self,proof=self.database_proof,runtime_revision=self.runtime_revision)
+        elif self.durable and self.marker is not None:
+            from app.storage.scanner_latest import publish
+            latest,_=self._probe()
+            if latest==self.marker:
+                with self.connector() as db:
+                    if not publish(db,self,proof=self.database_proof,runtime_revision=self.runtime_revision):
+                        self.marker=None
+
+    def _once(self):
         continuation,self.continuation=self.continuation,None
         if self._withdraw_if_stopped():return
         with cancellation(self.stopped):
@@ -150,16 +208,29 @@ class Scanner:
         try:
             while not self.closed:
                 self.wake.clear()
-                try:await asyncio.to_thread(self.once)
+                deferred=False
+                try:
+                    turn=await asyncio.to_thread(self.once)
+                    deferred=isinstance(turn,dict) and turn.get('deferred',False)
+                    self.error=None
                 except Exception as exc:
+                    failure(__name__, 'scanner_reconciliation', exc)
+                    self.error=type(exc).__name__
                     self.continuation=None
                     if self.stopped():self.projection.stop()
                     else:
-                        self.marker=None; self.projection.fail(type(exc).__name__+':'+str(exc)[:120])
+                        self.marker=None; self.projection.fail('scanner_reconciliation_failed')
+                    if self.durable:
+                        try:
+                            with self.connector() as db:
+                                db.execute('DELETE FROM scanner_latest WHERE runtime_id=%s',(self.provider.runtime_id,))
+                        except Exception as secondary:
+                            # Heartbeat/dependency/expiry guards remain independent.
+                            failure(__name__, 'scanner_failure_withdrawal', secondary)
                 # One coalescing bit, not an unbounded callback/task queue.
                 with self.projection.lock:
                     pending=bool(self.projection.pending) and not self.projection.stopped
-                if pending and not self.stopped():
+                if pending and not self.stopped() and not deferred:
                     # Each bounded drain yields through to_thread. Continue useful
                     # work immediately while preserving event-loop cancellation.
                     await asyncio.sleep(0)
@@ -175,14 +246,139 @@ class Scanner:
 
     async def close(self):
         self.closed=True; self.continuation=None; self.projection.stop(); self.wake.set()
+        if self.durable:
+            from app.collection.background_work import BACKGROUND
+            BACKGROUND.cancel('scanner')
         if self.task is not None:await self.task
         if self.unsubscribe:self.unsubscribe()
         await asyncio.to_thread(self.summaries.close)
         self.preparation.clear(); self.ticket_preparation.clear()
 
 
+class ScannerReader(Scanner):
+    """Hydrate compact publications; never run shared finance in the app."""
+    def __init__(self,provider,*,connector=connect,clock=utc):
+        from app.storage.scanner_preparation import PreparationCache
+        from app.storage.scanner_latest import SummaryReader
+        self.provider=provider; self.connector=connector; self.clock=clock
+        self.projection=Projection(clock=clock); self.closed=False; self.closing=False
+        self.preparation=PreparationCache(max_entries=1)
+        self.ticket_preparation=PreparationCache(max_entries=32,max_bytes=4*1024*1024)
+        self.summaries=SummaryReader(self); self.value=None; self.loaded=None
+        self.healthy=False; self.authority_until=None
+        self.unavailable_reason=None; self.collection_stopped=False
+
+    def stopped(self):
+        return (self.closed or self.collection_stopped or not self.healthy or self.authority_until is None
+                or instant(self.clock())>=instant(self.authority_until))
+
+    def _withdraw_if_stopped(self):
+        """Deny stale authority without inventing an acknowledged collection Stop."""
+        if not self.stopped():return False
+        self.loaded=None
+        with self.projection.lock:
+            if self.closed or self.collection_stopped:
+                self.projection.stop()
+            elif (self.projection.state!='unavailable' or self.projection.stopped
+                  or self.projection.rows or self.projection.receipts or self.projection.cache
+                  or self.projection.targets or self.projection.pending or self.projection.inputs):
+                # stopped() also guards unavailable proofs and dead heartbeats.
+                # Those failures clear every financial authority just as Stop
+                # does, while retaining their distinct customer-visible state.
+                self.projection.stopped=False
+                self.projection.fail('background_results_unavailable')
+                self.projection.state='unavailable'
+        return True
+
+    def refresh(self):
+        # Ticket workers and HTTP share this reader. Serialize capture/restore
+        # with the projection's existing lock so an older read cannot replace a
+        # newer publication, without introducing a second lock ordering.
+        with self.projection.lock:
+            self._refresh()
+
+    def _refresh(self):
+        from dataclasses import replace
+        from datetime import timedelta
+        from app.collection.runtime_status import read_runtime, HEARTBEAT_SECONDS
+        from app.storage.scanner_latest import restore
+        from app.storage.scanner_publication import current_revision
+        try:
+            with self.connector() as db:
+                with db.transaction():
+                    db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                    runtime=read_runtime(db)
+                    row=db.execute('SELECT * FROM scanner_latest WHERE singleton').fetchone()
+                    proof=current_revision(db)
+            policy=load()
+            if hasattr(policy,'sizing_mode'):policy=replace(policy,sizing_mode='ceiling')
+            marker=digest(dict(rows=proof,config=runtime['config'],states=runtime['states'],
+                engine=engine_binding(),policy=policy.to_dict(),registry=self.preparation.registry(at=self.clock())))
+            value=None if row is None else row['payload']
+            self.value=value
+            self.capture_config=runtime['config']
+            self.collection_stopped=bool(runtime.get('global_stopped',False))
+            valid=(runtime['active'] and not self.collection_stopped
+                   and row is not None and row['runtime_id']==runtime['runtime_id']
+                   and runtime.get('calculations',{}).get('scanner','running')=='running'
+                   and row['runtime_revision']==runtime['revision'] and value['source_marker']==marker
+                   and (value['deadline'] is None or instant(self.clock())<instant(value['deadline'])))
+            self.healthy=bool(valid)
+            self.unavailable_reason=None if valid else 'background_publication_binding_unavailable'
+            self.authority_until=((instant(runtime['heartbeat_at'])+timedelta(seconds=HEARTBEAT_SECONDS)).isoformat()
+                                  if runtime['heartbeat_at'] else None)
+            if not valid:
+                self.loaded=None; self._withdraw_if_stopped()
+                return
+            identity=(row['runtime_id'],row['publication'],row['runtime_revision'],value['source_marker'],row['published_at'])
+            if identity!=self.loaded or self.projection.stopped:
+                restore(self.projection,value)
+                self.value=value; self.loaded=identity
+        except Exception as exc:
+            failure(__name__, 'scanner_publication_read', exc)
+            self.healthy=False; self.loaded=None; self.collection_stopped=False
+            self._withdraw_if_stopped()
+            self.unavailable_reason='background_read_'+type(exc).__name__
+
+    def start(self):
+        self.refresh()
+
+    def _selection_snapshot(self,selected):
+        try:
+            return self._selection_capture(selected)
+        except Exception as exc:
+            failure(__name__, 'scanner_selection_capture', exc)
+            # An unavailable selected SQL proof cannot preserve a ready ticket
+            # or leak storage exception text through the binding endpoint.
+            self.healthy=False; self.loaded=None; self.collection_stopped=False
+            self._withdraw_if_stopped()
+            return self.projection.frame,{}
+
+    def _selection_capture(self,selected):
+        self.refresh()
+        if self.stopped() or not self.value:return self.projection.frame,{}
+        pair=next((p for p in self.projection.frame['pairs'] if p['id']==selected['pair_id']),None)
+        if pair is None:return self.projection.frame,{}
+        members=tuple(sorted({tuple(self.value['members'][k]) for k in pair['legs']}))
+        with self.connector() as db:
+            config=deepcopy(self.capture_config)
+            frame,inputs,_=capture(db,config=config,
+                authority=config.get('authority'),at=self.clock(),
+                source_status=None,members=members,cache=self.ticket_preparation)
+        return frame,inputs
+
+    def _capture_selected(self,selected):
+        self.refresh()
+        if self.stopped():raise ValueError('data_runtime_unavailable')
+        return super()._capture_selected(selected)
+
+    async def close(self):
+        self.closed=True; self.healthy=False; self.projection.stop()
+        self.preparation.clear(); self.ticket_preparation.clear()
+
+
 def mount(app, provider):
-    scanner=Scanner(provider)
+    scanner=ScannerReader(provider) if getattr(provider,'remote_runtime',False) else Scanner(provider)
     async def close(app):await scanner.close()
     app.on_cleanup.append(close)
     scanner.summary_reading = False
@@ -217,12 +413,14 @@ def mount(app, provider):
             args={k:int(req.query[k]) for k in ('offset','limit','since','expected_revision') if k in req.query}
             args.update({k:req.query[k] for k in ('epoch','query_id') if k in req.query})
             scanner.start()
-            if scanner.stopped():scanner.projection.stop()
+            scanner._withdraw_if_stopped()
             out=scanner.projection.view(filters=filters,**args)
             return web.json_response(out)
         except (ValueError,TypeError,ZeroDivisionError) as exc:
-            return web.json_response(dict(error='scanner_query_invalid',reason=str(exc)[:160],provider_requests=0),
-                                     status=409 if str(exc)=='scanner_page_revision_changed' else 400)
+            reason=public_reason(exc,allowed={'scanner_page_revision_changed','scanner_category_unsupported',
+                'scanner_filter_invalid'},fallback='scanner_query_invalid',operation='scanner_query',logger=__name__)
+            return web.json_response(dict(error='scanner_query_invalid',reason=reason,provider_requests=0),
+                                     status=409 if reason=='scanner_page_revision_changed' else 400)
     async def transitions(req):
         dimensions = set(Filters.__dataclass_fields__)
         allowed = dimensions | {'cursor','server_id','epoch','scope'}
@@ -233,7 +431,7 @@ def mount(app, provider):
                                  for k,v in req.query.items() if k in dimensions})
             cursor = int(req.query['cursor']) if 'cursor' in req.query else None
             scanner.start()
-            if scanner.stopped():scanner.projection.stop()
+            scanner._withdraw_if_stopped()
             p = scanner.projection
             p.expire()
             with p.lock:

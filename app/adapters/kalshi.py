@@ -23,7 +23,7 @@ SPORT_SERIES = {'KXNFLGAME': ('football', 'NFL', 'football_game'),
                 'KXNBAGAME': ('basketball', 'NBA', 'basketball_game'),
                 'KXNCAAFGAME': ('football', 'NCAAF', 'football_game'),
                 'KXNCAAFCSGAME': ('football', 'NCAAF', None),
-                'KXNCAAMBGAME': ('basketball', 'NCAAB', None),
+                'KXNCAAMBGAME': ('basketball', 'NCAAB', 'basketball_game'),
                 'KXNHLGAME': ('hockey', 'NHL', 'hockey_match')}
 
 
@@ -100,7 +100,11 @@ def parse_event(response, data, series_id, *, typed_scope=False, linked_mileston
             raise ValueError('Exact retained native scope series unavailable')
         league = binding['sport']
         sport = {'NFL':'football','NCAAF':'football','NBA':'basketball','NCAAB':'basketball','MLB':'baseball','NHL':'hockey'}[league]
-        milestone_type = binding['milestone_type']
+        # Older catalog snapshots did not include a college basketball milestone.
+        # Admit only an explicit observed basketball_game relationship, never a
+        # start inferred from the ticker, title or market expiration.
+        milestone_type = binding['milestone_type'] or ('basketball_game'
+            if league=='NCAAB' and binding['period'] in ('full_game','first_half') else None)
     else:
         sport, league, milestone_type = SPORT_SERIES[series_id]
     matching = [m for m in (list(linked_milestones) or decode(response.body).get('milestones', []))

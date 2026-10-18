@@ -602,7 +602,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def ev_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/ev.html'))
     async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
     app.router.add_get('/api/comparison',comparison_data)
-    app.router.add_get('/api/coverage',comparison_coverage)
+    if not database_mode:app.router.add_get('/api/coverage',comparison_coverage)
     app.router.add_get('/ev',ev_page)
     # The retained session coverage page has its own reader at /coverage;
     # current comparison coverage is explicitly namespaced.
@@ -624,14 +624,16 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         body=await read_json(req)
         if not isinstance(body,dict):raise PublicRequestError('Exact native admin control object required')
         if body==dict(action='stop'):
-            await provider.close()
+            try:await getattr(provider,'stop',provider.close)()
+            except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body) in ({'action','sports','request_id'},{'action','sports','request_id','reference'}) and body['action']=='refresh' and hasattr(provider,'refresh_aggregate'):
             try:
                 if 'reference' in body and type(body['reference']) is not bool:raise PublicRequestError('Explicit reference flag required')
                 await provider.refresh_aggregate(body['sports'],body['request_id'],reference=body.get('reference',False))
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
-            await provider.pause(body['source'])
+            try:await provider.pause(body['source'])
+            except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','runtime_id','candidate_digest','recovery_id','covered_attempts'} and body['action']=='recover_accounting' and hasattr(provider,'recover_accounting'):
             try:await provider.recover_accounting(body['runtime_id'],body['candidate_digest'],body['recovery_id'],body['covered_attempts'])
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
@@ -650,7 +652,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def current_asset(req):
         name=req.match_info['name']
         allowed={'stored.css':static_root/'opportunity_static/current/stored.css','stored.js':static_root/'opportunity_static/current/stored.js','arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
-        for filename in ('scanner.js','scanner.css','board-client.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js'):
+        for filename in ('scanner.js','scanner.css','board-client.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
             allowed[filename]=static_root/'opportunity_static/current'/filename
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])

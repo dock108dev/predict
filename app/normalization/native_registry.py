@@ -15,4 +15,9 @@ def native_registry(live=False):
         if path.stat().st_size>128*1024:raise ValueError('Live native identity catalog bound')
         current=json.loads(path.read_text());data['version']+='+'+current['version']
         for key in ('entities','aliases','native_mappings'):data[key]+=current[key]
+        # Native league-listing slug (men's college basketball), distinct from
+        # wcbb. This is a reusable source league alias, never an event crosswalk.
+        if not any(a['kind']=='league' and a['text']=='cbb' for a in data['aliases']):
+            data['aliases'].append(dict(kind='league',text='cbb',targets=['NCAAB'],
+                source='Polymarket US /v2/leagues: cbb, basketball, men'))
     return Registry(data)

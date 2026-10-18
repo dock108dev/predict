@@ -8,8 +8,8 @@ import json
 import unittest
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.dashboard.comparison_board import response, details, entries
-from app.storage.comparison_board import ReadContext, discover, calculate_current, context_identity
-from app.storage.store import encoded
+from app.storage.comparison_board import ReadContext, discover, calculate_current, context_identity, observation_identity
+from app.storage.store import encoded, hashed
 from tests.test_ev09_n01 import retained, AT
 
 
@@ -25,6 +25,23 @@ def bundle(c,policy=DEFAULT_POLICY):
     b=discover(c.store,context=c,benchmark_venue=policy.benchmark_venue)[0]
     b['calculation_context']=context_identity(b,policy,c)
     return b
+
+
+def latest_frame(c=None):
+    """Authored background publication for read-only API/reader unit cases."""
+    c=c or context();catalog=c.catalog();rows={}
+    for game in catalog['games']:
+        b=discover(c.store,context=c,game=game['game_key'])[0]
+        b['calculation_context']=context_identity(b,DEFAULT_POLICY,c)
+        v=calculate_current(b,DEFAULT_POLICY,context=c)
+        obs=c.observation_bundles(game=game['game_key'])[0]
+        obs['calculation_context']=observation_identity(obs,c)
+        rows[b['game_key']]=dict(game_key=b['game_key'],economic_revision=b['input_version'],calculated_at=v['calculated_at'],
+            facts=dict(context=b['calculation_context'],observation_context=obs['calculation_context'],valid_until=None,
+                boards={view:response(obs if view=='odds' else b,None if view=='odds' else v,DEFAULT_POLICY,view=view,filter='all',at=AT) for view in ('odds','ev','arbs')}))
+    return dict(status=dict(version='predict-latest-board-1',games=catalog['games'],policy=DEFAULT_POLICY.to_dict(),
+        epoch=c.epoch,as_of=AT,scope_complete=True),rows=rows,reasons=[],at=AT,
+        owner=dict(active=True,healthy=True),read_revision='authored-read-revision',read_authority='authored-authority')
 
 
 class CurrentBoardReads(unittest.TestCase):
@@ -62,6 +79,19 @@ class CurrentBoardReads(unittest.TestCase):
         self.assertEqual(b['records'][0]['quote']['times']['source_at'],cb['records'][0]['quote']['times']['source_at'])
         c.engine='changed-engine'
         self.assertNotEqual(identity['context_id'],context_identity(b,DEFAULT_POLICY,c)['context_id'])
+
+    def test_financial_context_binds_reviewed_native_contract_without_new_raw_input(self):
+        c=context();b=bundle(c);before=deepcopy(b);identity=b['calculation_context']
+        q=next(q for _,_,q in entries(b['state_inputs']) if q['venue']=='kalshi')
+        q['native_contract']['id']='native-contract:authored-changed-applicability-evidence'
+        changed=context_identity(b,DEFAULT_POLICY,c)
+        self.assertNotEqual(changed['context_id'],identity['context_id'])
+        self.assertEqual(changed['dependency_revision'],identity['dependency_revision'])
+        self.assertEqual(changed['engine_binding'],identity['engine_binding'])
+        self.assertEqual(changed['policy_revision'],identity['policy_revision'])
+        self.assertEqual(b['input_version'],before['input_version'])
+        self.assertEqual(q['native_contract']['scope'],next(other for _,_,other in entries(before['state_inputs'])
+            if other['venue']=='kalshi')['native_contract']['scope'])
 
     def test_details_expiry_changes_context_and_preserves_whole_frame(self):
         c=context();b=bundle(c);later=context(at='2026-10-14T03:00:00Z');lb=bundle(later)
@@ -115,7 +145,7 @@ class _ReadOnlyDB:
     def transaction(self):return self
     def execute(self,statement,*args):
         self.statements.append(str(statement))
-        if not str(statement).startswith('SET TRANSACTION'):raise AssertionError('unexpected ordinary SQL '+str(statement))
+        if not (str(statement).startswith('SET TRANSACTION') or str(statement).startswith("SELECT set_config('")):raise AssertionError('unexpected ordinary SQL '+str(statement))
 
 
 class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
@@ -127,7 +157,14 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
         provider=SimpleNamespace(closed=False,closing=False,dispatch=True,database=SimpleNamespace(status=lambda:dict(state='available')))
         app=web.Application();mount(app,provider)
         current=frame()
-        patches=[patch('app.dashboard.comparison_board_api.connect',return_value=database),patch('app.storage.current_rows.CurrentRowStore.capture',side_effect=lambda **kwargs:deepcopy(current)),patch('app.storage.comparison_board.utc',return_value=AT)]
+        published=latest_frame()
+        patches=[patch('app.dashboard.comparison_board_api.connect',return_value=database),
+            patch('app.dashboard.comparison_board_api.snapshot',return_value=published),
+            patch('app.storage.latest_board.snapshot',return_value=published),
+            patch('app.storage.latest_board.slate_authority',return_value=hashed(['authored-authority',False])),
+            patch('app.dashboard.comparison_board_api.read_context',side_effect=lambda db,**kwargs:context(current)),
+            patch('app.dashboard.comparison_board_api.selected_dependencies',return_value=('fixture-dependency',['fixture-event'])),
+            patch('app.dashboard.comparison_board_api.utc',return_value=AT)]
         for item in patches:item.start()
         try:
             async with TestClient(TestServer(app)) as client:
@@ -139,9 +176,16 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
                     output[view]=await r.json();self.assertEqual(r.status,200,output[view])
                 selected=output['ev']['rows'][0]['details'];identity=selected['context_id'];quote=selected['quote_id']
                 for view in ('details','inputs'):
-                    r=await client.get('/api/boards/'+view,params=dict(params,context_id=identity,quote=quote))
+                    expected=identity if view=='details' else output['odds']['calculation_context']['context_id']
+                    r=await client.get('/api/boards/'+view,params=dict(params,context_id=expected,quote=quote))
                     output[view]=await r.json();self.assertEqual(r.status,200,output[view])
-                    self.assertEqual(output[view]['calculation_context']['context_id'],identity)
+                    self.assertEqual(output[view]['calculation_context']['context_id'],expected)
+                r=await client.get('/api/boards/details',params=dict(params,context_id=identity,quote=quote,amount='500'))
+                sized=await r.json();self.assertEqual(r.status,200,sized)
+                self.assertEqual(sized['policy']['requested_amount_usd'],'500')
+                self.assertEqual(sized['selection_context']['context_id'],identity)
+                self.assertNotEqual(sized['calculation_context']['context_id'],identity)
+                self.assertEqual(sized['calculation_context']['dependency_revision'],sized['selection_context']['dependency_revision'])
                 r=await client.get('/api/boards/slate',params=dict(view='odds',filter='all',limit='50'))
                 output['slate']=await r.json();self.assertEqual(r.status,200,output['slate'])
                 r=await client.get('/api/boards/slate',params=dict(view='odds',expected_revision='superseded'))
@@ -157,22 +201,50 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
             for item in reversed(patches):item.stop()
         self.assertTrue(database.statements)
 
+    async def test_ordinary_latest_reads_never_enter_finance_or_capture(self):
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient,TestServer
+        from contextlib import ExitStack
+        from unittest.mock import MagicMock
+        from app.dashboard.comparison_board_api import mount
+        database=_ReadOnlyDB();published=latest_frame()
+        provider=SimpleNamespace(closed=False,closing=False,dispatch=True,
+            database=SimpleNamespace(status=lambda:dict(state='available')),
+            acquire=MagicMock(side_effect=AssertionError('provider forbidden')))
+        app=web.Application();mount(app,provider)
+        with ExitStack() as stack:
+            stack.enter_context(patch('app.dashboard.comparison_board_api.connect',return_value=database))
+            stack.enter_context(patch('app.dashboard.comparison_board_api.snapshot',return_value=published))
+            stack.enter_context(patch('app.storage.latest_board.snapshot',return_value=published))
+            stack.enter_context(patch('app.storage.latest_board.slate_authority',return_value=hashed(['authored-authority',False])))
+            for target in ('app.dashboard.comparison_board_api.calculate_current','app.dashboard.comparison_board_api.read_context','app.storage.latest_board.calculate_current'):
+                stack.enter_context(patch(target,side_effect=AssertionError('ordinary financial work forbidden')))
+            async with TestClient(TestServer(app)) as client:
+                game=published['status']['games'][0]['game_key']
+                for _ in range(2):
+                    for view in ('games','odds','ev','arbs','slate'):
+                        params={} if view=='games' else dict(view='ev',filter='all',limit='50') if view=='slate' else dict(game=game,filter='all')
+                        result=await client.get('/api/boards/'+view,params=params)
+                        self.assertEqual(result.status,200,await result.text())
+            provider.acquire.assert_not_called()
+            self.assertTrue(all(sql.startswith("SELECT set_config('") for sql in database.statements))
+
     async def test_stop_during_nonfinancial_capture_refuses_completed_response(self):
         from aiohttp import web
         from aiohttp.test_utils import TestClient,TestServer
         from app.dashboard.comparison_board_api import mount
         database=_ReadOnlyDB();provider=SimpleNamespace(closed=False,closing=False,dispatch=True)
-        def catalog():
+        def capture(db,**kwargs):
             provider.dispatch=False
-            return dict(version='predict-board-catalog-2',games=[],limits=dict(maximum_games=500),provider_requests=0)
+            return dict(status=dict(games=[],epoch='fixture'),owner=dict(active=False),read_revision='stopped')
         app=web.Application();mount(app,provider)
-        with patch('app.dashboard.comparison_board_api.connect',return_value=database),patch('app.dashboard.comparison_board_api.ReadContext',return_value=SimpleNamespace(catalog=catalog)):
+        with patch('app.dashboard.comparison_board_api.connect',return_value=database),patch('app.dashboard.comparison_board_api.snapshot',side_effect=capture):
             async with TestClient(TestServer(app)) as client:
                 result=await client.get('/api/boards/games')
                 self.assertEqual(result.status,409)
                 self.assertEqual((await result.json())['error'],'current_read_stopped')
 
-    async def test_only_one_read_active_four_waiting_excess_refused(self):
+    async def test_one_ordinary_worker_two_waiting_reserve_selected_capacity(self):
         import asyncio
         from threading import Event
         from aiohttp import web
@@ -180,22 +252,22 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
         from app.dashboard.comparison_board_api import mount
         database=_ReadOnlyDB();provider=SimpleNamespace(closed=False,closing=False,dispatch=True)
         entered=Event();release=Event();calls=[]
-        def capture(*args):
+        def capture(*args,**kwargs):
             calls.append(1);entered.set()
             if not release.wait(5):raise AssertionError('bounded reader test timed out')
-            return SimpleNamespace(catalog=lambda:dict(version='predict-board-catalog-2',games=[],provider_requests=0))
+            return dict(status=dict(games=[],epoch='fixture'),owner=dict(active=True),read_revision='fixture')
         app=web.Application();mount(app,provider)
-        with patch('app.dashboard.comparison_board_api.connect',return_value=database),patch('app.dashboard.comparison_board_api.ReadContext',side_effect=capture):
+        with patch('app.dashboard.comparison_board_api.connect',return_value=database),patch('app.dashboard.comparison_board_api.snapshot',side_effect=capture):
             async with TestClient(TestServer(app)) as client:
                 first=asyncio.create_task(client.get('/api/boards/games'))
                 self.assertTrue(await asyncio.to_thread(entered.wait,3))
-                queued=[asyncio.create_task(client.get('/api/boards/games')) for _ in range(4)]
+                queued=[asyncio.create_task(client.get('/api/boards/games')) for _ in range(2)]
                 await asyncio.sleep(.05)
                 excess=await client.get('/api/boards/games');self.assertEqual(excess.status,429)
                 self.assertEqual(len(calls),1)
                 release.set()
                 responses=await asyncio.gather(first,*queued)
-                self.assertEqual([response.status for response in responses],[200]*5)
+                self.assertEqual([response.status for response in responses],[200]*3)
 
 
 if __name__=='__main__':unittest.main()

@@ -11,3 +11,126 @@
 .scanner-summary{margin:10px 0;padding-top:8px;border-top:1px solid #dce3ed}.scanner-summary p{margin:6px 0}.scanner-toolbar #scanner-disclosure[open]{max-height:65vh;overflow:auto}
 
 .scanner-recognition{flex-shrink:0;margin:0}.scanner-recognition>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Shared Predict visual direction: cool surfaces, blue actions, readable controls. */
+:root { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#1e293b; background:#f3f6fb; line-height:1.5 }
+main { max-width:1320px; padding:0 28px }
+header { position:sticky; top:0; z-index:5; min-height:72px; gap:28px; background:rgba(243,246,251,.97); backdrop-filter:blur(12px) }
+.brand { display:flex; align-items:center; gap:8px; font-size:25px; font-weight:750; letter-spacing:-.8px; color:#172b46 }
+.brand span { background:#e7eefc; color:#245bcc; width:32px; height:32px; font-size:23px; text-align:center; border-radius:9px }
+nav { gap:4px; margin-right:auto }
+nav a { display:flex; align-items:center; justify-content:center; min-height:44px; padding:8px 16px; border-radius:8px; font-weight:600; color:#526278 }
+nav [aria-current] { border:0; color:#1649ae; background:#e5edfc }
+nav a:hover { background:#e7edf6 }
+button,select,input { min-height:44px; border-color:#8595ac; border-radius:8px; font-size:.9375rem; padding:8px 12px }
+#scanner-stop { font-size:.9375rem; background:transparent }
+.scanner-heading { margin:20px 0 18px }
+h1 { font-size:28px; line-height:1.2; letter-spacing:-.7px }
+.scope { background:none; padding:0; border-radius:0; font-size:.8125rem; color:#526278 }
+#scanner-filters { padding:0; border:0; background:none; border-radius:0; gap:12px }
+label,legend { font-size:.8125rem }
+label input,label select { font-size:.9375rem }
+#scanner-filters>label:first-child { min-width:200px }
+#scanner-filters>label { min-width:105px }
+#scanner-filters fieldset { width:auto; flex:1; flex-wrap:wrap; gap:8px 16px }
+#scanner-venue-options { gap:8px 16px }
+#scanner-venue-options label { min-height:44px; font-size:.875rem }
+#scanner-venue-options input { width:18px; height:18px; min-height:18px }
+.subtle { font-size:.8125rem; background:transparent }
+.scanner-toolbar { font-size:.875rem; gap:12px; padding:10px 0 }
+.scanner-list-tools { font-size:.875rem; gap:12px; padding:0 0 12px }
+.scanner-list-tools label { font-size:.8125rem }
+.scanner-columns { font-size:.8125rem; text-transform:none; letter-spacing:0; color:#526278 }
+.scanner-row { font-size:.875rem; padding:12px 14px; border-color:#d9e1ec }
+.scanner-row small { font-size:.8125rem; color:#526278 }
+.scanner-row button { color:#245bcc; border-color:#8595ac; background:#f8faff }
+.scanner-empty { padding:24px; text-align:left; font-size:1rem; background:white; border:1px solid #d9e1ec; border-radius:12px }
+.scanner-pagination { margin-top:12px; font-size:.875rem }
+@media(max-width:1000px) {
+  #scanner-filters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) }
+  #scanner-filters>label,#scanner-filters>label:first-child { min-width:0 }
+  #scanner-filters input { width:100% }
+  #scanner-venues { grid-column:1/-1 }
+  #scanner-filters>.subtle { grid-column:4; margin:0 }
+}
+@media(max-width:760px) {
+  main { padding:0 16px }
+  header { display:grid; grid-template-columns:1fr auto; gap:4px; padding:12px 0 6px }
+  nav { grid-column:1/-1; grid-row:2; gap:4px; margin:0; justify-content:space-between; width:100% }
+  nav a { flex:1; padding:8px 7px; font-size:.9375rem }
+  .brand { font-size:23px }
+  #scanner-stop { font-size:.8125rem; padding:8px 10px }
+  .scanner-heading { align-items:baseline; margin:16px 0 }
+  h1 { font-size:24px }
+  .scope { white-space:normal; text-align:right; font-size:.8125rem; max-width:90px }
+  #scanner-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px }
+  #scanner-filters>label:first-child { grid-column:1/-1 }
+  #scanner-filters>label { width:auto }
+  #scanner-filters fieldset { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:0 8px }
+  #scanner-venues legend { float:none; padding:0; width:100%; margin:0 }
+  #scanner-venue-options { gap:4px 12px }
+  #scanner-filters>.subtle { grid-column:1/-1; justify-self:start; margin:0 }
+  .scanner-toolbar { flex-wrap:wrap; align-items:center; gap:0 12px }
+  .scanner-list-tools { flex-wrap:wrap; align-items:center }
+  .scanner-list-tools>p { flex-basis:100%; margin:0 }
+  .scanner-list-tools label { flex:1; min-width:0; white-space:normal }
+  .scanner-list-tools input { width:100%; min-width:0 }
+  .scanner-row { font-size:.875rem; padding:14px }
+  .scanner-row small { font-size:.8125rem }
+  #scanner-search { font-size:.875rem }
+}
+@media(prefers-reduced-transparency:reduce) { header { background:#f3f6fb; backdrop-filter:none } }
+
+#scanner-advanced { flex:1 1 70%; min-width:0; margin:0 }
+#scanner-advanced>summary { min-height:44px; display:list-item; align-content:center; cursor:pointer; color:#245bcc; font-size:.875rem; font-weight:600; overflow-wrap:anywhere }
+.scanner-advanced-fields { display:grid; grid-template-columns:180px 200px minmax(0,1fr); gap:12px 20px; background:white; border:1px solid #d9e1ec; border-radius:10px; padding:14px; margin:4px 0 8px }
+#scanner-filters .scanner-advanced-fields input { width:100% }
+#scanner-filters .scanner-advanced-fields fieldset { width:100%; min-width:0 }
+.scanner-advanced-fields legend { float:none; width:100%; margin:0; padding:0 }
+.scanner-recognition button { min-height:44px; font-size:.8125rem }
+@media(max-width:1000px) {
+  #scanner-advanced { grid-column:1/4 }
+  .scanner-advanced-fields { grid-template-columns:1fr 1fr }
+  .scanner-advanced-fields #scanner-venues { grid-column:1/-1 }
+}
+@media(max-width:760px) {
+  #scanner-advanced { grid-column:1; align-self:center }
+  #scanner-advanced[open] { grid-column:1/-1 }
+  #scanner-filters>.subtle { grid-column:2; justify-self:end }
+  .scanner-advanced-fields { padding:12px; gap:12px }
+  #scanner-filters fieldset { width:100% }
+  #scanner-venue-options label { flex-basis:auto; width:auto }
+  .scanner-list-tools { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px 12px }
+  .scanner-list-tools>p { grid-column:1/-1 }
+  .scanner-list-tools .scanner-recognition { margin:0 }
+  .scanner-list-tools label { display:flex; flex-direction:column; align-items:stretch; gap:4px }
+  .scanner-list-tools input { min-height:44px }
+}
+
+.scanner-row .row-state { font-size:.8125rem }
+
+.scanner-toolbar:has(#scanner-health[hidden]) { display:none }
+#scanner-disclosure { flex:0 1 auto; position:relative; margin:0; font-size:.875rem; color:#526278 }
+#scanner-disclosure>summary { min-height:44px; align-content:center; cursor:pointer; font-weight:600 }
+#scanner-disclosure[open] { flex-basis:100%; padding:14px; background:white; border:1px solid #d9e1ec; border-radius:10px }
+@media(min-width:1001px) {
+  .scanner-heading { margin:16px 0 12px }
+  .scanner-row { padding:8px 14px; min-height:64px }
+  .scanner-row .leg strong { font-size:.8125rem; line-height:1.35 }
+  .scanner-row .leg small { line-height:1.35 }
+  .scanner-row .edge { font-size:1.05rem; line-height:1.2 }
+  .scanner-row .edge+small { font-size:.75rem; line-height:1.25 }
+}
+@media(max-width:1000px) {
+  #scanner-disclosure { grid-column:1/4 }
+  #scanner-disclosure[open] { grid-column:1/-1 }
+}
+@media(max-width:760px) {
+  #scanner-disclosure { grid-column:1/-1; justify-self:start }
+  #scanner-filters>.subtle { grid-row:4; grid-column:2 }
+  #scanner-filters:has(#scanner-advanced[open])>.subtle { grid-row:auto }
+  .scanner-list-tools { margin-top:8px }
+}
+@media(min-width:1001px) {
+  .scanner-row .leg>div { font-size:.8125rem; line-height:1.35 }
+}

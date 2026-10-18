@@ -74,6 +74,22 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .calculation-settings { position:relative }
 .calculation-settings[open] { z-index:4; border-bottom-left-radius:0; border-bottom-right-radius:0 }
 .calculation-settings[open] .settings-body { position:absolute; top:100%; left:-1px; right:-1px; background:white; border:1px solid #c8d4e6; border-top:0; border-radius:0 0 10px 10px; box-shadow:0 12px 28px #2638541c }
+
+/* Comparison workspace: one compact task heading, then the working filters. */
+.heading { margin:20px 0 18px; align-items:center }
+.heading-actions { display:flex; align-items:center; justify-content:flex-end; gap:16px; min-width:0 }
+.heading-actions #settings { display:block; margin:0; width:340px; max-width:100% }
+.heading-actions .calculation-settings>summary { min-height:56px; padding:7px 12px }
+.heading-actions .calculation-settings>summary strong { font-size:.8125rem }
+.heading-actions .view-help { white-space:nowrap }
+.board-controls { display:block; margin-bottom:16px }
+.board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) {
+  grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.25fr) minmax(0,1.6fr);
+  gap:12px
+}
+.board-controls #sort-setting { grid-column:5/7 }
+button,input,select { border-color:#8595ac }
+#applied { line-height:1.4 }
 .odds-board {
   background:var(--surface);
   border:1px solid var(--line);
@@ -312,7 +328,20 @@ summary {
 .slate-summary strong { color:#23354c }
 .slate-coverage { display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--muted); font-size:.75rem; margin:0 }
 .slate-coverage small { font-size:inherit }
-.slate-coverage span { white-space:nowrap }
+.slate-coverage span { overflow-wrap:anywhere }
+.slate-coverage>span { flex:1 1 240px }
+.slate-coverage>small { flex-basis:100% }
+.slate-overview { min-width:0 }
+.slate-overview>.slate-summary,.slate-overview>.slate-coverage,.slate-overview>.observation-counts,.slate-overview>.observation-states,.slate-overview>.observation-read-time,.slate-overview>.page-completion { flex-basis:100%; min-width:0 }
+.observation-counts,.observation-states { margin:4px 0; font-size:.8125rem; line-height:1.5; overflow-wrap:anywhere }
+.observation-read-time,.page-completion { display:block; font-size:.75rem; line-height:1.5; color:var(--muted) }
+.observation-reasons summary,.estimate-reasons summary { cursor:pointer; color:#2458b6; min-height:44px; padding:10px 0; font-size:.8125rem }
+.observation-reasons p,.estimate-reasons p,.missing-board-errors p { font-size:.8125rem; overflow-wrap:anywhere }
+.missing-board-errors { margin:8px 0; color:#8a2734 }
+.observation-estimate-status { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 12px }
+.estimate-reasons { min-width:0 }
+.estimate-reasons[open] { flex-basis:100% }
+.estimate-reasons[open] summary { padding-bottom:0 }
 .slate-game { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin:0 0 12px; padding:12px 16px }
 .slate-game-heading { display:flex; align-items:baseline; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; margin-bottom:10px }
 .slate-game h2,.slate-comparison-game h2 { font-size:1rem; line-height:1.4; margin:0; font-weight:650; overflow-wrap:anywhere }
@@ -328,6 +357,12 @@ summary {
 .slate-price-cell .slate-action { font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; min-height:44px; padding:6px 10px; color:#204fbb; border:1px solid #6f88b1; background:#f3f7ff; line-height:1.35; text-align:left }
 .slate-price-cell .slate-action:hover { border-color:#6e90cc; background:#e8f0ff }
 .compact-source-clock { font-size:.75rem; line-height:1.45; margin-top:4px }
+.compact-native-price,.compact-depth,.compact-gross-comparison,.compact-current-comparison,.compact-observation-age,.compact-comparator-age { display:block; font-size:.75rem; line-height:1.45; margin-top:3px; overflow-wrap:anywhere }
+.compact-current-comparison { font-weight:600; color:#24466c }
+.compact-native-price { color:#34465e }
+.compact-depth { color:var(--muted) }
+.observation-estimate-status { font-size:.8125rem; line-height:1.45; color:var(--muted); margin:0 0 10px }
+.native-observation { padding:4px 0 10px }
 .mobile-price-label { display:none }
 .unavailable-price { display:block; font-size:18px; line-height:44px; color:#64748b }
 .slate-fair { padding-left:10px; border-left:1px solid #dbe3f1 }
@@ -389,6 +424,29 @@ summary {
 .slate-arb .slate-result-identity { grid-template-columns:1fr 1fr; gap:10px }
 .slate-leg strong { font-size:.875rem }
 .comparison-unavailable strong { color:#687386; font-size:.875rem; font-weight:500 }
+.comparison-coverage { margin:8px 0 12px; min-width:0 }
+.current-comparison-counts { color:#24466c; font-size:.875rem; font-weight:600; line-height:1.5; margin:0; overflow-wrap:anywhere }
+.comparison-coverage-reasons summary,.observation-coverage-details>summary { min-height:44px; padding:10px 0; cursor:pointer; color:#2458b6; font-size:.8125rem }
+.comparison-coverage-reasons p,.comparison-coverage-reasons small { font-size:.8125rem; line-height:1.5; overflow-wrap:anywhere }
+
+/* A market row can be a winner, signed spread, or score total. */
+.slate-team-name strong { display:block; font-size:inherit; overflow-wrap:anywhere }
+.slate-team-name small { margin-top:3px; font-size:.75rem; line-height:1.4 }
+.slate-game-heading small,.comparison-input { overflow-wrap:anywhere; min-width:0 }
+
+.slate-overview { gap:4px 20px; margin-bottom:12px }
+.comparison-coverage { display:flex; flex-wrap:wrap; align-items:center; gap:0 16px; width:100% }
+.comparison-coverage .current-comparison-counts { flex:1; margin:0; font-size:.8125rem }
+.comparison-coverage-reasons { margin:0 }
+.comparison-coverage-reasons[open] { flex-basis:100% }
+.observation-coverage-details { margin:0 }
+.slate-overview details>summary { min-height:44px; display:flex; align-items:center; gap:6px; cursor:pointer }
+.slate-overview details>summary::before { content:"▸"; font-size:.75rem }
+.slate-overview details[open]>summary::before { content:"▾" }
+.slate-overview details>summary::-webkit-details-marker { display:none }
+
+.comparison-coverage { margin:0 }
+.slate-overview .comparison-coverage-reasons,.slate-overview .observation-coverage-details { margin:0 }
 dialog {
   width:min(800px,calc(100% - 24px));
   max-height:90dvh;
@@ -433,6 +491,13 @@ dialog::backdrop {
 }
 #detail-content .muted {
   font-size:.875rem
+}
+.comparison-takeaway {
+  padding:12px 14px;
+  border-left:3px solid #5079a5;
+  background:#f1f5fa;
+  line-height:1.55;
+  overflow-wrap:anywhere
 }
 dl {
   display:grid;
@@ -505,6 +570,27 @@ footer {
 #detail-content>.metrics .metric { display:flex; flex-direction:column }
 #detail-content>.metrics .metric>small { flex:1 }
 #detail-content>.metrics>.conditional-label { grid-column:1/-1 }
+.observed-depth,.observation-identity { min-width:0; margin:18px 0; overflow-wrap:anywhere }
+.observed-depth table { table-layout:fixed }
+.observed-depth th,.observed-depth td { width:50%; overflow-wrap:anywhere }
+.observation-identity p { overflow-wrap:anywhere }
+.original-comparison { min-width:0; margin:20px 0; border-top:1px solid var(--line); padding-top:4px }
+.original-comparison p { overflow-wrap:anywhere; font-size:.875rem; line-height:1.5 }
+.comparison-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.comparison-input { min-width:0; padding:12px; background:#f3f6fc; border:1px solid var(--line); border-radius:8px }
+.comparison-input h4 { margin:0 0 10px; font-size:.9375rem }
+.comparison-input p { margin:7px 0 }
+@media(max-width:600px) { .comparison-inputs { grid-template-columns:minmax(0,1fr) } }
+
+/* A selected estimate reads as one result, with funding and reconciliation below. */
+#detail-content>.metrics { border:1px solid #d9e4f7; padding:16px 18px }
+#detail-content>.metrics .metric small { color:#344b69; font-size:.875rem }
+#detail-content>.metrics strong { font-size:2rem; letter-spacing:-.7px }
+.detail-funding { margin:16px 0; gap:16px }
+.detail-funding small { font-size:.8125rem }
+.detail-reconciliation { column-gap:20px }
+
+#detail-content>.metrics:has(>.metric:only-child) { grid-template-columns:minmax(0,1fr) }
 @media(max-width:900px) {
   .cards .card {
     grid-template-columns:minmax(150px,1fr) minmax(180px,1.25fr) auto;
@@ -564,7 +650,8 @@ footer {
   }
   nav a {
     flex:1;
-    padding:8px 12px
+    min-width:0;
+    padding:8px 7px
   }
   #stop {
     font-size:.8125rem;
@@ -924,4 +1011,39 @@ opposing comparisons have four. */
   .availability-notice>button { max-width:100%; white-space:normal }
   .game-reference { font-size:.75rem }
   .game-reference small { display:block; margin-left:0 }
+}
+
+/* Keep controls readable while bringing prices into the first screen. */
+@media(min-width:761px) and (max-width:1050px) {
+  .board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(3,minmax(0,1fr)) }
+  .board-controls #sort-setting { grid-column:auto }
+  .heading-actions #settings { width:290px }
+  .view-title .scope { flex-basis:100% }
+}
+@media(max-width:760px) {
+  .heading { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0 }
+  .view-title { flex:1; min-width:0 }
+  .heading-actions { display:contents }
+  .heading-actions .view-help { margin-left:auto; font-size:.8125rem }
+  .heading-actions .view-help summary { font-size:.8125rem }
+  .heading-actions #settings { order:3; width:100%; margin:0 }
+  .heading-actions .calculation-settings>summary { min-height:52px }
+  .board-controls,.board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { gap:10px 12px }
+  .board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .board-controls #sort-setting { grid-column:auto }
+  .board-controls .search-field { grid-column:1/-1 }
+  .board-controls .slate-selection:has(#sort-setting[hidden]) .search-field { grid-column:auto }
+  .comparison-coverage { gap:0 12px }
+  .comparison-coverage .current-comparison-counts { flex-basis:100% }
+  .observation-coverage-details { width:100% }
+  .slate-overview { gap:0 12px }
+  #status,#applied,.scope { font-size:.8125rem }
+  .detail-funding small { min-height:0 }
+}
+
+@media(max-width:760px) {
+  .heading-actions #settings { display:block }
+  .heading-actions #settings .settings-fields label { grid-column:auto }
+  .heading-actions #settings .settings-fields .benchmark-setting { grid-column:1/-1 }
+  .heading-actions .settings-body { text-align:left }
 }

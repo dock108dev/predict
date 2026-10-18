@@ -175,7 +175,15 @@ class PurchaseSemantics(unittest.TestCase):
         legacy=coverage.catalog(pages,'polymarket_us',AS_OF,compact_output=False)
         eid=legacy['events'][0]['id'];mid=legacy['markets'][0]['id']
         selected=coverage.catalog(pages,'polymarket_us',AS_OF,compact_output=False,current_selection={'events':[eid],'markets':[mid]})
-        self.assertEqual(selected,legacy);self.assertEqual(pages,before)
+        projected=deepcopy(selected)
+        for event in projected['events']:
+            reference=event.pop('embedded_market_packaging_reference',None)
+            if reference:
+                original=next(row for row in legacy['events'] if row['id']==event['id'])
+                self.assertEqual(reference['body_sha256'],original['provenance'][0]['body_sha256'])
+                self.assertEqual(reference['omitted_markets'],0)
+        self.assertEqual(projected,legacy);self.assertEqual(pages,before)
+        self.assertEqual(coverage.catalog(pages,'polymarket_us',AS_OF,compact_output=False),legacy)
         empty=coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':[eid],'markets':[]})
         self.assertEqual(empty['markets'],[]);self.assertEqual(len(empty['events']),1)
         with self.assertRaises(ValueError):coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':list(range(25)),'markets':[]})

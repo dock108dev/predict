@@ -6,6 +6,13 @@
       "tests/test_current_state.py",
       "tests/test_current_native.py",
       "tests/test_current_native_discovery.py",
+      "tests/test_current_multisport_ingress.py",
+      "tests/test_source_local_sink.py",
+      "tests/test_native_identity_trace.py",
+      "tests/test_native_season_fields.py",
+      "tests/test_current_native_catalog_lifecycle.py",
+      "tests/test_current_native_density.py",
+      "tests/test_current_native_material_quarantine.py",
       "tests/test_current_confirmation.py",
       "tests/test_current_occurrence.py",
       "tests/test_current_occurrence_october8.py",
@@ -26,7 +33,8 @@
       "tests/test_ev08_temporal.py",
       "tests/test_ev09_delivery.py",
       "tests/test_ev09_n01.py",
-      "tests/test_ev09_b01.py"
+      "tests/test_ev09_b01.py",
+      "tests/test_schedule_metadata.py"
     ]
   },
   {
@@ -39,7 +47,9 @@
   {
     "name": "python-02",
     "tests": [
-      "tests/test_current_service.py"
+      "tests/test_current_service.py",
+      "tests/test_data_runtime_unit.py",
+      "tests/test_selected_fee_operation.py"
     ]
   },
   {
@@ -460,9 +470,11 @@
       "tests/test_ev09_ingress_isolation.py",
       "tests/test_ev09_registry_index.py",
       "tests/test_comparison_slate.py",
+      "tests/test_slate_read_frames.py",
       "tests/test_comparison_read_context.py",
       "tests/test_ingress_catchup_budget.py",
-      "tests/test_payload_codec.py"
+      "tests/test_payload_codec.py",
+      "tests/test_selected_read_work.py"
     ]
   },
   {
@@ -475,16 +487,26 @@
       "tests/test_d03_aggregate_frame.py",
       "tests/test_d03_financial_workload.py",
       "tests/test_domain_delta.py",
-      "tests/test_domain_frame.py"
+      "tests/test_domain_frame.py",
+      "tests/test_observation_presenter.py",
+      "tests/test_current_comparison_matching.py",
+      "tests/test_native_scoring_registry.py",
+      "tests/test_current_price_comparison.py",
+      "tests/test_multisport_identity.py",
+      "tests/test_multisport_board_capacity.py",
+      "tests/test_source_local_contract.py",
+      "tests/test_source_local_occurrence.py"
     ]
   },
   {
     "name": "scanner-classification-projection",
     "tests": [
       "tests/test_sc01_readiness.py",
+      "tests/test_sc07_source_metadata.py",
       "tests/test_sc02_finance.py",
       "tests/test_sc02_projection.py",
-      "tests/test_sc02_contract.py"
+      "tests/test_sc02_contract.py",
+      "tests/test_sc07_reader_state.py"
     ]
   },
   {
@@ -492,7 +514,8 @@
     "tests": [
       "tests/test_sc03_finance.py",
       "tests/test_sc03_tickets.py",
-      "tests/test_sc03_contract.py"
+      "tests/test_sc03_contract.py",
+      "tests/test_sc07_destinations.py"
     ]
   },
   {
@@ -515,6 +538,15 @@
       "tests/test_sc06_contract.py",
       "tests/test_sc06_readiness_cache.py",
       "tests/test_sc06_normalization_registry.py"
+    ]
+  },
+  {
+    "name": "broad-shared-coverage",
+    "tests": [
+      "tests/test_background_work.py",
+      "tests/test_broad_pipeline.py",
+      "tests/test_broad_coverage.py",
+      "tests/test_shared_current_comparisons.py"
     ]
   }
 ]

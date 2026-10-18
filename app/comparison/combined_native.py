@@ -1,4 +1,4 @@
-"""Retained native winner adapter without acquisition.
+"""Retained native sporting adapter without acquisition.
 
 Original catalogs/books are retained by the caller. Explicit source roles,
 active pregame facts and sealed predicates establish source-local applicability.
@@ -15,6 +15,12 @@ VERSION = 'predict-combined-native-1'
 def normalize(catalog, books, *, at, associations=None, include_missing=False):
     source = catalog['record']['source']
     inventory = deepcopy(catalog['record']['value']['inventory'])
+    # Catalogs may gain season/stage after their initial display-only binding.
+    # Re-run the same strict owner against retained original metadata; never
+    # carry a refusal from an earlier incomplete event into a complete one.
+    from app.collection.v1_comparison import annotate
+    pending=[m for m in inventory['markets'] if m.get('comparison_admission',{}).get('reason')=='comparison_context_missing']
+    if pending:annotate(dict(inventory,markets=pending),source,policy='manual-comparison-2')
     reducer = SessionProjection(); reducer.inventory = {source: inventory}
     projected=associations
     associations = {}
@@ -29,7 +35,8 @@ def normalize(catalog, books, *, at, associations=None, include_missing=False):
     markets = {m['id']: m for m in inventory['markets']}
     result = []
     for row in records:
-        if row['market_identity']['family'] != 'moneyline' or row['market_identity']['period'] != 'full_game':continue
+        from .sporting_scope import supported
+        if not supported(row['event'].get('competition'),row['market_identity']['family'],row['market_identity']['period']):continue
         q = row['quote']; event = row['event']; market = markets[q['source']['native_market_id']]
         binding = market['v1_raw_binding']
         if binding['sha256'] != hashed({k:v for k,v in binding.items() if k != 'sha256'}):
@@ -50,11 +57,7 @@ def normalize(catalog, books, *, at, associations=None, include_missing=False):
         metadata = row['comparison_source_metadata']; metadata['phase'] = phase
         if source == 'kalshi':metadata.pop('selected_reference_data',None)
         terms = market.get('terms', {})
-        # Published NFL model allows unknown OT with a named assumption; an
-        # explicit excluded scope cannot be widened by this adapter.
         overtime = (market.get('native_scope_binding') or {}).get('overtime','unknown')
-        if source == 'polymarket_us' and 'Overtime is included if played.' in terms.get('description',''):
-            overtime = 'included'
         row['comparison_scope'] = dict(overtime=overtime); metadata['overtime'] = overtime
         book_id = associations[(source,event['id'],market['id'])]
         metadata['combined_native_binding'] = dict(version=VERSION, catalog_envelope_id=catalog['id'],
@@ -63,12 +66,15 @@ def normalize(catalog, books, *, at, associations=None, include_missing=False):
             unit_basis='existing admitted purchase_book USD per $1 contract; original depth contracts',
             original_quantity_units=q['original']['quantity_units'], actual_fills=None,
             completion='native original terms retained; no common completion condition asserted')
-        if role_ok and not event.get('conflicting_duplicate') and not event.get('occurrence_conflict'):
+        from .native_scoring_scope import attach
+        row = attach(row, at=at)
+        admitted = metadata.get('comparison_admission',{}).get('supported') is not False
+        if role_ok and admitted and not event.get('conflicting_duplicate') and not event.get('occurrence_conflict'):
             row['verified'] = True
             if row.get('event_scope'):
                 row['event_scope']['policy'] = 'native-provider-event-1'
             row['orientation_evidence'].append(VERSION+':'+hashed(metadata['combined_native_binding']))
-        else:
+        elif not role_ok or event.get('conflicting_duplicate') or event.get('occurrence_conflict'):
             row['verified'] = False
             event['occurrence_conflict'] = True
         for name in ('_instrument','_fingerprint'):row.pop(name,None)

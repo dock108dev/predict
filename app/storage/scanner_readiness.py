@@ -9,7 +9,7 @@ from itertools import product
 from app.comparison.current_dependencies import digest, instant, encoded
 from app.comparison.scanner_readiness import Selection, assemble, check, MAX_INSTRUMENTS, POLICY_REVISION, _count
 from app.comparison.readiness_inputs import instrument
-from app.collection.current_policy import GRANT, aggregate_scope
+from app.collection.current_policy import GRANT, aggregate_scope, native_scope, native_markets
 from app.storage.store import Store
 from app.storage.current_rows import CurrentRowStore
 from app.storage.comparison_board import ReadContext, MAX_GAMES
@@ -237,8 +237,9 @@ def scope_inventory(selection, config, authority):
     scopes = []
     for venue, sport, league, market, period in product(selection.venues, selection.sports, selection.leagues, selection.markets, selection.periods):
         native = venue in ('kalshi', 'polymarket_us')
-        configured = bool(config['enabled'] and league in (config['sports'] if native else aggregate_scope(config)) and
-                          (native or config['aggregate_enabled']) and ('moneyline' if market == 'winner' else market) in config['families'])
+        configured = bool(config['enabled'] and league in (native_scope(config) if native else aggregate_scope(config)) and
+                          (native or config['aggregate_enabled']) and ('moneyline' if market == 'winner' else market) in
+                          (native_markets(config) if native else config['families']))
         supported = sport == 'football' and league == 'NFL' and market == 'winner' and period == 'full_game'
         authorized = bool(authority == GRANT and configured and supported)
         scope = dict(venue=venue, sport=sport, league=league, market=market, period=period)

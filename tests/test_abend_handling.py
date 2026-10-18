@@ -187,5 +187,25 @@ class ArithmeticResponse(AioHTTPTestCase):
                     await asyncio.gather(task, return_exceptions=True)
 
 
+class ScannerFailure(unittest.IsolatedAsyncioTestCase):
+    async def test_reconciliation_and_failed_withdrawal_are_safe_and_visible(self):
+        from app.dashboard.scanner_api import Scanner
+        from threading import RLock, Event
+        scanner=object.__new__(Scanner)
+        scanner.closed=False;scanner.durable=True;scanner.wake=Event()
+        scanner.projection=Mock(lock=RLock(),pending=False,stopped=False)
+        scanner.stopped=Mock(return_value=False)
+        scanner.connector=Mock(side_effect=OSError('SECRET withdrawal'))
+        def broken():
+            scanner.closed=True
+            raise OSError('SECRET provider payload')
+        scanner.once=broken
+        with self.assertLogs('app.dashboard.scanner_api',level='ERROR') as logs:
+            await scanner.run()
+        scanner.projection.fail.assert_called_once_with('scanner_reconciliation_failed')
+        self.assertIn('scanner_failure_withdrawal',' '.join(logs.output))
+        self.assertNotIn('SECRET',' '.join(logs.output))
+
+
 if __name__ == '__main__':
     unittest.main()

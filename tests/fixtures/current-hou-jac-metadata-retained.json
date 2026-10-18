@@ -1,0 +1,967 @@
+{
+  "evidence_class": "retained authentic SQL metadata and original price clocks; no new provider observation or ordinary current coverage",
+  "source_path": "test-results/current-comparison-coverage-20261017/sql-7.json",
+  "source_sha256": "dbd40ae71f2811414d988a0bd226a18416e3e538589a4eeb2c4b512d2c4d81d5",
+  "captured_at": "2026-10-17T15:33:23.070203+00:00",
+  "records": [
+    {
+      "verified": true,
+      "selection": {
+        "label": "Jacksonville Jaguars does not win",
+        "predicate": "not_win",
+        "participant": "NFL:JAX",
+        "signed_line": null
+      },
+      "event_scope": {
+        "policy": "native-provider-event-1",
+        "source": "kalshi",
+        "native_event_id": "KXNFLGAME-26OCT18HOUJAC"
+      },
+      "result_policy": "native-moneyline-normal-predicate-1:a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+      "market_identity": {
+        "line": null,
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NFL",
+          "KXNFLGAME-26OCT18HOUJAC",
+          "NFL:JAX",
+          "NFL:HOU"
+        ],
+        "rules": "native-gross-predicate-1",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "family": "moneyline",
+        "period": "full_game",
+        "season": "2026",
+        "competition": "NFL",
+        "outcome_set": "a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified",
+      "comparison_scope": {
+        "overtime": "unknown"
+      },
+      "anchor_participant": null,
+      "outcome_selections": [
+        {
+          "label": "Jacksonville Jaguars",
+          "predicate": "win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        },
+        {
+          "label": "Jacksonville Jaguars does not win",
+          "predicate": "not_win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        }
+      ],
+      "outcome_cardinality": 2,
+      "orientation_evidence": [
+        "manual-comparison-2:17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+        "predict-combined-native-1:a77d37c1a07a9384e968b2fea57a9ed822b669219995aa6e77c6945faffd0011"
+      ],
+      "comparison_source_metadata": {
+        "phase": "pregame",
+        "overtime": "unknown",
+        "series_id": "KXNFLGAME",
+        "native_key": [
+          "kalshi",
+          "KXNFLGAME-26OCT18HOUJAC",
+          "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "no",
+          "no"
+        ],
+        "observed_at": "2026-10-17T15:33:17.488813+00:00",
+        "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+        "material_sha256": "c64f33b2397bde95782192928b39f9f037bd6f40133a00bed8e68af2239bfa34",
+        "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+        "original_wording": {
+          "title": "Jacksonville wins",
+          "no_sub_title": "Jacksonville",
+          "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+          "yes_sub_title": "Jacksonville",
+          "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "combined_native_binding": {
+          "version": "predict-combined-native-1",
+          "completion": "native original terms retained; no common completion condition asserted",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "phase_facts": [
+            {
+              "id": "1d24aff1-e292-4075-9b9d-1ee584d18b95",
+              "season": {
+                "type": "REG",
+                "week": 6,
+                "year": 2026
+              },
+              "status": "scheduled",
+              "source_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+              "start_date": "2026-10-18T13:30:00Z",
+              "away_team_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+              "home_team_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+              "main_game_event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+            }
+          ],
+          "actual_fills": null,
+          "original_roles": {
+            "away": "NFL:HOU",
+            "home": "NFL:JAX"
+          },
+          "original_terms": {
+            "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "predicate_sha256": "17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+          "original_quantity_units": "contracts"
+        },
+        "selected_market_observation": {
+          "source": {
+            "path": "/trade-api/v2/markets",
+            "params": {
+              "limit": 50,
+              "event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+            },
+            "body_sha256": "d34f7abdcf528ecd1d0c12cd08aff159252ff7a2d935d321952a5db1e4d01a15",
+            "received_at": "2026-10-17T15:32:09.065238+00:00",
+            "inventory_row": 12
+          },
+          "status": "observed",
+          "values": {
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "step": "0.0100",
+                "start": "0.0000"
+              }
+            ],
+            "price_level_structure": "linear_cent",
+            "notional_value_dollars": "1.0000"
+          },
+          "version": "selected-market-observation-1",
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "material_sha256": "c64f33b2397bde95782192928b39f9f037bd6f40133a00bed8e68af2239bfa34",
+          "native_event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "native_market_id": "KXNFLGAME-26OCT18HOUJAC-JAC"
+        }
+      },
+      "event": {
+        "id": "KXNFLGAME-26OCT18HOUJAC",
+        "away": "NFL:HOU",
+        "home": "NFL:JAX",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "title": "HOU Texans vs JAC Jaguars",
+        "season": "2026",
+        "status": {
+          "live": null,
+          "ended": null,
+          "active": null,
+          "closed": null,
+          "period": null,
+          "status": null
+        },
+        "competition": "NFL",
+        "participants": {
+          "Houston Texans": "NFL:HOU",
+          "Jacksonville Jaguars": "NFL:JAX"
+        },
+        "scheduled_start": "2026-10-18T13:30:00+00:00",
+        "conflicting_duplicate": false,
+        "observed_identity_facts": [
+          {
+            "id": "1d24aff1-e292-4075-9b9d-1ee584d18b95",
+            "season": {
+              "type": "REG",
+              "week": 6,
+              "year": 2026
+            },
+            "status": "scheduled",
+            "source_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+            "start_date": "2026-10-18T13:30:00Z",
+            "away_team_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+            "home_team_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+            "main_game_event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+          }
+        ],
+        "source_participant_roles": {
+          "away": "NFL:HOU",
+          "home": "NFL:JAX"
+        }
+      },
+      "quote": {
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-17T15:33:18.603241+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-17T15:32:55.289000+00:00",
+          "received_at": "2026-10-17T15:33:17.488813+00:00"
+        },
+        "venue": "kalshi",
+        "source": {
+          "provider": "kalshi",
+          "binding_id": "17a59186d1bf0d9df104f4293294851b8b3e2a5f584b98095f2ec2f3c2edea4d",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "no",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "native_market_id": "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "native_outcome_id": "no"
+        },
+        "original": {
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.4400",
+          "payout": "1",
+          "native_units": "usd_per_contract",
+          "native_value": "0.5600",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "transformation": "one_minus_native_bid"
+        },
+        "cost_note": "Current applicable costs unavailable",
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "provenance": {
+          "mode": "current",
+          "sha256": "17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+          "real_source": true
+        },
+        "freshness_policy": {
+          "version": "kalshi-book-age-engineering-1",
+          "maximum_age_seconds": 30
+        },
+        "book_confirmation": {
+          "basis": "kalshi-complete-snapshot-send-1",
+          "venue": "kalshi",
+          "sha256": "04377800d2ff94a389554a2cd72345824b1cd388ed08a1550bf084061121ff42",
+          "version": "predict-book-confirmation-1",
+          "event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "sequence": 3583,
+          "market_id": "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "generation": 1,
+          "request_id": "100073",
+          "received_at": "2026-10-17T15:33:17.488813+00:00",
+          "confirmed_at": "2026-10-17T15:33:17.442000+00:00",
+          "requested_at": "2026-10-17T15:33:17.425170+00:00",
+          "content_sha256": "39b2de174c55ad6a973b9032193fa6bc485b5e64a53db27d5d25624047730150",
+          "payload_sha256": "992f999f7606b4f113ea02325fc39e1ebeca267ba11a06aba456e0dd03570706",
+          "subscription_id": "1",
+          "provider_source_at": null
+        },
+        "id": "",
+        "revision": 1
+      }
+    },
+    {
+      "verified": true,
+      "selection": {
+        "label": "Houston Texans",
+        "predicate": "win",
+        "participant": "NFL:HOU",
+        "signed_line": null
+      },
+      "event_scope": {
+        "policy": "native-provider-event-1",
+        "source": "polymarket_us",
+        "native_event_id": "141502"
+      },
+      "result_policy": "native-moneyline-normal-predicate-1:5c5627deedd556930ebb84a33ad8ffd2b8bb2cea7bee50711583bf96b8935864",
+      "market_identity": {
+        "line": null,
+        "event": [
+          "comparison-provider-occurrence-1",
+          "polymarket_us",
+          "NFL",
+          "141502",
+          "NFL:JAX",
+          "NFL:HOU"
+        ],
+        "rules": "native-gross-predicate-1",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "family": "moneyline",
+        "period": "full_game",
+        "season": "2026",
+        "competition": "NFL",
+        "outcome_set": "5c5627deedd556930ebb84a33ad8ffd2b8bb2cea7bee50711583bf96b8935864",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "anchor_participant": null,
+      "outcome_selections": [
+        {
+          "label": "Houston Texans",
+          "predicate": "win",
+          "participant": "NFL:HOU",
+          "signed_line": null
+        },
+        {
+          "label": "Jacksonville Jaguars",
+          "predicate": "win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        }
+      ],
+      "outcome_cardinality": 2,
+      "orientation_evidence": [
+        "manual-comparison-2:ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+        "predict-combined-native-1:d4fd9769fcf62cb95a3eccb31b6d00c4e5e7dae27c1dbfd0d3e17ddd6cb37063"
+      ],
+      "comparison_source_metadata": {
+        "phase": "pregame",
+        "overtime": "included",
+        "series_id": null,
+        "native_key": [
+          "polymarket_us",
+          "141502",
+          "1198902",
+          "2397286",
+          "Long"
+        ],
+        "observed_at": "2026-10-17T15:33:12.392542+00:00",
+        "rules_primary": null,
+        "material_sha256": "32095c9e319437507a2dec9c9edf074caa8eabf14bbcef41d62bc729091f3700",
+        "rules_secondary": null,
+        "original_wording": {
+          "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+        },
+        "combined_native_binding": {
+          "version": "predict-combined-native-1",
+          "completion": "native original terms retained; no common completion condition asserted",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "phase_facts": [
+            {
+              "id": "141502",
+              "active": true,
+              "closed": false,
+              "period": "NS",
+              "startTime": "2026-10-18T13:30:00Z",
+              "sportradarGameId": "0bddea0c-7e26-4dff-a967-85ef8e5156cc"
+            }
+          ],
+          "actual_fills": null,
+          "original_roles": {
+            "away": "NFL:HOU",
+            "home": "NFL:JAX"
+          },
+          "original_terms": {
+            "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "predicate_sha256": "ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+          "original_quantity_units": "contracts"
+        },
+        "public_event_occurrence": {
+          "game_id": "19533",
+          "event_id": "141502",
+          "provider_game_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+          "rescheduled_from_game_id": null
+        },
+        "selected_reference_data": {
+          "values": {},
+          "present": false,
+          "market_id": "1198902",
+          "instrument_id": "2397286",
+          "material_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "public_retail_observation": {
+          "long": true,
+          "values": {
+            "feeCoefficient": "0.0695",
+            "minimumTradeQty": "0.01",
+            "orderPriceMinTickSize": "0.0025"
+          },
+          "team_id": "60",
+          "market_id": "1198902",
+          "updated_at": "2026-10-17T15:25:15Z",
+          "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+          "applicability": "separate_metadata_requires_selected_binding",
+          "instrument_id": "2397286",
+          "material_sha256": "32095c9e319437507a2dec9c9edf074caa8eabf14bbcef41d62bc729091f3700"
+        }
+      },
+      "event": {
+        "id": "141502",
+        "away": "NFL:HOU",
+        "home": "NFL:JAX",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "title": "HOU Texans vs. JAC Jaguars",
+        "season": "2026",
+        "status": {
+          "live": null,
+          "ended": null,
+          "active": true,
+          "closed": false,
+          "period": "NS",
+          "status": null
+        },
+        "competition": "NFL",
+        "participants": {
+          "Houston Texans": "NFL:HOU",
+          "Jacksonville Jaguars": "NFL:JAX"
+        },
+        "scheduled_start": "2026-10-18T13:30:00+00:00",
+        "shared_provider_ids": {
+          "sportradar": "0bddea0c-7e26-4dff-a967-85ef8e5156cc"
+        },
+        "conflicting_duplicate": false,
+        "observed_identity_facts": [],
+        "source_participant_roles": {
+          "away": "NFL:HOU",
+          "home": "NFL:JAX"
+        }
+      },
+      "quote": {
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-17T15:33:13.323220+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-17T15:33:12.330442+00:00",
+          "received_at": "2026-10-17T15:33:12.392542+00:00"
+        },
+        "venue": "polymarket_us",
+        "source": {
+          "provider": "polymarket_us",
+          "binding_id": "555251c7a553df036bd195b99c8c9b913d735d245296e4fbf830c62f11abd36c",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "Long",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "141502",
+          "native_market_id": "1198902",
+          "native_outcome_id": "2397286"
+        },
+        "original": {
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.4350",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts"
+        },
+        "cost_note": "Current applicable costs unavailable",
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "provenance": {
+          "mode": "current",
+          "sha256": "ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+          "real_source": true
+        },
+        "freshness_policy": {
+          "version": "polymarket_us-book-age-engineering-1",
+          "maximum_age_seconds": 30
+        },
+        "book_confirmation": {
+          "basis": "us-complete-book-transact-1",
+          "venue": "polymarket_us",
+          "sha256": "432fb371c23f406bcc2e587417ab17722b97dd3cad79d1afeeac145f0dd38e85",
+          "version": "predict-book-confirmation-1",
+          "event_id": "141502",
+          "sequence": null,
+          "market_id": "1198902",
+          "generation": 2,
+          "request_id": "0e6d80d6-3d93-4e41-9aa6-297273e42706",
+          "received_at": "2026-10-17T15:33:12.392542+00:00",
+          "confirmed_at": "2026-10-17T15:33:12.330442+00:00",
+          "requested_at": null,
+          "content_sha256": "c4e30d08d7171209d42d185c9909c5b39a80a78c810ada57a3b834318a10458f",
+          "payload_sha256": "772177e99e388eb65d7a2d9c607b4e6332e5973caf31aa657cbf933f2fa41b6a",
+          "subscription_id": null,
+          "provider_source_at": "2026-10-17T15:33:12.330442+00:00"
+        },
+        "id": "",
+        "revision": 1
+      }
+    },
+    {
+      "verified": true,
+      "selection": {
+        "label": "Jacksonville Jaguars",
+        "predicate": "win",
+        "participant": "NFL:JAX",
+        "signed_line": null
+      },
+      "event_scope": {
+        "policy": "native-provider-event-1",
+        "source": "polymarket_us",
+        "native_event_id": "141502"
+      },
+      "result_policy": "native-moneyline-normal-predicate-1:5c5627deedd556930ebb84a33ad8ffd2b8bb2cea7bee50711583bf96b8935864",
+      "market_identity": {
+        "line": null,
+        "event": [
+          "comparison-provider-occurrence-1",
+          "polymarket_us",
+          "NFL",
+          "141502",
+          "NFL:JAX",
+          "NFL:HOU"
+        ],
+        "rules": "native-gross-predicate-1",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "family": "moneyline",
+        "period": "full_game",
+        "season": "2026",
+        "competition": "NFL",
+        "outcome_set": "5c5627deedd556930ebb84a33ad8ffd2b8bb2cea7bee50711583bf96b8935864",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "anchor_participant": null,
+      "outcome_selections": [
+        {
+          "label": "Houston Texans",
+          "predicate": "win",
+          "participant": "NFL:HOU",
+          "signed_line": null
+        },
+        {
+          "label": "Jacksonville Jaguars",
+          "predicate": "win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        }
+      ],
+      "outcome_cardinality": 2,
+      "orientation_evidence": [
+        "manual-comparison-2:ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+        "predict-combined-native-1:d4fd9769fcf62cb95a3eccb31b6d00c4e5e7dae27c1dbfd0d3e17ddd6cb37063"
+      ],
+      "comparison_source_metadata": {
+        "phase": "pregame",
+        "overtime": "included",
+        "series_id": null,
+        "native_key": [
+          "polymarket_us",
+          "141502",
+          "1198902",
+          "2397287",
+          "Short"
+        ],
+        "observed_at": "2026-10-17T15:33:12.392542+00:00",
+        "rules_primary": null,
+        "material_sha256": "32095c9e319437507a2dec9c9edf074caa8eabf14bbcef41d62bc729091f3700",
+        "rules_secondary": null,
+        "original_wording": {
+          "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+        },
+        "combined_native_binding": {
+          "version": "predict-combined-native-1",
+          "completion": "native original terms retained; no common completion condition asserted",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "phase_facts": [
+            {
+              "id": "141502",
+              "active": true,
+              "closed": false,
+              "period": "NS",
+              "startTime": "2026-10-18T13:30:00Z",
+              "sportradarGameId": "0bddea0c-7e26-4dff-a967-85ef8e5156cc"
+            }
+          ],
+          "actual_fills": null,
+          "original_roles": {
+            "away": "NFL:HOU",
+            "home": "NFL:JAX"
+          },
+          "original_terms": {
+            "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+          },
+          "predicate_sha256": "ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+          "original_quantity_units": "contracts"
+        },
+        "public_event_occurrence": {
+          "game_id": "19533",
+          "event_id": "141502",
+          "provider_game_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+          "rescheduled_from_game_id": null
+        },
+        "selected_reference_data": {
+          "values": {},
+          "present": false,
+          "market_id": "1198902",
+          "instrument_id": "2397287",
+          "material_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "public_retail_observation": {
+          "long": false,
+          "values": {
+            "feeCoefficient": "0.0695",
+            "minimumTradeQty": "0.01",
+            "orderPriceMinTickSize": "0.0025"
+          },
+          "team_id": "62",
+          "market_id": "1198902",
+          "updated_at": "2026-10-17T15:25:15Z",
+          "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL.",
+          "applicability": "separate_metadata_requires_selected_binding",
+          "instrument_id": "2397287",
+          "material_sha256": "32095c9e319437507a2dec9c9edf074caa8eabf14bbcef41d62bc729091f3700"
+        }
+      },
+      "event": {
+        "id": "141502",
+        "away": "NFL:HOU",
+        "home": "NFL:JAX",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "title": "HOU Texans vs. JAC Jaguars",
+        "season": "2026",
+        "status": {
+          "live": null,
+          "ended": null,
+          "active": true,
+          "closed": false,
+          "period": "NS",
+          "status": null
+        },
+        "competition": "NFL",
+        "participants": {
+          "Houston Texans": "NFL:HOU",
+          "Jacksonville Jaguars": "NFL:JAX"
+        },
+        "scheduled_start": "2026-10-18T13:30:00+00:00",
+        "shared_provider_ids": {
+          "sportradar": "0bddea0c-7e26-4dff-a967-85ef8e5156cc"
+        },
+        "conflicting_duplicate": false,
+        "observed_identity_facts": [],
+        "source_participant_roles": {
+          "away": "NFL:HOU",
+          "home": "NFL:JAX"
+        }
+      },
+      "quote": {
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-17T15:33:13.323220+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-17T15:33:12.330442+00:00",
+          "received_at": "2026-10-17T15:33:12.392542+00:00"
+        },
+        "venue": "polymarket_us",
+        "source": {
+          "provider": "polymarket_us",
+          "binding_id": "249af4cedb92bdefccce3d8359e8bcaf48b270765c2d932d107f06b3b68dbaaf",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "Short",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "141502",
+          "native_market_id": "1198902",
+          "native_outcome_id": "2397287"
+        },
+        "original": {
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.5675",
+          "payout": "1",
+          "native_units": "usd_per_contract",
+          "native_value": "0.4325",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "transformation": "one_minus_native_bid"
+        },
+        "cost_note": "Current applicable costs unavailable",
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "provenance": {
+          "mode": "current",
+          "sha256": "ce4dc9f123aacca63b627f82c870dd2ce3f29448cb5b8d0e20bfe7e35bfbe267",
+          "real_source": true
+        },
+        "freshness_policy": {
+          "version": "polymarket_us-book-age-engineering-1",
+          "maximum_age_seconds": 30
+        },
+        "book_confirmation": {
+          "basis": "us-complete-book-transact-1",
+          "venue": "polymarket_us",
+          "sha256": "432fb371c23f406bcc2e587417ab17722b97dd3cad79d1afeeac145f0dd38e85",
+          "version": "predict-book-confirmation-1",
+          "event_id": "141502",
+          "sequence": null,
+          "market_id": "1198902",
+          "generation": 2,
+          "request_id": "0e6d80d6-3d93-4e41-9aa6-297273e42706",
+          "received_at": "2026-10-17T15:33:12.392542+00:00",
+          "confirmed_at": "2026-10-17T15:33:12.330442+00:00",
+          "requested_at": null,
+          "content_sha256": "c4e30d08d7171209d42d185c9909c5b39a80a78c810ada57a3b834318a10458f",
+          "payload_sha256": "772177e99e388eb65d7a2d9c607b4e6332e5973caf31aa657cbf933f2fa41b6a",
+          "subscription_id": null,
+          "provider_source_at": "2026-10-17T15:33:12.330442+00:00"
+        },
+        "id": "",
+        "revision": 1
+      }
+    },
+    {
+      "verified": true,
+      "selection": {
+        "label": "Jacksonville Jaguars",
+        "predicate": "win",
+        "participant": "NFL:JAX",
+        "signed_line": null
+      },
+      "event_scope": {
+        "policy": "native-provider-event-1",
+        "source": "kalshi",
+        "native_event_id": "KXNFLGAME-26OCT18HOUJAC"
+      },
+      "result_policy": "native-moneyline-normal-predicate-1:a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+      "market_identity": {
+        "line": null,
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NFL",
+          "KXNFLGAME-26OCT18HOUJAC",
+          "NFL:JAX",
+          "NFL:HOU"
+        ],
+        "rules": "native-gross-predicate-1",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "family": "moneyline",
+        "period": "full_game",
+        "season": "2026",
+        "competition": "NFL",
+        "outcome_set": "a31755cf5d5220386fab80bc7aa4ea40378b55ac217e3461f6c29f9a5c75917c",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "period_boundary": "All regulation and applicable overtime; exceptional payouts separately unqualified",
+      "comparison_scope": {
+        "overtime": "unknown"
+      },
+      "anchor_participant": null,
+      "outcome_selections": [
+        {
+          "label": "Jacksonville Jaguars",
+          "predicate": "win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        },
+        {
+          "label": "Jacksonville Jaguars does not win",
+          "predicate": "not_win",
+          "participant": "NFL:JAX",
+          "signed_line": null
+        }
+      ],
+      "outcome_cardinality": 2,
+      "orientation_evidence": [
+        "manual-comparison-2:17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+        "predict-combined-native-1:a77d37c1a07a9384e968b2fea57a9ed822b669219995aa6e77c6945faffd0011"
+      ],
+      "comparison_source_metadata": {
+        "phase": "pregame",
+        "overtime": "unknown",
+        "series_id": "KXNFLGAME",
+        "native_key": [
+          "kalshi",
+          "KXNFLGAME-26OCT18HOUJAC",
+          "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "yes",
+          "yes"
+        ],
+        "observed_at": "2026-10-17T15:33:17.488813+00:00",
+        "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+        "material_sha256": "c64f33b2397bde95782192928b39f9f037bd6f40133a00bed8e68af2239bfa34",
+        "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+        "original_wording": {
+          "title": "Jacksonville wins",
+          "no_sub_title": "Jacksonville",
+          "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+          "yes_sub_title": "Jacksonville",
+          "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "combined_native_binding": {
+          "version": "predict-combined-native-1",
+          "completion": "native original terms retained; no common completion condition asserted",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "phase_facts": [
+            {
+              "id": "1d24aff1-e292-4075-9b9d-1ee584d18b95",
+              "season": {
+                "type": "REG",
+                "week": 6,
+                "year": 2026
+              },
+              "status": "scheduled",
+              "source_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+              "start_date": "2026-10-18T13:30:00Z",
+              "away_team_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+              "home_team_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+              "main_game_event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+            }
+          ],
+          "actual_fills": null,
+          "original_roles": {
+            "away": "NFL:HOU",
+            "home": "NFL:JAX"
+          },
+          "original_terms": {
+            "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+            "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "predicate_sha256": "17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+          "original_quantity_units": "contracts"
+        },
+        "selected_market_observation": {
+          "source": {
+            "path": "/trade-api/v2/markets",
+            "params": {
+              "limit": 50,
+              "event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+            },
+            "body_sha256": "d34f7abdcf528ecd1d0c12cd08aff159252ff7a2d935d321952a5db1e4d01a15",
+            "received_at": "2026-10-17T15:32:09.065238+00:00",
+            "inventory_row": 12
+          },
+          "status": "observed",
+          "values": {
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "step": "0.0100",
+                "start": "0.0000"
+              }
+            ],
+            "price_level_structure": "linear_cent",
+            "notional_value_dollars": "1.0000"
+          },
+          "version": "selected-market-observation-1",
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "material_sha256": "c64f33b2397bde95782192928b39f9f037bd6f40133a00bed8e68af2239bfa34",
+          "native_event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "native_market_id": "KXNFLGAME-26OCT18HOUJAC-JAC"
+        }
+      },
+      "event": {
+        "id": "KXNFLGAME-26OCT18HOUJAC",
+        "away": "NFL:HOU",
+        "home": "NFL:JAX",
+        "sport": "american_football",
+        "stage": "regular_season",
+        "title": "HOU Texans vs JAC Jaguars",
+        "season": "2026",
+        "status": {
+          "live": null,
+          "ended": null,
+          "active": null,
+          "closed": null,
+          "period": null,
+          "status": null
+        },
+        "competition": "NFL",
+        "participants": {
+          "Houston Texans": "NFL:HOU",
+          "Jacksonville Jaguars": "NFL:JAX"
+        },
+        "scheduled_start": "2026-10-18T13:30:00+00:00",
+        "conflicting_duplicate": false,
+        "observed_identity_facts": [
+          {
+            "id": "1d24aff1-e292-4075-9b9d-1ee584d18b95",
+            "season": {
+              "type": "REG",
+              "week": 6,
+              "year": 2026
+            },
+            "status": "scheduled",
+            "source_id": "0bddea0c-7e26-4dff-a967-85ef8e5156cc",
+            "start_date": "2026-10-18T13:30:00Z",
+            "away_team_id": "96edbad3-1be5-4528-a3ed-c6e0c28c5fa0",
+            "home_team_id": "61a75ab7-eaf0-4601-b920-86b1e165007d",
+            "main_game_event_ticker": "KXNFLGAME-26OCT18HOUJAC"
+          }
+        ],
+        "source_participant_roles": {
+          "away": "NFL:HOU",
+          "home": "NFL:JAX"
+        }
+      },
+      "quote": {
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-17T15:33:18.603241+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-17T15:32:55.289000+00:00",
+          "received_at": "2026-10-17T15:33:17.488813+00:00"
+        },
+        "venue": "kalshi",
+        "source": {
+          "provider": "kalshi",
+          "binding_id": "fea357ab532a1c89bd6875acaeef013dbda4e1935ce8e988847fa1d6bd515073",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "yes",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "native_market_id": "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "native_outcome_id": "yes"
+        },
+        "original": {
+          "role": "comparison",
+          "units": "usd_per_contract",
+          "value": "0.5700",
+          "payout": "1",
+          "native_units": "usd_per_contract",
+          "native_value": "0.4300",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "transformation": "one_minus_native_bid"
+        },
+        "cost_note": "Current applicable costs unavailable",
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "provenance": {
+          "mode": "current",
+          "sha256": "17a2d9fdbcebf70fbd8177f6f1225842a624687bf2f111101f2ced560a931d1c",
+          "real_source": true
+        },
+        "freshness_policy": {
+          "version": "kalshi-book-age-engineering-1",
+          "maximum_age_seconds": 30
+        },
+        "book_confirmation": {
+          "basis": "kalshi-complete-snapshot-send-1",
+          "venue": "kalshi",
+          "sha256": "04377800d2ff94a389554a2cd72345824b1cd388ed08a1550bf084061121ff42",
+          "version": "predict-book-confirmation-1",
+          "event_id": "KXNFLGAME-26OCT18HOUJAC",
+          "sequence": 3583,
+          "market_id": "KXNFLGAME-26OCT18HOUJAC-JAC",
+          "generation": 1,
+          "request_id": "100073",
+          "received_at": "2026-10-17T15:33:17.488813+00:00",
+          "confirmed_at": "2026-10-17T15:33:17.442000+00:00",
+          "requested_at": "2026-10-17T15:33:17.425170+00:00",
+          "content_sha256": "39b2de174c55ad6a973b9032193fa6bc485b5e64a53db27d5d25624047730150",
+          "payload_sha256": "992f999f7606b4f113ea02325fc39e1ebeca267ba11a06aba456e0dd03570706",
+          "subscription_id": "1",
+          "provider_source_at": null
+        },
+        "id": "",
+        "revision": 1
+      }
+    }
+  ]
+}

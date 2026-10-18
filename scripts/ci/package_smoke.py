@@ -1,5 +1,6 @@
 """Build and install fresh output, then check imports/assets outside the checkout."""
 
+import argparse
 import json
 import os
 import platform
@@ -18,7 +19,11 @@ def validate_wheel(names, source):
         for p in (source / "app").rglob("*")
         if p.is_file()
         and "__pycache__" not in p.parts
-        and p.suffix in {".py", ".json", ".js", ".css", ".html", ".sql"}
+        and (
+            p.suffix in {".py", ".json", ".js", ".css", ".html", ".sql"}
+            or p.suffix == ".pdf"
+            and p.parent == source / "app/fixtures/native-scoring-scope"
+        )
     }
     actual = {n for n in names if n.startswith("app/")}
     if expected - actual:
@@ -34,7 +39,13 @@ def validate_wheel(names, source):
 
 
 def main():
-    report = Path("test-results/package")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report-dir", default="test-results/package")
+    report = Path(parser.parse_args().report_dir)
+    if report.exists() and any(report.iterdir()):
+        parser.error(
+            "Use an empty package report directory; existing evidence is preserved"
+        )
     report.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="predict-package-") as folder:
@@ -97,7 +108,7 @@ import app.dashboard
 root = Path(app.dashboard.__file__).parent
 for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', 'admin.js',
              'ev.html', 'ev.js', 'coverage.html', 'coverage.js', 'comparison-board.js',
-             'comparison-view.js', 'comparison.css', 'scanner.html', 'scanner.js',
+             'comparison-view.js', 'scanner.html', 'scanner.js',
              'scanner.css', 'scanner-runtime.json'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
@@ -118,7 +129,7 @@ async def smoke():
         await site.start()
         url='http://127.0.0.1:'+str(site._server.sockets[0].getsockname()[1])
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
-            for path in ('/','/odds','/ev','/arbs','/admin','/api/scanner/client',
+            for path in ('/','/odds','/ev','/arbs','/admin','/current/coverage','/api/scanner/client',
                          '/api/scanner/summaries',
                          '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
@@ -126,15 +137,23 @@ async def smoke():
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     await response.read()
-            for path in ('/current/coverage', '/api/current', '/api/current/details',
-                         '/api/comparison', '/api/coverage',
+            for path in ('/api/current', '/api/current/details',
+                         '/api/comparison',
                          '/api/stored/games', '/api/stored/result', '/api/boards/history'):
                 async with client.get(url+path) as response:
                     assert response.status==410,(path,response.status)
                     state=await response.json()
                     assert state['provider_requests']==0,(path,state)
+            # These routes are supported SQL reads, not retired transports.
+            # This installed-package smoke deliberately provisions no SQL owner.
+            for path in ('/api/coverage', '/api/boards/games'):
+                async with client.get(url+path) as response:
+                    assert response.status==503,(path,response.status)
+                    state=await response.json()
+                    assert state['error']=='database_unavailable',(path,state)
+                    assert state['provider_requests']==0,(path,state)
             async with client.get(url+'/') as response:
-                assert '/current/assets/stored.js' in await response.text()
+                assert '/current/assets/scanner.js' in await response.text()
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()
@@ -166,6 +185,8 @@ asyncio.run(smoke())
             "seconds": round(time.monotonic() - started, 3),
             "baseline": None,
             "tested_sha": os.environ.get("GITHUB_SHA"),
+            "run_id": os.environ.get("GITHUB_RUN_ID"),
+            "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
             "python": platform.python_version(),
             "platform": platform.platform(),
             "installed_dependencies": json.loads(inventory),

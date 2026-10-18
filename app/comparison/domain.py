@@ -213,12 +213,30 @@ class ScorePredicate:
 
     @property
     def key(self) -> tuple:
-        # Sporting score domains are integer-valued. Equality to a half point
-        # is infeasible, so inclusive/strict wording shares the same predicate.
+        # Preserve the sealed version-1 profile identity. Current multi-source
+        # matching opts into the proven scoring-set key below independently.
         operator = self.operator
         if self.threshold.value.denominator == 2:
             operator = {"ge": "gt", "le": "lt"}.get(operator, operator)
         return self.domain, operator, self.threshold.key, self.subject_id
+
+    @property
+    def integer_key(self) -> tuple:
+        # All supported sporting scores are integers. Canonicalize the actual
+        # scoring set, rather than its source spelling: >3.5 and >=4 coincide.
+        # Equality payout/refund treatment belongs to CanonicalSelection and
+        # remains separate from this predicate-only equivalence.
+        from math import ceil, floor
+        operator, threshold = self.operator, self.threshold.value
+        if operator in {'gt', 'ge'}:
+            threshold = Fraction(floor(threshold) + 1 if operator == 'gt' else ceil(threshold))
+            operator = 'ge'
+        elif operator in {'lt', 'le'}:
+            threshold = Fraction(ceil(threshold) - 1 if operator == 'lt' else floor(threshold))
+            operator = 'le'
+        elif threshold.denominator != 1:
+            return self.domain, 'never' if operator == 'eq' else 'always', None, self.subject_id
+        return self.domain, operator, (threshold.numerator, threshold.denominator), self.subject_id
 
     def evaluate(self, event: EventReference, home_score: int, away_score: int) -> bool:
         if any(type(x) is not int or x < 0 for x in (home_score, away_score)):

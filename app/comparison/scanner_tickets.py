@@ -47,13 +47,15 @@ class TicketError(ValueError):
 
 class Tickets:
     def __init__(self, projection, *, calculate=None, fresh=None, fresh_selected=None, stopped=None, destinations=None,
-                 clock=None, timer=monotonic, allow_authored=False):
+                 clock=None, timer=monotonic, allow_authored=False, current_selected=None, collection_stopped=None):
         if calculate is None:
             from .scanner_ticket_finance import calculate
         self.projection=projection; self.calculate=calculate; self.fresh=fresh; self.fresh_selected=fresh_selected
         self.stopped=stopped or (lambda:projection.stopped)
+        self.collection_stopped=collection_stopped or self.stopped
         self.destinations=destinations or Destinations(); self.clock=clock or projection.clock
         self.allow_authored=allow_authored
+        self.current_selected=current_selected
         self.timer=timer; self.lock=RLock(); self.clients={}; self.jobs={}; self.closed=False
         self.executor=ThreadPoolExecutor(max_workers=MAX_CALCULATIONS, thread_name_prefix='predict-ticket')
 
@@ -75,9 +77,12 @@ class Tickets:
         return slot
 
     def _capture(self, selected, *, initial=False, snapshot=None):
+        if snapshot is None and self.current_selected is not None:
+            snapshot=self.current_selected(selected)
         p=self.projection
         with p.lock:
-            if self.closed or self.stopped() or p.stopped:return None, 'stopped'
+            if self.closed or self.collection_stopped() or p.stopped:return None, 'stopped'
+            if self.stopped():return None, 'temporarily_unavailable'
             if selected['row_id'] not in tuple(selected['opportunity_id']+':'+c for c in ('covered_outcome_arb','conditional_hedge','ev')):
                 return None,'binding_changed'
             if selected['server_id']!=p.server_id or selected['epoch']!=p.epoch:
@@ -270,7 +275,9 @@ class Tickets:
                     validation_ms=validation_ms,total_backend_ms=(perf_counter()-started)*1000))
         except CalculationStopped:
             if job['cancel'].is_set():raise TicketError('ticket_superseded') from None
-            return self._finish(job,None,None,'stopped' if self.stopped() else 'calculation_deadline')
+            reason=('stopped' if self.closed or self.collection_stopped() or self.projection.stopped else
+                    'temporarily_unavailable' if self.stopped() else 'calculation_deadline')
+            return self._finish(job,None,None,reason)
         except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
             reason=str(exc)
             if len(reason)>160 or not all(c.isalnum() or c in '_; :.-' for c in reason):reason=type(exc).__name__

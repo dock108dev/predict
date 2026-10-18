@@ -68,6 +68,10 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
     from app.comparison.projection_batches import batches
     ordered=(record for batch in batches(records,lambda r:encoded(r['market_identity']['event'])) for record in batch)
     for record in ordered:
+        # Reattach supported retained metadata to existing SQL rows as well as
+        # new collection. This does not need another provider observation.
+        from app.comparison.native_scoring_scope import attach
+        record=attach(record,at=envelope['clock_at'])
         fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata','comparison_scope'})
         event=record['event'];market=record['market_identity'];selection=record['selection'];q=deepcopy(record['quote'])
         if record.get('event_scope') is not None:
@@ -88,17 +92,24 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         else:
             key=(ordinary_event_key(event) if market['event'][0]=='predict-occurrence-1' else
                  current_event_key(event) if market['event'][0]=='comparison-reviewed-occurrence-1' else event_key(event))
-        if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition'),('season','season'),('stage','stage')]):
+        if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition')]) or any(market.get(k)!=event.get(k) for k in ('season','stage')):
             raise ValueError('Normalized market/event binding conflict')
-        if stamp(market['scheduled_start'])!=stamp(event['scheduled_start']):raise ValueError('Normalized schedule conflict')
+        if any(event.get(k) is None for k in ('season','stage')) and not (
+                key[0]=='comparison-provider-occurrence-1' and record['verified'] is False):
+            raise ValueError('Missing comparison context requires an unverified source-local observation')
+        if event.get('schedule_conflict') or stamp(market['scheduled_start'])!=stamp(event['scheduled_start']):raise ValueError('Normalized schedule conflict')
         family={'moneyline':'winner','team_binary':'winner','spread':'spread','total':'total'}.get(market['family'])
         if family is None:raise ValueError('Current common market adapter unsupported for this family')
         participants=[dict(id=event[role],name=next(n for n,cid in event['participants'].items() if cid==event[role]),role=role) for role in ('away','home')]
         discriminator=identity('reviewed-event',key)
         if key[0] in ('comparison-provider-occurrence-1','comparison-reviewed-occurrence-1','predict-occurrence-1'):
             discriminator='comparison-occurrence-1:'+discriminator
+        if key[0]=='comparison-provider-occurrence-1':
+            # Provider identity is durable while optional comparison context is
+            # learned. A later supported cross-source join has its own identity.
+            discriminator='comparison-provider-occurrence-1:'+identity('provider-event',key)
         if key[0]=='predict-occurrence-1':discriminator='predict-occurrence-1:'+identity('occurrence',key)
-        e=dict(id='',sport=event['sport'],league=event['competition'],season=event['season'],stage=event['stage'],event_discriminator=discriminator,
+        e=dict(id='',sport=event['sport'],league=event['competition'],season=event.get('season'),stage=event.get('stage'),event_discriminator=discriminator,
                participants=participants,title=event['title'],start_at=stamp(event['scheduled_start']).isoformat(),groups=[])
         e['id']=event_identity(e)
         if e['id'] not in events:events[e['id']]=e;result['events'].append(e)
@@ -117,7 +128,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         overtime=(record.get('comparison_scope') or dict(overtime='unknown'))['overtime']
         if matched:g['period_boundary']+=' | Scoring overtime: '+overtime
         g['id']=identity('group',[e['id'],*[g[k] for k in ('market','period','period_boundary','line','anchor_participant','outcome_cardinality')],g.get('result_policy','unspecified')])
-        if matched and family=='winner':
+        if matched:
             from app.comparison.domain import display_group_key
             display_key=display_group_key(e['id'],market['family'],market['period'],overtime,market['line'])
             g['display_group']=dict(version='predict-display-group-1',id=identity('display-group',display_key),
@@ -131,6 +142,10 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
                 result_policy=q.get('native_predicate',{}).get('original_result_policy',policy),
                 scope=dict(period=market['period'],overtime=overtime),
                 material_sha256=metadata.get('material_sha256',q['provenance'].get('sha256')))
+            if 'same_outcome' in metadata:
+                contract['same_outcome']=deepcopy(metadata['same_outcome'])
+            if 'scoring_scope' in metadata:
+                contract['scope_evidence']=deepcopy(metadata['scoring_scope'])
             contract['id']='native-contract:'+digest(contract)
             q['native_contract']=contract
         if g['id'] not in groups:groups[g['id']]=g;e['groups'].append(g)

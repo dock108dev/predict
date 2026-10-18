@@ -4,8 +4,10 @@ Reuse complete HTTP admission, reviewed catalog bindings and native stream
 reconstruction. CurrentService retains catalogs and admitted book images.
 """
 import asyncio
+from copy import deepcopy
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
+from hashlib import sha256
 import json
 import time
 from uuid import uuid4
@@ -18,6 +20,7 @@ from .native_scope_bindings import selectors_for, POLICY as SCOPE_POLICY
 from .native_selectors import query, candidates, PAGE_SIZE
 from .venue_access import ENDPOINTS, load_credentials
 from .current_sink import utc
+from .current_policy import native_scope, native_markets
 from .odds_http import BudgetStop
 
 class CatalogResync(Exception):
@@ -27,14 +30,192 @@ DISCOVERY_CAPS = frozenset(('native_discovery_wire_byte_cap', 'native_discovery_
 HOURLY_CAPS = frozenset(('prediction_session_byte_cap', 'prediction_discovery_request_cap',
                         'current_snapshot_request_cap', 'current_connection_cap'))
 
-def balanced_markets(markets, cap, families):
-    """A large spread ladder cannot consume every common-family subscription."""
-    pools={family:[m for m in markets if m.get('v1_raw_binding',{}).get('identity',{}).get('family',m.get('market_type'))==family] for family in families}
+def balanced_markets(markets, cap, families, *, events=None, offset=0, priority=()):
+    """Round robin across league, family and period within one source budget."""
+    events=events or {}
+    by_event={}
+    for market in markets:
+        family=market.get('v1_raw_binding',{}).get('identity',{}).get('family',market.get('market_type'))
+        if family not in families:continue
+        league=events.get(market.get('event_id'),{}).get('competition','unknown')
+        period=market.get('v1_raw_binding',{}).get('identity',{}).get('period',market.get('period')) or 'unknown'
+        by_event.setdefault((league,family,period),{}).setdefault(market.get('event_id'),[]).append(market)
+    pools={}
+    for key,events_in_cell in by_event.items():
+        event_ids=fair_order(sorted(events_in_cell),offset)
+        event_ids.sort(key=lambda eid:not any(m['id'] in priority for m in events_in_cell[eid]))
+        for eid,rows in events_in_cell.items():
+            events_in_cell[eid]=sorted(rows,key=lambda market:market['id'] not in priority)
+        pools[key]=[]
+        while any(events_in_cell.values()):
+            for eid in event_ids:
+                if events_in_cell[eid]:pools[key].append(events_in_cell[eid].pop(0))
+        pools[key]=fair_order(pools[key],offset//max(1,len(by_event)))
+    keys=sorted(pools,key=lambda key:(key[0],families.index(key[1]),key[2]))
+    if keys:
+        shift=offset%len(keys);keys=keys[shift:]+keys[:shift]
     chosen=[]
     while len(chosen)<cap and any(pools.values()):
-        for family in families:
-            if pools[family] and len(chosen)<cap:chosen.append(pools[family].pop(0))
+        for key in keys:
+            if pools[key] and len(chosen)<cap:chosen.append(pools[key].pop(0))
     return chosen
+
+
+def overlap_event_keys(event):
+    """Conservative scheduling hints; the occurrence resolver still owns identity."""
+    result=set();raw=event.get('_native') or event.get('native_metadata') or {}
+    shared=dict(event.get('shared_provider_ids',{}))
+    if raw.get('sportradarGameId'):shared['sportradar']=str(raw['sportradarGameId'])
+    for fact in event.get('observed_identity_facts',[]):
+        if fact.get('source_provider')=='sportradar' and fact.get('source_id'):
+            shared['sportradar']=str(fact['source_id'])
+    league=event.get('competition')
+    result.update(('shared',league,provider,str(value)) for provider,value in shared.items() if value)
+    roles=event.get('source_participant_roles') or {r:event.get(r) for r in ('home','away')}
+    start=event.get('scheduled_start');number=event.get('game_number',raw.get('gameNumber'))
+    if (set(roles)=={'home','away'} and None not in roles.values() and len(set(roles.values()))==2
+            and start and (league!='MLB' or type(number) is int)):
+        try:result.add(('occurrence',league,coverage.stamp(start).isoformat(),roles['home'],roles['away'],number))
+        except (ValueError,TypeError,AttributeError):pass
+    return result
+
+
+def overlapping_markets(catalog, others):
+    """Rank exact known occurrence/family/period/predicate peers inside fair cells."""
+    from .v1_comparison import predicates
+    def entries(cat):
+        events={e['id']:e for e in cat.get('events',[]) if not e.get('exclusion')}
+        result=[]
+        for market in cat.get('markets',[]):
+            event=events.get(market.get('event_id'));binding=market.get('v1_raw_binding',{})
+            if not event or market.get('exclusion') or binding.get('status')!='BOUND_RAW_PREDICATE':continue
+            try:keys={json.dumps(predicate,sort_keys=True) for _,predicate,_ in predicates(binding)}
+            except (ValueError,KeyError,TypeError):continue
+            result.append((market,overlap_event_keys(event),keys))
+        return result
+    peers=[entry for other in others for entry in entries(other)]
+    return {market['id'] for market,events,keys in entries(catalog)
+            if any(events & peer_events and keys & peer_keys and
+                   (market.get('market_type'),market.get('period'))==(peer.get('market_type'),peer.get('period'))
+                   for peer,peer_events,peer_keys in peers)}
+
+
+def identity_diagnostics(catalog, selected=(), byte_cap=24*1024):
+    """Bounded existing admission facts; no parser or admission decisions change."""
+    entries=[dict(kind='event',id=e['id'],reason=e['exclusion'])
+             for e in catalog['events'] if e.get('exclusion')]
+    for market in sorted(catalog['markets'],key=lambda m:m['id'] not in selected):
+        binding=market.get('v1_raw_binding') or {}
+        reason=market.get('subscription_exclusion') or market.get('exclusion') or market.get('parse_exclusion')
+        if not reason and binding.get('status')!='IDENTITY_BLOCKED':continue
+        blockers=binding.get('blockers',[])
+        bounded=[str(value)[:256] for value in blockers[:6]]
+        entries.append(dict(kind='market',id=market['id'],reason=reason or 'native_binding_incomplete',
+            binding_status=binding.get('status'),binding_blockers=bounded,
+            binding_blockers_truncated=len(blockers)>6 or any(len(str(value))>256 for value in blockers[:6]),
+            source_predicate_present=bool(binding.get('source_predicate')),
+            predicate_present=bool(binding.get('predicate'))))
+    kept=[];size=2
+    for entry in entries:
+        length=len(json.dumps(entry,separators=(',',':')).encode())+1
+        if len(kept)>=200 or size+length>byte_cap:continue
+        kept.append(entry);size+=length
+    return kept,len(entries)-len(kept)
+
+
+def fair_order(values, offset):
+    values=list(values)
+    if not values:return values
+    offset%=len(values)
+    return values[offset:]+values[:offset]
+
+
+def fair_metadata_bindings(event, native, families, offset=0, cap=3):
+    """Select exact embedded locators fairly without increasing request bounds.
+
+    Native ID ordering can put an entire winner ladder before the first spread
+    or total. Keep one opportunity per represented family, then rotate within
+    each family on later normal discovery passes. Unknown retained locators
+    stay eligible rather than acquiring a fabricated family.
+    """
+    from app.adapters.polymarket_us import full_game_family
+    by_id={str(m.get('id')):m for m in native.get('markets',[]) if isinstance(m,dict)}
+    pools={}
+    for binding in event.get('market_bindings',[]):
+        family=full_game_family(by_id.get(binding['id'],{}).get('sportsMarketType'))
+        if family is not None and family not in families:continue
+        pools.setdefault(family or 'unknown',[]).append(binding)
+    keys=[family for family in families if family in pools]+(['unknown'] if 'unknown' in pools else [])
+    keys=fair_order(keys,offset)
+    pools={key:fair_order(sorted(rows,key=lambda r:r['id']),offset) for key,rows in pools.items()}
+    chosen=[]
+    while len(chosen)<cap and any(pools.values()):
+        for key in keys:
+            if pools[key] and len(chosen)<cap:chosen.append(pools[key].pop(0))
+    return chosen
+
+
+def unique_metadata_counts(markets, venue):
+    """Unique native units in captured metadata, before bounded projection."""
+    outcomes=set()
+    for market in markets:
+        if venue=='kalshi':
+            outcomes.update((market['id'],side) for side in ('yes','no'))
+        else:
+            sides=market['_native'].get('marketSides')
+            if not isinstance(sides,list) or any(not isinstance(s,dict) or s.get('id') is None for s in sides):
+                return dict(games=len({m['event_id'] for m in markets}),
+                    markets=len({m['id'] for m in markets}),quotes=None)
+            outcomes.update((market['id'],str(side['id'])) for side in sides)
+    return dict(games=len({m['event_id'] for m in markets}),markets=len({m['id'] for m in markets}),quotes=len(outcomes))
+
+
+CATALOG_BYTES=2*1024*1024
+QUARANTINE_HEADROOM=32*1024
+
+
+def catalog_selection(events, native_events, markets, families, offset):
+    """Choose whole native records before expansion; one common bounded pool.
+
+    The reservation allows repeated terms/provenance in the derived schema.
+    An exact serialized check still guards the completed local proposal. Large
+    entries are skipped, never shortened, and never consume another request.
+    """
+    by_event={e['id']:e for e in events}
+    parent_cost={eid:8192+8*len(json.dumps({k:v for k,v in native_events.get(eid,{}).items()
+        if k!='markets'},default=str).encode()) for eid in by_event}
+    market_cost={id(m):8192+8*len(json.dumps(m.get('_native',{}),default=str).encode()) for m in markets}
+    # Individually infeasible records cannot pin the rotating feasible ladder.
+    # They remain counted as omitted, with their complete receipts untouched.
+    feasible=[m for m in markets if m['event_id'] in by_event
+        and 128*1024+parent_cost[m['event_id']]+market_cost[id(m)]<=CATALOG_BYTES]
+    ordered=balanced_markets(feasible,len(feasible),families,events=by_event,offset=offset)
+    selected=[];parents=[];reserved=128*1024
+    for market in ordered:
+        eid=market['event_id']
+        if eid not in by_event or market['id'] in selected:continue
+        # US selected children also remain in the retained parent's packaging.
+        cost=market_cost[id(market)]
+        if eid not in parents:
+            cost+=parent_cost[eid]
+        if reserved+cost>CATALOG_BYTES:continue
+        if len(selected)>=72:break
+        selected.append(market['id']);reserved+=cost
+        if eid not in parents:parents.append(eid)
+    # Empty metadata can still report a genuine empty native event catalog.
+    if not ordered:
+        for event in fair_order(events,offset):
+            own={k:v for k,v in native_events.get(event['id'],{}).items() if k!='markets'}
+            cost=8192+8*len(json.dumps(own,default=str).encode())
+            if reserved+cost<=CATALOG_BYTES:
+                parents.append(event['id']);reserved+=cost
+    return dict(events=parents,markets=selected),dict(
+        candidate_events=len(by_event),candidate_markets=len({m['id'] for m in markets}),
+        supported_family_candidates=len({m['id'] for m in markets if m.get('market_type') in families}),
+        selected_events=len(parents),selected_markets=len(selected),reserved_bytes=reserved,
+        omitted_events=len(by_event)-len(parents),omitted_markets=len({m['id'] for m in markets})-len(selected))
+
+
 class NativeWorker:
     def __init__(self, service, venue):
         self.service, self.venue = service, venue
@@ -45,6 +226,11 @@ class NativeWorker:
         self.client = None
         self.credential = None
         self.signature = None
+        self.discovery_cursor = 0
+        self.subscription_cursor = 0
+        self.catalog_cursor = 0
+        self.event_cursors = {}
+        self.listing_states = {}
         self.metrics = dict(requests=0, connections=0, frames=0, books=0, bytes=0,
                             generations=0, reconciliations=0, resyncs=0, retries=0,
                             source_receipt_ms=None, receipt_projection_ms=None)
@@ -52,10 +238,13 @@ class NativeWorker:
         self.budget_totals=dict(requests=0,bytes=0,connections=0)
         self.http_totals=dict(wire=0,decoded=0)
         self.http_active=False
+        self.http_lock=asyncio.Lock()
+        self.supplemental_connections=0
         self.hourly_pause=False
         self.pages = []
         self.catalog = dict(events=[], markets=[])
         self.markets = {}
+        self.material_quarantine = {}
         self.backoff_until = 0
         self.failed = False
         self.findings = []
@@ -74,6 +263,9 @@ class NativeWorker:
     def queue_book(self, book):
         """Keep one fully reconstructed latest image per subscribed market."""
         mid=book['raw']['ref']['market_id']
+        if mid in self.material_quarantine:
+            self.metrics['quarantined_books_skipped']=self.metrics.get('quarantined_books_skipped',0)+1
+            return
         if self.lifecycle_initialized:
             book=self.lifecycle.admit_book(book,generation=self.metrics['connections'])
         if mid not in self.pending_books and len(self.pending_books)>=self.config['markets_per_source']:
@@ -104,18 +296,24 @@ class NativeWorker:
             if self.metrics.get('snapshot_requests',0)>=max(0,(self.config['duration_seconds']-35)//20):return
             # Leave a final 35-second age-out window in every attended runtime.
             if self.service.deadline-time.monotonic()<35:return
-            if self.client.budget.requests>=self.config['requests_per_source']:
-                raise BudgetStop('current_snapshot_request_cap')
-            self.client.budget.requests+=1
-            self.metrics['requests']=self.budget_totals['requests']+self.client.budget.requests
-            self.metrics['snapshot_requests']=self.metrics.get('snapshot_requests',0)+1
-            request_id=100000+self.metrics['snapshot_requests']
-            requested=utc()
-            for m in markets:pending[m.raw.ref.market_id]=(request_id,requested)
-            command=dict(id=request_id,cmd='update_subscription',params=dict(sid=engine.sid,
-                market_tickers=[m.raw.ref.market_id for m in markets],action='get_snapshot'))
-            wire=json.dumps(command);self.client.budget.charge_bytes(len(wire.encode()))
-            await asyncio.wait_for(self.socket.send(wire),3)
+            async with self.http_lock:
+                await self.send_snapshot(engine,markets,pending)
+
+    async def send_snapshot(self,engine,markets,pending):
+        self.guard()
+        if engine.sid is None or pending:return
+        if self.client.budget.requests>=self.config['requests_per_source']:
+            raise BudgetStop('current_snapshot_request_cap')
+        self.client.budget.requests+=1
+        self.metrics['requests']=self.budget_totals['requests']+self.client.budget.requests
+        self.metrics['snapshot_requests']=self.metrics.get('snapshot_requests',0)+1
+        request_id=100000+self.metrics['snapshot_requests']
+        requested=utc()
+        for m in markets:pending[m.raw.ref.market_id]=(request_id,requested)
+        command=dict(id=request_id,cmd='update_subscription',params=dict(sid=engine.sid,
+            market_tickers=[m.raw.ref.market_id for m in markets],action='get_snapshot'))
+        wire=json.dumps(command);self.client.budget.charge_bytes(len(wire.encode()))
+        await asyncio.wait_for(self.socket.send(wire),3)
 
     def request_resync(self):
         self.reconcile_needed = True
@@ -123,7 +321,9 @@ class NativeWorker:
             self.wake_task = asyncio.create_task(self.socket.close())
 
     def guard(self):
-        if self.closed or not self.service.dispatch or self.failed:
+        if (self.closed or not self.service.dispatch or self.failed
+                or getattr(self.service,'globally_stopped',False)
+                or self.venue in getattr(self.service,'paused_sources',set())):
             raise asyncio.CancelledError()
         # Hourly transport bounds with cumulative accounting, independent of tabs.
         # Never reset a budget underneath an outstanding HTTP byte reservation.
@@ -133,11 +333,12 @@ class NativeWorker:
             self.budget_totals['connections']=self.metrics['connections']
             self.client.budget.requests=0;self.client.budget.bytes=0
             self.budget_started=time.monotonic()
+            self.supplemental_connections=0
             self.hourly_pause=False
         if self.client:
             self.metrics['budget_window']=dict(seconds_remaining=max(0,3600-(time.monotonic()-self.budget_started)),
                 requests=self.client.budget.requests,bytes=self.client.budget.bytes,
-                connections=self.metrics['connections']-self.budget_totals['connections'],
+                connections=self.connection_allowance_used(),
                 paused=self.hourly_pause)
         if time.monotonic() >= self.service.deadline:
             raise BudgetStop('attended_runtime_deadline')
@@ -149,7 +350,6 @@ class NativeWorker:
         for name,key in (('http_wire_bytes','wire'),('http_decoded_bytes','decoded')):
             self.http_totals[key]+=getattr(self.client,name,0)
             setattr(self.client,name,0)
-        self.metrics['discovery_passes']=self.metrics.get('discovery_passes',0)+1
 
     async def wait_hourly_budget(self):
         self.hourly_pause=True
@@ -173,17 +373,7 @@ class NativeWorker:
             self.failed = True
             self.service.issue(self.venue, 'authentication' if row['status']==401 else 'entitlement', 'http_'+str(row['status']))
             self.service.source_state(self.venue, 'unavailable', 'Native catalog access was refused.')
-        if row['status'] == 429:
-            from email.utils import parsedate_to_datetime
-            delay = 60
-            for key, value in row.get('response_headers', []):
-                if key.lower() == 'retry-after':
-                    try: delay = max(delay, float(value))
-                    except ValueError: delay = max(delay, (parsedate_to_datetime(value)-datetime.now(timezone.utc)).total_seconds())
-            if not 0 <= delay <= 300:
-                self.failed = True
-                raise BudgetStop('retry_after_outside_operational_envelope')
-            self.backoff_until = time.monotonic()+delay
+        self.apply_http_backoff(row)
         if not row['complete'] or not row.get('usable_metadata'):
             query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
             if row.get('delivery_reason') not in query_caps | DISCOVERY_CAPS | HOURLY_CAPS | {'http_status', None, 'native_http_timeout', 'native_http_transport_error'} and row['status']==200:
@@ -197,7 +387,27 @@ class NativeWorker:
             raise BudgetStop('current_discovery_retained_cap')
         self.pages.append(page)
 
+    def connection_allowance_used(self):
+        return self.metrics['connections']-self.budget_totals['connections']+self.supplemental_connections
+
+    def apply_http_backoff(self,row):
+        """One source backoff owner, also used by explicit finite public reads."""
+        if row['status'] == 429:
+            from email.utils import parsedate_to_datetime
+            delay = 60
+            for key, value in row.get('response_headers', []):
+                if key.lower() == 'retry-after':
+                    try: delay = max(delay, float(value))
+                    except ValueError: delay = max(delay, (parsedate_to_datetime(value)-datetime.now(timezone.utc)).total_seconds())
+            if not 0 <= delay <= 300:
+                self.failed = True
+                raise BudgetStop('retry_after_outside_operational_envelope')
+            self.backoff_until = time.monotonic()+delay
     async def get(self, path, params, field=None, scope=None):
+        async with self.http_lock:
+            return await self._get(path,params,field,scope)
+
+    async def _get(self, path, params, field=None, scope=None):
         self.guard()
         if self.backoff_until > time.monotonic():
             raise BudgetStop('provider_backoff_pending')
@@ -208,7 +418,7 @@ class NativeWorker:
             response = await MockREST.get(self.client, self.client.endpoint+path, params)
         except Exception as exc:
             if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
-                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code=str(exc))
             raise
         finally:
@@ -216,7 +426,7 @@ class NativeWorker:
             self.http_active=False
         if response.status_code != 200:
             if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
-                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code='http_'+str(response.status_code))
             raise ValueError('http_'+str(response.status_code))
         try:
@@ -230,97 +440,301 @@ class NativeWorker:
                 if not all(ids) or len(set(ids)) != len(ids): raise ValueError('duplicate_catalog_identity')
         except (ValueError,TypeError,AttributeError) as exc:
             if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
-                self.service.coverage.observe(self._coverage_sport,self.venue,checked_at=utc(),
+                self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='rejected_payload',reason='payload_rejected',query=dict(path=path,params=params),detail_code=str(exc))
             raise
         if hasattr(self,'_coverage_checked') and getattr(self,'_coverage_sport',None):
             self._coverage_checked.add(self._coverage_sport)
         return rows
 
+    def quarantine_changed_material(self,native_events,returned_markets):
+        """Observed changed owned terms revoke comparison even when unfit.
+
+        Retain only bounded hashes/field names, never the rejected replacement.
+        The existing semantic contract masks only reviewed mutable observations.
+        """
+        from .native_review_contract import project,CURRENT_POLICY,ELIGIBILITY
+        def material(raw,event=False):
+            if event:raw={k:v for k,v in raw.items() if k!='markets'}
+            try:terms=project(self.venue,raw,event=event,policy=CURRENT_POLICY)
+            except (ValueError,TypeError):terms=dict(unparseable_semantic_material_sha256=digest(raw))
+            return dict(terms=terms,
+                eligibility={k:raw[k] for k in ELIGIBILITY[self.venue] if k in raw})
+        def digest(value):return sha256(json.dumps(value,sort_keys=True,separators=(',',':'),default=str).encode()).hexdigest()
+        def fact_set(values):return sorted({digest(value) for value in values})
+        events={e['id']:e for e in self.catalog['events']}
+        markets={m['id']:m for m in self.catalog['markets']}
+        # These are the same own linked identity fields retained by coverage.
+        facts={}
+        for page in self.pages:
+            _,data=coverage.decode_page(page)
+            for milestone in data.get('milestones',[]):
+                for eid in milestone.get('related_event_tickers',[]):
+                    if eid not in events:continue
+                    fact=dict(id=milestone.get('id'),source_id=milestone.get('source_id'),
+                        source_provider=milestone.get('source_provider'),start_date=milestone.get('start_date'),
+                        **{k:v for k,v in milestone.get('details',{}).items() if k in
+                           ('season','season_type','season_year','main_game_event_ticker','home_team_id','away_team_id',
+                            'game_number','original_start','schedule_status','status')})
+                    facts.setdefault(eid,[]).append(fact)
+        changed=False
+        for candidate in returned_markets:
+            mid=candidate['id'];old=markets.get(mid)
+            if mid not in self.lifecycle.leases or not old:continue
+            parent=events.get(old['event_id'],{})
+            prior=material(old.get('_native',{}))
+            current=material(candidate['_native'])
+            fields=['market.'+str(k) for k in set(prior['terms'])|set(current['terms'])
+                if prior['terms'].get(k)!=current['terms'].get(k)]
+            if prior['eligibility']!=current['eligibility']:fields.append('market.eligibility')
+            eid=candidate['event_id']
+            old_event=material(parent.get('_native',{}),True)
+            new_event=material(native_events[eid],True) if eid in native_events else old_event
+            if old['event_id']!=eid:fields.append('market.event_id')
+            if old_event!=new_event:fields.append('event.material')
+            if eid in facts and fact_set(facts[eid])!=fact_set(parent.get('observed_identity_facts',[])):
+                fields.append('event.observed_identity_facts')
+            if not fields:continue
+            witness=dict(supported=False,reason='native_material_changed_capacity',
+                missing_fields=['feasible_current_native_material'],
+                prior_sha256=digest(dict(market=prior,event=old_event,facts=fact_set(parent.get('observed_identity_facts',[])))),
+                observed_sha256=digest(dict(market=current,event=new_event,facts=fact_set(facts.get(eid,parent.get('observed_identity_facts',[]))))),
+                changed_fields=[str(k).encode('ascii','backslashreplace')[:64].decode('ascii') for k in sorted(fields)[:6]],
+                changed_fields_omitted=max(0,len(fields)-6))
+            while len(json.dumps(witness).encode())>QUARANTINE_HEADROOM//20-64 and witness['changed_fields']:
+                witness['changed_fields'].pop();witness['changed_fields_omitted']+=1
+            self.material_quarantine[mid]=witness
+            old['comparison_admission']=deepcopy(witness)
+            self.lifecycle.leases[mid]['image_current']=False
+            self.pending_books.pop(mid,None)
+            changed=True
+        self.metrics['material_quarantined_markets']=len(self.material_quarantine)
+        if changed:
+            # The outer admission marker survives ordinary catalog reannotation.
+            # Membership/material is unchanged, retaining original books/clocks.
+            self.service.catalog(self.venue,self.catalog)
+
+    def retain_catalog_for_capacity(self,sports,families,native_events,returned_markets):
+        """A local proposal limit cannot revoke coherent existing ownership."""
+        self.metrics['catalog_projection'].update(
+            state='retained_previous' if self.catalog['events'] or self.markets else 'deferred',
+            reason='native_source_inventory_cap',selected_events=0,selected_markets=0)
+        self.metrics['coverage']=self.findings
+        self.quarantine_changed_material(native_events,returned_markets)
+        for finding in self.findings:
+            if finding.get('queried'):
+                finding.update(state='budget_limited',reason='native_source_inventory_cap')
+        if hasattr(self.service,'coverage'):
+            for sport in sports:
+                for family in families:
+                    if any(f.get('queried') and f.get('sport')==sport and f.get('family') in (None,family)
+                           for f in self.findings):
+                        self.service.coverage.observe(sport,self.venue,family=family,checked_at=utc(),
+                            status='not_checked',reason='query_capacity',completeness='partial',
+                            offered=dict(games=None,markets=None,quotes=None))
+        self.pages=[]
+
     async def discover(self):
+        self.metrics['discovery_passes']=self.metrics.get('discovery_passes',0)+1
         self.pages = []
         self.findings = []
         self._coverage_checked=set()
         coverage_started=utc()
         now = datetime.now(timezone.utc)
         selected = []
-        # Scope is deliberately bounded: one first page per sport/family and
-        # selected-event metadata. Empty pages prove only this query's result.
-        if self.venue == 'kalshi':
-            for sport in self.config['sports']:
-                if len(selected)>=self.config['events_per_source']:break
-                self._coverage_sport=sport
-                for family in self.config['families']:
-                    selectors = selectors_for(sport+'/full_game/'+family)
-                    if not selectors: continue
-                    selector = selectors[0]
-                    rows = await self.get(selector['path'], dict(selector['params'], limit=5), 'events', selector['binding'])
-                    # Exact typed series selectors also cover spread/total;
-                    # the older game-only selector must not silently filter them.
-                    page=self.pages[-1]
-                    raw,_=coverage.decode_page(page)
-                    native_events=[coverage.event_record(self.venue,page,raw,e,i,now) for i,e in enumerate(rows)]
-                    found = [dict(id=e['id']) for e in native_events if not e.get('exclusion') and e.get('scheduled_start')]
-                    found.sort(key=lambda e:next(n['scheduled_start'] for n in native_events if n['id']==e['id']))
-                    admitted=[]
-                    for event in found:
-                        if len(selected)>=self.config['events_per_source']:break
-                        if event['id'] not in {x[0] for x in selected}:
-                            selected.append((event['id'], selector['binding']))
-                            admitted.append(event['id'])
-                    self.findings.append(dict(sport=sport,family=family,rows=len(rows),selected=admitted,
-                        scope='first bounded listing page; later pages unobserved'))
-                    if len(selected) >= self.config['events_per_source']: break
-            for eid, scope in selected:
-                self._coverage_sport=scope['sport']
-                await self.get('/trade-api/v2/markets', dict(event_ticker=eid, limit=50), 'markets', scope)
-        else:
-            for sport in self.config['sports']:
-                if len(selected)>=self.config['events_per_source']:break
-                self._coverage_sport=sport
-                path, params = query(self.venue, sport, now)
-                try:rows = await self.get(path, dict(params, limit=min(PAGE_SIZE,self.config['events_per_source']-len(selected)), offset=0), 'events')
-                except BudgetStop as exc:
-                    query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
-                    if str(exc) not in query_caps:raise
-                    self.service.issue(self.venue,'resource',str(exc))
-                    self.findings.append(dict(sport=sport,state='query_capacity_exclusion',reason=str(exc),scope='one bounded query; no support inference'))
+        native_events={}
+        sports=native_scope(self.config);families=native_markets(self.config)
+        inventory=getattr(getattr(getattr(self.service,'sink',None),'reducer',None),'inventory',{})
+        overlap={json.dumps([e.get('competition'),e.get('canonical_key')],sort_keys=True)
+                 for venue,cat in inventory.items() if venue!=self.venue
+                 for e in cat.get('events',[]) if not e.get('exclusion') and e.get('canonical_key')}
+        pools=[]
+        # First listing opportunities precede metadata. The same source-wide
+        # page/request/byte limits apply to the whole pass, not to each league.
+        scopes=[(sport,family) for sport in sports for family in families] if self.venue=='kalshi' else [(sport,None) for sport in sports]
+        scopes=fair_order(scopes,self.discovery_cursor)
+        self.discovery_cursor+=1
+        listing_cap=min(len(scopes),max(1,self.config['discovery_pages']//2))
+        for sport,family in scopes[listing_cap:]:
+            for omitted_family in ([family] if family else families):
+                self.findings.append(dict(sport=sport,family=omitted_family,state='budget_limited',
+                    reason='shared_discovery_page_cap',configured=True,queried=False,scope='not queried in this bounded pass'))
+                if hasattr(self.service,'coverage'):
+                    self.service.coverage.observe(sport,self.venue,family=omitted_family,checked_at=utc(),
+                        status='not_checked',reason='query_capacity',completeness='partial')
+        for sport,family in scopes[:listing_cap]:
+            self._coverage_sport=sport;self._coverage_family=family
+            scope=None
+            if self.venue=='kalshi':
+                selectors=selectors_for(sport+'/full_game/'+family)
+                if not selectors:
+                    self.findings.append(dict(sport=sport,family=family,state='unsupported',configured=True,queried=False,
+                        reason='selector_unestablished',scope='source/type selector unavailable'))
                     continue
-                found, excluded = candidates(self.pages[-1:], self.venue, sport, now)
-                admitted=[]
-                for event in found:
-                    if len(selected)>=self.config['events_per_source']:break
-                    if event['id'] not in {x['id'] for x in selected}:
-                        selected.append(event);admitted.append(event['id'])
-                self.findings.append(dict(sport=sport,rows=len(rows),selected=admitted,exclusions=excluded[:5],
-                    scope='first bounded listing page; later pages unobserved'))
-            for event in selected[:self.config['events_per_source']]:
-                self._coverage_sport=event.get('competition',event.get('sport'))
-                # Listing-bound game ID is the only permitted market locator.
-                if event.get('market_bindings'):
-                    for binding in event['market_bindings'][:3]:
-                        await self.get('/v1/market/id/'+binding['id'], {})
-                elif event.get('game_id'):
-                    await self.get('/v1/markets', dict(gameId=str(event['game_id']), active='true', closed='false', limit=5, offset=0), 'markets')
-        selection=None
-        if self.venue=='polymarket_us':
-            selection=dict(events=[e['id'] for e in selected],markets=[b['id'] for e in selected for b in e.get('market_bindings',[])[:3]])
-            # A game-ID market query must contribute its exact returned IDs.
-            for page in self.pages:
-                if page['path']=='/v1/markets':
-                    _,data=coverage.decode_page(page)
-                    selection['markets'] += [str(m['id']) for m in data['markets']]
+                selector=selectors[0];scope=selector['binding']
+                path,params=selector['path'],dict(selector['params'],limit=PAGE_SIZE)
+            else:
+                path,params=query(self.venue,sport,now,families=families)
+                params=dict(params,limit=PAGE_SIZE,offset=0)
+            cell=(sport,family,tuple(families))
+            state=self.listing_states.get(cell)
+            if state and state.get('blocked'):
+                self.findings.append(dict(sport=sport,family=family,state='unsupported',configured=True,queried=False,
+                    reason=state['blocked'],scope='listing continuation unavailable; other cells continue'))
+                continue
+            if state is None:
+                state=dict(path=path,base={k:v for k,v in params.items() if k not in ('cursor','offset','limit')},
+                    position='' if self.venue=='kalshi' else 0,receipt=None,seen=[])
+                self.listing_states[cell]=state
+            # The cursor/offset belongs to this exact frozen query, including
+            # its time window. Only a completed traversal starts a new query.
+            position=state['position']
+            params=dict(state['base'],limit=PAGE_SIZE,**({'cursor':position} if self.venue=='kalshi' and position else
+                {} if self.venue=='kalshi' else {'offset':position}))
+            try:
+                rows=await self.get(path,params,'events',scope)
+            except BudgetStop as exc:
+                query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
+                if str(exc) not in query_caps:raise
+                self.service.issue(self.venue,'resource',str(exc))
+                self.findings.append(dict(sport=sport,family=family,state='budget_limited',queried=True,
+                    reason=str(exc),scope='one bounded query; no support inference'))
+                continue
+            page=self.pages[-1]
+            for native in rows:
+                native_events[str(native.get('event_ticker' if self.venue=='kalshi' else 'id'))]=native
+            if position not in ('',0):
+                page['current_listing_window']=dict(policy='current-recurring-page-1',position=position,
+                    base_query_sha256=sha256(json.dumps(state['base'],sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+                    previous_receipt_sha256=state['receipt'])
+            _,listing=coverage.decode_page(page)
+            exhausted=False;continuation=None
+            if self.venue=='kalshi':
+                cursor=listing.get('cursor')
+                if not isinstance(cursor,str) or len(cursor)>4096:
+                    state['blocked']='native_cursor_missing_or_invalid'
+                elif not cursor:exhausted=True
+                else:
+                    fingerprint=sha256(cursor.encode()).hexdigest()
+                    if fingerprint in state['seen'] or cursor==position:state['blocked']='native_cursor_repeated'
+                    else:
+                        state['seen']=(state['seen']+[fingerprint])[-64:]
+                        continuation=cursor
+            elif len(rows)<PAGE_SIZE:exhausted=True
+            elif len(rows)==PAGE_SIZE:continuation=position+PAGE_SIZE
+            else:state['blocked']='native_offset_progress_unestablished'
+            if exhausted:self.listing_states.pop(cell,None)
+            elif continuation is not None:state.update(position=continuation,receipt=page['body_sha256'])
+            if self.venue=='kalshi':
+                page=self.pages[-1];raw,_=coverage.decode_page(page)
+                native_records=[coverage.event_record(self.venue,page,raw,e,i,now) for i,e in enumerate(rows)]
+                found=[dict(id=e['id'],competition=sport,canonical_key=e.get('canonical_key'),scheduled_start=e['scheduled_start'],scope=scope)
+                       for e in native_records if not e.get('exclusion') and e.get('scheduled_start')]
+                found.sort(key=lambda e:(e['scheduled_start'],e['id']));excluded=[]
+            else:
+                found,excluded=candidates(self.pages[-1:],self.venue,sport,now,families=families)
+            for event in found:
+                event['cross_venue_overlap']=json.dumps([sport,event.get('canonical_key')],sort_keys=True) in overlap
+            found.sort(key=lambda event:(not event['cross_venue_overlap'],event.get('scheduled_start') or '',event['id']))
+            finding=dict(sport=sport,family=family,rows=len(rows),discovered=len(found),selected=[],
+                state='discovered' if found else 'empty',configured=True,queried=True,exclusions=excluded[:5],
+                page_position=position,next_position=continuation,traversal_exhausted=exhausted,
+                continuation_limitation=state.get('blocked'),
+                scope='one recurring bounded page window; other pages unobserved in this pass')
+            self.findings.append(finding)
+            key=(sport,family)
+            pools.append((finding,fair_order(found,self.event_cursors.get(key,0))))
+        metadata_cap=min(self.config['events_per_source'],self.config['discovery_pages']-len(self.pages))
+        # An exact listed market can be fetched when no native gameId exists;
+        # reserve all its (at most three) metadata requests before selecting it.
+        spent=0
+        while any(pool for _,pool in pools) and len(selected)<self.config['events_per_source']:
+            progressed=False
+            for finding,pool in pools:
+                if not pool:continue
+                event=pool.pop(0)
+                if event['id'] in {e['id'] for e in selected}:continue
+                cost=1 if self.venue=='kalshi' or event.get('game_id') else min(3,len(event.get('market_bindings',[])))
+                if self.venue=='polymarket_us' and not event.get('game_id'):
+                    event['selected_metadata_bindings']=fair_metadata_bindings(event,native_events.get(event['id'],{}),
+                        families,self.event_cursors.get((finding['sport'],finding.get('family')),0))
+                    cost=len(event['selected_metadata_bindings'])
+                if cost==0:continue
+                if spent+cost>metadata_cap:
+                    finding['state']='budget_limited';finding['reason']='shared_metadata_page_cap';continue
+                selected.append(event);finding['selected'].append(event['id']);spent+=cost;progressed=True
+                key=(finding['sport'],finding.get('family'));self.event_cursors[key]=self.event_cursors.get(key,0)+1
+                if len(selected)>=self.config['events_per_source']:break
+            if not progressed:break
+        for finding,pool in pools:
+            if pool:
+                finding['budget_omitted_events']=len(pool)
+                finding['reason']='shared_event_or_metadata_cap'
+        returned_markets=[]
+        from app.adapters.polymarket_us import full_game_family
+        def remember(rows,event):
+            for native in rows:
+                mid=native.get('ticker' if self.venue=='kalshi' else 'id')
+                if not mid:continue
+                family=(event.get('scope') or {}).get('family') if self.venue=='kalshi' else full_game_family(native.get('sportsMarketType'))
+                returned_markets.append(dict(id=str(mid),event_id=event['id'],market_type=family or 'unknown',_native=native))
+        for event in selected:
+            self._coverage_sport=event.get('competition',event.get('sport'))
+            self._coverage_family=(event.get('scope') or {}).get('family')
+            remember(native_events.get(event['id'],{}).get('markets') or [],event)
+            if self.venue=='kalshi':
+                rows=await self.get('/trade-api/v2/markets',dict(event_ticker=event['id'],limit=50),'markets',event['scope'])
+                remember(rows,event)
+            elif event.get('game_id'):
+                rows=await self.get('/v1/markets',dict(gameId=str(event['game_id']),active='true',closed='false',limit=50,offset=0),'markets')
+                remember(rows,event)
+            else:
+                for binding in event.get('selected_metadata_bindings',[]):
+                    data=await self.get('/v1/market/id/'+binding['id'],{})
+                    remember([data.get('market',data)] if isinstance(data,dict) else data,event)
+        selection,projection=catalog_selection(selected,native_events,returned_markets,families,self.catalog_cursor)
+        self.catalog_cursor+=1
+        self.metrics['metadata_budget_omitted_markets']=projection['omitted_markets']
+        self.metrics['catalog_projection']=dict(projection,state='bounded',reason=None,byte_cap=CATALOG_BYTES,
+            event_cap=200,market_cap=512,projection_event_cap=24,projection_market_cap=72,
+            material_quarantine_reserved_bytes=QUARANTINE_HEADROOM)
+        if ((projection['supported_family_candidates'] and not selection['markets'])
+                or (selected and not selection['events'])):
+            self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+            return
         cat = coverage.catalog(self.pages, self.venue, now, compact_output=False,current_selection=selection)
         from .current_occurrence import annotate as occurrence
         occurrence(cat, self.venue)
-        if len(cat['events']) > 200 or len(cat['markets']) > 512 or len(json.dumps(cat, default=str).encode()) > 2*1024*1024:
-            raise BudgetStop('native_source_inventory_cap')
+        # A conservative raw reservation normally fits in one projection. If a
+        # derived field expands further, remove whole tail entries locally from
+        # these same receipts; do not fetch, truncate terms or abandon old books.
+        actual_bytes=len(json.dumps(cat,default=str).encode())
+        while len(cat['events'])>200 or len(cat['markets'])>512 or actual_bytes>CATALOG_BYTES-QUARANTINE_HEADROOM:
+            if not selection['markets']:
+                self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+                return
+            selection['markets'].pop()
+            retained={m['event_id'] for m in returned_markets if m['id'] in selection['markets']}
+            selection['events']=[eid for eid in selection['events'] if eid in retained]
+            if not selection['markets']:
+                self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+                return
+            cat=coverage.catalog(self.pages,self.venue,now,compact_output=False,current_selection=selection)
+            occurrence(cat,self.venue)
+            actual_bytes=len(json.dumps(cat,default=str).encode())
+        self.metrics['catalog_projection'].update(actual_bytes=actual_bytes,selected_events=len(cat['events']),
+            selected_markets=len(cat['markets']),omitted_events=projection['candidate_events']-len(cat['events']),
+            omitted_markets=projection['candidate_markets']-len(cat['markets']))
+        self.metrics['metadata_budget_omitted_markets']=self.metrics['catalog_projection']['omitted_markets']
         from .continuous import select_inventory
         ids, eligible = select_inventory(cat, now, 512)
         events_by_id={e['id']:e for e in cat['events']}
         eligible_markets=[m for m in cat['markets'] if m['id'] in ids and not events_by_id[m['event_id']].get('exclusion')]
         eligible_markets.sort(key=lambda m:(m.get('market_type')!='moneyline',events_by_id[m['event_id']]['scheduled_start'],m['id']))
-        chosen=balanced_markets(eligible_markets,self.config['markets_per_source'],self.config['families'])
+        overlap_priority=overlapping_markets(cat,[other for venue,other in inventory.items() if venue!=self.venue])
+        chosen=balanced_markets(eligible_markets,self.config['markets_per_source'],families,events=events_by_id,offset=self.subscription_cursor,priority=overlap_priority)
+        self.metrics['known_peer_priority_markets']=len(overlap_priority)
+        self.subscription_cursor+=1
         ids=[m['id'] for m in chosen]
         for m in eligible_markets:
             if m['id'] not in ids:m['subscription_exclusion']='subscription_limit'
@@ -341,6 +755,13 @@ class NativeWorker:
                 parsed[market['id']] = value
             except (ValueError, KeyError, TypeError):
                 market['parse_exclusion'] = 'native_market_parser_rejected'
+        # Include selection and parser diagnostics in the exact reservation.
+        # The retained wrapper is at most 20 bounded witnesses inside this room.
+        actual_bytes=len(json.dumps(cat,default=str).encode())
+        if actual_bytes>CATALOG_BYTES-QUARANTINE_HEADROOM:
+            self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+            return
+        self.metrics['catalog_projection']['actual_bytes']=actual_bytes
         # Retire unselected/closed catalogs deliberately; leases are independent.
         self.metrics['generations'] += 1
         self.catalog, self.markets = cat, parsed
@@ -351,28 +772,51 @@ class NativeWorker:
         self.metrics['catalog_markets'] = len(cat['markets'])
         self.metrics['selected_markets'] = len(parsed)
         self.metrics['coverage'] = self.findings
-        self.metrics['identity_exclusions'] = [dict(kind='event',id=e['id'],reason=e['exclusion']) for e in cat['events'] if e.get('exclusion')][:100]
-        self.metrics['identity_exclusions'] += [dict(kind='market',id=m['id'],reason=m.get('subscription_exclusion') or m.get('exclusion') or m.get('parse_exclusion'))
-            for m in cat['markets'] if m.get('subscription_exclusion') or m.get('exclusion') or m.get('parse_exclusion')][:100]
+        from .native_identity_trace import identity_trace
+        self.metrics['native_identity_trace']=identity_trace(cat,self.venue,pages=self.pages,selected=ids,
+            selected_events=[e['id'] for e in selected],pass_number=self.metrics['discovery_passes'])
+        trace_bytes=len(json.dumps(self.metrics['native_identity_trace'],separators=(',',':')).encode())
+        self.metrics['identity_exclusions'],self.metrics['identity_exclusions_omitted']=identity_diagnostics(
+            cat,ids,byte_cap=24*1024-trace_bytes-256)
         self.service.catalog(self.venue, cat)
         from app.comparison.lifecycle import worker_selections
         delta=self.lifecycle.reconcile(worker_selections(self.venue,parsed,cat),now)
+        self.material_quarantine.clear()
+        self.metrics['material_quarantined_markets']=0
         self.lifecycle_initialized=True
         self.metrics['subscription_changes']=delta
         self.metrics['owned_subscriptions']=len(self.lifecycle.leases)
         for mid in set(self.pending_books)-set(self.lifecycle.leases):self.pending_books.pop(mid,None)
         if hasattr(self.service,'coverage'):
-            for sport in self.config['sports']:
+            for sport in sports:
                 if sport not in self._coverage_checked:continue
                 latest=self.service.coverage.observations.get((sport,self.venue),{}).get('latest')
                 if latest and latest['checked_at']>=coverage_started and latest['status'] in ('failed_source','rejected_payload'):continue
                 events=[e for e in cat['events'] if e.get('competition')==sport]
                 event_ids={e['id'] for e in events}
                 markets=[m for m in cat['markets'] if m['event_id'] in event_ids]
-                self.service.coverage.observe(sport,self.venue,checked_at=utc(),
-                    status='offerings_returned' if events else 'no_offerings_returned',
-                    offered=dict(games=len(events),markets=len(markets),quotes=None),
-                    reason=None if events else 'query_empty',completeness='partial')
+                for family in families:
+                    related=[f for f in self.findings if f.get('sport')==sport and f.get('family') in (None,family)]
+                    queried=[f for f in related if f.get('queried')]
+                    if not queried:continue
+                    family_markets=[m for m in markets if m.get('market_type')==family]
+                    empty=all(f.get('rows')==0 for f in queried)
+                    limited=any(f.get('state')=='budget_limited' or f.get('budget_omitted_events',0)>0
+                        or f.get('discovered',0)>len(f.get('selected',[])) for f in queried)
+                    limited=limited or any(m['id'] not in selection['markets'] and m['market_type']==family
+                        and next((e.get('competition') for e in selected if e['id']==m['event_id']),None)==sport
+                        for m in returned_markets)
+                    status='offerings_returned' if family_markets else 'no_offerings_returned' if empty else 'not_checked'
+                    reason=None if family_markets else 'query_empty' if empty else 'query_capacity' if limited else 'mapping_unresolved'
+                    offered=(dict(games=len({m['event_id'] for m in family_markets}),markets=len(family_markets),quotes=None)
+                        if family_markets or empty else dict(games=None,markets=None,quotes=None))
+                    selected_event_ids={e['id'] for e in selected if e.get('competition',e.get('sport'))==sport}
+                    measured=[m for m in returned_markets if m['market_type']==family and m['event_id'] in selected_event_ids]
+                    unique=unique_metadata_counts(measured,self.venue) if measured or empty else dict(games=None,markets=None,quotes=None)
+                    self.service.coverage.observe(sport,self.venue,family=family,checked_at=utc(),
+                        status=status,offered=offered,reason=reason,completeness='partial',
+                        unique_offered=unique,
+                        offered_scope='bounded_listing_and_selected_metadata')
         self.pages = []
         # Metadata raw receipts change every rediscovery. Reconciliation depends
         # only on exact identity and material native terms/state.
@@ -397,7 +841,7 @@ class NativeWorker:
             snapshot_task = None
             try:
                 self.guard()
-                if self.metrics['connections']-self.budget_totals['connections'] >= self.config['connections_per_source']:
+                if self.connection_allowance_used() >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
                 self.lifecycle.begin_connection(self.metrics['connections'])
@@ -582,7 +1026,8 @@ class NativeWorker:
                     await self.wait_hourly_budget()
                     continue
                 try:
-                    self.begin_discovery()
+                    async with self.http_lock:
+                        self.begin_discovery()
                     await self.discover()
                     errors = 0
                 except asyncio.CancelledError: raise

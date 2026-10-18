@@ -36,6 +36,14 @@ Runtime identity and increasing revisions order updates; conflicting same-revisi
 content or regressions reject. Source IDs, original price units, orientation,
 period, cardinality and economic contracts remain exact. Titles are not identity.
 
+An exact native source-local observation may have null season/stage while its
+comparison context is incomplete. This requires a
+`comparison-provider-occurrence-1:` discriminator, explicit home/away roles and
+an unverified quote binding. Its provider event identity stays stable as optional
+context arrives; a later supported shared occurrence has a separate derived
+identity. Null context never qualifies a shared or verified comparison. Missing
+MLB occurrence facts likewise remain explicit in original source metadata.
+
 Receipt time, source time, calculation time and connection health are distinct.
 Age removes eligibility without rewriting observations. Unknown clocks, fees,
 payouts, depth or probability withhold dependent results. A change cursor describes

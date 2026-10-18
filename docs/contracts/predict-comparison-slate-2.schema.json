@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "predict-comparison-slate-2.schema.json",
-  "title": "One coherent bounded page of current upcoming NFL comparisons",
+  "title": "One captured bounded page of current multi-sport comparisons",
   "type": "object",
   "required": [
     "version",
@@ -17,7 +17,10 @@
     "provider_requests",
     "read_revision",
     "epoch",
-    "coverage"
+    "coverage",
+    "read_token",
+    "read_expires_at",
+    "read_at"
   ],
   "properties": {
     "version": {
@@ -363,6 +366,23 @@
         }
       },
       "additionalProperties": false
+    },
+    "collection": {
+      "type": "object"
+    },
+    "read_at": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "read_token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 128
+    },
+    "read_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
     }
   }
 }

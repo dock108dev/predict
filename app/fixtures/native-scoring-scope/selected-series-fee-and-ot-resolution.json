@@ -1,0 +1,142 @@
+{
+  "version": "sc07-selected-series-fee-and-overtime-resolution-1",
+  "reviewed_at": "2026-10-17T13:43:18.843335+00:00",
+  "evidence_class": "independent_offline_review_of_root_authorized_three_responses_and_retained_current_official_terms",
+  "selected_native_key": [
+    "kalshi",
+    "KXNFLGAME-26OCT18HOUJAC",
+    "KXNFLGAME-26OCT18HOUJAC-JAC",
+    "yes",
+    "yes"
+  ],
+  "selected_original_terms": {
+    "sha256": "b0137b5db2fb2ec32870890ba5b2bbf7926748c59ed83bf51407b62985a5f8bd",
+    "text": {
+      "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+      "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+    },
+    "retained_source": "test-results/sc07-execution/source/attachability-current-snapshot.json",
+    "snapshot_sha256": "7b578b28042127ec8c4ce97f04a968dbc86c00eea735edc3409ec5792380dbc2",
+    "matches_exact_operation_selection_digest": true
+  },
+  "operation_binding": {
+    "path": "test-results/sc07-execution/fee-operation/result.json",
+    "sha256": "0efa0ace4243bc04b563d1e9fbee7b04d63db47088fdf3504672e8a0fab9a28b",
+    "candidate_digest": "cb425e1f14fda3bee4dd757ce6c6be0025f79f84200437b638d38d63bfc3e81e",
+    "runtime_id": "0527190e-d298-44d2-9674-7b601f4e5474",
+    "operation_id": "sc07-hou-jac-fees-20261017",
+    "baseline_observed_at": "2026-10-17T13:41:00.628166+00:00",
+    "assembled_at": "2026-10-17T13:41:03.236191+00:00",
+    "state": "complete_evidence_only"
+  },
+  "responses": [
+    {
+      "path": "/trade-api/v2/series/KXNFLGAME",
+      "params": {},
+      "started_at": "2026-10-17T13:41:00.313835+00:00",
+      "received_at": "2026-10-17T13:41:00.628166+00:00",
+      "body_sha256": "7b9cd0e6333dc37b9e5b6539c3f8f6fd40dd65bd5195adb94506fe36cee8c366",
+      "body_bytes": 1536,
+      "status": 200
+    },
+    {
+      "path": "/trade-api/v2/series/fee_changes",
+      "params": {
+        "series_ticker": "KXNFLGAME",
+        "show_historical": "true"
+      },
+      "started_at": "2026-10-17T13:41:01.347419+00:00",
+      "received_at": "2026-10-17T13:41:01.509296+00:00",
+      "body_sha256": "8ea02e068a64812adfe344b151d6173ad8038b1973de184e7b802552f757ab02",
+      "body_bytes": 197,
+      "status": 200
+    },
+    {
+      "path": "/trade-api/v2/events/fee_changes",
+      "params": {
+        "cursor": "",
+        "event_ticker": "KXNFLGAME-26OCT18HOUJAC",
+        "limit": 100
+      },
+      "started_at": "2026-10-17T13:41:02.668601+00:00",
+      "received_at": "2026-10-17T13:41:03.144345+00:00",
+      "body_sha256": "4d755a11d76cd85bec7a4758a2d226815fd2a935a5563dbafae35ee9d373da45",
+      "body_bytes": 36,
+      "status": 200
+    }
+  ],
+  "governing_terms": {
+    "current_series_id": "KXNFLGAME",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+    "pointer_received_at": "2026-10-17T13:41:00.628166+00:00",
+    "retained_pdf_path": "test-results/sc07/source-review/primary/kalshi-football.pdf",
+    "sha256": "57b57e1ad96466e413e9274c0d2598225997e35d71262eb63c4ae13858b81d38",
+    "retrieved_at": "2026-10-17T02:36:22.450012+00:00",
+    "exact_URL_match": true,
+    "matches_Oct9_public_rule_binding": true,
+    "source_last_updated_ts_not_assumed_amendment_instant": "2026-10-06T14:58:29.805933Z",
+    "contract_url_retained_without_extra_retrieval": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLGAMEWIN.pdf",
+    "amendment_effective_instant": null
+  },
+  "overtime": {
+    "status": "supported_selected_source_applicability",
+    "period": "full_game",
+    "value": "included",
+    "rationale": [
+      "Exact selected HOU-JAC full-game market belongs to currentKXNFLGAME series.",
+      "Current series directly designates the exact official governing terms URL whose complete retained current bytes are verified.",
+      "That governing document includes all overtime unless specified otherwise.",
+      "Exact selected HOU-JAC rules have no overtime exclusion; the governing default applies."
+    ],
+    "hypothetical_unseen_amendment_required": false,
+    "historical_amendment_time_invented": false,
+    "production_scope_automatically_changed": false
+  },
+  "tie": {
+    "status": "selected_literal_preserved",
+    "value_usd_per_contract": "0.50",
+    "rationale": "Selected secondary rules explicitly pay0.50 for each team; preserve that literal, without substituting generic tie-strike semantics or inventing a no-Tie-strike premise."
+  },
+  "current_fee": {
+    "status": "supported_current_selected_series_event_fee_context",
+    "fee_type": "quadratic_with_maker_fees",
+    "fee_multiplier": "1",
+    "historical_series_changes": [
+      {
+        "fee_multiplier": 1,
+        "fee_type": "quadratic_with_maker_fees",
+        "id": "babedc22-e303-4aaf-8e0b-5016f1239786",
+        "scheduled_ts": "2026-01-01T08:00:00Z",
+        "series_ticker": "KXNFLGAME"
+      }
+    ],
+    "event_fee_changes": [],
+    "terminal_cursor": "",
+    "rationale": [
+      "Current regime/multiplier and one retained historical row have the same values.",
+      "Exact selected event response has no override rows and terminal empty cursor.",
+      "Combine with independently retained public base taker0.07 schedule; prospective taker intent is valid pretrade."
+    ],
+    "public_schedule_review": "test-results/sc07/source-review/kalshi-fee-schedule-web-review.json",
+    "new_effective_from_or_expires_at": null
+  },
+  "remaining_independent_gates": [
+    "Standard personal-website positive quantity minimum/increment or documented website/API equivalence.",
+    "Applicable personal-website balance-alignment precision; no legal direct-member status inferred from owner channel fact.",
+    "Complete fee/settlement/scalar payout rounding treatment where applicable and standard PMUS participant settlement-charge treatment.",
+    "Exceptional joint cashflows:48hour-start vs2week-reschedule clauses differ; independent LFMP values remain unknown.",
+    "Exact current immutable observation/material/destination attachment and consistent production model-owner review."
+  ],
+  "clocks": [
+    "All3API request/receipt clocks remain separate, not relabeled an atomic exchange snapshot.",
+    "These are metadata observations and never renew original price/book ages.",
+    "No retrospective baseline or invented future fee applicability interval."
+  ],
+  "actual_future_fill_required_pretrade": false,
+  "changes": {
+    "app_code": false,
+    "model_or_fixture": false,
+    "network_during_review": false,
+    "owner_questions": false
+  }
+}

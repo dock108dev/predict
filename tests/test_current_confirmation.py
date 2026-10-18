@@ -58,6 +58,12 @@ class Held(unittest.IsolatedAsyncioTestCase):
   clock=patch('app.collection.current_occurrence.datetime');fake=clock.start();fake.now.return_value=datetime(2026,10,3,14,tzinfo=timezone.utc);self.addCleanup(clock.stop)
   svc=CurrentService(config=dict(DEFAULT,enabled=False,aggregate_enabled=False));store=CurrentStore(svc);svc.store=store;svc.sink=LatestStateSink(store,svc.initial_state());svc.dispatch=True
   cats=catalogs();trackers={};books={}
+  # This controlled clock/lease vector needs a coherent occurrence. The older
+  # retained catalog's vendor ID disagrees with its dated reviewed game ID;
+  # preserve that file and explicitly author the matching identity here.
+  from app.collection.current_occurrence import load
+  for event in cats['polymarket_us']['events']:
+   event['_native']['sportradarGameId']=load()['event']['game_id']
   for v,c in cats.items():
    svc.catalog(v,c);trackers[v]=Confirmations(v);trackers[v].begin(1)
    for m in c['markets']:

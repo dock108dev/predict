@@ -50,11 +50,13 @@ class BoardReadModel(unittest.TestCase):
     def test_benchmark_refuses_corrupt_or_crossed_originals_without_substitution(self):
         for malformed in ({}, {'outcomes':[None]}, 'unsupported'):
             b=dict(retained()[0],benchmark=malformed)
-            with self.assertRaisesRegex(ValueError,'benchmark_'):benchmark(b,AT)
+            shown=benchmark(b,AT)
+            self.assertFalse(shown['available']);self.assertEqual(shown['fair'],[])
+            self.assertIn('benchmark_',shown['reason'])
         b=deepcopy(retained()[0]);b['benchmark']['outcomes'][0]['decimal_odds']='1.99'
-        with self.assertRaisesRegex(ValueError,'benchmark_original_odds_association_conflict'):benchmark(b,AT)
+        self.assertEqual(benchmark(b,AT)['reason'],'benchmark_original_odds_association_conflict')
         b=deepcopy(retained()[0]);b['benchmark_venue']='novig'
-        with self.assertRaisesRegex(ValueError,'selected_benchmark_missing'):benchmark(b,AT)
+        self.assertIn('selected_benchmark_missing',benchmark(b,AT)['reason'])
         b['benchmark']=None
         shown=benchmark(b,AT);self.assertEqual(shown['freshness'],'unavailable');self.assertEqual(shown['fair'],[])
     def test_benchmark_original_clock_boundaries_are_shared(self):

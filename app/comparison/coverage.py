@@ -31,11 +31,14 @@ class CoverageLedger:
     def __init__(self, configured, families=FAMILIES):
         if set(configured) - set(VENUES) or any(set(s) - set(SPORTS) for s in configured.values()):
             raise ValueError('Unsupported coverage scope')
-        if set(families) - set(FAMILIES):
+        configured_families={v:tuple(families.get(v,FAMILIES)) for v in VENUES} if isinstance(families,dict) else {v:tuple(families) for v in VENUES}
+        if any(set(values)-set(FAMILIES) for values in configured_families.values()):
             raise ValueError('Unsupported coverage family')
         self.configured = {v: tuple(configured.get(v, ())) for v in VENUES}
-        self.families = tuple(families)
+        self.configured_families=configured_families
+        self.families = tuple(f for f in FAMILIES if any(f in values for values in configured_families.values()))
         self.observations = {}
+        self.family_observations = {}
         self.books = {}
 
     def observe_book(self, sport, venue, *, received_at, source_at):
@@ -48,7 +51,8 @@ class CoverageLedger:
 
     def observe(self, sport, venue, *, checked_at, status, offered=None,
                 source_clocks=(), reason=None, evidence_sha256=None, family=None,
-                completeness='unmeasured', query=None, detail_code=None):
+                completeness='unmeasured', query=None, detail_code=None,
+                unique_offered=None, offered_scope='exact_query'):
         if sport not in SPORTS or venue not in VENUES or status not in STATUSES:
             raise ValueError('Invalid coverage cell/status')
         stamp(checked_at)
@@ -83,12 +87,24 @@ class CoverageLedger:
                      source_clocks=clocks, reason=reason, receipt_sha256=evidence_sha256,
                      family=family, completeness=completeness, query_sha256=query_hash,
                      admission_code=None if detail_code is None else admission_code(detail_code))
+        if unique_offered is not None:
+            if (not isinstance(unique_offered,dict) or set(unique_offered)-set(COUNTS)
+                    or any(v is not None and (type(v) is not int or not 0<=v<=10000) for v in unique_offered.values())
+                    or offered_scope not in ('exact_query','bounded_listing_and_selected_metadata')):
+                raise ValueError('Invalid unique query measurement')
+            if status in ('failed_source','rejected_payload') and any(v is not None for v in unique_offered.values()):
+                raise ValueError('Failed query unique totals remain unknown')
+            value.update(unique_offered={k:unique_offered.get(k) for k in COUNTS},offered_scope=offered_scope)
         key = (sport, venue)
         previous = self.observations.get(key, {})
         if previous.get('latest') and stamp(checked_at) < stamp(previous['latest']['checked_at']):
             raise ValueError('Coverage check clock regressed')
         success = value if status in ('offerings_returned', 'no_offerings_returned') else previous.get('last_success')
         self.observations[key] = dict(latest=value, last_success=deepcopy(success))
+        if family is not None:
+            previous=self.family_observations.get((sport,venue,family),{})
+            success=value if status in ('offerings_returned','no_offerings_returned') else previous.get('last_success')
+            self.family_observations[(sport,venue,family)]=dict(latest=deepcopy(value),last_success=deepcopy(success))
 
     def snapshot(self, inventory=(), *, sports=None, venues=None, families=None, exclusions=()):
         """Reconcile against *all* supplied current rows and caller display filters.
@@ -127,7 +143,7 @@ class CoverageLedger:
                 display_reason = ('filtered_out' if local and not shown else 'mapping_unresolved' if unresolved else
                                   latest.get('reason') if latest else 'not_checked')
                 cells.append(dict(sport=sport, venue=venue, configured=sport in self.configured[venue],
-                    configured_families=list(self.families), checked=latest is not None,
+                    configured_families=list(self.configured_families[venue]), checked=latest is not None,
                     status=status, latest=latest, last_success=context.get('last_success'),
                     last_book=deepcopy(self.books.get((sport,venue))),
                     counts=dict(admitted_quotes=len(local), displayed_quotes=len(shown),
@@ -135,6 +151,8 @@ class CoverageLedger:
                                 rejected_quotes=None, rejected_markets=sum(e.get('sport')==sport and e.get('venue')==venue for e in exclusions)),
                     admitted_family_counts={f: sum(r['family'] == f for r in local) for f in FAMILIES},
                     displayed_family_counts={f: sum(r['family'] == f for r in shown) for f in FAMILIES},
+                    family_queries=[dict(family=family,configured=sport in self.configured[venue] and family in self.configured_families[venue],
+                        **deepcopy(self.family_observations.get((sport,venue,family),dict(latest=None,last_success=None)))) for family in FAMILIES],
                     display_reason=display_reason, exclusion_reasons=reasons))
         return dict(schema=VERSION, evidence_class='current projection and exact query observations',
                     cells=cells, totals=dict(admitted_quotes=len(rows), displayed_quotes=sum(c['counts']['displayed_quotes'] for c in cells),

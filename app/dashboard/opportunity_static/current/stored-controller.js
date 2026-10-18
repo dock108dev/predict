@@ -5,7 +5,7 @@ import {
   percent,
   quantity,
   settings,
-  SlateAccumulator,
+  readSlate,
   checkDetails,
   checkInputs,
   LatestRead,
@@ -22,9 +22,13 @@ import {
   freshness,
   price,
   labelsFor,
+  matchesGameSearch,
+  marketFamily,
+  updateRelativeAges,
+  preserveDisclosures,
 } from "./board-elements.js";
 import { createSlateViews } from "./stored-views.js";
-import { renderSavedDetails } from "./stored-details.js";
+import { renderSavedDetails, renderOriginalDetails } from "./stored-details.js";
 
 const setStatus = (message, state = "ready") => {
   if ($("status").textContent !== message) $("status").textContent = message;
@@ -69,7 +73,16 @@ try {
     sessionStorage.getItem("predict-board-selection") || "null",
   );
   $("search").value = sessionStorage.getItem("predict-board-slate-search") || "";
+  for (const key of ["league", "family", "period", "venue"]) if ($(key)) $(key).dataset.saved = sessionStorage.getItem("predict-board-slate-" + key) || "";
 } catch {}
+// Coverage links select a local display scope. They do not change collection,
+// the captured slate request, or a frozen Details frame.
+const incomingScope = new URLSearchParams(location.search || "");
+if (["league", "family", "period", "venue"].some(key => incomingScope.has(key))) {
+  game = "";
+  $("search").value = "";
+  for (const key of ["league", "family", "period", "venue"]) if ($(key)) $(key).dataset.saved = incomingScope.get(key) || "";
+}
 function form() {
   $("amount").value = applied.amount;
   $("buffer").value = String(numeric(applied.buffer) * 100);
@@ -98,10 +111,12 @@ function persist() {
   sessionStorage.setItem("predict-board-settings", JSON.stringify(applied));
   sessionStorage.setItem("predict-board-slate-game", game);
   sessionStorage.setItem("predict-board-slate-search", $("search").value);
+  for (const key of ["league", "family", "period", "venue"]) if ($(key)) sessionStorage.setItem("predict-board-slate-" + key, $(key).value);
 }
 function preserveContent(draw) {
   const active = document.activeElement,
-    key = active?.dataset.key,
+    key = active?.dataset.key || active?.closest?.("details")?.dataset.key,
+    focusedSummary = active?.tagName === "SUMMARY",
     anchor = [...$("content").querySelectorAll(".slate-result, .slate-game")].find(n => n.getBoundingClientRect().bottom > 100),
     anchorKey = anchor?.dataset.key, anchorTop = anchor?.getBoundingClientRect().top,
     disclosures = [...$("content").querySelectorAll("details[open]")].map(
@@ -114,7 +129,8 @@ function preserveContent(draw) {
     const replacement = [...$("content").querySelectorAll("[data-key]")].find(n => n.dataset.key === anchorKey && n.className === anchor.className);
     if (replacement) window.scrollBy(0, replacement.getBoundingClientRect().top - anchorTop);
   }
-  if (key)
+  if (key && focusedSummary) [...$("content").querySelectorAll("details")].find(d => d.dataset.key === key)?.querySelector("summary")?.focus({ preventScroll: true });
+  else if (key)
     $("content")
       .querySelectorAll("button[data-key]")
       .forEach((b) => {
@@ -133,17 +149,17 @@ function draw(v) {
       boards: v.boards.map(b => ({ ...b, rows: [] })),
     };
   current = v;
-  $("applied").textContent =
-    money(applied.amount) +
-    " · " +
-    percent(String(numeric(applied.buffer) * 100)) +
-    " buffer · " +
-    venue(applied.benchmark_venue);
+  const settingsLabel = (amount, buffer, benchmark) => money(amount) + " · " +
+    percent(String(numeric(buffer) * 100)) + " buffer · " + venue(benchmark);
+  const sharedLabel = settingsLabel(v.policy.requested_amount_usd, v.policy.buffer_rate, v.policy.benchmark_venue);
+  const detailsLabel = settingsLabel(applied.amount, applied.buffer, applied.benchmark_venue);
+  $("applied").textContent = detailsLabel === sharedLabel ? detailsLabel :
+    "Details " + detailsLabel + ". Shared comparisons " + sharedLabel;
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
   const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Saving updates paused. Source status is in Admin.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
-  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
+  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
   if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
   preserveContent(() =>
     renderers.draw(v, {
@@ -151,15 +167,38 @@ function draw(v) {
       filter,
       game,
       search: $("search").value,
+      league: $("league").value, family: $("family").value, period: $("period").value,
+      source: $("venue")?.value || "",
       sort: $("sort").value,
       onShowAll: () => { const all = $("filters").querySelector("[data-filter=all]"); all.click(); all.focus({ preventScroll: true }); },
     }),
   );
 }
 function catalogOptions() {
+  const options = {
+    league:[...new Set(games.map(g => g.league || g.scope?.split("/")[0]).filter(Boolean))].sort(),
+    family:[...new Set((current?.boards || []).flatMap(b => b.prices.map(marketFamily)))].sort(),
+    period:[...new Set((current?.boards || []).flatMap(b => b.prices.map(q => q.market?.period || "full_game")))].sort(),
+    venue:[...new Set(["kalshi", "polymarket_us", "novig", "prophetx", "pinnacle", ...(current?.boards || []).flatMap(b => b.prices.map(q => q.venue))])].sort(),
+  };
+  for (const [key, values] of Object.entries(options)) {
+    const target = $(key);
+    if (!target) continue;
+    const selected = target.dataset.saved || target.value;
+    // Keep a linked empty/unsupported scope visible instead of silently showing
+    // a broader collection when that cell currently has no retained prices.
+    if (selected && !values.includes(selected)) values.push(selected);
+    const signature = JSON.stringify(values);
+    if (target.dataset.signature !== signature) {
+      target.dataset.signature = signature;
+      target.replaceChildren(...["",...values].map(value => { const o = el("option", value ? (key === "family" && value === "winner" ? "Winner / moneyline" : key === "venue" ? venue(value) : words(value)) : "All " + ({league:"leagues", family:"markets", period:"periods", venue:"sources"}[key])); o.value = value; return o; }));
+    }
+    target.value = values.includes(selected) ? selected : "";
+    delete target.dataset.saved;
+  }
   const search = $("search").value.toLowerCase(),
     visible = games.filter(
-      (g) => g.title.toLowerCase().includes(search) || g.game_key === game,
+      (g) => ((!$("league").value || (g.league || g.scope?.split("/")[0]) === $("league").value) && matchesGameSearch(g, search)) || g.game_key === game,
     );
   const signature = JSON.stringify(visible.map((g) => [g.game_key, g.title]));
   if ($("game").dataset.signature === signature) { $("game").value = game; return; }
@@ -169,7 +208,7 @@ function catalogOptions() {
     ...visible.map((g) => {
       const o = el(
         "option",
-        g.title +
+        [g.league || g.sport, g.title, time(g.start_at)].filter(Boolean).join(" · ") +
           (g.matches?.some((m) => m.status === "conflict")
             ? " · Unmatched source"
             : ""),
@@ -185,21 +224,11 @@ async function pull() {
   if (failures >= 4) return;
   const c = context(), generation = ++pullGeneration;
   try {
-    const qs = query({ ...c, game: "" });
-    qs.set("view", c.view);
-    qs.set("filter", c.filter);
-    qs.set("limit", "50");
-    const pages = new SlateAccumulator(c);
-    do {
-      qs.set("offset", String(pages.nextOffset));
-      if (pages.expectedRevision) qs.set("expected_revision", pages.expectedRevision);
-      const completed = await read.read("/api/boards/slate?" + qs, (page, metadata) => {
-        pages.append(page, metadata.bytes);
-        return true;
-      }, 8388608);
-      if (!completed || generation !== pullGeneration) return;
-    } while (!pages.complete);
-    const value = pages.result();
+    const value = await readSlate(read, c, {
+      isCurrent: () => generation === pullGeneration && !unloading,
+      onRecovery: () => setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Recovering stored observations…" : "Recovering stored observations…", "busy"),
+    });
+    if (!value || generation !== pullGeneration) return;
     polling.setSlate({ ...value, stopped: stopRequested || value.stopped });
     const continued = followGame(
       games.find((g) => g.game_key === game) ||
@@ -220,8 +249,12 @@ async function pull() {
     stopped = stopRequested || value.stopped;
     $("stop").disabled = stopped;
     $("stop").textContent = stopped ? "Collection stopped" : "Stop collection";
+    current = value;
     catalogOptions();
     persist();
+    failures = 0;
+    $("retry").hidden = true;
+    $("read-diagnostics").hidden = true;
     if (!games.length) {
       draw(value);
       setStatus("");
@@ -232,10 +265,7 @@ async function pull() {
       catalogOptions();
       persist();
     }
-    failures = 0;
     draw(value);
-    $("retry").hidden = true;
-    $("read-diagnostics").hidden = true;
     if (detail?.kind === "result") refreshDetails();
   } catch (e) {
     if (e.name === "AbortError" || generation !== pullGeneration) return;
@@ -358,11 +388,12 @@ function openDetails(row, button, selectedGame) {
 }
 async function openOriginal(q, button, selectedGame) {
   polling.cancel();
-  const { selection } = labelsFor(selectedGame.participants);
   detailRead.cancel();
   originalRead.cancel();
-  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, policy_revision: current.policy.revision } });
-  $("detail-content").replaceChildren(el("p", "Loading current original contract and source evidence…"));
+  const selectedBoard = current.boards.find(b => b.game_key === selectedGame.game_key);
+  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, quote_revision: q.quote_revision, observation_revision: q.observation_revision, policy_revision: selectedBoard?.calculation_context?.policy_revision } });
+  const renderFrame = inputs => preserveDisclosures($("detail-content"), () => renderOriginalDetails(q, { estimate_availability: selectedBoard?.estimate_availability, ...inputs }, { root: $("detail-content"), participants: selectedGame.participants, title: selectedGame.title }));
+  renderFrame({ evidence: { status: "Loading exact-frame contract and source evidence" } });
   showDialog(button);
   try {
     const qs = query(held.context);
@@ -374,32 +405,25 @@ async function openOriginal(q, button, selectedGame) {
       8388608,
     );
     if (!inputs || held !== detail) return;
-    $("detail-content").replaceChildren(el("h3", selection(q)), el("p", venue(q.venue) + " · " + price(q)));
-    textLine($("detail-content"), "Original native price", quantity(q.original.value) + " " + words(q.original.units));
-    textLine($("detail-content"), "Original source / receipt", time(q.freshness?.source_at) + " / " + time(q.freshness?.received_at));
-    const d = el("details");
-    d.append(
-      el("summary", "Original contract and source evidence"),
-      el("pre", JSON.stringify(inputs.evidence, null, 2)),
-    );
-    $("detail-content").append(d);
+    renderFrame(inputs);
   } catch (e) {
-    if (e.name !== "AbortError" && held === detail)
-      detailFailure("Original inputs changed, expired or are unavailable. Reopen the current price.",e.message);
+    if (e.name !== "AbortError" && held === detail) {
+      renderFrame({ evidence: { status: "Exact current evidence unavailable", reason: e.message } });
+      $("detail-content").append(el("p", "Selected observation frame shown with its original clocks. Current evidence changed or is unavailable; close and reopen the price for a new frame.", "warning"));
+    }
   }
 }
 function changeSettings(next) {
   applied = next;
   form();
   persist();
-  failures = 0;
-  pullGeneration++;
-  read.cancel();
-  closeDetails();
-  current = null;
-  $("content").replaceChildren();
-  setStatus("Loading requested settings…", "busy");
-  pull();
+  if (current) draw(current);
+  if (detail?.kind === "result") {
+    detail.context = { ...detail.context, ...applied };
+    detailRead.cancel();
+    refreshDetails();
+  }
+  setStatus("Settings apply when you open selected Details. Shared comparisons keep their displayed defaults.");
 }
 const settingsDisclosure=document.querySelector(".calculation-settings");
 settingsDisclosure.addEventListener("focusout",event=>{
@@ -440,6 +464,11 @@ $("game").onchange = () => {
   if (current) draw(current);
 };
 $("sort").onchange = () => { if (current) draw(current); };
+for (const key of ["league", "family", "period", "venue"]) if ($(key)) $(key).onchange = () => {
+  const selected = games.find(g => g.game_key === game);
+  if (key === "league" && $(key).value && selected && (selected.league || selected.scope?.split("/")[0]) !== $(key).value) game = "";
+  catalogOptions(); persist(); if (current) draw(current);
+};
 for (const b of $("filters").querySelectorAll("button")) {
   b.onclick = () => {
     filter = b.dataset.filter;
@@ -491,8 +520,14 @@ for (const a of document.querySelectorAll("nav a"))
   if (a.getAttribute("href") === location.pathname)
     a.setAttribute("aria-current", "page");
 form();
+const ageClock = window.setInterval(() => {
+  if (unloading || document.hidden) return;
+  updateRelativeAges($("content"));
+  if ($("details").open) updateRelativeAges($("detail-content"));
+}, 1000);
 window.addEventListener("pagehide", () => {
   unloading = true;
+  window.clearInterval(ageClock);
   polling.cancel();
   pullGeneration++;
   read.cancel();

@@ -349,10 +349,12 @@
           "type": "string"
         },
         "season": {
-          "type": "string"
+          "type": ["string", "null"],
+          "description": "Null only for an unverified source-local observation; never inferred from dates or identifiers."
         },
         "stage": {
-          "type": "string"
+          "type": ["string", "null"],
+          "description": "Null only for an unverified source-local observation; exact comparison context remains unavailable."
         },
         "event_discriminator": {
           "type": "string"
@@ -402,6 +404,50 @@
         },
         "funded_pair_search": {
           "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {"properties": {"season": {"type": "null"}}},
+              {"properties": {"stage": {"type": "null"}}}
+            ]
+          },
+          "then": {
+            "properties": {
+              "event_discriminator": {"pattern": "^comparison-provider-occurrence-1:"},
+              "groups": {
+                "items": {
+                  "properties": {
+                    "outcomes": {
+                      "items": {
+                        "properties": {
+                          "quotes": {
+                            "additionalProperties": {"$ref": "#/$defs/sourceLocalUnverifiedQuote"}
+                          },
+                          "alternatives": {
+                            "additionalProperties": {
+                              "items": {"$ref": "#/$defs/sourceLocalUnverifiedQuote"}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sourceLocalUnverifiedQuote": {
+      "properties": {
+        "binding": {
+          "properties": {
+            "verified": {"const": false}
+          }
         }
       }
     },
@@ -1426,6 +1472,24 @@
             "string",
             "null"
           ]
+        },
+        "same_outcome": {"type": "object", "description": "Structured predicate, equality, scoring and normal-payout facts used by the shared exact same-outcome resolver."},
+        "scope_evidence": {
+          "type": "object",
+          "required": ["version", "status", "overtime", "reason", "missing_fields", "observed_overtime", "conflicts", "evidence"],
+          "properties": {
+            "version": {"const": "predict-native-scoring-scope-1"},
+            "status": {"enum": ["supported", "unknown", "contradictory"]},
+            "overtime": {"enum": ["included", "excluded", "unknown"]},
+            "reason": {"type": "string", "maxLength": 160},
+            "missing_fields": {"type": "array", "items": {"type": "string"}, "maxItems": 32},
+            "observed_overtime": {},
+            "scoring": {"type": "object"},
+            "rule_id": {"type": ["string", "null"]},
+            "conflicts": {"type": "array", "items": {"type": "string"}, "maxItems": 16},
+            "evidence": {"type": "array", "items": {"type": "object"}, "maxItems": 32}
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

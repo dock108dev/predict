@@ -630,6 +630,8 @@ class EnforcementTests(unittest.TestCase):
                         dict(base, id=2, created_at="2026-08-01T00:00:00Z"),
                     ]
                 )
+            if path == "/actions/runs/1/attempts/1":
+                return dict(id=1, run_attempt=1, conclusion="failure")
             return dict(
                 total_count=2,
                 jobs=[
@@ -646,6 +648,7 @@ class EnforcementTests(unittest.TestCase):
             paths,
             [
                 "/actions/workflows/ci.yml/runs?per_page=30&status=completed&created=%3E%3D2026-09-10",
+                "/actions/runs/1/attempts/1",
                 "/actions/runs/1/attempts/2/jobs?per_page=100",
             ],
         )
@@ -821,3 +824,147 @@ class RequiredGateTests(unittest.TestCase):
                 (root / "notes.md").write_text("private notes")
                 with self.assertRaisesRegex(ValueError, "Local-only"):
                     module.validate(root)
+
+
+class AssuranceContractTests(unittest.TestCase):
+    def test_selected_jobs_require_success_and_only_unselected_jobs_may_skip(self):
+        module = load("assurance_report")
+        for scope, selected in module.SCOPES.items():
+            needs = {
+                name: {"result": "success" if name in selected else "skipped"}
+                for name in ("compatibility", "postgres", "security")
+            }
+            needs["health"] = {"result": "failure"}
+            passed, records = module.evaluate(scope, needs)
+            self.assertTrue(passed)
+            self.assertEqual(
+                sum(r["status"] == "N/A" for r in records), 3 - len(selected)
+            )
+            for name in selected:
+                for failure in ("failure", "cancelled", "skipped", None):
+                    changed = dict(needs, **{name: {"result": failure}})
+                    self.assertFalse(module.evaluate(scope, changed)[0])
+            self.assertFalse(module.evaluate(scope, {})[0])
+        self.assertFalse(module.evaluate("untrusted", {})[0])
+
+    def test_invalid_junit_durations_cannot_publish_a_pass(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "browser/junit.xml"
+            path.parent.mkdir()
+            for duration in ("NaN", "inf", "-1", "invalid"):
+                path.write_text(f'<testsuite><testcase time="{duration}"/></testsuite>')
+                with self.assertRaises(ValueError):
+                    load("run_checks").junit_counts(path)
+                _, records, failed = load("quality_report").render(
+                    {"browser": {"outcome": "success"}}, root, browser=True
+                )
+                self.assertTrue(failed)
+                self.assertEqual(records[0]["status"], "FAIL")
+
+    def test_reviewed_pdf_is_required_but_unrelated_pdf_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            pdf = root / "app/fixtures/native-scoring-scope/rules.pdf"
+            pdf.parent.mkdir(parents=True)
+            pdf.write_bytes(b"%PDF-test")
+            validate = load("package_smoke").validate_wheel
+            validate([pdf.relative_to(root).as_posix()], root)
+            for names in ([], [pdf.relative_to(root).as_posix(), "app/unreviewed.pdf"]):
+                with self.assertRaises(ValueError):
+                    validate(names, root)
+
+
+class PartialHealthTests(unittest.TestCase):
+    def test_one_jobs_api_outage_preserves_other_measurements(self):
+        from datetime import datetime, timezone
+
+        base = dict(
+            name="CI",
+            status="completed",
+            event="push",
+            conclusion="failure",
+            run_attempt=1,
+            created_at="2026-10-09T00:00:00Z",
+            run_started_at="2026-10-09T00:00:01Z",
+        )
+
+        def fetch(path):
+            if "workflows/ci.yml/runs?" in path:
+                return {"workflow_runs": [dict(base, id=1), dict(base, id=2)]}
+            if "/runs/1/" in path:
+                raise TimeoutError("unavailable")
+            return dict(
+                total_count=1,
+                jobs=[
+                    dict(
+                        started_at="2026-10-09T00:00:02Z",
+                        completed_at="2026-10-09T00:00:12Z",
+                        steps=[],
+                    )
+                ],
+            )
+
+        metrics, runs = load("health").collect(
+            fetch, datetime(2026, 10, 10, tzinfo=timezone.utc)
+        )
+        self.assertEqual(metrics["incomplete_job_samples"], 1)
+        self.assertAlmostEqual(metrics["runner_minutes"], 10 / 60)
+        self.assertEqual(metrics["queue_seconds"]["median"], 2)
+        self.assertEqual(runs[0]["jobs_unavailable"], "TimeoutError")
+
+    def test_recovered_rerun_counts_observed_failed_first_attempt(self):
+        from datetime import datetime, timezone
+
+        run = dict(
+            name="CI",
+            status="completed",
+            event="pull_request",
+            conclusion="success",
+            run_attempt=2,
+            first_attempt_conclusion="failure",
+            created_at="2026-10-09T00:00:00Z",
+        )
+        metric = load("health").analyze(
+            [run], datetime(2026, 10, 10, tzinfo=timezone.utc)
+        )["events"]["pull_request"]
+        self.assertEqual(metric["first_attempt_pass_rate"], 0)
+        self.assertEqual(metric["observed_rerun_recoveries"], 1)
+
+
+class AssuranceArtifactTests(unittest.TestCase):
+    def test_summary_persists_scoped_na_and_failed_requested_job(self):
+        import contextlib
+        import os
+        from unittest.mock import patch
+
+        for outcome, expected in (("success", 0), ("failure", 1)):
+            with tempfile.TemporaryDirectory() as folder, contextlib.chdir(folder):
+                needs = {
+                    name: {"result": "skipped"}
+                    for name in ("compatibility", "postgres", "health")
+                }
+                needs["security"] = {"result": outcome}
+                with patch.dict(
+                    os.environ,
+                    {
+                        "ASSURANCE_SCOPE": "security",
+                        "NEEDS_JSON": json.dumps(needs),
+                        "GITHUB_SHA": "candidate",
+                        "CI_RUN_URL": "<unsafe>|`text`",
+                        "GITHUB_STEP_SUMMARY": "summary.md",
+                    },
+                    clear=True,
+                ):
+                    self.assertEqual(load("assurance_report").main(), expected)
+                value = json.loads(
+                    Path("test-results/assurance/metrics.json").read_text()
+                )
+                text = Path("summary.md").read_text()
+                self.assertEqual(value["tested_sha"], "candidate")
+                self.assertIn("N/A", text)
+                self.assertNotIn("<unsafe>", text)
+                self.assertIn("&lt;unsafe&gt;&#124;&#96;text&#96;", text)
+                self.assertEqual(
+                    text, Path("test-results/assurance/summary.md").read_text()
+                )

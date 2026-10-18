@@ -102,7 +102,9 @@ function bootScanner() {
     return ({evaluated_positive:'Selected markets checked',evaluated_zero:'Checked selected markets · no qualifying opportunities.',not_evaluated:'Still evaluating the selected markets…',partial:'Partially evaluated · coverage is incomplete',unavailable:'Comparable markets unavailable',unsupported:'Selected scope is unsupported',stopped:'Collection stopped'})[c.state]||'Coverage is incomplete';
   }
   function updateHealth() {
+    byId('health').hidden=false;
     if(!page){byId('health').textContent=incompatible?'Update required to verify this scanner.':'Current comparison unavailable. Waiting for a supported response.';return;}const message=healthMessage();if(byId('health').textContent!==message)byId('health').textContent=message;const c=page.coverage;
+    byId('health').hidden=message==='Selected markets checked' && c.complete && !c.errors.length;
     byId('coverage-detail').textContent=c.evaluated_pairs+' of '+c.compatible_pairs+' compatible pairs evaluated in the selected scope. '+(c.qualifying_pairs===null?'Qualifying count not established. ':c.qualifying_pairs+' qualifying pairs. ')+(c.complete?'Evaluation complete.':'Incomplete evaluation; zero results do not establish checked-zero.')+(c.errors.length?' A shared evaluation problem affects this scope. See Admin.':'');
   }
   function capabilityOptions() {
@@ -111,7 +113,13 @@ function bootScanner() {
     const venues=byId('venue-options');venues.replaceChildren();
     for(const v of page.filter_options.venues){const l=make('label'),input=make('input');input.type='checkbox';input.value=v;input.checked=!filters.venues.length||filters.venues.includes(v);input.name='venue';input.onchange=changeFilters;l.append(input,make('span',label(v)));venues.append(l);}
   }
-  function restoreForm(){byId('category').value=filters.category;for(const k of ['minimum_edge','minimum_size'])if(document.activeElement!==byId(k))byId(k).value=filters[k]||'';for(const k of ['sports','leagues','markets','periods'])if(byId(k).options.length>1)byId(k).value=filters[k][0]||'';}
+  function restoreForm(){
+    const advanced=[];
+    if(filters.minimum_edge!==null)advanced.push('edge ≥ '+filters.minimum_edge+'%');
+    if(filters.minimum_size!==null)advanced.push('size ≥ $'+filters.minimum_size);
+    if(filters.venues.length)advanced.push(filters.venues.map(label).join(', '));
+    byId('advanced-label').textContent='Size & sources'+(advanced.length?' · '+advanced.join(' · '):'');
+    byId('category').value=filters.category;for(const k of ['minimum_edge','minimum_size'])if(document.activeElement!==byId(k))byId(k).value=filters[k]||'';for(const k of ['sports','leagues','markets','periods'])if(byId(k).options.length>1)byId(k).value=filters[k][0]||'';}
   function changeFilters(event) {
     const next=scannerDefaults();next.category=byId('category').value;
     for(const k of ['sports','leagues','markets','periods'])next[k]=byId(k).value?[byId(k).value]:[];
@@ -121,7 +129,7 @@ function bootScanner() {
     if(!checked.length&&venueInputs.length){if(event?.target?.name==='venue')event.target.checked=true;byId('warning').textContent='Select at least one execution venue. Both legs must be eligible.';byId('warning').hidden=false;return;}
     next.venues=checked.length===venueInputs.length?[]:checked;
     for(const k of ['minimum_edge','minimum_size']){const value=byId(k).value.trim();if(value&&!/^\d{1,8}(\.\d{1,6})?$/.test(value)){byId('warning').textContent='Use a nonnegative decimal for the minimum filter.';byId('warning').hidden=false;return;}next[k]=value||null;}
-    byId('warning').hidden=true;filters=next;try{localStorage.setItem(scannerPreferenceKey,JSON.stringify(filters));}catch{}
+    byId('warning').hidden=true;filters=next;restoreForm();try{localStorage.setItem(scannerPreferenceKey,JSON.stringify(filters));}catch{}
     arrivals.reset();summaries.reset();verified=false;held=false;hover=null;render();updateHealth();serverFilterStart=performance.now();reader.configure(filters);
   }
   const reader=new ScannerReader({assetRevision:SCANNER_ASSET_REVISION,onPage:(value,timing)=>{

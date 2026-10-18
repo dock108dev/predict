@@ -11,11 +11,24 @@ MAX_ASSOCIATIONS = 16384
 MAX_CAPTURE_BYTES = 96 * 1024 * 1024
 
 
+def _observation_records(records):
+    """Price admission never parses optional model/reference attachments."""
+    out=[]
+    for record in records:
+        if record['quote']['venue']=='pinnacle':continue
+        value=dict(record,quote=dict(record['quote']))
+        for field in ('sharp_reference','comparison_input_refs','comparison_input_status','engine_inputs'):
+            value['quote'].pop(field,None)
+        out.append(value)
+    return out
+
+
 def _records(records, at):
     """Private edited shells; the resolver fully detaches every output record."""
+    from app.collection.current_policy import SPORTS
     out=[]
     for item in records:
-        if item['event'].get('competition')!='NFL' or item['market_identity'].get('family')!='moneyline' or item['market_identity'].get('period')!='full_game':continue
+        if item['event'].get('competition') not in SPORTS or item['market_identity'].get('family') not in ('moneyline','spread','total'):continue
         if stamp(item['event']['scheduled_start'])<=stamp(at):continue
         # Only these containers change before OccurrenceResolver's final copy.
         # Other nested facts, including unknown fields, remain untouched here.
@@ -26,7 +39,10 @@ def _records(records, at):
         if 'combined_native_binding' in meta:
             native=dict(meta['combined_native_binding']);meta['combined_native_binding']=native
             for key in ('catalog_envelope_id','book_envelope_id'):native.pop(key,None)
-        if r['quote']['source']['provider']=='the_odds_api':
+        if (r['quote']['source']['provider']=='the_odds_api'
+                and r['event'].get('competition')=='NFL'
+                and r['market_identity'].get('family')=='moneyline'
+                and r['market_identity'].get('period')=='full_game'):
             r['comparison_scope']=dict(overtime='included')
             meta.update(phase='pregame',overtime='included',scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
         out.append(r)
@@ -35,9 +51,10 @@ def _records(records, at):
 
 class ReadContext:
     """One caller-owned repeatable SQL snapshot and bounded transient game data."""
-    def __init__(self, store, *, at=None, frame=None):
+    def __init__(self, store, *, at=None, frame=None, resource_guard=None, tolerate_invalid_catalog=False):
         from .current_rows import CurrentRowStore
-        self.store=store;self.at=at or utc();self.engine=engine_binding()
+        self.store=store;self.at=at or utc();self.engine=engine_binding();self.resource_guard=resource_guard
+        self.tolerate_invalid_catalog=tolerate_invalid_catalog;self.catalog_errors=[]
         frame=frame if frame is not None else CurrentRowStore(store.db).capture(include_depth=False)
         self.epoch=str(frame['epoch']);self.revision=frame['revision']
         self.dependency_revisions=frame.get('dependency_revisions',{})
@@ -58,6 +75,7 @@ class ReadContext:
         receipts=[(r['quote']['source'],r['quote']['times'].get('received_at'),r['quote'].get('provenance')) for r in records]
         self.read_revision=hashed(dict(epoch=self.epoch,revision=self.revision,engine=self.engine,availability=clocks,receipts=receipts,source_states={k:v.get('state') for k,v in statuses.items()}))
         self._catalog_bundles=None
+        self._observation_bundles={}
         self._normalization_registries=None
 
     def normalization_registries(self):
@@ -84,14 +102,27 @@ class ReadContext:
             from app.dashboard.current_state import unavailable
             out=[]
             for rows in self.prepared['groups']:
-                executions=[r for r in rows if r['quote']['venue']!='pinnacle']
+                executions=_observation_records(rows)
                 if not executions:continue
                 raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
-                state=catalog_from_normalized(raw,executions,include_profiles=False,
-                    registries=self.normalization_registries())
                 members=[list(v) for v in sorted({(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows})]
+                try:
+                    state=catalog_from_normalized(raw,executions,include_profiles=False,
+                        source_rules={},selected_applicability={})
+                except ValueError:
+                    if not self.tolerate_invalid_catalog:raise
+                    from .schedule_metadata import diagnostic
+                    failures=[d for record in executions if (d:=diagnostic(record)) is not None]
+                    self.catalog_errors.append(dict(members=members,reason=failures[0]['reason'] if failures else 'observation_invalid',
+                        **(dict(schedule_conflicts=failures[:8],omitted=max(0,len(failures)-8)) if failures else {})))
+                    if len(self.catalog_errors)>MAX_GAMES:raise ValueError('board_catalog_capacity')
+                    continue
                 event=state['events'][0]
                 summary={k:event[k] for k in ('id','title','start_at','participants')}
+                summary.update(league=rows[0]['event']['competition'],
+                    sport=rows[0]['event'].get('sport'),
+                    families=sorted({r['market_identity']['family'] for r in rows}),
+                    periods=sorted({r['market_identity']['period'] for r in rows}))
                 summary['native_alternatives']=sum(sum(len(qs) for qs in o.get('alternatives',{}).values()) for g in event['groups'] for o in g['outcomes'])
                 out.append(dict(game_key='combined:'+event['id'],members=members,input_version=self.guard(members),records=rows,catalog_event=summary))
             if len(out)>MAX_GAMES:raise ValueError('board_catalog_capacity')
@@ -100,6 +131,63 @@ class ReadContext:
 
     def catalog(self):
         return dict(catalog(self.catalog_bundles()),read_revision=self.read_revision,epoch=self.epoch)
+
+    def observation_bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None):
+        """Validated source frames without financial/profile admission.
+
+        Only the selected occurrence's bounded asks are hydrated. Optional
+        benchmark construction is decoration after original-price validation.
+        It cannot remove an otherwise admitted source frame.
+        """
+        from app.dashboard.current_normalized import catalog_from_normalized
+        from app.dashboard.current_state import unavailable
+        from app.dashboard.current_contract import drain, serialize_steps
+        from app.comparison.estimated_policy import DEFAULT_POLICY
+        from app.comparison.combined_inputs import _benchmark
+        found=self.catalog_bundles()
+        if game is not None:found=[choose(found,game)]
+        if selected is not None:found=[b for b in found if list(selected) in b['members']]
+        out=[]
+        for source in found:
+            key=(source['game_key'],benchmark_venue)
+            if key not in self._observation_bundles:
+                rows=source['records']
+                if self.store.db is not None and any('depth' not in r['quote'] for r in rows):
+                    from .current_rows import CurrentRowStore
+                    rows=CurrentRowStore(self.store.db).hydrate_records(rows,resource_guard=self.resource_guard)
+                executions=_observation_records(rows)
+                raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
+                state=catalog_from_normalized(raw,executions,include_profiles=False,source_rules={},selected_applicability={})
+                # Reuse the existing fact validator and supported native-price
+                # conversions without invoking its financial owners.
+                state=drain(serialize_steps(state,prices_only=True,estimate_policy=DEFAULT_POLICY))
+                state['comparison_profiles']={}
+                if self.store.db is not None:
+                    from .current_rows import contract_id
+                    from app.dashboard.comparison_board import entries
+                    # A book receipt can advance with an unchanged price.
+                    # Fetch its own clocks from this same selected SQL frame;
+                    # never relabel the retained quote clocks as book clocks.
+                    ids=[contract_id(record) for record in rows]
+                    books=self.store.db.execute('''SELECT c.id AS contract_id,b.source_at,b.received_at,b.revision,
+                        b.quantity_units,b.state,b.sync,b.sequence FROM current_contract c
+                        JOIN current_native_book b ON b.venue=c.venue AND b.event_id=c.event_id
+                            AND b.native_market_id=c.native_market_id WHERE c.id=ANY(%s)''',(ids,)).fetchall()
+                    by_contract={book['contract_id']:{k:v for k,v in book.items() if k!='contract_id'} for book in books}
+                    for _,_,q in entries(state):
+                        book=by_contract.get(contract_id(dict(quote=q)))
+                        if book is not None:q['observed_book']=book
+                benchmark_value=None;benchmark_originals=None;reason=None
+                try:benchmark_value,benchmark_originals=_benchmark(rows,state,benchmark_venue)
+                except (ValueError,KeyError,TypeError,ArithmeticError) as exc:reason=str(exc)[:160] or 'optional_benchmark_unavailable'
+                value=dict(source,as_of=self.at,state_inputs=state,records=rows,epoch=self.epoch,
+                    source_status=deepcopy(self.source_status),
+                    benchmark_venue=benchmark_venue,benchmark=benchmark_value,benchmark_reason=reason,
+                    benchmark_originals=benchmark_originals,envelope_ids=[],envelopes=[],
+                    representation='current typed source observations, exact native contracts and bounded asks; original source clocks retained')
+                self._observation_bundles[key]=value
+            out.append(self._observation_bundles[key])
+        return out
 
     def bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None, cache=True, occurrence_rows=None, _readiness_only=False):
         if _readiness_only and occurrence_rows is None:
@@ -114,7 +202,7 @@ class ReadContext:
         for rows in groups:
             if self.store.db is not None and any('depth' not in r['quote'] for r in rows):
                 from .current_rows import CurrentRowStore
-                rows=CurrentRowStore(self.store.db).hydrate_records(rows)
+                rows=CurrentRowStore(self.store.db).hydrate_records(rows,resource_guard=self.resource_guard)
             values=build([],at=self.at,benchmark_venue=benchmark_venue,prepared=dict(self.prepared,groups=[rows]),
                 registries=self.normalization_registries(),_current_guard=self.guard,_readiness_only=_readiness_only)
             for value in values:
@@ -129,8 +217,22 @@ class ReadContext:
 def context_identity(bundle, policy, context):
     value=dict(epoch=context.epoch,game_key=bundle['game_key'],dependency_revision=bundle['input_version'],policy_revision=policy.revision,engine_binding=context.engine)
     from app.dashboard.comparison_board import entries, freshness, quote_key
-    applicability=[(quote_key(q),freshness(q,bundle['state_inputs']['comparison_profiles'],event,stamp(context.at))['reasons']) for event,_,q in entries(bundle['state_inputs'])]
+    # Current SQL guards retain raw source identity. A local applicability
+    # review can change the normalized native contract without new ingress or
+    # different price/freshness; selected financial Details must bind it too.
+    applicability=[(quote_key(q),q.get('native_contract',{}).get('id'),
+        freshness(q,bundle['state_inputs']['comparison_profiles'],event,stamp(context.at))['reasons'])
+        for event,_,q in entries(bundle['state_inputs'])]
     return dict(context_id=hashed(dict(value,applicability=applicability)),**{k:v for k,v in value.items() if k!='game_key'})
+
+
+def observation_identity(bundle, context):
+    """Source-frame identity: no estimate policy, profile or model deadline."""
+    from app.dashboard.comparison_board import entries, freshness, quote_key, price
+    value=dict(epoch=context.epoch,game_key=bundle['game_key'],dependency_revision=bundle['input_version'],engine_binding=context.engine)
+    availability=[(quote_key(q),price(q)['observation_revision'],freshness(q,{},event,stamp(context.at),financial=False)['reasons'])
+                  for event,_,q in entries(bundle['state_inputs'])]
+    return dict(context_id=hashed(dict(value,availability=availability)),**{k:v for k,v in value.items() if k!='game_key'})
 
 
 def calculate_current(bundle,policy, *, context, details=False, selected_quote=None, selected_pair=None):
@@ -175,7 +277,13 @@ def catalog(bundles):
     games=[]
     for b in bundles:
         e=b['catalog_event'] if 'catalog_event' in b else b['state_inputs']['events'][0]
-        games.append(dict(game_key=b['game_key'],input_version=b['input_version'],title=e['title'],start_at=e['start_at'],participants=e['participants'],members=b['members'],scope='NFL/full_game/winner',matches=list({r['quote']['occurrence_match']['revision']:{k:deepcopy(r['quote']['occurrence_match'].get(k)) for k in ('revision','status','method','conflicts','occurrence_id')} for r in b['records']}.values()),native_alternatives=e.get('native_alternatives',0) if 'catalog_event' in b else sum(sum(len(qs) for qs in o.get('alternatives',{}).values()) for g in e['groups'] for o in g['outcomes'])))
+        league=b['records'][0]['event']['competition']
+        families=sorted({r['market_identity']['family'] for r in b['records']})
+        periods=sorted({r['market_identity']['period'] for r in b['records']})
+        games.append(dict(game_key=b['game_key'],input_version=b['input_version'],title=e['title'],start_at=e['start_at'],participants=e['participants'],members=b['members'],
+            league=league,sport=e.get('sport') or b['records'][0]['event'].get('sport'),families=families,periods=periods,
+            scope='/'.join([league,','.join(periods),','.join('winner' if f=='moneyline' else f for f in families)]),
+            matches=list({r['quote']['occurrence_match']['revision']:{k:deepcopy(r['quote']['occurrence_match'].get(k)) for k in ('revision','status','method','conflicts','occurrence_id')} for r in b['records']}.values()),native_alternatives=e.get('native_alternatives',0) if 'catalog_event' in b else sum(sum(len(qs) for qs in o.get('alternatives',{}).values()) for g in e['groups'] for o in g['outcomes'])))
     out=dict(version='predict-board-catalog-2',games=games,limits=dict(maximum_games=MAX_GAMES),provider_requests=0)
     if len(encoded(out))>2*1024*1024:raise ValueError('board_catalog_byte_capacity')
     return out

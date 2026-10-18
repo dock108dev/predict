@@ -25,7 +25,7 @@ function authoredAvailability(v) {
 }
 
 (async () => {
-  const { americanDecimal } = await import(asset('board-elements.js'));
+  const { americanDecimal, matchesGameSearch } = await import(asset('board-elements.js'));
   const { createComparisonSlate, crossVenue } = await import(asset('comparison-slate-views.js'));
   for (const [value, expected] of [['2','+100'],['2.3','+130'],['1.75','-133'],['197/87','+126'],['197/110','-126'],['2.005','+101'],['2.004999999999999999999999999999','+100'],['1.8','-125'],['3/2','-200'],['1','Unavailable'],[null,'Unavailable'],['2/0','Unavailable'],['1.99','-101']]) assert.equal(americanDecimal(value),expected,value);
   assert(crossVenue({legs:[{venue:'novig',source:{provider:'shared'}},{venue:'prophetx',source:{provider:'shared'}}]}));
@@ -73,7 +73,31 @@ function authoredAvailability(v) {
   const extra=copy(ev.boards[0].rows[0]);extra.quote_id+=':distinct';extra.selection.period_boundary+=':distinct';ev.boards[0].rows.push(extra);
   renderer.draw(ev,{view:'ev',filter:'all'});assert.equal(content.querySelectorAll('.slate-ev').length,ev.boards[0].rows.length);
   const missing=slate('odds');missing.boards[0].prices=[];missing.boards[0].benchmark.fair=[];missing.boards[0].benchmark.originals=[];
-  renderer.draw(missing,{view:'odds',filter:'all'});assert(content.textContent.includes('Fair unavailable'));assert.equal(content.querySelectorAll('.unavailable-price').length,8);
+  renderer.draw(missing,{view:'odds',filter:'all'});assert(content.textContent.includes('No retained prices for this market scope'));assert.equal(content.querySelectorAll('.slate-price-row').length,0,'an empty observation set cannot invent winner outcomes');
+  const searched=slate('odds'),first=searched.games[0];
+  Object.assign(first,{title:'CAR Panthers vs PHI Eagles',participants:[{id:'NFL:CAR',name:'Carolina Panthers'},{id:'NFL:PHI',name:'Philadelphia Eagles'}]});
+  const second={...copy(first),game_key:first.game_key+':second',title:'Tampa Bay at Carolina'};
+  searched.games.push(second);searched.boards.push({...copy(searched.boards[0]),game_key:second.game_key});
+  assert(matchesGameSearch(first,' Carolina '));assert(matchesGameSearch(first,'NFL:CAR'));assert(matchesGameSearch(first,'eAGLes'));assert(!matchesGameSearch(first,'Denver'));
+  renderer.draw(searched,{view:'odds',filter:'all',search:'Carolina'});
+  assert.equal(content.querySelectorAll('.slate-odds').length,2,'full participant names match abbreviated game titles');
+  assert(content.querySelector('.slate-summary').textContent.includes('2 games shown'));
+  // Financial readiness and optional reference rendering cannot suppress a source fact.
+  const observed=slate('odds'),b=observed.boards[0],q=b.prices[0];
+  b.rows=[];b.benchmark=null;b.estimate_availability={state:'unavailable',reason_codes:['calculation_failed']};
+  q.source_state='available';q.source_health={state:'available',reason:'Original book received'};q.freshness={...q.freshness,status:'current'};
+  q.observed_depth={available:true,levels:[{price:'0.43',quantity:'12.5'},{price:'0.44',quantity:'27'}],quantity_units:'contracts',price_units:'usd_per_contract',total_levels:2,truncated:false,source_at:q.times.source_at,received_at:q.times.received_at};
+  q.gross_comparison={available:true,value:'0.5',unit:'cents',meaning:'Same predicate and period; higher gross acquisition price'};
+  const before=JSON.stringify(observed);renderer.draw(observed,{view:'odds',filter:'all'});
+  assert(content.textContent.includes('Estimates unavailable'));
+  assert(content.querySelector('.estimate-reasons').textContent.includes('calculation_failed'));
+  assert(content.textContent.includes('Current price · Source available'));
+  assert(content.textContent.includes('Observed 12.5 contracts at 0.43 usd per contract'));
+  assert(content.textContent.includes('Gross difference +0.5 cents'));
+  const preserved=content.querySelectorAll('button').find(n=>n.dataset.key===b.game_key+':'+q.quote_id);assert(preserved);preserved.onclick();assert.equal(originals.at(-1).q,q);
+  assert.equal(JSON.stringify(observed),before,'observation presentation cannot rewrite source or estimate clocks');
+  q.observed_depth=null;q.freshness.status='historical';q.source_health.state='stopped';renderer.draw(observed,{view:'odds',filter:'all'});
+  assert(content.textContent.includes('Last-known price · Source stopped'));assert(content.textContent.includes('Observed depth unknown'));
   const evidence=process.env.PREDICT_RETAINED_RESPONSES;
   if(evidence){
     const read=name=>JSON.parse(fs.readFileSync(path.join(evidence,name)));

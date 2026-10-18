@@ -107,7 +107,8 @@
       "enum": [
         "complete",
         "pending",
-        "stopped"
+        "stopped",
+        "unavailable"
       ]
     },
     "status": {
@@ -120,7 +121,7 @@
     },
     "prices": {
       "type": "array",
-      "maxItems": 64,
+      "maxItems": 128,
       "items": {
         "type": "object",
         "required": [
@@ -199,13 +200,36 @@
                 "maxItems": 64
               }
             }
+          },
+          "observation_display": {
+            "$ref": "#/$defs/observationDisplay"
+          },
+          "gross_comparison": {
+            "$ref": "#/$defs/grossComparison"
+          },
+          "captured_source_state": {
+            "type": "string"
+          },
+          "captured_source_health": {
+            "type": "object"
+          },
+          "native_contract_summary": {"type": "object"},
+          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
+          "market": {"type": "object"},
+          "event": {"type": "object"},
+          "current_comparison": {
+            "$ref": "#/$defs/grossComparison"
           }
         }
       }
     },
+    "comparison_input_encoding": {"const": "same-board-price-refs-1"},
+    "native_wordings": {"type": "array", "maxItems": 1024},
     "rows": {
       "type": "array",
-      "maxItems": 64
+      "maxItems": 128,
+      "description": "Odds uses a compact reference index into prices; financial views retain full calculation rows.",
+      "items": {"type": "object"}
     },
     "empty_reason": {
       "type": [
@@ -226,7 +250,6 @@
         "context_id",
         "epoch",
         "dependency_revision",
-        "policy_revision",
         "engine_binding"
       ],
       "properties": {
@@ -390,6 +413,80 @@
         "string",
         "null"
       ]
+    },
+    "sizing_scope": {
+      "type": "string"
+    },
+    "economic_revision": {
+      "type": "string"
+    },
+    "background_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64
+    },
+    "observation_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64
+    },
+    "calculation_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64
+    },
+    "collection": {
+      "type": "object",
+      "required": [
+        "healthy",
+        "active",
+        "stopped",
+        "sources"
+      ]
+    },
+    "estimate_availability": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason_codes"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "evaluated",
+            "partial",
+            "unavailable",
+            "last_known"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 128
+        },
+        "calculated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparison_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64
     }
   },
   "additionalProperties": false,
@@ -483,6 +580,25 @@
                       "maxItems": 64
                     }
                   }
+                },
+                "observation_display": {
+                  "$ref": "#/$defs/observationDisplay"
+                },
+                "gross_comparison": {
+                  "$ref": "#/$defs/grossComparison"
+                },
+                "captured_source_state": {
+                  "type": "string"
+                },
+                "captured_source_health": {
+                  "type": "object"
+                },
+                "native_contract_summary": {"type": "object"},
+          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
+          "market": {"type": "object"},
+          "event": {"type": "object"},
+          "current_comparison": {
+                  "$ref": "#/$defs/grossComparison"
                 }
               }
             }
@@ -581,6 +697,25 @@
                           "maxItems": 64
                         }
                       }
+                    },
+                    "observation_display": {
+                      "$ref": "#/$defs/observationDisplay"
+                    },
+                    "gross_comparison": {
+                      "$ref": "#/$defs/grossComparison"
+                    },
+                    "captured_source_state": {
+                      "type": "string"
+                    },
+                    "captured_source_health": {
+                      "type": "object"
+                    },
+                    "native_contract_summary": {"type": "object"},
+          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
+          "market": {"type": "object"},
+          "event": {"type": "object"},
+          "current_comparison": {
+                      "$ref": "#/$defs/grossComparison"
                     }
                   }
                 },
@@ -1678,6 +1813,25 @@
                                     "maxItems": 64
                                   }
                                 }
+                              },
+                              "observation_display": {
+                                "$ref": "#/$defs/observationDisplay"
+                              },
+                              "gross_comparison": {
+                                "$ref": "#/$defs/grossComparison"
+                              },
+                              "captured_source_state": {
+                                "type": "string"
+                              },
+                              "captured_source_health": {
+                                "type": "object"
+                              },
+                              "native_contract_summary": {"type": "object"},
+          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
+          "market": {"type": "object"},
+          "event": {"type": "object"},
+          "current_comparison": {
+                                "$ref": "#/$defs/grossComparison"
                               }
                             }
                           },
@@ -1730,5 +1884,293 @@
         }
       }
     }
-  ]
+  ],
+  "$defs": {
+    "oddsRowReference": {
+      "type": "object", "required": ["quote_id", "quote_revision", "price_ref", "venue", "selection", "market"],
+      "properties": {
+        "quote_id": {"type": "string", "maxLength": 256},
+        "quote_revision": {"type": ["string", "integer"]},
+        "price_ref": {"type": "string", "maxLength": 256},
+        "venue": {"type": "string"},
+        "selection": {"type": "object"},
+        "market": {"type": "object"}
+      }, "additionalProperties": false
+    },
+    "sameOutcome": {
+      "type": "object", "required": ["supported", "key", "reason", "missing_fields"],
+      "properties": {
+        "supported": {"type": "boolean"},
+        "key": {"type": ["array", "null"]},
+        "reason": {"type": ["string", "null"]},
+        "missing_fields": {"type": "array", "items": {"type": "string"}, "maxItems": 32}
+      },
+      "additionalProperties": false
+    },
+    "observationDisplay": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason_codes",
+        "source_reason_codes",
+        "publication_reason_codes",
+        "read_at",
+        "source_age_seconds",
+        "received_age_seconds",
+        "current_until"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "current",
+            "pending",
+            "last_known",
+            "unknown"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "source_reason_codes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "publication_reason_codes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "read_at": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "source_age_seconds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "received_age_seconds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "current_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparisonInput": {
+      "type": "object",
+      "required": [
+        "quote_id",
+        "quote_revision",
+        "venue",
+        "native_side",
+        "selection",
+        "original",
+        "times"
+      ],
+      "properties": {
+        "quote_id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "quote_revision": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "venue": {
+          "type": "string"
+        },
+        "native_side": {
+          "type": "string"
+        },
+        "selection": {
+          "type": "object"
+        },
+        "original": {
+          "type": "object"
+        },
+        "times": {
+          "type": "object"
+        },
+        "source_state": {
+          "type": "string"
+        },
+        "source_health": {
+          "type": "object"
+        },
+        "captured_source_state": {
+          "type": "string"
+        },
+        "captured_source_health": {
+          "type": "object"
+        },
+        "freshness_policy": {
+          "type": "object"
+        },
+        "event": {
+          "type": "object"
+        },
+        "freshness": {
+          "type": "object"
+        },
+        "observation_display": {
+          "$ref": "#/$defs/observationDisplay"
+        },
+        "source": {
+          "type": "object"
+        },
+        "same_outcome": {"$ref": "#/$defs/sameOutcome"},
+        "native_contract_summary": {"type": "object", "description": "Captured native wording, original predicate and explicit equality/scoring facts; id points to the complete locally retained contract evidence."},
+        "market": {"type": "object"},
+        "native_contract_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    },
+    "grossComparison": {
+      "type": "object",
+      "required": [
+        "available",
+        "value",
+        "unit",
+        "exact",
+        "comparison_quote_id",
+        "inputs",
+        "meaning",
+        "reason"
+      ],
+      "properties": {
+        "input_refs": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object", "required": ["quote_id", "quote_revision"], "properties": {"quote_id": {"type": "string"}, "quote_revision": {"type": ["string", "integer"]}}, "additionalProperties": false}},
+        "available": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "const": "cents"
+        },
+        "exact": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "comparison_quote_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "comparison_venue": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/comparisonInput"
+          }
+        },
+        "meaning": {
+          "type": "string"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_value": {
+          "type": "string"
+        },
+        "display_status": {
+          "enum": [
+            "current",
+            "pending",
+            "last_known",
+            "unknown",
+            "unavailable"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "read_at": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "source_time_skew_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "metric": {
+          "enum": [
+            "lowest_current",
+            "lowest_observed"
+          ]
+        },
+        "selection_valid_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "missing_fields": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 128
+          }
+        },
+        "reason_code": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

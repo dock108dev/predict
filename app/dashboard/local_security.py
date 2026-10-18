@@ -98,3 +98,13 @@ async def read_json(request, *, max_size=None):
     except (ValueError, RecursionError):
         # Parser messages must not echo input fields, contents or encoding bytes.
         raise PublicRequestError('Invalid JSON body; use unique fields and finite values') from None
+
+
+def public_reason(error, *, allowed=(), fallback, operation, logger):
+    """Expose only exact authored reason codes; never trust message shape/prefix."""
+    reason = str(error)
+    if type(error) is ValueError and reason in allowed:
+        return reason
+    from app.diagnostics import failure
+    failure(logger, operation, error)
+    return fallback

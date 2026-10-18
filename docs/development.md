@@ -12,6 +12,50 @@ requested. Use disposable test fixtures/databases in place. Older isolated
 closeouts are historical evidence, not a requirement to defer local integration.
 Keep credentials, settings and account/quota/hold state intact.
 
+## Ordinary app and background data
+
+```sh
+scripts/opportunity-board start
+scripts/opportunity-board status
+scripts/opportunity-board stop --role app
+scripts/opportunity-board start --role app
+scripts/opportunity-board status --role data
+scripts/opportunity-board stop --role data
+scripts/opportunity-board start --role data
+```
+
+The default role is both. App-only stop/restart leaves acquisition and shared
+calculations running. Stopping data ends its process; Admin global/source Stop
+is an acknowledged acquisition control with a persistent Stop latch. Starting a
+data process preserves explicit pauses and unresolved accounting; it does not
+clear holds or force catch-up. Use existing guarded Admin recovery only with its
+required evidence. [Runtime contract](data-app-runtime-contract.md).
+
+Focused separation SQL and the small authored working loop use disposable storage:
+
+```sh
+PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --da-separation --report-dir test-results/da-separation/sql
+```
+
+This lane excludes the legacy SQL manifest and deferred SC06 timing campaigns.
+Its fixture sources make zero provider requests. It also verifies independent
+observation publication under missing/expired/malformed finance, bounded depth,
+source health versus estimate validity, per-game reuse and database-only Inputs. Ordinary authorized source
+activity is attributed separately.
+
+For Odds freshness and comparison presentation, use authored mixed-state cases
+and the affected latest-board SQL lane. Check both captured inputs against their
+existing freshness policies, pending publication separately from source expiry,
+and exact comparator identity/arithmetic after aging. Verify scoped observation
+counts and explicit missing boards across filters/pages. In the ordinary app,
+inspect one available gross difference in desktop and 390px Details and retain
+the returned frame with its screenshots. A natural price change is optional;
+record unchanged prices and observed transitions honestly. Age text and local
+filters must not request providers or whole-slate calculations. Rebuild assets
+before restarting the affected app/data owner; verify loaded source and served
+asset identities, then leave ordinary operation available. Protected-record
+fingerprints, original holds, quota state and resource guards must still match.
+
 ## Install tools
 
 ```sh
@@ -47,10 +91,13 @@ git diff --check
 | Asset delivery and calculation cancellation | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
 | Settings, game selection and polling | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
 | Current board contracts and selected Details | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
+| Captured multi-page reads and recovery | `test_consistent_slate_reads_sql.py` in the disposable SQL lane, `test_consistent_slate_reads.cjs` |
 | Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, `test_comparison_cashflows.py` |
 | Event matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, `test_comparison_event_links.py` |
 | SQL ingress, expiry and retired routes | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
 | Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
+| Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`; `test_sc02_sql.py` through the disposable SQL harness |
+| Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
 | CI reporting failures | `test_ci_reporting.py` |
 
 Run resource-sensitive Python modules in fresh processes: some deliberately
@@ -151,8 +198,9 @@ page after rebuilding assets; restart the app after backend or credential change
 ## Maintenance boundaries
 
 [Architecture](architecture.md) describes module ownership. Ordinary ingress uses
-`CurrentRowStore`; board and slate reads calculate transiently from current SQL
-rows. Details binds to the clicked input context and requires a new selection
+`CurrentRowStore`; background owners calculate affected shared results and the app
+reads latest database publications. Only selected Details/tickets calculate amounts
+on request. Details binds to the clicked input context and requires a new selection
 when those inputs change. Older archive readers serve separate retained-research
 interfaces. See the [storage guide](current-row-storage.md) and
 [board contract](comparison-board-api-contract.md).

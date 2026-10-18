@@ -26,6 +26,24 @@ def contract(native, period='full_game', wording='Authored rule'):
 
 
 class EstimateTemplateTests(unittest.TestCase):
+    def test_current_same_outcome_attachment_is_hash_bound_without_admitting_unknown_fields(self):
+        from app.comparison.estimated_templates import _contract
+        from tests.test_sc01_readiness import authored
+        quote,_,_,group,_=authored()
+        value=quote['native_contract'];before=deepcopy(value)
+        native=[quote['venue'],*[quote['source'][key] for key in
+            ('native_event_id','native_market_id','native_outcome_id','native_side')]]
+        self.assertIn('same_outcome',value)
+        self.assertEqual(_contract(value,native),value)
+        changed=deepcopy(value)
+        changed['same_outcome']['predicate']['threshold']='1'
+        with self.assertRaisesRegex(ValueError,'Exact versioned native contract'):_contract(changed,native)
+        unknown=deepcopy(value);unknown['future_unreviewed_fact']={}
+        unknown['id']='native-contract:'+digest({k:v for k,v in unknown.items() if k!='id'})
+        with self.assertRaisesRegex(ValueError,'Exact versioned native contract'):_contract(unknown,native)
+        self.assertEqual(value,before)
+        self.assertEqual(value['scope']['period'],group['period'])
+
     def test_fee_engine_rounding_native_units_and_null_actuals(self):
         # Independently known one-fill quadratic fee: 100 dollar-face at .5.
         for venue, quantity, expected in [('novig', '10000', '0.75000'),

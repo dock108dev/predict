@@ -39,7 +39,11 @@ scripts/opportunity-board stop
 ```
 
 Open the printed loopback address, normally [localhost:8783](http://127.0.0.1:8783/).
-The launcher starts a dedicated socket-only PostgreSQL cluster. There is no cloud
+The launcher starts a dedicated socket-only PostgreSQL cluster plus independent
+background data and app processes. Add `--role app` or `--role data` to any command
+to manage them separately. Closing/restarting the app leaves collection and shared
+calculations running. [Lifecycle and result contract](docs/data-app-runtime-contract.md).
+There is no cloud
 service or automatic restart. Current prices keep their original clocks; a recent
 calculation does not make an old price fresh. Fee and payout models have bounded
 applicability, so missing or expired models can withhold estimates.

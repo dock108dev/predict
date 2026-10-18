@@ -34,3 +34,21 @@ targetRules = ["generic-api-key"]
 paths = ['''(?:^|/)tests/test_comparison_occurrence_continuation\.py$''']
 regexTarget = "match"
 regexes = ['''(?:the_odds_)?api\\?["']\s*,\s*\\?["']21b26266f3d78af02eb672e606275d95''']
+
+
+# Reviewed 2026-10-17; same 2027-01-14 review deadline above.
+[[allowlists]]
+description = "Exact recomputed scanner scope digests in named authored examples; real key fields in these files remain scanned"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)(?:docs/examples/scanner-readiness-1/(?:waiting|authoritative-evaluated-zero|partial-with-blocked-scope|ready-missing-ev-reference)\.json|docs/examples/scanner-1/(?:snapshot|changed|unchanged|resync|stopped)\.json|tests/fixtures/sc04/workload\.json)$''']
+regexTarget = "match"
+regexes = ['''key"?\s*:\s*"(?:293fa8caabbe6d12038b95ea3dceb3572685adc622f7419d1f438e29b278bb65|61cacbe275877656071a2280f93e0df3c1e9a319e67e12e35a8419b5d2c2c29c)(?:"|$)''']
+
+[[allowlists]]
+description = "Exact public hockey-team UUID in one retained native market review; not an account credential"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)app/reviews/native/retained-1694c5363a2386593b8c44f1-v1\.json$''']
+regexTarget = "match"
+regexes = ['''hockey_team"?\s*:\s*"f61f9daa-407b-4c46-96e8-feee19cd6f51(?:"|$)''']

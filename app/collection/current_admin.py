@@ -40,7 +40,7 @@ def advice(category, failure):
 
 
 def issue(service, venue, category, failure):
-    from .current_policy import aggregate_scope
+    from .current_policy import aggregate_scope, native_scope, native_markets
     venue=venue if venue in (*VENUES,'the_odds_api','service') else 'service'
     category=category if category in CATEGORIES else 'local_defect'
     failure=code(failure)
@@ -55,7 +55,8 @@ def issue(service, venue, category, failure):
         endpoint_class=context.get('endpoint_class', 'discovery_or_book' if venue in ('kalshi','polymarket_us') else 'service_or_quota'),
         runtime_id=service.runtime_id,attempt_id=context.get('attempt_id',service.runtime_id),candidate_digest=service.digest,
         first_at=at,last_at=at,occurrences=1,category=category,kind=kind,code=failure,
-        scope=dict(sports=[context['sport']] if context.get('sport') else aggregate_scope(service.config) if provider=='the_odds_api' else service.config['sports'],families=service.config['families']),
+        scope=dict(sports=[context['sport']] if context.get('sport') else aggregate_scope(service.config) if provider=='the_odds_api' else native_scope(service.config),
+            families=service.config['families'] if provider=='the_odds_api' else native_markets(service.config)),
         impact=impact,healthy_independent_paths=[v for v in VENUES if v not in affected and service.states[v]['state']=='available'],
         credits=0 if provider in ('kalshi','polymarket_us') else context.get('charged_credits'),
         reserved_credits=0 if provider in ('kalshi','polymarket_us') else None if q is None else q.get('reserved'),retry_count=getattr(worker,'metrics',{}).get('retries',0),
@@ -81,6 +82,19 @@ def project(service, raw):
     if hasattr(service,'coverage'):
         exclusions=[dict(sport=e.get('sport'),venue=e.get('source'),reason=e.get('reason_code')) for e in getattr(service.sink,'exclusions',[])]
         raw['coverage']=service.coverage.snapshot(current_rows(index),exclusions=exclusions)
+        # Compact inventory types survive the cross-process runtime status even
+        # when an encountered native contract cannot be admitted as a price.
+        encountered=set()
+        for source,catalog in getattr(getattr(service.sink,'reducer',None),'inventory',{}).items():
+            events={e['id']:e for e in catalog.get('events',[])}
+            for market in catalog.get('markets',[]):
+                event=events.get(market.get('event_id'),{})
+                sport=event.get('competition',event.get('sport'))
+                family=market.get('market_type') or market.get('family') or 'unknown'
+                period=market.get('period') or 'unknown'
+                if sport in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL') and source in service.coverage.configured:
+                    encountered.add((sport,source,str(family)[:100],str(period)[:100]))
+        raw['coverage']['encountered_types']=[dict(league=s,source=v,family=f,period=p) for s,v,f,p in sorted(encountered)[:256]]
     panels=[]
     for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),('the_odds_api',['novig','prophetx'])):
         worker=service.workers.get(provider)

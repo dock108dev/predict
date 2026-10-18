@@ -1,0 +1,251 @@
+{
+  "version": "predict-native-source-type-rules-1",
+  "rules": [
+    {
+      "provider": "kalshi",
+      "native_type": "KXMLBGAME",
+      "league": "MLB",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included",
+        "extra_innings": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-baseball-win.pdf",
+        "sha256": "46b02443153f4692acb3bac3d3aedabe93e837b08c80323013c8dce117ebb6e7",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLGAMEWIN.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise. Extra innings scoring counts toward the final official result."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXMLBSPREAD",
+      "league": "MLB",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included",
+        "extra_innings": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-baseball-spread.pdf",
+        "sha256": "9060020bb71acafacf41a3a1f2e0923904d560cfdba059583dc0219e02d6c4e8",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise. Extra innings scoring counts toward the final official result."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXMLBTOTAL",
+      "league": "MLB",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included",
+        "extra_innings": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-baseball-total.pdf",
+        "sha256": "772c802f40ad2fbd3f9527cc915130c2315b111ff3e942c2ced9ab9604fb3fe5",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise. Extra innings scoring counts toward the final official result."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNBAGAME",
+      "league": "NBA",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNBASPREAD",
+      "league": "NBA",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNBATOTAL",
+      "league": "NBA",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAMBGAME",
+      "league": "NCAAB",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAMBSPREAD",
+      "league": "NCAAB",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAMBTOTAL",
+      "league": "NCAAB",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAFGAME",
+      "league": "NCAAF",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-football-win.pdf",
+        "sha256": "19578b71cd63da63cc2894c60542ef06bb5de56b9366add56f07cee645cfca4b",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAFSPREAD",
+      "league": "NCAAF",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-football-spread.pdf",
+        "sha256": "1daaea87a853adcb485bdb80fb8bd5c5fa7c831d8e237f7446bc16ea43705f5a",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNCAAFTOTAL",
+      "league": "NCAAF",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-football-total.pdf",
+        "sha256": "84be6b2cc3a16e1c3997824a6ec1ebac878a76f98609318cc223e67a6ace1572",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNFLGAME",
+      "league": "NFL",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/kalshi-football.pdf",
+        "sha256": "57b57e1ad96466e413e9274c0d2598225997e35d71262eb63c4ae13858b81d38",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+        "clause": "All overtime periods are included unless specified otherwise; market-specific exceptions take precedence.",
+        "pointer_evidence": {
+          "path": "app/fixtures/native-scoring-scope/selected-series-fee-and-ot-resolution.json",
+          "sha256": "b598ae3d1ea50dc92b53b348ad6f490204ce663d5f991235cf39a1e206d26028"
+        }
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNFLSPREAD",
+      "league": "NFL",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-football-spread.pdf",
+        "sha256": "1daaea87a853adcb485bdb80fb8bd5c5fa7c831d8e237f7446bc16ea43705f5a",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNFLTOTAL",
+      "league": "NFL",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-football-total.pdf",
+        "sha256": "84be6b2cc3a16e1c3997824a6ec1ebac878a76f98609318cc223e67a6ace1572",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNHLGAME",
+      "league": "NHL",
+      "family": "moneyline",
+      "period": "full_game",
+      "defaults": {},
+      "evidence": null
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNHLSPREAD",
+      "league": "NHL",
+      "family": "spread",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-hockey-spread.pdf",
+        "sha256": "c913519020c0a0eca2a6cd02ef376619ab47f3363c32e9f861ffe3975c8469a2",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYSPREADS.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    },
+    {
+      "provider": "kalshi",
+      "native_type": "KXNHLTOTAL",
+      "league": "NHL",
+      "family": "total",
+      "period": "full_game",
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-hockey-total.pdf",
+        "sha256": "825c776e0cc3648cb90cbb78a45528b880e623776ebcf8d9b553caad0f21feaa",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYTOTALS.pdf",
+        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+      }
+    }
+  ]
+}

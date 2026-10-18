@@ -70,7 +70,17 @@ class OccurrenceResolver:
         if raw.get('rescheduledFromGameId') not in (None,0,'0'):
             replacement = replacement or str(raw['rescheduledFromGameId'])
         conflict |= len(set(roles.values())) != 2
+        source_games = {str(fact['main_game_event_ticker']) for fact in e.get('observed_identity_facts', [])
+            if provider == 'kalshi' and fact.get('main_game_event_ticker')}
+        if provider == 'kalshi' and e.get('related_game_event_id'):
+            source_games.add(str(e['related_game_event_id']))
+        if len(source_games) > 1:
+            conflict = True
+        # Native spread/total series may use separate event IDs for the same
+        # provider game. Only an explicit source link establishes that alias.
+        source_game = next(iter(source_games)) if len(source_games) == 1 else s['native_event_id']
         return dict(key=(provider, s['native_event_id']), roles=roles,
+                    source_game=source_game,
                     league=e['competition'], season=e.get('season'), stage=e.get('stage'),
                     game_number=e.get('game_number',raw.get('gameNumber')), shared=shared,
                     original_start=e.get('original_start') or raw.get('originalStartTime'),
@@ -110,9 +120,17 @@ class OccurrenceResolver:
         if len(records) > 16000:
             raise ValueError('Occurrence record capacity')
         at = instant(clock)
-        facts = {}; conflicts = {}
+        facts = {}; conflicts = {}; source_local = set()
         for r in records:
             f = self._facts(r); k = f['key']
+            admission = r.get('comparison_source_metadata', {}).get('comparison_admission', {})
+            # A native price has a durable provider identity before its shared
+            # comparison context is known. Retain it without promoting a typed
+            # vendor ID or a remembered join into missing source context.
+            if k[0] in ('kalshi', 'polymarket_us') and (
+                    any(r['event'].get(field) in (None, '') for field in ('season', 'stage'))
+                    or admission.get('reason') == 'comparison_context_missing'):
+                source_local.add(k)
             if k in facts and digest({n:v for n,v in f.items() if n not in ('event', 'version', 'evidence')}) != digest({n:v for n,v in facts[k].items() if n not in ('event', 'version', 'evidence')}):
                 conflicts[k] = ['contradictory_source_metadata']
             facts[k] = f
@@ -133,6 +151,8 @@ class OccurrenceResolver:
         assigned = {}; methods = {}; intervals = {}; edge_ids = {}
         # Shared provider identifiers outrank reviewed edges; disagreements fail.
         for k, f in sorted(facts.items()):
+            if k in source_local:
+                continue
             edge, reason = self.links.resolve(*k, f['league'], f['roles']['home'], f['roles']['away'], at)
             shared = sorted(f['shared'].items())
             if shared:
@@ -159,8 +179,10 @@ class OccurrenceResolver:
                 conflicts.setdefault(k, []).append(reason)
         # Reconcile shared identifiers even if one member has a reviewed alias.
         for k, f in sorted(facts.items()):
+            if k in source_local:
+                continue
             peers = set().union(*(shared_index[(name, value)] for name, value in f['shared'].items()))
-            peers = sorted(peers - {k}, key=order.get)
+            peers = sorted(peers - {k} - source_local, key=order.get)
             if any(not self._consistent(f, facts[p]) for p in peers):
                 for p in [k, *peers]:conflicts.setdefault(p, []).append('shared_id_metadata_conflict')
             ids = {assigned[p] for p in [k, *peers] if p in edge_ids}
@@ -176,7 +198,11 @@ class OccurrenceResolver:
         # Mutual unique candidates only. This rejects repeated games and forks.
         candidates = {}
         for k, f in facts.items():
+            if k in source_local:
+                candidates[k] = []
+                continue
             possible = set(role_groups[(f['league'], frozenset(f['roles'].values()))])
+            possible.difference_update(source_local)
             for namespace, value in f['shared'].items():
                 # A different value in any common namespace necessarily fails
                 # _consistent. Missing namespaces remain candidates as before.
@@ -184,14 +210,15 @@ class OccurrenceResolver:
             candidates[k] = [p for p in sorted(possible, key=order.get)
                 if p[0] != k[0] and p not in conflicts and self._metadata(f, facts[p])]
         for k in sorted(facts):
-            if k in conflicts or k in assigned and methods[k]!='shared_provider_event':continue
+            if k in source_local or k in conflicts or k in assigned and methods[k]!='shared_provider_event':continue
             peers = candidates[k]
             if peers and all(candidates[p].count(k) == 1 and
-                             len({x for x in candidates[p] if x[0] == k[0]}) == 1 for p in peers):
+                             len({facts[x]['source_game'] for x in candidates[p] if x[0] == k[0]}) == 1 for p in peers):
                 # All candidates must also agree with one another and not be
                 # separate same-provider events or distinct strong identities.
                 ids = {assigned[p] for p in peers if p in assigned and methods[p] != 'shared_provider_event'}
-                if (len(ids) <= 1 and len({p[0] for p in peers}) == len(peers)
+                source_members = {(p[0],facts[p]['source_game']) for p in peers}
+                if (len(ids) <= 1 and len({p[0] for p in peers}) == len(source_members)
                         and all(p == q or self._metadata(facts[p],facts[q]) for p in peers for q in peers)):
                     oid = next(iter(ids)) if ids else 'metadata-game:' + digest(sorted([k,*peers]))
                     assigned[k] = oid; methods[k] = 'unique_metadata'
@@ -203,7 +230,7 @@ class OccurrenceResolver:
         # and role checks. They cannot overrule a contradictory stronger identity.
         if self.overrides:
             for k,f in facts.items():
-                if k in assigned or f['conflict']:continue
+                if k in source_local or k in assigned or f['conflict']:continue
                 edge, _ = self.overrides.resolve(*k,f['league'],f['roles']['home'],f['roles']['away'],at)
                 if edge:
                     assigned[k] = edge.occurrence_id; methods[k] = 'local_reviewed_override'
@@ -244,7 +271,7 @@ class OccurrenceResolver:
                 from .event_links import provider_key
                 original['market_identity']['event'] = provider_key(k[0],original['event'])
                 aggregate = k[0] == 'the_odds_api'
-                verified=aggregate or r['verified'] is True and not f['conflict']
+                verified=aggregate or r['verified'] is True and k not in source_local and not f['conflict']
                 original['event_scope'] = dict(policy='aggregate-provider-event-2' if aggregate else
                     'native-provider-event-1' if verified else 'native-event-unverified-2',
                     source=k[0] if aggregate else original['quote']['venue'],native_event_id=k[1])
@@ -262,7 +289,7 @@ class OccurrenceResolver:
                 for value in [original['selection'],*original.get('outcome_selections',[])]:
                     value['participant'] = mapping.get(value['participant'],value['participant'])
                 original['anchor_participant'] = mapping.get(original.get('anchor_participant'),original.get('anchor_participant'))
-                original['verified'] = True
+                original['verified'] = (original.get('comparison_source_metadata', {}).get('comparison_admission', {}).get('supported') is not False)
                 # Matching provenance has its own dependency revision. Schedule
                 # or peer membership changes do not reprice a native instrument.
                 original['orientation_evidence'].append(VERSION+':'+digest([oid,k]))

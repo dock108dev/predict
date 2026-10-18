@@ -50,6 +50,9 @@ class DatabaseIngressSink:
                         market=next((m for m in candidate.inventory.get(row['source'],{}).get('markets',[]) if m['id']==ref['market_id'] and m['event_id']==ref['event_id']),None)
                         if market is None or ref['venue']!=row['source'] or book['sync']!='synchronized' or book['state']=='unknown' or book['quantity_unit']!='contracts':raise ValueError('Unadmitted current book identity or units')
                         if {o['outcome_id'] for o in book['outcomes']}!={side['id'] for side in market['sides']}:raise ValueError('Incomplete current outcome set')
+                        if book.get('book_confirmation'):
+                            from .current_confirmation import validate
+                            validate(book['book_confirmation'],ref,book)
                         from app.dashboard.current_contract import bounded_decimal,stamp
                         stamp(book['raw']['received_at']);stamp(book['raw'].get('exchange_at'),True)
                         for outcome in book['outcomes']:
@@ -104,23 +107,24 @@ class DatabaseIngressSink:
 
 
 class DatabasePipeline:
-    """Current-row startup, expiry and Stop; finance belongs to request reads."""
+    """Current-row startup, expiry and Stop for the independent data owner."""
     def __init__(self,service):
         self.service=service;self.closed=False;self.task=None
         self.error=None;self.wake=asyncio.Event()
     async def start(self):
         from app.storage.current_rows import CurrentRowStore
-        from .current_policy import aggregate_scope
-        from uuid import uuid4
+        from .current_policy import aggregate_scope, native_scope, native_markets
         try:
             with connect() as db:
                 Store(db).migrate();rows=CurrentRowStore(db)
                 with db.transaction():
-                    # A reopened process cannot revive an earlier Details context.
-                    # This generation has no authority over source price clocks.
-                    db.execute('UPDATE current_row_epoch SET epoch=%s WHERE singleton=true',(str(uuid4()),))
+                    # Process restart reconciles committed current facts. Exact
+                    # runtime/result bindings invalidate old selection authority;
+                    # neither an app nor data restart resets the data epoch.
                     for venue in ('kalshi','polymarket_us','novig','prophetx','pinnacle'):
-                        rows.expire_out_of_scope(venue,self.service.config['sports'] if venue in ('kalshi','polymarket_us') else aggregate_scope(self.service.config),self.service.config['families'])
+                        native=venue in ('kalshi','polymarket_us')
+                        rows.expire_out_of_scope(venue,native_scope(self.service.config) if native else aggregate_scope(self.service.config),
+                            native_markets(self.service.config) if native else self.service.config['families'])
                     rows.expire()
             self.error=None
             self.task=asyncio.create_task(self.run_maintenance(),name='predict-current-expiry')

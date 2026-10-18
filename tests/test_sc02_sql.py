@@ -135,6 +135,22 @@ class SQL(IsolatedAsyncioTestCase):
             r=await client.get('/api/scanner');self.assertEqual((await r.json())['coverage']['state'],'stopped')
         finally:await client.close()
 
+    async def test_sql_probe_failure_rolls_back_only_measurement_savepoint(self):
+        seen=[];close=subscribe(seen.append)
+        try:
+            with self.connect() as db:
+                epoch=uuid4().hex
+                def broken_probe(connection):connection.execute('SELECT 1 / 0')
+                with patch('app.storage.scanner_publication.prepare',side_effect=broken_probe):
+                    with self.assertLogs('app.storage.scanner_publication',level='ERROR'):
+                        with transaction(db):
+                            db.execute('update current_row_epoch set epoch=%s where singleton=true',(epoch,))
+                self.assertEqual(db.execute('select epoch from current_row_epoch').fetchone()['epoch'],epoch)
+                self.assertEqual(seen,[])
+                with transaction(db):db.execute('SELECT 1')
+                self.assertEqual(len(seen),1)
+        finally:close()
+
     async def test_probe_capacity_and_measurement_failure_do_not_abort_ingress(self):
         from unittest.mock import MagicMock
         from app.storage.scanner_publication import current_revision

@@ -3,6 +3,7 @@
 An observation exists only for a top-level transaction actually committed by
 this process. Nested/foreign writers and unchanged pre-start rows stay unknown.
 """
+from app.diagnostics import failure
 from collections import OrderedDict
 from threading import RLock
 from time import perf_counter
@@ -40,7 +41,11 @@ def current_revision(db):
         raise ValueError('scanner_revision_probe_capacity')
     offers={r['contract_id']:r['revision'] for r in offer_rows}
     native={hashed([r['venue'],r['native_event_id'],r['native_market_id']]):r['revision'] for r in native_rows}
-    return dict(epoch=epoch,current_rows_revision=hashed([epoch,offers,native]))
+    events={r['id']:r['revision'] for r in db.execute('SELECT id,revision FROM current_event').fetchall()}
+    contracts={r['id']:r['revision'] for r in db.execute('SELECT id,revision FROM current_contract').fetchall()}
+    statuses={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
+    return dict(epoch=epoch,current_rows_revision=hashed([epoch,offers,native]),
+                facts_revision=hashed([events,contracts,statuses]))
 
 
 def committed(proof):
@@ -53,7 +58,8 @@ def committed(proof):
         listeners=tuple(_listeners)
     for callback in listeners:
         try:callback(observation)
-        except Exception:pass  # Measurement must never fail ingress after commit.
+        except Exception as exc:
+            failure(__name__, 'scanner_commit_listener', exc)
 
 
 def lookup(revision):
@@ -72,6 +78,11 @@ def transaction(db):
     with db.transaction():
         yield
         if top:
-            try:proof = prepare(db)
-            except Exception:proof = None  # Optional instrumentation cannot abort ingress.
+            try:
+                # A failed optional SQL probe must roll back its savepoint;
+                # catching alone leaves PostgreSQL's outer transaction aborted.
+                with db.transaction():proof = prepare(db)
+            except Exception as exc:
+                failure(__name__, 'scanner_commit_probe', exc)
+                proof = None
     if top:committed(proof)

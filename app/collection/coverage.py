@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from dataclasses import replace
 from hashlib import sha256
 import json
+import re
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -103,6 +104,24 @@ def traversal(pages, venue, field):
     """Validate a contiguous first traversal; retain usable prefix on failure."""
     accepted = []
     expected = '' if venue == 'kalshi' else 0
+    if pages and field=='events' and pages[0].get('current_listing_window'):
+        # Current workers retain one bounded page per recurring cell. A valid
+        # local continuation marker identifies that page window, without claiming
+        # that earlier pages are retained or that the whole listing is complete.
+        page=pages[0];marker=page['current_listing_window'];q=params(page)
+        base={k:v for k,v in q.items() if k not in ('cursor','offset','limit')}
+        position=q.get('cursor','') if venue=='kalshi' else q.get('offset',0)
+        valid=(isinstance(marker,dict) and set(marker)=={'policy','position','base_query_sha256','previous_receipt_sha256'}
+            and marker['policy']=='current-recurring-page-1' and marker['position']==position
+            and page.get('v1_comparison_policy')=='manual-comparison-2'
+            and page.get('native_binding_revision')=='live-native-binding-2'
+            and marker['base_query_sha256']==sha256(json.dumps(base,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            and isinstance(marker['previous_receipt_sha256'],str) and re.fullmatch('[0-9a-f]{64}',marker['previous_receipt_sha256']) is not None
+            and (isinstance(position,str) and bool(position) and len(position)<=4096 if venue=='kalshi' else type(position) is int and position>0))
+        if not valid:
+            return [],dict(state='failed',reason='invalid_current_listing_window',retained_pages=len(pages),used_pages=0,
+                unused_pages=len(pages),next_position=None,query=q)
+        expected=position
     seen = set()
     row_ids=set()
     state, reason = 'unknown', 'no retained pages'
@@ -163,6 +182,10 @@ def traversal(pages, venue, field):
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             state, reason = 'failed', str(exc)
             break
+    window=bool(pages and pages[0].get('current_listing_window'))
+    if window and state=='exhausted':
+        state,reason='bounded/truncated','terminal current page window; preceding listing pages are not retained'
+        expected=None
     return accepted, dict(state=state, reason=reason, retained_pages=len(pages),
                           used_pages=len(accepted), unused_pages=len(pages)-len(accepted),
                           next_position=expected if state != 'exhausted' else None,
@@ -276,7 +299,7 @@ def event_record(venue, page, body, native, index, as_of, linked_milestones=()):
         if page.get('v1_comparison_policy')=='manual-comparison-2':
             # Keep only identity fields of exact linked milestones, never the
             # injury/lineup payload, and never inherit unrelated game records.
-            record['observed_identity_facts']=[dict(id=m.get('id'),source_id=m.get('source_id'),start_date=m.get('start_date'),**{k:v for k,v in m.get('details',{}).items() if k in ('season','main_game_event_ticker','home_team_id','away_team_id','game_number','original_start','schedule_status','status')}) for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[])]
+            record['observed_identity_facts']=[dict(id=m.get('id'),source_id=m.get('source_id'),source_provider=m.get('source_provider'),start_date=m.get('start_date'),**{k:v for k,v in m.get('details',{}).items() if k in ('season','season_type','season_year','main_game_event_ticker','home_team_id','away_team_id','game_number','original_start','schedule_status','status')}) for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[])]
 
         if page.get('v1_comparison_policy')in ('manual-comparison-1','manual-comparison-2') and venue=='kalshi':
             links={m.get('details',{}).get('main_game_event_ticker') for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[]) and m.get('details',{}).get('main_game_event_ticker') in m.get('related_event_tickers',[])}
@@ -323,7 +346,8 @@ def market_record(venue, page, body, native, eid, index, series_id='KXNFLGAME'):
         market = kalshi.parse_market(r, native, eid, series_id, typed_scope=typed_scope) if venue == 'kalshi' else polymarket_us.parse_market(r, native, eid)
         record.update(market_type=market.market_type.value, status=market.state.value)
         us_types=polymarket_us.LIVE_FULL_GAME_TYPES if page.get('native_binding_revision') in ('live-native-binding-1','live-native-binding-2') else polymarket_us.FULL_GAME_TYPES
-        full = (venue == 'kalshi' and series_id in kalshi.SPORT_SERIES) or native.get('sportsMarketType') in set(us_types.values())
+        us_full=polymarket_us.full_game_family(native.get('sportsMarketType'),live_bindings=us_types is polymarket_us.LIVE_FULL_GAME_TYPES)
+        full = (venue == 'kalshi' and series_id in kalshi.SPORT_SERIES) or us_full is not None
         record['period'] = market.period if typed_scope else 'full_game' if full else 'unknown_or_other'
         if typed_scope:
             binding = series_binding(series_id)
@@ -340,7 +364,7 @@ def market_record(venue, page, body, native, eid, index, series_id='KXNFLGAME'):
                         record['exclusion']='native_scope_effective_descriptor_facts_missing'
             if market.state.value != 'active' or native.get('closed') is True or native.get('active') is False:
                 record['exclusion'] = 'inactive_or_unknown_market_state'
-        elif market.market_type.value != 'moneyline' or not full:
+        elif market.market_type.value not in ('moneyline','spread','total') or not full:
             record['exclusion'] = 'unsupported_market_type_or_period'
         elif market.state.value != 'active' or native.get('closed') is True or native.get('active') is False:
             record['exclusion'] = 'inactive_or_unknown_market_state'
@@ -396,19 +420,80 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
     # Retain both sources. Query exhaustion cannot erase an observed listing.
     independent_games = {str(params(p).get('gameId')) for p, _, _ in market_pages
                          if venue == 'polymarket_us' and params(p).get('gameId')}
+    # Subscription slugs identify a socket channel. Selection cannot erase an
+    # observed collision on another event/line in these same bounded receipts.
+    observed_slugs=defaultdict(set)
+    observed_parents=defaultdict(set)
+    if venue=='polymarket_us' and current_selection is not None:
+        for _,_,data in event_pages:
+            for native in data['events']:
+                for market in native.get('markets') or []:
+                    if isinstance(market,dict) and market.get('slug'):
+                        observed_slugs[market['slug']].add(str(market.get('id')))
+                    if isinstance(market,dict):
+                        observed_parents[str(market.get('id'))].add(str(native.get('id')))
+        for _,_,data in market_pages:
+            for market in data['markets']:
+                if market.get('slug'):observed_slugs[market['slug']].add(str(market.get('id')))
     for page, body, data in event_pages:
         for native in data['events']:
             row_index += 1
-            if selected_events is not None and str(native.get('event_ticker' if venue=='kalshi' else 'id')) not in selected_events:continue
+            nested=venue=='polymarket_us' or params(page).get('with_nested_markets') in (True,'true')
+            embedded=native.get('markets')
+            if selected_events is not None and str(native.get('event_ticker' if venue=='kalshi' else 'id')) not in selected_events:
+                if nested and isinstance(embedded,list):row_index+=len(embedded)
+                continue
             proof = provenance(page,row_index,body)
             record = event_record(venue,page,body,native,row_index,as_of,linked_milestones if page.get('v1_coverage_policy') else ())
+            if record.get('scheduled_start'):
+                # Keep the schedule-bearing response clock, never a market/book
+                # receipt. Linked milestone pages can differ from event pages.
+                from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
+                proofs=[];authorities=[];starts=[]
+                if venue=='kalshi':
+                    scope=record.get('native_scope_binding') or {}
+                    milestone_type=scope.get('milestone_type') or ('basketball_game'
+                        if record.get('competition')=='NCAAB' and scope.get('period') in ('full_game','first_half') else None)
+                    # Mirror parse_event's exact input: linked milestone pages
+                    # when explicitly supplied, otherwise this event response.
+                    # Sibling listing/market pages are not its provenance.
+                    schedule_pages=([p for p in pages if p['path']=='/trade-api/v2/milestones'
+                        and p.get('v1_coverage_policy') and p.get('usable_metadata')]
+                        if page.get('v1_coverage_policy') and linked_milestones else [page])
+                    for schedule_page in schedule_pages:
+                        if schedule_page['source']!=venue:continue
+                        schedule_body,schedule_data=decode_page(schedule_page)
+                        if schedule_page['path']=='/trade-api/v2/milestones' and not schedule_page.get('usable_metadata'):continue
+                        for milestone_index,m in enumerate(schedule_data.get('milestones',[])):
+                            if (record['id'] in m.get('related_event_tickers',[]) and m.get('category')=='Sports'
+                                    and m.get('type')==milestone_type):
+                                proofs.append(provenance(schedule_page,milestone_index,schedule_body))
+                                authorities.append(str(m.get('id')));starts.append(m.get('start_date'))
+                else:
+                    proofs=[proof];authorities=[record['id']];starts=[native.get('startTime')]
+                if (proofs and len(proofs)<=8 and None not in starts and len(set(authorities))==1 and authorities[0]!='None'
+                        and all(stamp(v)==stamp(record['scheduled_start']) for v in starts)):
+                    metadata=dict(version=SCHEDULE_VERSION,native_event_id=record['id'],
+                        authority=[venue,'milestone' if venue=='kalshi' else 'event',authorities[0]],
+                        start=record['scheduled_start'],received_at=min(proofs,key=lambda p:stamp(p['received_at']))['received_at'],
+                        proofs=proofs)
+                    from app.storage.store import hashed
+                    metadata['revision']=hashed(metadata)
+                    record['schedule_metadata']=metadata
             from .native_payload import event_detail_id
             requested = event_detail_id(page['path'])
             if requested is not None and record['id'] != requested:
                 record['exclusion'] = 'conflicting_query_identity'
-            insert(events,record,native,proof)
-            if venue == 'polymarket_us' or params(page).get('with_nested_markets') in (True,'true'):
-                embedded = native.get('markets')
+            retained_native=native
+            if current_selection is not None and isinstance(embedded,list):
+                # Identity extraction above sees the complete original event.
+                # Only the derived current packaging drops unrelated children;
+                # exact selected market records and source receipts stay whole.
+                retained_native=dict(native,markets=[m for m in embedded if str(m.get('ticker' if venue=='kalshi' else 'id')) in selected_markets])
+                record['embedded_market_packaging_reference']=dict(body_sha256=proof['body_sha256'],
+                    event_id=record['id'],path=page['path'],omitted_markets=len(embedded)-len(retained_native['markets']))
+            insert(events,record,retained_native,proof)
+            if nested:
                 events[record['id']]['market_discovery'] = 'embedded_only' if isinstance(embedded,list) else 'unknown'
                 for m in (embedded if isinstance(embedded,list) else []):
                     row_index += 1
@@ -459,6 +544,8 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
                 event['embedded_missing_from_market_query'] = missing
         event['market_ids'] = sorted(m['id'] for m in markets.values() if m['event_id']==event['id'])
     for market in markets.values():
+        if len(observed_parents.get(market['id'],()))>1:
+            market.update(conflicting_duplicate=True,exclusion='conflicting_duplicate')
         event = events.get(market['event_id'])
         if event is None:
             market['exclusion'] = market['exclusion'] or 'missing_event'
@@ -467,15 +554,17 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
         native = market['_native']
         if venue=='polymarket_us' and event:
             types=polymarket_us.LIVE_FULL_GAME_TYPES if any(p.get('native_binding_revision') in ('live-native-binding-1','live-native-binding-2') for p,_,_ in event_pages+market_pages) else polymarket_us.FULL_GAME_TYPES
-            expected=types.get({'NFL':'nfl','NCAAF':'cfb','MLB':'mlb','NHL':'nhl','NBA':'nba'}.get(event.get('competition')))
-            if market['period']=='full_game' and expected!=native.get('sportsMarketType'):market['exclusion']='market_event_sport_conflict'
+            league={'NFL':'nfl','NCAAF':'cfb','MLB':'mlb','NHL':'nhl','NBA':'nba','NCAAB':'cbb'}.get(event.get('competition'))
+            expected=polymarket_us.full_game_family(native.get('sportsMarketType'),league,live_bindings=types is polymarket_us.LIVE_FULL_GAME_TYPES) if league else None
+            if market['period']=='full_game' and expected!=market['market_type']:market['exclusion']='market_event_sport_conflict'
         if venue == 'polymarket_us':
             sides = native.get('marketSides')
             sides = sides if isinstance(sides,list) and all(isinstance(s,dict) for s in sides) else []
             reason = None
             if not native.get('id') or not native.get('slug') or not event or event['identity'] != 'resolved':
                 reason = 'unresolved_native_identity'
-            elif sum(m.get('native_slug') == market['native_slug'] for m in markets.values()) != 1:
+            elif (sum(m.get('native_slug') == market['native_slug'] for m in markets.values()) != 1
+                  or len(observed_slugs.get(market['native_slug'],()))>1):
                 reason = 'ambiguous_subscription_slug'
             elif not any(isinstance(market['terms'].get(k), str) and market['terms'][k].strip()
                          for k in ('description','rules_primary','rules_secondary')):
@@ -483,11 +572,11 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
             elif (len(sides) != 2 or len({s.get('id') for s in sides}) != 2
                   or {s.get('long') for s in sides} != {True, False}
                   or any(type(s.get('long')) is not bool or not s.get('id') for s in sides)
-                  or {(s['team'].get('name') if isinstance(s.get('team'),dict) else None) for s in sides} != set(event['participants'])
+                  or (market['market_type']!='total' and {(s['team'].get('name') if isinstance(s.get('team'),dict) else None) for s in sides} != set(event['participants']))
                   or any(str(s.get('marketId')) != market['id'] for s in sides)):
                 reason = 'unresolved_native_sides'
             market['subscription_evidence_exclusion'] = reason
-            market['subscription_evidence_basis'] = 'native ID, unique slug, resolved event and side teams, explicit roles, native terms; completeness independent'
+            market['subscription_evidence_basis'] = 'native ID, unique slug, resolved parent event, explicit side roles and native terms; comparison predicate and scope remain separate'
         if venue == 'polymarket_us' and native.get('gameStartTime') and event:
             try:
                 conflict = stamp(native['gameStartTime']).isoformat() != event['scheduled_start']

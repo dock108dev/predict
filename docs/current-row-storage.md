@@ -11,7 +11,7 @@ native depth. This guide describes their ownership, ordering and expiry. See
 
 | Relation | Owner and lifetime |
 | --- | --- |
-| `current_row_epoch` | One runtime/reset generation, rotated transactionally on ordinary startup; an earlier process cannot recreate an old Details context. |
+| `current_row_epoch` | Current data/reset generation; app and data restarts preserve it. Runtime identity and fresh exact dependencies independently invalidate old selections. |
 | `current_event` | One exact provider/event mapping, compact allowlisted sporting and occurrence-witness facts, pregame start expiry. |
 | `current_contract` | One exact venue/provider/event/market/outcome/native-side selection, including selections with no offer. |
 | `current_offer` | One actual current offer for a contract; exact price and units, source and receipt clocks stored separately. |
@@ -25,12 +25,14 @@ Migration `012_current_rows.sql` defines these working tables. They are independ
 
 Current snapshots and calculation results are not persisted by this owner. Shared financial definitions and user configuration retain their existing separate owners. `capture(include_depth=False)` supplies a coherent repeatable-read metadata frame and semantic dependencies. MVCC binds reads without taking the writer advisory lock; catalog construction cannot hold that write lock. A standalone capture starts its own repeatable-read, read-only transaction; ordinary API callers provide an existing repeatable-read transaction through selected-depth hydration. `hydrate_records` reads only selected execution ask ladders; its caller binds the expected revision before/after hydration. The API integration owner provides the transient calculation and Details context.
 
-Planned data/app separation adds a distinct bounded latest-result owner for
-background shared calculations; it is not implemented by the current ingress
-tables above. Results replace current derived rows and carry source/dependency,
-engine/policy, expiry and scope-completeness facts. Expanded reports and raw feed
-history remain excluded. An app-only restart must not rotate `current_row_epoch`
-or reset ingestion. Existing source, account, quota and hold lifetimes stay separate.
+The independent background runtime publishes bounded latest results through
+migrations 013–015. `data_runtime` and its bounded command relation provide source
+status, heartbeat, material revisions and actual control acknowledgments.
+`scanner_latest` replaces one compact typed projection (32 MiB cap);
+`latest_board` replaces up to 500 compact game rows (64 MiB total), with one
+status publication. Inputs, raw source bodies and expanded reports are excluded.
+The [runtime contract](data-app-runtime-contract.md) specifies authority, failure,
+retention and app-read behavior. Existing protected owners remain separate.
 
 ## Bounded ordered SQL writes
 
@@ -40,7 +42,51 @@ The private helper explicitly synchronizes after every 128 counted commands and 
 
 ## Ordering, removals and expiry
 
+Selected Kalshi contract facts may retain exact-present price ranges, price
+structure and face value from the already-owned discovery response. Their
+16 KiB observation cap, original discovery receipt/body proof and material hash
+are separate from book/source clocks. Missing/null/oversized values stay explicit;
+these unreviewed observations grant no legal quantity, cost, execution-channel
+or settlement applicability. Metadata changes invalidate contract dependencies
+without rewriting the quote's price or original clocks.
+
 Known source clocks precede receipt ordering. Older source observations and unknown clocks attempting to replace known source evidence are rejected. Equal source/receipt clocks cannot identify conflicting prices or books. Receipt-only observations retain the source timestamp and semantic dependency revision; source, price, units, contract and depth changes invalidate the appropriate dependencies.
+
+Event schedules have separate metadata authority. Native catalog admission retains
+the exact schedule-bearing event or linked milestone response path, row, body hash
+and metadata receipt, independently of book source/receipt clocks. Current contracts
+retain their original derived start and schedule witness. A newer book cannot rank
+or replace a newer schedule witness. A newer metadata witness can update the shared
+event even when the accompanying price is rejected as older.
+
+Reconstruction reconciles an older derived market start only when both retained
+witnesses establish an ordered revision of the same source authority, native event
+and occurrence facts. The original contract stays stored unchanged; detached
+`schedule_reconciliation` evidence records the original derived start, metadata
+revision and current witness. Equal-clock contradictions, incompatible occurrence
+facts and legacy starts without the earlier witness remain unavailable. No title,
+ticker, arbitrary contract order or price receipt supplies a missing date or
+schedule authority. Missing original/rescheduled context stays unknown.
+
+Explicit legacy recovery can use an already-retained complete SQL capture only
+when its entire raw contract still matches the current stored contract and its
+event preserves the exact native milestone/occurrence identity and original
+derived start. The capture time is labelled `observed_no_later_than`, an upper
+bound on the earlier observation, with a capture-file hash and row revisions;
+`received_at` remains null. A strictly later ordinary native metadata receipt
+must independently confirm the same authority before reconstruction can reconcile
+the starts. Recovery updates only the contract's provenance binding. It never
+inserts expired contracts, restores offers or edits event schedules, prices,
+depth, book headers or quote clocks. A changed contract, wrong witness, missing
+current authority or overlapping time bound refuses recovery.
+
+Catalog diagnostics distinguish `schedule_binding_unverified`,
+`schedule_equal_metadata_conflict` and `schedule_metadata_order_unverified`, with
+bounded exact native keys and conflicting starts. Invalid occurrences remain
+isolated; valid occurrences continue publishing. Previous obsolete frames retain
+their captured inputs until valid replacements exist. Reconciliation dispatches
+no providers, changes no original price/depth/clock and cannot extend an expired
+offering around its old book.
 
 Only admitted complete refresh scopes remove absent contracts. Aggregate scopes identify venue and sport. Native scopes additionally identify the exact event and market. Errors or incomplete/unknown-state books cannot clear healthy offers. A complete native book can retain exact selections while removing only missing offers. Material native predicate/identity/terms changes withdraw the previous exact market until a fresh image arrives. Partial discovery absence alone does not authorize removal.
 
@@ -52,11 +98,21 @@ Ordinary startup and `DatabasePipeline` do not reopen journals, restore aggregat
 
 Legacy codecs/readers remain available to separately selected retained/research paths. Their presence does not create an ordinary startup writer. `storage/current_reset.py` coordinates the explicit sports-only reset. Ingress and startup do not reset owner storage.
 
-## Scanner readiness reads
+## Scanner readiness, results and commit observations
 
-SC01's isolated successor adds a bounded, repeatable-read, read-only readiness inventory over these same current relations. It separates discovered contracts from priced instruments, preserves original source/book/receipt clocks and resolves shared model definitions transiently. It creates no readiness table, report cache, raw envelope archive or new migration. Existing upserts, ordering, expiry and protected-state ownership remain unchanged. The successor route is `/api/boards/readiness`; see the [readiness schema](contracts/predict-scanner-readiness-1.schema.json). The local SC01 closeout records the exact candidate and verification boundary. The ordinary installation has not been changed to include that route.
+The ordinary readiness route inventories the same current facts without finance.
+The background scanner owns readiness preparation, affected pair calculations,
+compact results and summaries; the app reads its latest PostgreSQL publication.
+Selected tickets prepare only their exact current members. The process-local
+commit callback supplies optional genuine commit measurement; correctness uses
+committed offer/book plus event/contract/status revisions, runtime identity and
+engine/policy facts across processes. Pre-start or foreign commit timing remains
+unknown rather than invented.
 
-
-## Scanner projection and commit observations
-
-SC02 adds one bounded process projection over detached read-only captures. Financial work runs after the SQL transaction/connection closes; cached scalar results and current inputs replace in place. A successor ingress wrapper records a genuine observation after successful top-level commit, tied to exact current-row revision; nested/rollback/foreign/pre-start cases remain unknown. Readiness v1 keeps `sql_committed_at=null`. No new SQL table/migration, raw-response archive or per-filter financial report is introduced. Scanner protocol and bounds: `docs/scanner-projection-contract.md`. The ordinary installation remains unchanged.
+Current-row writers, explicit market withdrawals, expiry and final derived
+publication share advisory transaction lock 901095. Financial work happens before
+that lock. The final comparison rejects superseded work, and readers independently
+withdraw stale bindings before the worker catches up. App startup does not write
+epochs, reset data or start acquisition. See the
+[projection contract](scanner-projection-contract.md) and
+[latest-result contract](data-app-runtime-contract.md).

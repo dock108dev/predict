@@ -44,6 +44,20 @@ class BrowserHardening(AioHTTPTestCase):
             transport=Mock(get_extra_info=Mock(return_value=('127.0.0.1',8783))))
         with self.assertRaises(web.HTTPForbidden):check_browser(request)
 
+    async def test_ambiguous_content_type_rejected_before_controls(self):
+        origin=str(self.client.make_url('/')).rstrip('/')
+        for values in (('application/json','text/plain'),('text/plain','application/json'),
+                       ('application/json','application/json')):
+            headers=CIMultiDict([('Origin',origin),*(('Content-Type',v) for v in values)])
+            with self.assertLogs('aiohttp.server',level='ERROR'):
+                response=await self.client.post('/api/stop',data=b'{}',headers=headers)
+            self.assertEqual(response.status,400)
+        self.owner.stop.assert_not_awaited()
+        response=await self.client.post('/api/stop',data=b'{}',headers={
+            'Origin':origin,'Content-Type':'application/json; charset=utf-8'})
+        self.assertEqual(response.status,200)
+        self.owner.stop.assert_awaited_once()
+
     async def test_incomplete_body_deadline_closes_connection_without_dispatch(self):
         stalled = asyncio.Event()
         async def chunks():
@@ -127,7 +141,8 @@ class BrowserHardening(AioHTTPTestCase):
         self.assertEqual((await self.client.get('/api/status')).status, 200)
 
     async def test_admin_requires_an_object_without_dispatch(self):
-        provider = Mock(status=Mock(return_value={'state':'stopped'}), close=AsyncMock(),
+        provider = Mock(spec=['status','close','refresh_aggregate','pause','recover'],
+                        status=Mock(return_value={'state':'stopped'}), close=AsyncMock(),
                         refresh_aggregate=AsyncMock(), pause=AsyncMock(), recover=AsyncMock())
         self.app[CURRENT_KEY].provider = provider
         origin = str(self.client.make_url('/')).rstrip('/')
@@ -304,6 +319,97 @@ class NativeFailurePrivacy(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(discovery.source_stops['kalshi'],'OSError')
                     self.assertTrue(discovery.inventory['polymarket_us']['markets'])
                 else:self.assertEqual(discovery.refresh['reason'],'ValueError')
+
+
+class CurrentReadPrivacy(AioHTTPTestCase):
+    async def get_application(self):
+        from app.dashboard.comparison_board_api import mount
+        app=web.Application()
+        self.provider=SimpleNamespace(closed=False,closing=False,dispatch=True)
+        with patch('app.dashboard.scanner_api.mount'):
+            mount(app,self.provider)
+        return app
+
+    async def test_internal_read_errors_are_private_and_recovery_codes_survive(self):
+        for error in (ValueError('SECRET local path or provider URL'),
+                      ValueError('current_slate_read_expired SECRET suffix'),
+                      json.JSONDecodeError('SECRET parse bytes','{}',0)):
+            with self.subTest(error=type(error).__name__):
+                with patch('app.dashboard.comparison_board_api.connect',side_effect=error):
+                    with self.assertLogs('app',level='ERROR') as logs:
+                        response=await self.client.get('/api/boards/games')
+                self.assertEqual(response.status,409)
+                body=await response.text()
+                self.assertNotIn('SECRET',body+' '.join(logs.output))
+                self.assertEqual(json.loads(body)['reason'],'current_inputs_unavailable')
+        for reason in ('current_slate_read_expired','current_slate_read_capacity',
+                       'current_slate_read_authority_changed','current_inputs_changed_or_removed'):
+            with patch('app.dashboard.comparison_board_api.connect',side_effect=ValueError(reason)):
+                with self.assertLogs('app',level='ERROR'):
+                    response=await self.client.get('/api/boards/games')
+            self.assertEqual(response.status,409)
+            self.assertEqual((await response.json())['reason'],reason)
+
+
+class ScannerReadPrivacy(AioHTTPTestCase):
+    async def get_application(self):
+        from app.dashboard.scanner_api import mount
+        self.scanner=Mock(close=AsyncMock())
+        app=web.Application()
+        with patch('app.dashboard.scanner_api.Scanner',return_value=self.scanner), \
+             patch('app.dashboard.scanner_ticket_api.mount'):
+            mount(app,SimpleNamespace())
+        return app
+
+    async def test_internal_scanner_failure_is_private_and_revision_conflict_remains_409(self):
+        self.scanner.projection.view.side_effect=ValueError('SECRET source payload')
+        with self.assertLogs('app.dashboard.scanner_api',level='ERROR') as logs:
+            response=await self.client.get('/api/scanner')
+        self.assertEqual(response.status,400)
+        self.assertNotIn('SECRET',await response.text()+' '.join(logs.output))
+        self.scanner.projection.view.side_effect=ValueError('scanner_page_revision_changed')
+        response=await self.client.get('/api/scanner')
+        self.assertEqual(response.status,409)
+        self.assertEqual((await response.json())['reason'],'scanner_page_revision_changed')
+
+
+class FeeControlPrivacy(unittest.IsolatedAsyncioTestCase):
+    async def test_control_failure_is_not_copied_to_durable_acknowledgment(self):
+        from app.collection.data_runtime import DataRuntime
+        from app.dashboard.current_state import SelectionError
+        for error in (OSError('SECRET private path'),ValueError('SECRET metadata')):
+            runtime=DataRuntime(service=SimpleNamespace())
+            runtime.selected_fees=SimpleNamespace(start=AsyncMock(side_effect=error))
+            with self.assertLogs('app.collection.data_runtime',level='ERROR') as logs:
+                with self.assertRaises(SelectionError) as caught:
+                    await runtime.control('collect_selected_fees',{})
+            self.assertEqual(caught.exception.body['error'],'selected_fee_control_refused')
+            self.assertNotIn('SECRET',str(caught.exception.body)+' '.join(logs.output))
+
+
+class LauncherLogPrivacy(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import runpy
+        cls.open_log=staticmethod(runpy.run_path(str(Path(__file__).resolve().parents[1]/'scripts/opportunity-board'))['open_log'])
+
+    def test_new_log_is_private_and_existing_contents_survive_append(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'data.log'
+            with self.open_log(path) as stream:stream.write('first\n')
+            with self.open_log(path) as stream:stream.write('second\n')
+            self.assertEqual(path.read_text(),'first\nsecond\n')
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o600)
+
+    def test_symlink_and_fifo_targets_are_rejected_without_writes(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);target=root/'original';target.write_text('preserve')
+            link=root/'data.log';link.symlink_to(target)
+            with self.assertRaises(OSError):self.open_log(link)
+            self.assertEqual(target.read_text(),'preserve')
+            fifo=root/'fifo';os.mkfifo(fifo)
+            with self.assertRaises((OSError,ValueError)):self.open_log(fifo)
 
 
 if __name__ == '__main__':unittest.main()

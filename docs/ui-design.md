@@ -1,8 +1,9 @@
 # Interface design
 
-Predict presents current NFL pregame, full-game winner odds, EV and cross-venue
-comparisons. Server financial owners calculate values; the browser validates
-context and renders them. Ordinary reads calculate from current SQL rows. See
+Predict presents collected prices, EV and cross-venue comparisons across the
+supported leagues, markets and periods. Background financial owners calculate
+shared results; the browser validates their context and renders them. Ordinary
+reads consume current SQL publications, while selected Details can size an item. See
 [architecture](architecture.md) and the [board API contract](comparison-board-api-contract.md)
 for storage and transport boundaries.
 
@@ -111,3 +112,50 @@ styling. These presentation choices do not alter financial or protocol guards.
 
 [Development](development.md#frontend-sources) describes the readable frontend
 modules, generated public assets and verification boundaries.
+
+## October 17 interface review
+
+Adapted the shared Glass Starter 02 requirements (September 23): cool light
+surfaces, slate text, restrained blue actions, system typography and 44px primary
+controls. No gallery/runtime dependency was added. Reviewed the current source
+scanner, Odds and selected Details; historical installed screenshots are separate.
+
+- Scanner and Odds now share navigation, brand treatment, control sizing and focus
+  styles. Scanner includes the existing Coverage destination. Routine checked
+  status is quiet only when evaluation is complete with no errors; pending,
+  partial, expired, stopped and unavailable messages remain visible.
+- Odds places six common filters in one desktop row and Details settings beside
+  its heading. Identical shared/selected settings are stated once; differing
+  policies still show both. Scanner keeps scope filters visible and groups its
+  optional minimum-size/edge and source restrictions under Size & sources. Applied
+  restrictions remain named in the collapsed summary. These are existing controls,
+  with one additional reveal for those optional restrictions, not new capabilities.
+- First use leads with a single source-setup action instead of zero-count coverage
+  disclosures. Result counts use ordinary catalog wording. Single-metric Details
+  fills its available width rather than leaving an unused metric column; funding,
+  precise residuals, reconciliation and original clocks remain. A future source
+  clock warning no longer repeats the word Source during age updates.
+
+Matched offline Chromium screenshots use identical repository fixture data and
+clocks at 1280×900 and 390×900. At desktop width the first Odds game moves from
+658px to 438px; at 390px it moves from 877px to 707px. The first scanner result
+moves from 392px to 345px on desktop and 783px to 619px on narrow screens. Narrow
+first use moves from 517px to 206px. These measurements describe composition,
+not actual source coverage, performance or new-user success.
+
+Evidence is under `test-results/interface-review-20261017/`: paired
+`before-{scanner,odds,details,empty,failure}-{1280,390}.png`, corresponding `after-`
+images, review harness and JSON observations. Screenshots were visually inspected.
+The final intercepted browser pass also checks optional-filter keyboard access,
+invalid-input feedback/reset, local search, a settings draft surviving refresh,
+Details focus containment/return, long names and 125% text without document
+horizontal overflow. All browser traffic is intercepted; no ordinary SQL, owner
+state or providers are used to populate these screens.
+
+Eight affected JavaScript suites, seven Python asset/contract tests, generated
+asset drift, JavaScript syntax and documentation/whitespace checks pass. Existing
+synthetic preview AppKey warnings remain. Full SC04/SC05 performance campaigns,
+installed/live acceptance and independent new-user testing were not run. The
+working source assets were rebuilt; no ordinary process restart, publication,
+commit or release was performed. Visual conclusions apply to the inspected
+synthetic states and remain provisional for owner/customer use.

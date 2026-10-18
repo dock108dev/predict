@@ -14,8 +14,7 @@ class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
         async with TestClient(TestServer(app)) as client:
             for path in ('/api/current', '/api/current/details', '/api/current/prices',
                          '/api/current/updates', '/api/current/changes', '/api/comparison',
-                         '/api/arbs', '/api/coverage', '/api/selections/old-token',
-                         '/current/coverage'):
+                         '/api/arbs', '/api/selections/old-token'):
                 response = await client.get(path)
                 self.assertEqual(response.status, 410, path)
                 value = await response.json()
@@ -23,6 +22,30 @@ class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(value['provider_requests'], 0)
             self.assertEqual((await client.get('/api/admin/status')).status, 200)
             self.assertEqual((await client.get('/')).status, 200)
+            page = await client.get('/current/coverage')
+            self.assertEqual(page.status, 200)
+            self.assertIn('Coverage', await page.text())
+            for asset in ('coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
+                self.assertEqual((await client.get('/current/assets/'+asset)).status, 200, asset)
+
+    async def test_sql_coverage_routes_reach_the_new_retained_reader(self):
+        import logging
+        from types import SimpleNamespace
+        from aiohttp import web
+        from app.dashboard.request_guard import dashboard_guard
+        app=web.Application(middlewares=[dashboard_guard(SimpleNamespace(database_mode=True),logger=logging.getLogger(__name__))])
+        reached=[]
+        async def retained(req):
+            reached.append(req.path)
+            return web.json_response(dict(schema='predict-broad-coverage-1',provider_requests=0))
+        app.router.add_get('/api/coverage',retained)
+        app.router.add_get('/current/coverage',retained)
+        async with TestClient(TestServer(app)) as client:
+            for path in ('/api/coverage','/current/coverage'):
+                reply=await client.get(path)
+                self.assertEqual(reply.status,200)
+                self.assertEqual((await reply.json())['provider_requests'],0)
+        self.assertEqual(reached,['/api/coverage','/current/coverage'])
 
     async def test_explicit_injected_mode_keeps_its_own_transport(self):
         app = create_app(owner=owner(), sessions={}, current_provider=InjectedTestProvider())

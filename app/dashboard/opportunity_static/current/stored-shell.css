@@ -73,3 +73,19 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .calculation-settings { position:relative }
 .calculation-settings[open] { z-index:4; border-bottom-left-radius:0; border-bottom-right-radius:0 }
 .calculation-settings[open] .settings-body { position:absolute; top:100%; left:-1px; right:-1px; background:white; border:1px solid #c8d4e6; border-top:0; border-radius:0 0 10px 10px; box-shadow:0 12px 28px #2638541c }
+
+/* Comparison workspace: one compact task heading, then the working filters. */
+.heading { margin:20px 0 18px; align-items:center }
+.heading-actions { display:flex; align-items:center; justify-content:flex-end; gap:16px; min-width:0 }
+.heading-actions #settings { display:block; margin:0; width:340px; max-width:100% }
+.heading-actions .calculation-settings>summary { min-height:56px; padding:7px 12px }
+.heading-actions .calculation-settings>summary strong { font-size:.8125rem }
+.heading-actions .view-help { white-space:nowrap }
+.board-controls { display:block; margin-bottom:16px }
+.board-controls .slate-selection,.board-controls .slate-selection:has(#sort-setting[hidden]) {
+  grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.25fr) minmax(0,1.6fr);
+  gap:12px
+}
+.board-controls #sort-setting { grid-column:5/7 }
+button,input,select { border-color:#8595ac }
+#applied { line-height:1.4 }

@@ -40,3 +40,12 @@ Allocation copy requires current top-level readiness, the selected frame, unexpi
 The [filter-wide transition read](scanner-transition-contract.md) supplies quiet visual recognition and deliberate opt-in local sound. Find/pagination do not change this scope. Initial load, filter change, reconnect, gaps and receipt-only churn are silent. Scanner, ticket and transition work share one bounded cycle; there are no per-row readers. Ticket expiry has the scanner's independent 250 ms local sweep. `predictTicketObservations()` retains at most 256 selected-request-to-second-animation-frame samples with binding, delivery and backend timing stages. These measure actual Chromium rendering opportunities, not physical display scanout or installed source propagation.
 
 SC06 adds [retained observed summaries](scanner-summary-contract.md) to the existing **Scope, size & observations** disclosure. It keeps one optional, throttled, 64 KiB read while open and visible. A summary response validates exact scope/server/epoch, rational extrema, coverage-backed current zero, censoring and storage limits before presentation. The read does not delay scanner revision acceptance and has no provider or financial authority. Closed disclosure adds no row height or summary reader. Scope changes, Stop, suspension and obsolete responses invalidate its context independently of tickets and quiet arrival cues.
+
+## Independent background owner
+
+The ordinary app reads latest PostgreSQL scanner publications; page loads, filters,
+paging and polling never start collection or shared financial evaluation. An app
+restart preserves the data runtime/epoch and may require ticket reselection.
+Original expiry, changed dependencies, explicit collection Stop and missing runtime
+heartbeats withdraw action authority. Resynchronization stays silent.
+[Runtime contract](data-app-runtime-contract.md).

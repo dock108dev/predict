@@ -14,6 +14,12 @@ HOSTS = {'kalshi': {'kalshi.com'}, 'polymarket_us': {'polymarket.us'},
 PATH = Path(__file__).resolve().parents[1] / 'fixtures/scanner-destinations-v1.json'
 
 
+def _require(condition):
+    # These guards grant navigation authority and must also run under python -O.
+    if not condition:
+        raise ValueError('destination_evidence_unsafe_or_unsupported')
+
+
 def binding(instrument):
     return {k: deepcopy(instrument[k]) for k in
             ('venue', 'native_key', 'native_contract_id', 'terms_sha256', 'predicate')}
@@ -40,24 +46,24 @@ class Destinations:
             route = self.catalog['routes'][item['route_id']]
             # Evidence is retained and hashed, including route and matching position.
             for evidence in (route['evidence'], item['evidence']):
-                assert evidence['sha256'] == digest(evidence['retained'])
-                assert evidence['class'] in ('authored_fixture', 'reviewed_source')
-                assert evidence['retained']
-            assert route['venue'] == instrument['venue']
-            assert route['evidence']['retained']['documented_template'] == route['template']
-            assert item['evidence']['retained']['binding'] == exact
-            assert item['evidence']['retained']['url'] == item['url']
+                _require(evidence['sha256'] == digest(evidence['retained']))
+                _require(evidence['class'] in ('authored_fixture', 'reviewed_source'))
+                _require(evidence['retained'])
+            _require(route['venue'] == instrument['venue'])
+            _require(route['evidence']['retained']['documented_template'] == route['template'])
+            _require(item['evidence']['retained']['binding'] == exact)
+            _require(item['evidence']['retained']['url'] == item['url'])
             params = item['parameters']
-            assert all(isinstance(v, str) and 0 < len(v) <= 256 for v in params.values())
+            _require(all(isinstance(v, str) and 0 < len(v) <= 256 for v in params.values()))
             url = route['template'].format(**{k: quote(v, safe='') for k, v in params.items()})
             parsed = urlsplit(url)
-            assert url == item['url'] and len(url) <= 2048
-            assert parsed.scheme == 'https' and parsed.hostname in HOSTS[instrument['venue']]
-            assert parsed.netloc == parsed.hostname and not parsed.username and not parsed.password
-            assert not parsed.query and not parsed.fragment and parsed.path not in ('', '/')
-            assert '%' not in parsed.netloc and '..' not in parsed.path and '\\' not in url
-            assert all(ord(c) > 32 for c in url)
-        except (KeyError, ValueError, AssertionError, TypeError):
+            _require(url == item['url'] and len(url) <= 2048)
+            _require(parsed.scheme == 'https' and parsed.hostname in HOSTS[instrument['venue']])
+            _require(parsed.netloc == parsed.hostname and not parsed.username and not parsed.password)
+            _require(not parsed.query and not parsed.fragment and parsed.path not in ('', '/'))
+            _require('%' not in parsed.netloc and '..' not in parsed.path and '\\' not in url)
+            _require(all(ord(c) > 32 for c in url))
+        except (KeyError, ValueError, TypeError, AttributeError, IndexError):
             return dict(unavailable, reason='destination_evidence_unsafe_or_unsupported')
         evidence_class = ('reviewed_source' if all(x['evidence']['class'] == 'reviewed_source'
                           for x in (route, item)) else 'authored_fixture')

@@ -83,12 +83,58 @@ def college_entrant(label, sport):
     return next(iter(matches)) if len(matches)==1 else None
 
 
+def _season_context(facts):
+    """Read explicit nested/flat source witnesses without calendar inference."""
+    years=set();names=set();stages=set();malformed=False;unknown_type=False
+    stage_map=dict(REG='regular_season',PRE='preseason',POST='playoffs')
+    for fact in facts:
+        nested=fact.get('season')
+        witnesses=[]
+        if isinstance(nested,dict):
+            witnesses.append((nested.get('year'),nested.get('type'),'type' in nested))
+            name=nested.get('name')
+            if isinstance(name,str) and re.fullmatch(r'20\d\d(?:-20\d\d)?',name):names.add(name)
+            elif name is not None:malformed=True
+        if 'season_year' in fact or 'season_type' in fact:
+            witnesses.append((fact.get('season_year'),fact.get('season_type'),'season_type' in fact))
+        for year,kind,declared_type in witnesses:
+            if year is not None:
+                if type(year) is int:years.add(year)
+                else:malformed=True
+            if isinstance(kind,str) and kind in stage_map:stages.add(stage_map[kind])
+            elif declared_type:unknown_type=True
+    name_conflict=False
+    for name in names:
+        bounds=[int(value) for value in name.split('-')]
+        if bounds[0]>bounds[-1] or any(not bounds[0]<=year<=bounds[-1] for year in years):name_conflict=True
+    if malformed or unknown_type or name_conflict or len(years)>1 or len(names)>1 or len(stages)>1:
+        return None,'Explicit native season fields conflict or have unsupported year/type values'
+    if len(years)==1 and len(stages)==1:
+        # A declared full name is authoritative; a scalar year remains that
+        # exact source year label, never an inferred multi-year season.
+        return (next(iter(names)) if names else str(next(iter(years))),next(iter(stages))),None
+    return None,None
+
+
 def enrich_game(event):
     e=deepcopy(event);facts=e.get('observed_identity_facts',[])
     native=e.get('_native') or {}
     if native.get('gameId') is not None:e['source_game_id']=str(native['gameId'])
     e['identity_field_evidence']=dict(native_season=native.get('season'),native_stage=native.get('stage'),native_series_label=native.get('seriesSlug'),native_game_id=native.get('gameId'),native_game_number=native.get('gameNumber'),native_original_start=native.get('originalStartTime'),native_rescheduled_from=native.get('rescheduledFromGameId'),qualification='Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels')
     if e.get('source')=='polymarket_us':
+        for key in ('season','stage'):
+            value=native.get(key)
+            if isinstance(value,str) and value and (key!='stage' or value in ('regular_season','preseason','playoffs','postseason','championship')):
+                if e.get(key) not in (None,value):e['conflicting_duplicate']=True
+                else:e[key]=value
+        # Explicit occurrence fields are retained as source facts. A native
+        # numeric gameId remains a locator and never becomes a shared game ID.
+        if native.get('sportradarGameId'):
+            e['game_id']=str(native['sportradarGameId'])
+        for native_key,key in (('gameNumber','game_number'),('originalStartTime','original_start')):
+            if native.get(native_key) is not None:e[key]=native[native_key]
+        if native.get('rescheduledFromGameId') in (None,0,'0') and native.get('originalStartTime'):
+            e['schedule_status']='original'
         teams=(e.get('_native') or {}).get('teams',[])
         if len(teams)==2:
             mapping={t.get('name'):resolve_team(t,e.get('competition'),'polymarket_us') for t in teams}
@@ -98,6 +144,9 @@ def enrich_game(event):
                 e.update(participants=mapping,identity='resolved')
                 if e.get('scheduled_start'):e['canonical_key']=[stamp(e['scheduled_start']).isoformat(),sorted(mapping.values())]
 
+    roles=e.get('source_participant_roles',{})
+    if set(roles)=={'home','away'} and None not in roles.values() and set(roles.values())==set(e.get('participants',{}).values()):
+        e.update(home=roles['home'],away=roles['away'])
     from app.normalization.native_registry import native_registry
     reg=repair_registry();role_pairs=[]
     for fact in facts:
@@ -111,10 +160,21 @@ def enrich_game(event):
         e.update(source_participant_roles=roles,home=roles['home'],away=roles['away'],participants={reg.entities[c]['name']:c for c in roles.values()},identity='resolved')
         if e.get('scheduled_start'):e['canonical_key']=[stamp(e['scheduled_start']).isoformat(),sorted(roles.values())]
     elif len(unique)>1:e['conflicting_duplicate']=True
-    seasons={str(f['season']['year']) for f in facts if isinstance(f.get('season'),dict) and type(f['season'].get('year')) is int}
-    stages={dict(REG='regular_season',PRE='preseason',POST='playoffs').get(f['season'].get('type')) for f in facts if isinstance(f.get('season'),dict)}-{None}
-    if len(seasons)==1 and len(stages)==1:
-        season=next(iter(seasons));stage=next(iter(stages))
+    if e.get('source')=='kalshi':
+        occurrence_facts=[f for f in facts if f.get('source_id') and f.get('source_provider')=='sportradar' and f.get('game_number') is not None
+                          and f.get('original_start') and f.get('schedule_status')]
+        occurrences={(str(f['source_id']),f['game_number'],f['original_start'],f['schedule_status']) for f in occurrence_facts}
+        if len(occurrences)==1:
+            values=next(iter(occurrences))
+            for key,value in zip(('game_id','game_number','original_start','schedule_status'),values):
+                if e.get(key) not in (None,value):e['conflicting_duplicate']=True
+                else:e[key]=value
+        elif len(occurrences)>1:e['conflicting_duplicate']=True
+    context,context_conflict=_season_context(facts)
+    if context_conflict:
+        e.setdefault('identity_conflicts',[]).append(context_conflict)
+    elif context:
+        season,stage=context
         if any(e.get(k) is not None and e[k]!=v for k,v in [('season',season),('stage',stage)]):e['conflicting_duplicate']=True
         e.update(season=season,stage=stage)
     # Exact retained public crosswalk may name the observed linked main game.
@@ -243,18 +303,20 @@ def share_games(target,other):
             raw.update(source_participant_roles=deepcopy(m.get('source_participant_roles',{})),season=m['season'],stage=m['stage'],shared_identity_provenance=dict(source='kalshi',event_ids=sorted(x['id'] for x in matches),facts=deepcopy(m.get('observed_identity_facts',[])),qualification='Exact two-participant schedule correspondence; no MLB occurrence inferred'))
 
 def us_score(native,locator,event):
-    """Observed retail signed line + literal period + native side orientation."""
+    """Literal native line, period, subject, units and explicit equality facts."""
     from decimal import Decimal,InvalidOperation
     family=locator.get('family');period=locator.get('period');sport=event.get('competition')
-    if family not in ('moneyline','spread','total') or sport not in ('NFL','NCAAF') or period not in ('full_game','first_half'):return None
+    if family not in ('moneyline','spread','total') or sport not in TEAM_KEYS or period not in ('full_game','first_half'):return None
+    if period=='first_half' and sport not in ('NFL','NCAAF','NBA','NCAAB'):return None
     sides=native.get('marketSides',[]);text=native.get('description','')
-    if len(sides)!=2 or {s.get('long') for s in sides}!={True,False} or any(str(s.get('marketId'))!=str(native.get('id')) for s in sides):return None
+    if not isinstance(text,str) or len(sides)!=2 or {s.get('long') for s in sides}!={True,False} or any(type(s.get('long')) is not bool or str(s.get('marketId'))!=str(native.get('id')) for s in sides):return None
     if (period=='first_half') != ('in the first half of ' in text):return None
+    if period=='full_game' and re.search(r'(?:first \d+ innings|regulation only|first half|first quarter)',text,re.I):return None
     try:line=Decimal('0') if family=='moneyline' else Decimal(str(native.get('line')))
     except InvalidOperation:return None
-    # Integer strikes need exact equality/push semantics absent in these records.
-    if not line.is_finite() or abs(line)>10000 or family!='moneyline' and line%1 not in (Decimal('.5'),Decimal('-.5')):return None
+    if not line.is_finite() or abs(line)>10000 or family!='moneyline' and line*2!=(line*2).to_integral_value():return None
     long=next(s for s in sides if s['long']);short=next(s for s in sides if not s['long'])
+    unit='runs' if sport=='MLB' else 'goals' if sport=='NHL' else 'points'
     if family=='moneyline':
         if period!='first_half' or long.get('description')!='Yes' or short.get('description')!='No':return None
         match=re.match(r'^1st Half Winner settles Yes if (.+?) outscores (.+?) in the first half of ',text)
@@ -265,7 +327,7 @@ def us_score(native,locator,event):
         elif match:
             participant=resolve_team(long.get('team') or {},sport,'polymarket_us')
             if participant is None or resolve_team(short.get('team') or {},sport,'polymarket_us')!=participant:return None
-            names=[college_entrant(match[k],sport) for k in (1,2)]
+            names=[resolve_team(dict(name=match[k]),sport,'polymarket_us') for k in (1,2)]
             if names[0]!=participant or set(names)!=set(event.get('participants',{}).values()):return None
         else:return None
     elif family=='spread':
@@ -273,17 +335,32 @@ def us_score(native,locator,event):
         other=resolve_team(short.get('team') or {},sport,'polymarket_us')
         if participant is None or other is None or {participant,other}!=set(event.get('participants',{}).values()):return None
         label=(long.get('team') or {}).get('name')
-        match=re.search(r'^This market will settle to Yes if '+re.escape(label)+r' covers a ([+-]\d+(?:\.\d+)?) point spread in ',text)
+        match=re.search(r'^This market will settle to Yes if '+re.escape(label)+r' covers a ([+-]\d+(?:\.\d+)?) '+unit.removesuffix('s')+r' spread in ',text)
         try:valid=match and Decimal(match[1])==line and Decimal(long['description'])==line and Decimal(short['description'])==-line
         except (InvalidOperation,KeyError):return None
         if not valid:return None
     else:
         participant='combined'
         if locator.get('total_scope') not in ('combined','game','requires_contract_scope'):return None
-        match=re.search(r' combine for (?:more than|over) (\d+(?:\.\d+)?) points in ',text)
+        match=re.search(r' combine for (?:more than|over) (\d+(?:\.\d+)?) '+unit+r' in ',text)
         labels=re.search(r'(?:settles Over if|settle to Yes if) (.+?) and (.+?) combine for ',text)
         if not labels:return None
         names=[resolve_team(dict(name=labels[k]),sport,'polymarket_us') for k in (1,2)]
         if set(names)!=set(event.get('participants',{}).values()) or None in names:return None
         if not match or Decimal(match[1])!=line or long.get('description')!='Over' or short.get('description')!='Under':return None
-    return dict(policy=POLICY,status='EXPLICIT_PREDICATE_ONLY',competition=sport,period=period,family=family,participant=participant,line=format(line,'f'),unit='points',native_metadata_sha256=stable(native),rules_primary=text,outcomes=[dict(native_id=str(long['id']),operator='eq' if participant=='tie' else 'gt'),dict(native_id=str(short['id']),operator='ne' if participant=='tie' else 'le')],qualification='Half-integer literal threshold; exceptional settlement remains unavailable')
+    equality='predicate' if family=='moneyline' else 'unreachable'
+    short_operator='ne' if participant=='tie' else 'le'
+    if family!='moneyline' and line==line.to_integral_value():
+        threshold=line if family=='total' else -line
+        subject='total' if family=='total' else 'winning margin'
+        refund='If the '+subject+' is exactly '+format(threshold,'f')+' '+unit+', both sides are refunded.'
+        if refund in text:
+            equality='refund';short_operator='lt'
+        elif 'Equality is settled as No.' in text:equality='predicate'
+        else:equality='unknown'
+    return dict(policy=POLICY,status='EXPLICIT_PREDICATE_ONLY',competition=sport,period=period,family=family,
+        participant=participant,line=format(line,'f'),unit=unit,native_metadata_sha256=stable(native),rules_primary=text,
+        equality_treatment=equality,outcomes=[dict(native_id=str(long['id']),operator='eq' if participant=='tie' else 'gt',equality=equality),
+        dict(native_id=str(short['id']),operator=short_operator,equality=equality)],
+        missing=['Exact equality/push/refund treatment for integer line'] if equality=='unknown' else [],
+        qualification='Literal scoring predicate; unknown equality and exceptional settlement remain unavailable')

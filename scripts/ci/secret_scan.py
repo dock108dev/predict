@@ -24,6 +24,22 @@ def verify_rules(binary, config):
         source.write_text(
             f'PUBLIC = ("the_odds_api", "{public_id}")\napi_key = "{credential}"\n'
         )
+        repository = Path(__file__).resolve().parents[2]
+        example_name = "docs/examples/scanner-readiness-1/waiting.json"
+        scopes = json.loads((repository / example_name).read_text())["scopes"]
+        example = root / "source" / example_name
+        example.parent.mkdir(parents=True)
+        example.write_text(
+            '"key": "' + scopes[0]["key"] + '"\napi_key = "' + credential + '"\n'
+        )
+        review_name = "app/reviews/native/retained-1694c5363a2386593b8c44f1-v1.json"
+        review = json.loads((repository / review_name).read_text())
+        team = review["sources"]["kalshi"]["metadata"]["custom_strike"]["hockey_team"]
+        native = root / "source" / review_name
+        native.parent.mkdir(parents=True)
+        native.write_text(
+            '"hockey_team": "' + team + '"\napi_key = "' + credential + '"\n'
+        )
         report = root / "report.json"
         result = subprocess.run(
             [
@@ -46,14 +62,16 @@ def verify_rules(binary, config):
         if (
             result.returncode != 1
             or not isinstance(value, list)
-            or len(value) != 1
-            or value[0].get("StartLine") != 2
+            or len(value) != 3
+            or any(row.get("StartLine") != 2 for row in value)
+            or {str(Path(row["File"]).relative_to(root / "source")) for row in value}
+            != {"app/dashboard/opportunity_board.py", example_name, review_name}
         ):
             raise ValueError(
                 "Secret scanner detection/exception controls failed; no source scan can qualify"
             )
     print(
-        "Secret scanner controls: PASS; credential detection retained in an excepted source file"
+        "Secret scanner controls: PASS; credential detection retained in all three excepted file classes"
     )
 
 

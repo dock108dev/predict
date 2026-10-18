@@ -25,13 +25,16 @@ class Policy(unittest.TestCase):
         database.execute.return_value.fetchone.return_value = {'n': value}
         return database
 
-    def test_sql_usage_reads_only_current_public_table_storage(self):
+    def test_sql_usage_reads_current_and_latest_public_table_storage(self):
         database = self.database(Decimal('2147483648'))
         self.assertEqual(sql_usage(database), SQL_BYTE_CAP)
         query = database.execute.call_args.args[0]
         self.assertIn("schemaname='public'", query)
         self.assertIn("left(tablename,8)='current_'", query)
         self.assertIn('pg_total_relation_size', query)
+        self.assertIn("format('%%I.%%I'", query)
+        self.assertEqual(database.execute.call_args.args[1],
+                         (['data_runtime', 'data_runtime_command', 'scanner_latest', 'latest_board', 'latest_board_status', 'coverage_latest'],))
         database.execute.assert_called_once()
 
     def test_empty_sql_sum_is_zero(self):

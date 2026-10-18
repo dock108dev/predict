@@ -109,20 +109,44 @@ def side_ids(market):
 
 def parse_market(response, data, event_id):
     side_ids(data)
+    family=full_game_family(data.get('sportsMarketType'))
+    if family is None:
+        family={'moneyline':'moneyline','spreads':'spread','spread':'spread','totals':'total','total':'total',
+                'SPORTS_MARKET_TYPE_MONEYLINE':'moneyline','SPORTS_MARKET_TYPE_SPREAD':'spread',
+                'SPORTS_MARKET_TYPE_TOTAL':'total'}.get(data.get('marketType')) or {
+                'SPORTS_MARKET_TYPE_MONEYLINE':'moneyline','SPORTS_MARKET_TYPE_SPREAD':'spread',
+                'SPORTS_MARKET_TYPE_TOTAL':'total'}.get(data.get('sportsMarketTypeV2'))
     return Market(raw=response.raw(event_id, identifier(data.get('id'))),
         title=data.get('question') or data.get('title'),
         outcomes=tuple(Outcome(native_id=identifier(s.get('id')), label=s.get('description')
                        or s.get('team', {}).get('name') or identifier(s.get('id')))
                        for s in data.get('marketSides', [])),
-        market_type=MarketType.MONEYLINE if data.get('marketType') == 'moneyline' or
-            data.get('sportsMarketTypeV2') == 'SPORTS_MARKET_TYPE_MONEYLINE' else MarketType.UNKNOWN,
+        market_type=MarketType(family) if family else MarketType.UNKNOWN,
+        period='full_game' if full_game_family(data.get('sportsMarketType')) else None,
         state=state(data.get('status', data.get('ep3Status'))))
 
 
 # Fine-grained full-game values established by complete retained records.
 FULL_GAME_TYPES = {'nfl':'football_team_full_game_winner', 'cfb':'football_team_full_game_winner',
                    'mlb':'baseball_team_full_game_winner', 'nhl':'hockey_team_full_game_winner'}
-LIVE_FULL_GAME_TYPES = {**FULL_GAME_TYPES, 'nba':'basketball_team_full_game_winner'}
+LIVE_FULL_GAME_TYPES = {**FULL_GAME_TYPES, 'nba':'basketball_team_full_game_winner',
+                        'cbb':'basketball_team_full_game_winner'}
+
+
+def full_game_types(league, families=('moneyline','spread','total'), *, live_bindings=True):
+    winner=(LIVE_FULL_GAME_TYPES if live_bindings else FULL_GAME_TYPES).get(league)
+    if winner is None:return ()
+    prefix=winner.removesuffix('winner')
+    return tuple(prefix+{'moneyline':'winner','spread':'spread','total':'total'}[family]
+                 for family in families)
+
+
+def full_game_family(native_type, league=None, *, live_bindings=True):
+    leagues=(league,) if league else (LIVE_FULL_GAME_TYPES if live_bindings else FULL_GAME_TYPES)
+    for candidate in leagues:
+        for family,kind in zip(('moneyline','spread','total'),full_game_types(candidate,live_bindings=live_bindings)):
+            if native_type==kind:return family
+    return None
 
 def event_game_binding(data, league, *, live_bindings=False):
     """Bind a listing's participants/market refs through explicit side team IDs.
@@ -137,7 +161,7 @@ def event_game_binding(data, league, *, live_bindings=False):
     if league not in types:return dict(teams=teams,markets=[],basis='event_teams_only')
     bound=[];pairs=[]
     for market in data.get('markets') or []:
-        if not isinstance(market,dict) or market.get('sportsMarketType')!=types.get(league):continue
+        if not isinstance(market,dict) or not full_game_family(market.get('sportsMarketType'),league,live_bindings=live_bindings):continue
         sides=market.get('marketSides')
         if not isinstance(sides,list) or len(sides)!=2:continue
         # Older/minimal records without side-team IDs remain unbound.
@@ -163,8 +187,28 @@ def event_game_binding(data, league, *, live_bindings=False):
         signature=lambda pair:sorted((str(t['id']),t['name'],t.get('ordering')) for t in pair)
         if any(signature(pair)!=signature(pairs[0]) for pair in pairs):raise ValueError('conflicting_embedded_game_pairs')
         if len({m['id'] for m in bound})!=len(bound) or len({m['slug'] for m in bound})!=len(bound):raise ValueError('duplicate_embedded_market_identity')
+        # Totals need no team on each Over/Under side. The observed parent
+        # relationship still supplies exact metadata locators after the game's
+        # participant pair has been established independently.
+        bound_ids={m['id'] for m in bound}
+        for market in data.get('markets') or []:
+            if not isinstance(market,dict) or not full_game_family(market.get('sportsMarketType'),league,live_bindings=live_bindings):continue
+            mid=identifier(market.get('id'));slug=identifier(market.get('slug'))
+            if mid not in bound_ids:
+                bound.append(dict(id=mid,slug=slug));bound_ids.add(mid)
         return dict(teams=pairs[0],markets=sorted(bound,key=lambda m:(m['id'],m['slug'])),basis='embedded_full_game_side_team_ids',
                     ignored_team_ids=[str(t.get('id')) for t in teams if isinstance(t,dict) and t.get('id') not in {v['id'] for v in pairs[0]}])
+    if live_bindings and len(teams)==2 and len({str(t.get('id')) for t in teams if isinstance(t,dict)})==2 and all(
+            isinstance(t,dict) and t.get('id') and t.get('name') and t.get('league')==league for t in teams):
+        refs=[]
+        for market in data.get('markets') or []:
+            if not isinstance(market,dict) or not full_game_family(market.get('sportsMarketType'),league):continue
+            mid=identifier(market.get('id'));slug=identifier(market.get('slug'))
+            if len(slug)>200:raise ValueError('invalid_embedded_market_locator')
+            refs.append(dict(id=mid,slug=slug))
+        if len({m['id'] for m in refs})!=len(refs) or len({m['slug'] for m in refs})!=len(refs):
+            raise ValueError('duplicate_embedded_market_identity')
+        return dict(teams=teams,markets=refs,basis='event_teams_with_embedded_market_locators')
     return dict(teams=teams,markets=[],basis='event_teams_only')
 
 

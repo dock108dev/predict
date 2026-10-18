@@ -62,7 +62,8 @@ const root=path.resolve(__dirname,'..'),out=process.env.PREDICT_SC05_REPORT||pat
   await shot('quiet-filter-wide-arrivals');await page.locator('#scanner-sound').click();
   // Filter changes, local search, page changes, overflow and reload are silent.
   await page.locator('#scanner-search').fill('no matching title');await page.waitForTimeout(900);assert.equal((await page.evaluate(()=>window.predictArrivalObservations())).sounds,1);await page.locator('#scanner-search').fill('');
-  await page.locator('#scanner-minimum_edge').fill('30');await page.locator('#scanner-minimum_edge').press('Tab');await page.waitForTimeout(1000);assert.equal((await page.evaluate(()=>window.predictArrivalObservations())).sounds,1);
+  await page.locator('#scanner-advanced>summary').click();
+ await page.locator('#scanner-minimum_edge').fill('30');await page.locator('#scanner-minimum_edge').press('Tab');await page.waitForTimeout(1000);assert.equal((await page.evaluate(()=>window.predictArrivalObservations())).sounds,1);
   await ctl({action:'overflow'});await page.waitForTimeout(1000);assert((await page.locator('#scanner-arrivals').innerText()).includes('earlier observations unknown'));assert.equal((await page.evaluate(()=>window.predictArrivalObservations())).sounds,1);
   const arrivalObservations=await page.evaluate(()=>window.predictArrivalObservations());
   const state=await ctl({});if(!process.env.SC05_PORTABLE){assert(state.sql_capture_enabled);assert(state.witness.length>=30);}assert.equal(state.provider_requests,0);assert.deepEqual(errors,[]);assert.equal(external.length,0);

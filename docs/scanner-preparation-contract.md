@@ -1,6 +1,9 @@
 # Scanner readiness preparation reuse
 
-The scanner owns one process-local readiness preparation cache. It stores compact
+The background scanner owns one process-local readiness preparation cache. The
+app reads its latest database publication and has a separate bounded selected-item
+cache; it never prepares a whole slate for an ordinary scanner page.
+[Cross-process ownership](data-app-runtime-contract.md). It stores compact
 detached input facts, not financial results, durable history or acquisition
 authority. Current SQL remains authoritative. Every capture first takes a fresh
 repeatable-read snapshot and resolves the complete current occurrence membership.

@@ -122,7 +122,10 @@ jobs:
   browser:
     name: Ordinary browser journey
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
+    env:
+      PG_CONFIG: /usr/lib/postgresql/16/bin/pg_config
+      PREDICT_SC06_REPORT: ${{ github.workspace }}/test-results/browser/sc06
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

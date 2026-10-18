@@ -272,7 +272,7 @@ def binding_context(e,g,o):
 
 def event_identity(e):
     """Versioned current occurrence IDs omit scheduled-time metadata."""
-    current=e['event_discriminator'].startswith('predict-occurrence-1:')
+    current=e['event_discriminator'].startswith(('predict-occurrence-1:','comparison-provider-occurrence-1:'))
     values=[e[k] for k in (('sport','league','event_discriminator') if current else ('sport','league','season','stage','event_discriminator'))]
     if not current and not e['event_discriminator'].startswith('comparison-occurrence-1:'):
         values.append(stamp(e['start_at']).isoformat())
@@ -342,7 +342,13 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
     events={}; native_selections={}; count_groups=0; count_quotes=0
     for e in r['events']:
         fields(e,{'id','sport','league','season','stage','event_discriminator','participants','title','start_at','groups'})
-        for k in ('id','sport','league','season','stage','event_discriminator','title'):text(e[k])
+        for k in ('id','sport','league','event_discriminator','title'):text(e[k])
+        source_local=e['event_discriminator'].startswith('comparison-provider-occurrence-1:')
+        missing_context=any(e[k] is None for k in ('season','stage'))
+        for k in ('season','stage'):
+            if e[k] is not None:text(e[k])
+            elif not source_local:
+                raise ValueError('Missing comparison context requires a source-local observation')
         stamp(e['start_at'])
         ps=e['participants']
         if not isinstance(ps,list) or not 2<=len(ps)<=16 or len({p['id'] for p in ps})!=len(ps):raise ValueError('Distinct participants required')
@@ -350,6 +356,8 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
             fields(p,{'id','name','role'})
             for k in ('id','name','role'):text(p[k])
         if len({p['role'] for p in ps})!=len(ps):raise ValueError('Distinct participant roles required')
+        if source_local and (len(ps)!=2 or {p['role'] for p in ps}!={'home','away'}):
+            raise ValueError('Exact source-local home and away roles required')
         eid=event_identity(e)
         e['id']=eid; groups={}
         for g in e['groups']:
@@ -394,14 +402,24 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
                     if 'native_contract' in q:
                         from app.comparison.event_links import digest
                         c=q['native_contract']
-                        fields(c,{'version','id','source','predicate','wording','result_policy','scope','material_sha256'})
+                        fields(c,{'version','id','source','predicate','wording','result_policy','scope','material_sha256'},{'scope_evidence','same_outcome'})
                         if c['version']!='predict-native-contract-1' or c['source']!=q['source'] or c['id']!='native-contract:'+digest({k:v for k,v in c.items() if k!='id'}) or len(packed(c))>65536:
                             raise ValueError('Native contract provenance conflict')
+                        if 'same_outcome' in c and (not isinstance(c['same_outcome'],dict) or len(packed(c['same_outcome']))>16384):
+                            raise ValueError('Bounded canonical contract facts required')
                         fields(c['scope'],{'period','overtime'})
                         if c['scope']['period']!=g['period'] or c['scope']['overtime'] not in ('included','excluded','unknown'):
                             raise ValueError('Native contract scoring scope conflict')
                         if 'display_group' in g and c['scope']['overtime']!=g['display_group']['overtime']:
                             raise ValueError('Native contract display scope conflict')
+                        if 'scope_evidence' in c:
+                            from app.comparison.native_scoring_scope import VERSION as SCOPE_VERSION
+                            audit=c['scope_evidence']
+                            fields(audit,{'version','status','overtime','reason','missing_fields','observed_overtime','conflicts','evidence'},{'scoring','rule_id'})
+                            if (audit['version']!=SCOPE_VERSION or audit['overtime']!=c['scope']['overtime']
+                                    or audit['status'] not in ('supported','unknown','contradictory')
+                                    or (audit['status']=='supported')!=(audit['overtime']!='unknown')):
+                                raise ValueError('Native contract scoring evidence conflict')
                         if c['predicate']!=q.get('occurrence_match',{}).get('original_selection'):
                             raise ValueError('Native contract original predicate conflict')
                     if 'occurrence_match' in q:
@@ -462,6 +480,8 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
                     if not isinstance(b['evidence'],list) or not 1<=len(b['evidence'])<=32:raise ValueError('Bounded binding evidence required')
                     for ev in b['evidence']:text(ev)
                     fields(b,{'verified','evidence','selection'})
+                    if missing_context and b['verified']:
+                        raise ValueError('Missing comparison context cannot have a verified selection binding')
                     q['binding']=b
                     native_key=identity('instrument',[q['venue'],*[s[k] for k in ('provider','native_event_id','native_market_id','native_outcome_id','native_side','quote_side')]])
                     if native_key in native_selections and native_selections[native_key]!=o['id']:raise ValueError('Native instrument bound to conflicting selections')

@@ -33,8 +33,6 @@ def dashboard_guard(current_provider, *, logger):
                 in (
                     "/api/comparison",
                     "/api/arbs",
-                    "/api/coverage",
-                    "/current/coverage",
                 )
                 or request.path == "/api/current"
                 or request.path.startswith("/api/current/")

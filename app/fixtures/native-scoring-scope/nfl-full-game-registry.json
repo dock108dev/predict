@@ -1,0 +1,477 @@
+{
+  "version": "predict-native-scoring-registry-1",
+  "governing_rules": {
+    "kalshi-nfl-full-game": {
+      "series_id": "KXNFLGAME",
+      "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLGAMEWIN.pdf",
+      "path": "app/fixtures/native-scoring-scope/kalshi-football.pdf",
+      "sha256": "57b57e1ad96466e413e9274c0d2598225997e35d71262eb63c4ae13858b81d38",
+      "period": "full_game",
+      "overtime": "included",
+      "reviewed_at": "2026-10-17T13:43:18.843335+00:00",
+      "pointer_evidence": {
+        "path": "app/fixtures/native-scoring-scope/selected-series-fee-and-ot-resolution.json",
+        "sha256": "b598ae3d1ea50dc92b53b348ad6f490204ce663d5f991235cf39a1e206d26028"
+      },
+      "default": "All overtime periods are included unless specified otherwise; market-specific exceptions take precedence."
+    }
+  },
+  "targets": [
+    {
+      "id": "NFL:JAX:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:JAX",
+        "away": "NFL:HOU",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:JAX",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18HOUJAC",
+            "KXNFLGAME-26OCT18HOUJAC-JAC",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T13:43:18.843335+00:00",
+          "terms": {
+            "sha256": "b0137b5db2fb2ec32870890ba5b2bbf7926748c59ed83bf51407b62985a5f8bd",
+            "text": {
+              "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "81129f13545cd7ddcbb0b0675b5786258454c112875ba728a3e33f2c5c7171aa",
+            "text": {
+              "title": "Jacksonville wins",
+              "no_sub_title": "Jacksonville",
+              "rules_primary": "If Jacksonville wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Jacksonville",
+              "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141502",
+            "1198902",
+            "2397287",
+            "Short"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T13:43:18.843335+00:00",
+          "terms": {
+            "sha256": "46e01f71d11b3f3a3cfdd792c52df9cb6b5ee63cc78116d68a36a207b8b6a08c",
+            "text": {
+              "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "46e01f71d11b3f3a3cfdd792c52df9cb6b5ee63cc78116d68a36a207b8b6a08c",
+            "text": {
+              "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    },
+    {
+      "id": "NFL:HOU:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:JAX",
+        "away": "NFL:HOU",
+        "scheduled_start": "2026-10-18T13:30:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:HOU",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18HOUJAC",
+            "KXNFLGAME-26OCT18HOUJAC-HOU",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "5d423504b320e2c3b040583a18de59f07a0bad6a424d12eec958b3f93d23bb1d",
+            "text": {
+              "rules_primary": "If Houston wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "b867803e8a48efe73a3d2efc71c66a95cb4c3744586e4ae4746779b83fbc83d4",
+            "text": {
+              "title": "Houston wins",
+              "no_sub_title": "Houston",
+              "rules_primary": "If Houston wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Houston",
+              "rules_secondary": "The following market refers to the team who wins the HOU Texans vs JAC Jaguars Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141502",
+            "1198902",
+            "2397286",
+            "Long"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "46e01f71d11b3f3a3cfdd792c52df9cb6b5ee63cc78116d68a36a207b8b6a08c",
+            "text": {
+              "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "46e01f71d11b3f3a3cfdd792c52df9cb6b5ee63cc78116d68a36a207b8b6a08c",
+            "text": {
+              "description": "This market will settle to the winner of the Houston Texans vs Jacksonville Jaguars NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    },
+    {
+      "id": "NFL:CAR:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:PHI",
+        "away": "NFL:CAR",
+        "scheduled_start": "2026-10-18T17:00:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:CAR",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18CARPHI",
+            "KXNFLGAME-26OCT18CARPHI-CAR",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "84450f2301126ff4daccec620a93e3cc9169bbbbc20e538c972b24c61f2ad9e7",
+            "text": {
+              "rules_primary": "If Carolina wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "c0e796bfc3e3d7b2ffc42edb82f54f8d812a9c4e430be28dcfabda302e2f5140",
+            "text": {
+              "title": "Carolina wins",
+              "no_sub_title": "Carolina",
+              "rules_primary": "If Carolina wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Carolina",
+              "rules_secondary": "The following market refers to the team who wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141504",
+            "1198904",
+            "2397290",
+            "Long"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "8a7d4735848e96ec0f99107bd59fdf593f3c5bc74e6b46863f25115c9d6803af",
+            "text": {
+              "description": "This market will settle to the winner of the Carolina Panthers vs Philadelphia Eagles NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "8a7d4735848e96ec0f99107bd59fdf593f3c5bc74e6b46863f25115c9d6803af",
+            "text": {
+              "description": "This market will settle to the winner of the Carolina Panthers vs Philadelphia Eagles NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    },
+    {
+      "id": "NFL:PHI:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:PHI",
+        "away": "NFL:CAR",
+        "scheduled_start": "2026-10-18T17:00:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:PHI",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18CARPHI",
+            "KXNFLGAME-26OCT18CARPHI-PHI",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "5d57d068f9703c077634911bcb74ec5ad51388327a4a2f1dc7c13994e6e92a56",
+            "text": {
+              "rules_primary": "If Philadelphia wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "75983d47f20dcac26dac129100c24e9036c832a30bb0fd7dc83098fd4f73d37f",
+            "text": {
+              "title": "Philadelphia wins",
+              "no_sub_title": "Philadelphia",
+              "rules_primary": "If Philadelphia wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Philadelphia",
+              "rules_secondary": "The following market refers to the team who wins the CAR Panthers vs PHI Eagles Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141504",
+            "1198904",
+            "2397291",
+            "Short"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "8a7d4735848e96ec0f99107bd59fdf593f3c5bc74e6b46863f25115c9d6803af",
+            "text": {
+              "description": "This market will settle to the winner of the Carolina Panthers vs Philadelphia Eagles NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "8a7d4735848e96ec0f99107bd59fdf593f3c5bc74e6b46863f25115c9d6803af",
+            "text": {
+              "description": "This market will settle to the winner of the Carolina Panthers vs Philadelphia Eagles NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    },
+    {
+      "id": "NFL:BAL:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:CLE",
+        "away": "NFL:BAL",
+        "scheduled_start": "2026-10-18T17:00:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:BAL",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18BALCLE",
+            "KXNFLGAME-26OCT18BALCLE-BAL",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "be5277118a304ba75780052c5b91635d7431497f4149913aaaee55a303aeb412",
+            "text": {
+              "rules_primary": "If Baltimore wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "cd9da84e658f38f1282fc8c16edae280d013785096da4dee1467963dc25c6ca2",
+            "text": {
+              "title": "Baltimore wins",
+              "no_sub_title": "Baltimore",
+              "rules_primary": "If Baltimore wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Baltimore",
+              "rules_secondary": "The following market refers to the team who wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141506",
+            "1198906",
+            "2397294",
+            "Long"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "8691633f08b274028e36484e1473b7af3b9a3ecee33d664a283e88be312d874b",
+            "text": {
+              "description": "This market will settle to the winner of the Baltimore Ravens vs Cleveland Browns NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "8691633f08b274028e36484e1473b7af3b9a3ecee33d664a283e88be312d874b",
+            "text": {
+              "description": "This market will settle to the winner of the Baltimore Ravens vs Cleveland Browns NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    },
+    {
+      "id": "NFL:CLE:win:2026-10-18",
+      "game": {
+        "sport": "american_football",
+        "competition": "NFL",
+        "season": "2026",
+        "stage": "regular_season",
+        "home": "NFL:CLE",
+        "away": "NFL:BAL",
+        "scheduled_start": "2026-10-18T17:00:00+00:00"
+      },
+      "selection": {
+        "participant": "NFL:CLE",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "family": "moneyline",
+      "period": "full_game",
+      "bindings": [
+        {
+          "native_key": [
+            "kalshi",
+            "KXNFLGAME-26OCT18BALCLE",
+            "KXNFLGAME-26OCT18BALCLE-CLE",
+            "yes",
+            "yes"
+          ],
+          "series_id": "KXNFLGAME",
+          "governing_rule": "kalshi-nfl-full-game",
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "478dabed45666243ff94c6bc9183a888b3563f3314382d2c733d92a79b72bb90",
+            "text": {
+              "rules_primary": "If Cleveland wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "rules_secondary": "The following market refers to the team who wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "wording": {
+            "sha256": "13bcd053e9e6e669a1aa87e0b0e402a0826cf1e51680c3d4da5b5ade5a850e3a",
+            "text": {
+              "title": "Cleveland wins",
+              "no_sub_title": "Cleveland",
+              "rules_primary": "If Cleveland wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026, then the market resolves to Yes.",
+              "yes_sub_title": "Cleveland",
+              "rules_secondary": "The following market refers to the team who wins the BAL Ravens vs CLE Browns Pro Football game originally scheduled for Oct 18, 2026. If the game ends in a tie, the market will resolve to $0.50 for each team. If the game is postponed but begins within 48 hours from its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners."
+            }
+          },
+          "market_exceptions": "No overtime exception in these complete exact market terms; tie and postponement language retained independently."
+        },
+        {
+          "native_key": [
+            "polymarket_us",
+            "141506",
+            "1198906",
+            "2397295",
+            "Short"
+          ],
+          "series_id": null,
+          "governing_rule": null,
+          "reviewed_at": "2026-10-17T17:13:16+00:00",
+          "terms": {
+            "sha256": "8691633f08b274028e36484e1473b7af3b9a3ecee33d664a283e88be312d874b",
+            "text": {
+              "description": "This market will settle to the winner of the Baltimore Ravens vs Cleveland Browns NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "wording": {
+            "sha256": "8691633f08b274028e36484e1473b7af3b9a3ecee33d664a283e88be312d874b",
+            "text": {
+              "description": "This market will settle to the winner of the Baltimore Ravens vs Cleveland Browns NFL game scheduled for Oct 18, 2026. Overtime is included if played. If the game ends in a tie, the market will settle to $0.50. If the game is delayed, postponed, or suspended and not rescheduled to a date within two weeks of the originally scheduled date, the market will settle to the last fair market price. Outcome sourced from NFL."
+            }
+          },
+          "market_exceptions": "Own full-game winner description expressly includes overtime; tie and postponement language retained independently."
+        }
+      ]
+    }
+  ]
+}

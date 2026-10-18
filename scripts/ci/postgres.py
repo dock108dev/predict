@@ -43,6 +43,26 @@ def main(argv=None):
     )
     parser.add_argument("--allow-other-postgres", action="store_true")
     parser.add_argument(
+        "--tests",
+        nargs="+",
+        help="Explicit focused tests in the same disposable SQL lane.",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop a focused SQL run at its first failed test.",
+    )
+    parser.add_argument(
+        "--da-separation",
+        action="store_true",
+        help="Run focused data/app separation qualification in this disposable cluster.",
+    )
+    parser.add_argument(
+        "--da-browser",
+        action="store_true",
+        help="Include the small desktop/390px DA browser walkthrough; requires --da-separation.",
+    )
+    parser.add_argument(
         "--sc06-browser",
         action="store_true",
         help="Run the integrated SC06 SQL-to-Chromium workload in this disposable cluster.",
@@ -53,8 +73,10 @@ def main(argv=None):
         help="Run the SC03 30-sample SQL ticket timing check in this disposable cluster.",
     )
     args = parser.parse_args(argv)
-    if args.sc06_browser and args.sc03_ticket_timing:
+    if sum((args.da_separation, args.sc06_browser, args.sc03_ticket_timing)) > 1:
         parser.error("Select only one focused PostgreSQL qualification lane")
+    if args.da_browser and not args.da_separation:
+        parser.error("--da-browser requires --da-separation")
     if os.geteuid() == 0:
         raise ValueError(
             "Run as an ordinary user; never use a root-owned or owner cluster"
@@ -81,7 +103,11 @@ def main(argv=None):
         ),
         "report_dir": str(output),
         "suite": (
-            "sc03-ticket-timing"
+            "da-separation-browser"
+            if args.da_browser
+            else "da-separation"
+            if args.da_separation
+            else "sc03-ticket-timing"
             if args.sc03_ticket_timing
             else "sc06-browser"
             if args.sc06_browser
@@ -147,6 +173,21 @@ def main(argv=None):
             # that root inside this test process, never alter application configuration.
             tests = (
                 [
+                    "tests/test_da_separation_sql.py",
+                    "tests/test_latest_board_sql.py",
+                    "tests/test_current_publication_repair.py",
+                    "tests/test_multisport_pipeline_sql.py",
+                    "tests/test_source_local_observations_sql.py",
+                    "tests/test_consistent_slate_reads_sql.py",
+                    "tests/test_selected_input_latency_sql.py",
+                    "tests/test_selected_input_guards_sql.py",
+                    "tests/test_schedule_reconciliation_sql.py",
+                    "tests/test_broad_native_matrix_sql.py",
+                    "tests/test_broad_coverage_sql.py",
+                    "tests/test_shared_current_comparisons_sql.py",
+                ]
+                if args.da_separation
+                else [
                     "tests/test_sc03_sql.py::TicketSQL::test_authored_ready_http_timing_with_actual_disposable_sql_capture"
                 ]
                 if args.sc03_ticket_timing
@@ -157,12 +198,25 @@ def main(argv=None):
                     "tests/test_d03_current_rows.py",
                     "tests/test_current_row_financial_roundtrip.py",
                     "tests/test_current_row_occurrence_roundtrip.py",
+                    "tests/test_multisport_pipeline_sql.py",
+                    "tests/test_source_local_observations_sql.py",
+                    "tests/test_consistent_slate_reads_sql.py",
+                    "tests/test_selected_input_latency_sql.py",
+                    "tests/test_selected_input_guards_sql.py",
+                    "tests/test_schedule_reconciliation_sql.py",
+                    "tests/test_broad_native_matrix_sql.py",
+                    "tests/test_broad_coverage_sql.py",
+                    "tests/test_shared_current_comparisons_sql.py",
                     "tests/test_sc01_readiness_sql.py",
                     "tests/test_sc02_sql.py",
                     "tests/test_sc03_sql.py",
                     "tests/test_sc06_performance_sql.py",
                 ]
             )
+            if args.tests:
+                tests = args.tests
+            if args.fail_fast:
+                tests = [*tests, "-x"]
             code = (
                 "from pathlib import Path; import app.storage.store as s; "
                 's.ROOT=Path(__import__("sys").argv[1]); import pytest; '
@@ -175,6 +229,8 @@ def main(argv=None):
             environment["SC02_TEST_PGSOCKET"] = str(socket)
             environment["SC06_TEST_PGSOCKET"] = str(socket)
             environment["SC06_SQL_PROVISIONED"] = "1"
+            environment["DA_TEST_PGSOCKET"] = str(socket)
+            environment["DA_BROWSER"] = "1" if args.da_browser else "0"
             # Tests also spawn pg_dump/pg_restore; they must match this server.
             environment["PATH"] = str(binary) + os.pathsep + environment.get("PATH", "")
             environment["PREDICT_CI_ISOLATED_ROOT"] = str(

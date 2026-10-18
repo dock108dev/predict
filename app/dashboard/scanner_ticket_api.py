@@ -16,7 +16,10 @@ def mount(app, scanner):
             # A failed fresh proof must withdraw action authority. Never expose
             # database exception text or leave an old successful status ready.
             raise TicketError('ticket_current_proof_unavailable') from None
-    tickets=Tickets(scanner.projection,fresh_selected=fresh_selected,stopped=scanner.stopped)
+    tickets=Tickets(scanner.projection,fresh_selected=fresh_selected,stopped=scanner.stopped,
+                    current_selected=getattr(scanner,'_selection_snapshot',None),
+                    collection_stopped=(lambda:scanner.collection_stopped)
+                        if hasattr(scanner,'collection_stopped') else None)
     sweep=None
     async def cleanup():
         while True:
@@ -25,6 +28,7 @@ def mount(app, scanner):
     def start():
         nonlocal sweep
         scanner.start()
+        scanner._withdraw_if_stopped()
         if sweep is None:sweep=asyncio.create_task(cleanup())
     async def post(req):
         try:
@@ -52,7 +56,8 @@ def mount(app, scanner):
             start()
             p=scanner.projection
             with p.lock:
-                if scanner.stopped() or p.stopped:raise TicketError('ticket_stopped')
+                if scanner.stopped() or p.stopped:
+                    raise TicketError('ticket_stopped' if p.stopped else 'ticket_current_proof_unavailable')
                 row=p.rows.get(req.query['row_id'])
                 if row is None or p.server_id!=req.query['server_id'] or p.epoch!=req.query['epoch'] or any(row[k]!=req.query[k] for k in ('dependency_revision','economic_revision')):
                     raise TicketError('ticket_selection_changed')

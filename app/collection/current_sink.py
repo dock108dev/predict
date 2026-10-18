@@ -16,8 +16,166 @@ def utc():
     return datetime.now(timezone.utc).isoformat()
 
 
+def selected_market_observation(market, material):
+    """Retain bounded exact-present Kalshi metadata, without execution authority.
+
+    These fields already belong to the selected market discovery response. A
+    book receipt cannot date the metadata, and representation/face values do not
+    establish a legal quantity grid, settlement, participant channel or costs.
+    """
+    fields = ('price_ranges', 'price_level_structure', 'notional_value_dollars')
+    values = {key: deepcopy(material[key]) for key in fields if key in material}
+    proof = (market.get('provenance') or [{}])[-1]
+    value = dict(version='selected-market-observation-1',
+                 native_event_id=market['event_id'], native_market_id=market['id'],
+                 material_sha256=stable(material),
+                 source={key: deepcopy(proof[key]) for key in
+                         ('path', 'params', 'received_at', 'body_sha256', 'inventory_row') if key in proof},
+                 present_fields=list(values),
+                 qualification='unreviewed_source_metadata_only_no_execution_authority')
+    if len(packed(values)) > 16*1024:
+        return dict(value, status='metadata_capacity_excluded', values={})
+    return dict(value, status='observed' if values else 'absent', values=values)
+
+
+def _missing_comparison_context(event):
+    """Missing comparison context never becomes an invented source-local fact."""
+    fields = ['season', 'stage']
+    if event.get('competition') == 'MLB':
+        fields.extend(('game_id', 'game_number', 'original_start', 'schedule_status'))
+    return [field for field in fields if event.get(field) in (None, '', 'unknown', 'unverified')]
+
+
+def _source_local_event(event, venue):
+    """Validate the smaller durable native identity without joining occurrences."""
+    from app.comparison.domain import LEAGUES
+    from app.comparison.event_links import instant, provider_key
+    participants = event.get('participants', {})
+    roles = event.get('source_participant_roles', {})
+    if (venue not in ('kalshi', 'polymarket_us') or event.get('identity') != 'resolved'
+            or event.get('competition') not in LEAGUES
+            or not isinstance(event.get('id'), str) or not event['id']
+            or event.get('occurrence_conflict') or event.get('conflicting_duplicate')
+            or len(participants) != 2 or len(set(participants.values())) != 2
+            or any(not isinstance(value, str) or not value for value in participants.values())
+            or set(roles) != {'home', 'away'} or set(roles.values()) != set(participants.values())
+            or any(event.get(role) != roles[role] for role in ('home', 'away'))):
+        raise ValueError('Exact source-local event identity unavailable or conflicting')
+    instant(event['scheduled_start'])
+    if event['competition'] == 'MLB':
+        original = event.get('original_start'); status = event.get('schedule_status')
+        if (original is not None and status == 'original'
+                and instant(original) != instant(event['scheduled_start'])):
+            raise ValueError('Conflicting original source-local MLB schedule')
+        if event.get('game_number') is not None and (type(event['game_number']) is not int or event['game_number'] < 1):
+            raise ValueError('Conflicting source-local MLB game number')
+        if status is not None and status not in ('original', 'rescheduled'):
+            raise ValueError('Conflicting source-local MLB schedule status')
+    return provider_key(venue, event)
+
+
+def _context_display_binding(event, market, binding, venue):
+    """Reuse exact typed sides while retaining strict comparison refusal.
+
+    Only the known missing-context blockers are eligible. This detached display
+    binding never changes the catalog's BOUND_RAW_PREDICATE decision.
+    """
+    from .v1_comparison import predicates
+    missing = _missing_comparison_context(event)
+    if not missing or binding.get('status') != 'IDENTITY_BLOCKED':
+        return None
+    _source_local_event(event, venue)
+    blockers = binding.get('blockers', [])
+    prefixes = ('Exact game identity facts unavailable:',
+                'Exact schedule, sport season and stage unavailable',
+                'Exact MLB game/number/original/rescheduled identity unavailable')
+    def contextual(reason):
+        return isinstance(reason, str) and (reason.startswith(prefixes)
+            or reason == 'Conflicting or incomplete exact MLB occurrence/home/away identity'
+            and event['competition'] == 'MLB' and bool(missing))
+    if (not blockers or not all(contextual(reason) for reason in blockers)
+            or market.get('conflicting_duplicate') or binding.get('source') != venue
+            or binding.get('event_id') != event['id'] or binding.get('market_id') != market['id']
+            or binding.get('sha256') != stable({k:v for k,v in binding.items() if k != 'sha256'})):
+        return None
+    identity = binding.get('identity') or {}
+    if (identity.get('competition') != event['competition']
+            or identity.get('family') != market.get('market_type')
+            or identity.get('period') != market.get('period')
+            or any(identity.get(field) is not None and event.get(field) is not None
+                   and identity[field] != event[field] for field in ('season', 'stage'))):
+        return None
+    sides = market.get('sides', [])
+    values = list(predicates(binding))
+    if (not values or len(sides) != len(values)
+            or len({side['id'] for side in sides}) != len(sides)
+            or {side['id'] for side in sides} != {native for native, _, _ in values}):
+        return None
+    out = deepcopy(binding)
+    out['status'] = 'DISPLAY_ORIGINAL_ONLY'
+    out['comparison_admission'] = dict(supported=False, reason='comparison_context_missing',
+        missing_fields=missing, detail=deepcopy(blockers))
+    return out
+
+
+def source_local_display_binding(event, market, binding, venue):
+    """Exact native display fallback for discovery and sink; never comparison authority."""
+    try:
+        return _context_display_binding(event, market, binding, venue)
+    except (ValueError, KeyError, TypeError, ArithmeticError):
+        return None
+
+
+def _raw_display_binding(event,market,binding):
+    """Retain a typed native quote when only comparison interpretation is missing.
+
+    These are display labels from the original sides and source line. The explicit
+    comparison_admission block prevents them from becoming score predicates.
+    """
+    from .admission_enrichment import resolve_team
+    if (event.get('identity')!='resolved' or market.get('period')!='full_game'
+            or market.get('market_type') not in ('moneyline','spread','total')):return None
+    native=market.get('_native') or market.get('native_metadata') or {}
+    family=market['market_type'];venue=binding.get('source')
+    if venue!='polymarket_us':return None
+    sides=native.get('marketSides',[])
+    if (len(sides)!=2 or {s.get('long') for s in sides}!={True,False}
+            or any(str(s.get('marketId'))!=market['id'] or type(s.get('long')) is not bool for s in sides)):return None
+    line=None
+    if family!='moneyline':
+        try:
+            line=Decimal(str(native.get('line')))
+            if not line.is_finite() or abs(line)>10000:return None
+        except (ValueError,TypeError,ArithmeticError):return None
+    selections=[];anchor=None
+    for side in sides:
+        participant=None;signed=None
+        if family=='total':
+            label=side.get('description')
+            if label not in ('Over','Under'):return None
+            kind=label.lower();signed=str(line)
+        else:
+            participant=resolve_team(side.get('team') or {},event.get('competition'),venue)
+            if participant not in event.get('participants',{}).values():return None
+            kind='win' if family=='moneyline' else 'cover'
+            if family=='spread':
+                try:signed=Decimal(str(side.get('description')))
+                except (ValueError,TypeError,ArithmeticError):return None
+                if signed!=(line if side['long'] else -line):return None
+                signed=str(signed)
+                if side['long']:anchor=participant
+        selections.append(dict(native_id=str(side['id']),participant=participant,predicate=kind,signed_line=signed))
+    out=deepcopy(binding)
+    out.update(status='DISPLAY_ORIGINAL_ONLY',predicate=selections,source_predicate=None,display_anchor=anchor)
+    out['identity']=dict(binding.get('identity') or {},family=family,period='full_game',line=None if line is None else str(line))
+    conflict=any('conflict' in str(reason).lower() for reason in binding.get('blockers',[]))
+    out['comparison_admission']=dict(supported=False,reason='comparison_predicate_conflict' if conflict else 'comparison_predicate_missing',
+        missing_fields=['native_inequality','native_contract_wording'],detail=deepcopy(binding.get('blockers',[])))
+    return out
+
+
 def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None, include_missing=False):
-    from app.comparison.event_links import current_event_key as event_key, provider_key
+    from app.comparison.event_links import current_event_key as event_key
     from .v1_comparison import predicates
     records = []
     excluded = []
@@ -34,19 +192,45 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                 continue
             reason = event.get('exclusion') or market.get('exclusion') or market.get('subscription_evidence_exclusion')
             try:
-                if reason or binding['status'] != 'BOUND_RAW_PREDICATE':
-                    raise ValueError('Native identity or predicate incomplete')
                 event=deepcopy(event)
                 roles=event.get('source_participant_roles',{})
                 for role in ('home','away'):
                     if event.get(role) is None and roles.get(role) is not None:event[role]=roles[role]
+                if binding['status']!='BOUND_RAW_PREDICATE':
+                    contextual=source_local_display_binding(event,market,binding,venue)
+                    if (_missing_comparison_context(event)
+                            and (event.get('occurrence_conflict') or event.get('conflicting_duplicate')
+                                 or market.get('conflicting_duplicate')
+                                 or contextual is None and any('conflict' in str(value).lower() for value in binding.get('blockers',[])))):
+                        raise ValueError('Conflicting source-local identity')
+                    if contextual is not None:
+                        soft={'native_scope_effective_descriptor_facts_missing', 'native_scope_predicate_review_required',
+                              'unsupported_market_type_or_period', 'unresolved_native_sides'}
+                        if not event.get('exclusion') and all(not value or value in soft for value in
+                                (market.get('exclusion'),market.get('subscription_evidence_exclusion'))):
+                            binding=contextual;reason=None
+                    elif not reason:
+                        binding=_raw_display_binding(event,market,binding) or binding
+                # The catalog binding's seal covers its original strict facts.
+                # Attach the separate display refusal only after verifying it.
+                if market.get('comparison_admission',{}).get('supported') is False:
+                    binding=dict(binding,comparison_admission=deepcopy(market['comparison_admission']))
+                display_only=binding.get('comparison_admission',{}).get('supported') is False
+                if reason or binding['status'] not in ('BOUND_RAW_PREDICATE','DISPLAY_ORIGINAL_ONLY'):
+                    raise ValueError('Native identity or predicate incomplete')
                 event_scope=None
                 try:key = event_key(event)
                 except (ValueError,KeyError):
-                    if any(not event.get(k) for k in ('season','stage','scheduled_start','home','away')) or event['home']==event['away'] or set(event['participants'].values())!={event['home'],event['away']}:
-                        raise ValueError('Complete source-local event identity unavailable')
                     event_scope=dict(policy='native-event-unverified-2',source=venue,native_event_id=event['id'])
-                    key=provider_key(venue,event)
+                    key=_source_local_event(event,venue)
+                    for field in ('season','stage'):event.setdefault(field,None)
+                missing_context=_missing_comparison_context(event)
+                if event_scope is not None and missing_context:
+                    admission=deepcopy(binding.get('comparison_admission',{}))
+                    binding=dict(binding,comparison_admission=dict(supported=False,reason='comparison_context_missing',
+                        missing_fields=list(dict.fromkeys(missing_context+admission.get('missing_fields',[]))),
+                        detail=deepcopy(binding.get('blockers',admission.get('detail',[])))))
+                    display_only=True
                 ident = binding['identity']
                 from app.comparison.domain import PERIODS
                 if ident['period'] not in PERIODS or ident['family'] not in ('moneyline', 'spread', 'total'):
@@ -62,17 +246,23 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                 canonical_line = None if ident['family'] == 'moneyline' else str(ident['line'])
                 anchor = None
                 if ident['family'] == 'spread':
-                    anchor = fact['participant']
+                    anchor = fact['participant'] if fact else binding.get('display_anchor')
                 native_predicates=list(predicates(binding))
                 selections={}
                 for native,predicate,meaning in native_predicates:
-                    participant=meaning['participant'];kind=meaning['predicate'];signed=None
+                    participant=meaning['participant'];kind=meaning['predicate'];signed=meaning.get('signed_line')
                     if fact:
                         op=meaning['operator']
-                        if op not in ('gt','le','lt','ge') or abs(Decimal(canonical_line)%1)!=Decimal('.5'):raise ValueError('Exact score outcome requires supported half-point orientation')
+                        if op not in ('gt','le','lt','ge'):raise ValueError('Exact score outcome requires supported orientation')
                         if ident['family']=='total':
-                            if op not in ('gt','le'):raise ValueError('Unsupported combined-score direction')
-                            participant=None;kind='over' if op=='gt' else 'under';signed=canonical_line
+                            participant=None;kind='over' if op in ('gt','ge') else 'under';signed=canonical_line
+                        elif ident['family']=='moneyline':
+                            participant=fact['participant'];signed=None
+                            # A native team-win NO includes its own tie predicate;
+                            # it never becomes an opposing team's YES.
+                            if participant not in (event['home'],event['away']):
+                                raise ValueError('Partial winner requires a named team predicate')
+                            kind='win' if op==('gt' if participant==event['home'] else 'lt') else 'not_win'
                         else:
                             participant=event['home'] if op in ('gt','ge') else event['away']
                             kind='cover';signed=canonical_line if participant==anchor else str(-Decimal(canonical_line))
@@ -100,6 +290,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                             ctx.prec=600
                             original.update(native_value=str(Decimal(1)-Decimal(value)), native_units='usd_per_contract', transformation='one_minus_native_bid')
                     state = 'resyncing' if (venue, market['event_id'], market['id']) in projection.invalid else states[venue]['state']
+                    if market.get('comparison_admission',{}).get('reason')=='native_material_changed_capacity':state='stale'
                     source = dict(provider=venue, native_event_id=event['id'], native_market_id=market['id'],
                         native_outcome_id=native, native_side=side.get('role') or native,
                         binding_id=stable([venue, event['id'], market['id'], native, predicate]),
@@ -108,7 +299,10 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         times=dict(source_at=book['raw'].get('exchange_at'), received_at=book['raw']['received_at'],
                                    projected_at=clock or utc(), source_time_kind='provider_book' if book['raw'].get('exchange_at') else 'unknown'),
                         state=state if state != 'connecting' else 'resyncing',
-                        rule_note='Native predicate reviewed; exceptional settlement and costs remain unqualified.',
+                        rule_note=('Original native price retained; comparison context is incomplete.'
+                            if binding.get('comparison_admission',{}).get('reason')=='comparison_context_missing' else
+                            'Original native price retained; exact comparison predicate is unavailable.' if display_only else
+                            'Native predicate reviewed; exceptional settlement and costs remain unqualified.'),
                         cost_note='Current applicable costs unavailable',
                         depth=[dict(price=str(l['price']['value']), quantity=str(l['quantity']['value'])) for l in levels],
                         freshness_policy=dict(version=venue+'-book-age-engineering-1', maximum_age_seconds=30),
@@ -122,9 +316,9 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         competition=event['competition'], season=event['season'], stage=event['stage'], scheduled_start=event['scheduled_start'],
                         family=ident['family'], period=ident['period'], line=canonical_line,
                         outcome_set=stable([p for _, p, _ in predicates(binding)]), rules='native-gross-predicate-1'),
-                        period_boundary='All regulation and applicable overtime; exceptional payouts separately unqualified',
+                        period_boundary='Original native period; scoring scope recorded separately',
                         anchor_participant=anchor, selection=selection, quote=q,
-                        orientation_evidence=[binding['version']+':'+binding['sha256']], verified=event_scope is None,
+                        orientation_evidence=[binding['version']+':'+binding['sha256']], verified=event_scope is None and not display_only,
                         outcome_cardinality=2, outcome_selections=list(selections.values()),
                         result_policy='native-'+ident['family']+'-normal-predicate-1:'+stable([p for _,p,_ in native_predicates]))
                     normalized['comparison_scope']=dict(overtime=(market.get('native_scope_binding') or {}).get('overtime','unknown'))
@@ -155,8 +349,18 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         rules_primary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_primary'),
                         rules_secondary=binding.get('settlement',{}).get('native_clauses',{}).get('rules_secondary'),
                         series_id=event_material.get('series_ticker'),
+                        native_market_type=binding.get('locator',{}).get('native_type'),
+                        native_scope_binding=deepcopy(market.get('native_scope_binding')),
+                        source_predicate=deepcopy(binding.get('source_predicate')),
+                        native_terms=deepcopy(market.get('terms',{})),
                         phase=('pregame' if event_material.get('period')=='NS' and event_material.get('active') is True and event_material.get('closed') is False else
                                'live' if event_material.get('live') is True and event_material.get('ended') is False else 'unknown'))
+                    if display_only:
+                        normalized['comparison_source_metadata']['comparison_admission']=deepcopy(binding['comparison_admission'])
+                        if event_scope is None:
+                            event_scope=dict(policy='native-event-unverified-2',source=venue,native_event_id=event['id'])
+                    if venue == 'kalshi':
+                        normalized['comparison_source_metadata']['selected_market_observation'] = selected_market_observation(market, material)
                     # Preserve only exact selected instrument fields. A neighboring
                     # book/market or displayed face value cannot supply these units.
                     instrument_material=material
@@ -190,6 +394,11 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                                 updated_at=material.get('updatedAt'),material_sha256=stable(material),
                                 applicability='separate_metadata_requires_selected_binding')
                     if event_scope is not None:normalized['event_scope']=event_scope
+                    # Comparison metadata remains facet-local: an unknown
+                    # equality/scoring fact retains this native price.
+                    from app.comparison.same_outcome import descriptor
+                    normalized['comparison_source_metadata']['same_outcome']=descriptor(normalized,
+                        scoring=dict(overtime=normalized['comparison_scope']['overtime']))
                     instrument = stable([source, selection])
                     # Metadata changes invalidate the shared input dependency
                     # revision. They do not manufacture a quote/price revision.

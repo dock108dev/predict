@@ -176,6 +176,12 @@ def annotate(catalog, venue, templates=(), *, policy=POLICY):
             if locator['status']=='DOCUMENTED_LOCATOR':
                 market.update(market_type=locator['family'],period=locator['period'])
         binding=bind(enriched,market,venue,policy=policy);market['v1_raw_binding']=binding
+        if binding['status']=='BOUND_RAW_PREDICATE':
+            # A prior source-local refusal describes its old facts. Rebinding
+            # complete current metadata must replace that refusal as well.
+            prior=market.get('comparison_admission',{})
+            if prior.get('reason')=='comparison_context_missing':
+                market.pop('comparison_admission',None)
         if binding['status']=='BOUND_RAW_PREDICATE' and binding['identity']['family']=='futures':
             event.update(identity='resolved',competition=binding['identity']['competition'],season=binding['identity']['season'],stage='championship',
                 scheduled_start=binding['identity']['scheduled_start'],canonical_key=binding['identity']['event'])
@@ -192,6 +198,19 @@ def annotate(catalog, venue, templates=(), *, policy=POLICY):
         if binding['status']=='BOUND_RAW_PREDICATE' and market.get('exclusion') in (
                 'native_scope_effective_descriptor_facts_missing','native_scope_predicate_review_required','unsupported_market_type_or_period'):
             market['qualified_exclusion']=market['exclusion'];market['exclusion']=None
+        if policy==REPAIR_POLICY and binding['status']=='IDENTITY_BLOCKED':
+            from .current_sink import source_local_display_binding
+            display=source_local_display_binding(enriched,market,binding,venue)
+            if display is not None:
+                market['comparison_admission']=deepcopy(display['comparison_admission'])
+                # Exact source-local sides may be collected without admitting a
+                # cross-source comparison. Preserve the strict binding and its digest.
+                if market.get('exclusion') in ('native_scope_effective_descriptor_facts_missing',
+                        'native_scope_predicate_review_required','unsupported_market_type_or_period'):
+                    market['qualified_exclusion']=market['exclusion'];market['exclusion']=None
+                if market.get('subscription_evidence_exclusion')=='unresolved_native_sides':
+                    market['subscription_evidence_exclusion']=None
+                    market['subscription_evidence_basis']='Exact source-local native sides; comparison context remains unavailable'
     return catalog
 
 
@@ -224,7 +243,7 @@ def predicates(binding):
         threshold=Decimal(fact['line']) if domain=='combined_score' else -Decimal(fact['line']) if fact['participant']==home else Decimal(fact['line'])
         for side in fact['outcomes']:
             op=side['operator']
-            if domain=='home_margin' and fact['participant'] not in ('tie',home):op={'gt':'lt','le':'ge','eq':'eq','ne':'ne'}[op]
+            if domain=='home_margin' and fact['participant'] not in ('tie',home):op={'gt':'lt','ge':'le','lt':'gt','le':'ge','eq':'eq','ne':'ne'}[op]
             yield side['native_id'],[domain,str(threshold.normalize()),op],dict(participant=fact['participant'],predicate='score',operator=op)
     elif isinstance(binding['predicate'],list) and binding['predicate'] and isinstance(binding['predicate'][0],dict):
         for side in binding['predicate']:
