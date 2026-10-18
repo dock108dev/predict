@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import subprocess
 from unittest import IsolatedAsyncioTestCase, skipUnless
+from unittest.mock import patch
 from uuid import uuid4
 
 from aiohttp import web
@@ -85,14 +86,13 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
         """Use the ordinary browser helper on the actual HTTP/SQL wire bodies."""
         harness = r"""
 const fs = require('node:fs'), assert = require('node:assert/strict');
+const path = require('node:path'), {pathToFileURL} = require('node:url');
 (async () => {
   const pages = JSON.parse(fs.readFileSync(0, 'utf8'));
-  const source = fs.readFileSync('app/dashboard/opportunity_static/current/board-client.js', 'utf8');
-  const moduleURL = 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
+  const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current', name)).href;
+  const moduleURL = asset('board-client.js');
   const {defaults, LatestRead, readSlate} = await import(moduleURL);
-  const elementSource = fs.readFileSync('app/dashboard/opportunity_static/current/board-elements.js', 'utf8')
-    .replace('"./board-client.js"', JSON.stringify(moduleURL));
-  const {relativeAge, observationState} = await import('data:text/javascript;base64,' + Buffer.from(elementSource).toString('base64'));
+  const {relativeAge, observationState} = await import(asset('board-elements.js'));
   let index = 0;
   const requests = [];
   const reader = new LatestRead(async url => {
@@ -153,6 +153,15 @@ const fs = require('node:fs'), assert = require('node:assert/strict');
             self.ingress_books(workers, cases, generation=generation)
             await self.publication(offset + len(cases))
         initial = await self.publication(60)
+        # A page decodes only its requested stored view; projection preserves
+        # exactly the same source clocks, aging and dependency assessments.
+        with self.connect() as db:
+            full = latest.snapshot(db)
+            projected = latest.snapshot(db, at=full['at'], view='odds')
+        for key in full['rows']:
+            self.assertEqual(set(projected['rows'][key]['facts']['boards']), {'odds'})
+            self.assertEqual(latest.board(projected,key,view='odds',filter='all'),
+                latest.board(full,key,view='odds',filter='all'))
         self.assertEqual({game['league'] for game in initial['status']['games']}, set(SPORTS))
         with self.connect() as db:
             admitted = CurrentRowStore(db).capture()['records']
@@ -184,6 +193,21 @@ const fs = require('node:fs'), assert = require('node:assert/strict');
         self.assertEqual(frozen_inputs['evidence']['original'], selected['original'])
         self.assertEqual(frozen_inputs['evidence']['times'], selected['times'])
         frozen_copy = deepcopy(frozen_inputs)
+
+        # Slow runners can cross the native 30-second age boundary between a
+        # publication and Details. The same original remains inspectable, with
+        # truthful expired freshness, until its actual source facts change.
+        def aged_context(*args, **kwargs):
+            context=latest.read_context(*args, **kwargs)
+            context.at=(datetime.fromisoformat(context.at)+timedelta(seconds=31)).isoformat()
+            return context
+        with patch('app.dashboard.comparison_board_api.read_context',side_effect=aged_context):
+            aged_reply=await client.get('/api/boards/inputs',params=old_selection)
+            aged_inputs=await aged_reply.json()
+        self.assertEqual(aged_reply.status,200,aged_inputs)
+        self.assertEqual(aged_inputs['evidence']['original'],selected['original'])
+        self.assertEqual(aged_inputs['evidence']['times'],selected['times'])
+        self.assertIn('source_expired',aged_inputs['evidence']['freshness']['reasons'])
 
         # Change an already selected actual source book, and admit a new game,
         # after page one. The same background publisher, not HTTP, owns both.

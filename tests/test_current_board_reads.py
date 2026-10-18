@@ -45,6 +45,21 @@ def latest_frame(c=None):
 
 
 class CurrentBoardReads(unittest.TestCase):
+    def test_observation_identity_survives_age_boundary_but_binds_changed_facts(self):
+        from datetime import timedelta
+        from app.storage.store import stamp
+        from app.dashboard.comparison_board import freshness
+        c=context(); observed=c.observation_bundles()[0]
+        original=observation_identity(observed,c)
+        event,_,quote=entries(observed['state_inputs'])[0]
+        before=freshness(quote,{},event,stamp(c.at),financial=False)
+        c.at=(stamp(c.at)+timedelta(hours=1)).isoformat()
+        after=freshness(quote,{},event,stamp(c.at),financial=False)
+        self.assertNotEqual(before['reasons'],after['reasons'])
+        self.assertEqual(observation_identity(observed,c),original)
+        quote['original']['value']='0.61'
+        self.assertNotEqual(observation_identity(observed,c),original)
+
     def test_current_rows_only_and_no_envelope_membership(self):
         c=context();b=bundle(c)
         self.assertEqual(c.catalog()['version'],'predict-board-catalog-2')

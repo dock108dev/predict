@@ -227,11 +227,11 @@ def context_identity(bundle, policy, context):
 
 
 def observation_identity(bundle, context):
-    """Source-frame identity: no estimate policy, profile or model deadline."""
-    from app.dashboard.comparison_board import entries, freshness, quote_key, price
+    """Bind source facts; elapsed age changes their display, not their identity."""
+    from app.dashboard.comparison_board import entries, quote_key, price
     value=dict(epoch=context.epoch,game_key=bundle['game_key'],dependency_revision=bundle['input_version'],engine_binding=context.engine)
-    availability=[(quote_key(q),price(q)['observation_revision'],freshness(q,{},event,stamp(context.at),financial=False)['reasons'])
-                  for event,_,q in entries(bundle['state_inputs'])]
+    availability=sorted((quote_key(q),price(q)['observation_revision'])
+                        for _,_,q in entries(bundle['state_inputs']))
     return dict(context_id=hashed(dict(value,availability=availability)),**{k:v for k,v in value.items() if k!='game_key'})
 
 

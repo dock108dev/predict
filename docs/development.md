@@ -40,6 +40,14 @@ affected latest-board SQL tests. Preserve original source clocks, exact peer
 identity and explicit missing-input states. Browser filters and age updates must
 not dispatch providers or calculate the whole slate.
 
+Original-input identity binds the retained source facts, independently of elapsed
+age. Crossing the native 30-second freshness boundary keeps unchanged inputs
+inspectable and labels them expired; changed quotes, books, matching dependencies
+or runtime authority still invalidate the selection. Ordinary slate reads decode
+only the requested stored Odds/EV/Arbs view, within the existing read deadline and
+memory guards. The consistent-slate SQL test covers expiry between page and Details,
+view projection, and pagination through the actual browser module imports.
+
 ## Install tools
 
 ```sh

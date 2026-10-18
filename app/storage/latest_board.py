@@ -480,8 +480,9 @@ class LatestBoardOwner:
         if tasks:await asyncio.wait_for(asyncio.shield(asyncio.gather(*tasks)),timeout=self.service.config['cleanup_seconds'])
 
 
-def snapshot(db, *, at=None, resource_guard=None, game=None):
+def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):
     """Detached compact database frame; no normalization or financial owner."""
+    if view is not None and view not in ('odds','ev','arbs'):raise ValueError('Unsupported board view')
     with db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         if resource_guard is not None:
@@ -501,7 +502,15 @@ def snapshot(db, *, at=None, resource_guard=None, game=None):
         at=at or utc()
         status=saved['facts'] if saved else dict(games=[],errors=[],epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch'],policy=load().to_dict())
         owner=runtime(db,at=at);current=marker(db)
-        rows={r['game_key']:r for r in db.execute('SELECT * FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)',(game,game)).fetchall()}
+        if view is None:
+            retained=db.execute('SELECT * FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)',(game,game)).fetchall()
+        else:
+            # A slate consumes one compact view. Leave the other two in SQL,
+            # avoiding their JSON decoding and Python containers on every poll.
+            retained=db.execute('''SELECT game_key,dependency_revision,economic_revision,calculated_at,
+                (facts - 'boards') || jsonb_build_object('boards',jsonb_build_object(%s::text,facts->'boards'->%s::text)) AS facts
+                FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)''',(view,view,game,game)).fetchall()
+        rows={r['game_key']:r for r in retained}
         committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
         states=source_states(committed,owner)
         selected_manifest=next(iter(rows.values()))['facts'].get('publication_dependencies') if game and len(rows)==1 else None
@@ -652,7 +661,7 @@ def slate(db, policy, *, view, filter, stopped=False, offset=0, limit=25, expect
     else:
         if offset:raise ValueError('current_slate_read_token_required')
         reads.cleanup();reads.guard()
-        frame=snapshot(db,resource_guard=reads.guard);status=frame['status']
+        frame=snapshot(db,resource_guard=reads.guard,view=view);status=frame['status']
         if expected_revision and expected_revision!=frame['read_revision']:raise ValueError('current_slate_changed')
         games=sorted(status['games'],key=lambda g:(g.get('start_at') or '',g['game_key']))
         if len(games)>MAX_GAMES:raise ValueError('slate_page_capacity')
