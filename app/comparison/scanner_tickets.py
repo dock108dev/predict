@@ -1,4 +1,4 @@
-"""Bounded SC03 selected/adopted frames, latest state and explicit replacement.
+"""Bounded selected/adopted frames, latest state and explicit replacement.
 
 Detached two-leg capture only; no SQL, provider access or durable reports here.
 The HTTP adapter supplies a fresh read-only SQL capture before publication.

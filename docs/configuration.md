@@ -8,7 +8,12 @@ socket-only PostgreSQL cluster. The web listener binds to loopback.
 
 Copy [config/current.example.json](../config/current.example.json) to
 `.local/predict-current-config.json` before starting. The launcher reads this
-default path; foreground operation also accepts `--current-config PATH`.
+default path. Override it with
+`scripts/opportunity-board start --role data --current-config PATH` (or
+`--role both`). Foreground data operation accepts
+`.venv/bin/python -m app.collection.data_runtime --current-config PATH`.
+The app process reads the shared runtime; it does not accept source configuration.
+The launcher rejects `--current-config` for app-only starts, stop and status.
 
 - `enabled` controls all acquisition. Set it to `false` to inspect stored current
   observations without starting source workers.
@@ -16,6 +21,8 @@ default path; foreground operation also accepts `--current-config PATH`.
   The sample enables native acquisition and disables aggregate requests.
 - `sports` scopes native discovery. Values are `NFL`, `NCAAF`, `NBA`, `NCAAB`,
   `MLB` and `NHL`; actual source listings and supported calculations vary.
+- `native_sports` and `native_families` optionally override the native scope.
+  Missing or empty values use `sports` and `families`. They do not widen aggregate requests.
 - `aggregate_sports` independently scopes aggregate requests. An absent or empty
   list inherits `sports`. The sample therefore selects NFL for both paths.
 - `families` selects `moneyline`, `spread` and/or `total`.
@@ -63,6 +70,7 @@ There is no operating-system service or automatic restart. For foreground use,
 start PostgreSQL, then run these in separate terminals:
 
 ```sh
+scripts/project-postgres start
 .venv/bin/python -m app.collection.data_runtime
 .venv/bin/python -m app.dashboard.opportunity_board --port 8783
 ```
@@ -74,7 +82,8 @@ data ends acquisition. Both leave PostgreSQL running; use
 
 | Surface | Purpose |
 | --- | --- |
-| `/`, `/ev`, `/arbs` | Current Odds, single-trade EV and opposing allocations across games |
+| `/`, `/arbs` | Globally ranked opportunity scanner and selected manual tickets |
+| `/odds`, `/ev` | Observed source prices and single-trade estimates across games |
 | Details and Original | Selected current calculations and their original inputs; changed inputs require a new selection |
 | `/admin` | Source, quota, storage and issue status; collection controls and guarded recovery |
 | `/admin/retained` | Separate finite-session and saved-capture readers |
@@ -103,7 +112,9 @@ of sample configuration, command arguments and logs.
 A populated `.env` must be untracked, a regular user-owned file and mode 0600.
 `.venv/bin/python scripts/predict-paid-key` prompts for the key without echoing
 it and records the paid-account transition without making a provider request.
-Stop the app before changing credentials; a worker caches its selected key.
+Stop the data process before changing credentials (`scripts/opportunity-board stop --role data`);
+source workers cache their selected key. Stop any separately running retained
+acquisition session as well. Start data again after saving the key.
 Paid selection requires the guarded `.env` and never falls back to another
 account. Saved inspection needs no credentials. See [security](security.md) for
 the remaining credential-loading rules.

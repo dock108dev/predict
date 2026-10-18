@@ -162,3 +162,9 @@ app/reviews/*
 
 # Internal completion notes are local working material, not contributor guides.
 /docs/*-closeout.md
+
+# Local source-review notes and dated investigation output.
+/docs/sc07-*.md
+/docs/current-comparison-coverage-investigation-20261017.md
+/docs/sc06-performance-20261016.md
+/docs/market-scanner-baseline-20261015.json

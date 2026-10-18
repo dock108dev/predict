@@ -12,8 +12,9 @@ Observation visibility is independent of financial-estimate completeness: source
 prices, identities, original clocks and available depth remain useful when a
 particular estimate is unknown. Personal-website execution rules and exact order
 routes are outside collection/display requirements. Financial claims retain
-their own model applicability and uncertainty. Separating the current latest-board
-price publication from calculation success is the next implementation step.
+their own model applicability and uncertainty. Current latest-board price
+publication is independent of calculation success; unavailable estimates do not
+hide admitted source prices.
 
 ## Ordinary current data flow
 
@@ -63,12 +64,14 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/ev`, `/arbs` | Current comparison presentation and v2 transport |
+| `/`, `/arbs` | Globally ranked scanner and selected manual tickets |
+| `/odds`, `/ev` | Observed prices and single-trade estimates |
 | `/api/boards/{view}` | Latest shared results, revision-bound selected Details and typed Original |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
 | `/admin`, `/api/admin/status`, `/api/admin/current` | Sources, quota, storage, pause, Stop and guarded recovery |
 | `/api/current` and its subroutes | HTTP 410 in ordinary SQL mode; validated state and bounded notices in explicitly injected mode |
-| `/api/comparison`, `/api/arbs`, `/api/coverage`, `/current/coverage` | HTTP 410 in ordinary SQL mode; explicitly injected inspection only |
+| `/api/comparison`, `/api/arbs` | HTTP 410 in ordinary SQL mode; explicitly injected inspection only |
+| `/api/coverage`, `/current/coverage` | Latest bounded Coverage publication and current coverage page |
 | `/api/selections` and its subroutes | HTTP 410 in ordinary SQL mode; injected inspection and manual What-if only |
 | `/admin/retained`, `/game`, `/coverage` | Finite-session and retained capture interfaces |
 
@@ -138,6 +141,7 @@ Paths are relative to `app/`.
 | Aggregate schedule and accounting | `collection/current_aggregate_policy.py`, `collection/current_schedule.py`, `collection/current_quota.py`, `collection/current_conservative.py` |
 | Credentials and recovery | `collection/credential_handoff.py`, `collection/current_account_recovery.py`, `collection/venue_access.py` |
 | Native HTTP transport | `collection/native_http_transport.py`; `collection/continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
+| Native discovery selection | `collection/current_native_catalog.py` owns pure bounded selection/diagnostics; `collection/current_native.py` owns discovery/stream lifecycle |
 | Direct admitted-only current ingress and guards | `collection/current_database.py`, `collection/current_storage_policy.py` |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
 | Shared latest publications and readers | `storage/scanner_latest.py`, `storage/latest_board.py`, `dashboard/scanner_api.py` |
@@ -154,6 +158,20 @@ Paths are relative to `app/`.
 | Shared domain mathematics | `fees/`, `settlement.py`, `normalization/`, `depth.py`, `opportunities/percentages.py` |
 
 Keep state owners cohesive, transports independent and current API versions explicit.
+The launcher and `python -m app.dashboard` enter through `opportunity_board`,
+which delegates routing to `multi_game_server`. The former fixed-port
+`dashboard/server.py` router and its separate scan frontend have been removed.
+Current routes share `request_guard` and `local_security`; source configuration
+belongs to `current_policy`, loaded by the independent data runtime. App-only
+operation cannot silently accept an unused source configuration override.
+
+Retained session helpers, finite capture controllers and the explicitly isolated
+synthetic collection server remain separate supported research tools. Their
+callers use retained projections or disposable environments; they are not
+fallbacks for current SQL boards. Preview pages still share
+`dashboard/static/style.css`. Frozen source manifests describe historical
+packages and are not inventories of the current checkout.
+
 The v2 API/client supports up to 500 canonical games through at most 50-game/8 MiB
 pages, with expected-revision coherence and complete coverage checks. This is a
 capacity bound, not a claim about live game availability. Sports rows expire;

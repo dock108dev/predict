@@ -1,8 +1,9 @@
 # Data limitations
 
-The ordinary modeled comparison path selects NFL pregame full-game winners.
-Configuration and shared handlers also accept NCAAF, NBA, NCAAB, MLB and NHL;
-that does not extend the NFL funding model or guarantee venue listings.
+The current pipeline accepts six leagues and supported winner, spread, total and
+period representations. The default configuration selects NFL. Each calculation
+still needs exact applicable contract, quantity, fee, source and model facts;
+configuration support cannot guarantee venue listings or usable estimates.
 Native and aggregate sources have independent access, timing and availability.
 
 - Titles alone cannot establish a match. Participants, event identity, period,

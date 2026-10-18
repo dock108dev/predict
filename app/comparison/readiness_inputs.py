@@ -1,4 +1,4 @@
-"""SC01 adapters for existing native semantics and financial model owners."""
+"""Readiness adapters for existing native semantics and financial model owners."""
 from copy import deepcopy
 from dataclasses import replace
 from datetime import timedelta

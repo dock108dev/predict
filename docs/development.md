@@ -4,14 +4,6 @@ Use Python 3.11+ from a source checkout. Python 3.14 and Node 24 match primary C
 Run commands from the repository root. Native operation uses macOS Keychain;
 portable offline tests also run on Linux.
 
-## One local working copy
-
-Develop, integrate, build and run directly in the primary repository on `main`.
-Do not create successor repositories or candidate workspaces unless explicitly
-requested. Use disposable test fixtures/databases in place. Older isolated
-closeouts are historical evidence, not a requirement to defer local integration.
-Keep credentials, settings and account/quota/hold state intact.
-
 ## Ordinary app and background data
 
 ```sh
@@ -37,24 +29,16 @@ Focused separation SQL and the small authored working loop use disposable storag
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --da-separation --report-dir test-results/da-separation/sql
 ```
 
-This lane excludes the legacy SQL manifest and deferred SC06 timing campaigns.
+This focused lane excludes the broader compatibility manifest and stress workloads.
 Its fixture sources make zero provider requests. It also verifies independent
 observation publication under missing/expired/malformed finance, bounded depth,
 source health versus estimate validity, per-game reuse and database-only Inputs. Ordinary authorized source
 activity is attributed separately.
 
-For Odds freshness and comparison presentation, use authored mixed-state cases
-and the affected latest-board SQL lane. Check both captured inputs against their
-existing freshness policies, pending publication separately from source expiry,
-and exact comparator identity/arithmetic after aging. Verify scoped observation
-counts and explicit missing boards across filters/pages. In the ordinary app,
-inspect one available gross difference in desktop and 390px Details and retain
-the returned frame with its screenshots. A natural price change is optional;
-record unchanged prices and observed transitions honestly. Age text and local
-filters must not request providers or whole-slate calculations. Rebuild assets
-before restarting the affected app/data owner; verify loaded source and served
-asset identities, then leave ordinary operation available. Protected-record
-fingerprints, original holds, quota state and resource guards must still match.
+For freshness and comparison changes, use authored mixed-state inputs and the
+affected latest-board SQL tests. Preserve original source clocks, exact peer
+identity and explicit missing-input states. Browser filters and age updates must
+not dispatch providers or calculate the whole slate.
 
 ## Install tools
 
@@ -98,7 +82,7 @@ git diff --check
 | Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
 | Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`; `test_sc02_sql.py` through the disposable SQL harness |
 | Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
-| CI reporting failures | `test_ci_reporting.py` |
+| CI reporting and isolation failures | `test_ci_reporting.py`, `test_ci_environment.py`, `test_ci_assurance.py`, `test_ci_secrets.py` |
 
 Run resource-sensitive Python modules in fresh processes: some deliberately
 measure process caps. Use authored fixtures and temporary state. For SQL tests,
@@ -117,13 +101,9 @@ compatibility runs. Python 3.11 remains a supported compatibility lane.
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
 ```
 
-The SQL lane includes SC06's small financial current-row roundtrip, ready ticket,
-original-clock expiry and missing-depth refusal checks. Formal 500-event,
-30-ticket and burst stress qualification is deferred under the October 16 owner
-priority decision. Its campaign implementation and launcher were removed at the
-owner's request on October 17. Historical results remain in the
-[responsiveness evidence](sc06-performance-20261016.md); they are not passing
-performance qualification or a routine CI prerequisite.
+The SQL lane includes small financial current-row roundtrips, ready tickets,
+original-clock expiry and missing-depth refusal. Full-scale performance and
+burst testing are not routine CI prerequisites or established performance claims.
 
 The ordinary launcher selects tools matching its existing cluster's `PG_VERSION`
 even when PATH selects PostgreSQL 16. `PREDICT_PG_BIN` can select that matching
@@ -164,13 +144,15 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
   `scanner-arrivals.js` consumes filter-wide server transition observations;
   `scanner-summaries.js` validates the optional bounded observed-summary disclosure. The generator
   also produces scanner.js/css/html and scanner-runtime.json. See the
-  [client contract](scanner-client-contract.md) for bounds and SC05/SC06 seams.
+  [client contract](scanner-client-contract.md) for bounds, ticket interaction and summary reads.
 - [Readiness preparation reuse](scanner-preparation-contract.md) documents the
   bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
 - `stored-controller.js` owns auxiliary Odds/EV settings, selection, polling, cancellable reads,
   dialogs and Stop.
 - `board-client.js` validates settings and response identities; `board-elements.js`
-  provides shared formatting and display primitives.
+  provides shared formatting and display primitives. `board-read.js` owns bounded
+  cancellable reads and completion-based polling; `board-client.js` preserves its
+  public read-helper exports for existing controllers.
 - `comparison-slate-views.js` groups games and rows; `stored-views.js` supplies
   the compatible per-board presenter and view factory.
 - `stored-details.js` renders the selected current calculation and original inputs.
@@ -213,3 +195,34 @@ examples belong in `docs/contracts`. Retained fee documents and the exact inputs
 used by sealed executor packages are test/runtime inputs, not disposable output.
 Public documentation should use repository-owned paths and explain current
 behavior without depending on local plans or reports.
+
+Review Python modules above 500 physical lines and extract a cohesive responsibility
+or document a concrete retention reason above 1,000. For authored JavaScript and
+CSS use 300/600 lines. Tests use their language's thresholds. Judge extensionless
+launchers by their shebang: `scripts/opportunity-board` is Python. These are review
+triggers, not reasons to compress formatting or add forwarding fragments.
+
+Native catalog selection and bounded diagnostics live in
+`collection/current_native_catalog.py`; `current_native.py` preserves public helper
+imports and owns transport lifecycle. Its remaining worker intentionally keeps
+discovery, socket replacement, Stop, hourly budgets and cleanup together: these
+operations share the same socket/task/credential/budget ownership. Splitting its
+methods into stateful mixins would obscure that ownership. Review another
+extraction if a separate transport or lifecycle owner becomes necessary.
+
+CI regression tests are separated into `test_ci_reporting.py`,
+`test_ci_environment.py`, `test_ci_assurance.py` and `test_ci_secrets.py`, with
+tool loading in `tests/ci_support.py`. The quality workflow runs all four:
+
+```sh
+.venv/bin/python -m pytest -q tests/test_ci_*.py
+```
+
+Generated runtime bundles (`stored.js`, `stored.css` and `scanner.*`) are excluded
+from mechanical splitting; review their authored modules and generator instead.
+Keep generated runtime resources tracked. The PDFs under the native scoring and
+retained-retail fixtures and the sealed `scripts/v1_*_package/SOURCE.zip` archives
+are required fixture or frozen-package inputs. Preserve them alongside their
+manifests; they are not disposable test evidence. Existing ignore rules cover
+local output, caches, reports and private state; inspect tracked ignored files
+with `git ls-files -ci --exclude-standard` before adding new exceptions.

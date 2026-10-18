@@ -58,6 +58,10 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         self.assertTrue(imports)
                     pending.extend(urljoin(path, module) for module in imports)
                 self.assertTrue(
+                    {"board-client.js", "board-read.js"}
+                    <= {Path(path.split("?")[0]).name for path in seen}
+                )
+                self.assertTrue(
                     (
                         {"scanner.css", "scanner.js"} if page in ("/", "/arbs")
                         else {"stored.css", "stored.js", "board-client.js"}

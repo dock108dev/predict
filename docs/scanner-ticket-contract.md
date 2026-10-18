@@ -1,4 +1,4 @@
-# SC03 selected manual ticket v1
+# Selected manual ticket v1
 
 Implemented ordinary backend contract with background-owned discovery and database-bound selected inputs. [Runtime ownership](data-app-runtime-contract.md). [Response schema](contracts/predict-selected-ticket-1.schema.json), [commands](contracts/predict-ticket-command-1.schema.json), [binding](contracts/predict-ticket-selection-1.schema.json), [authored examples](examples/selected-ticket-1/README.md). Scanner v1 remains unchanged. These local calculations do not establish current source, destination, installed or owner qualification.
 
@@ -29,9 +29,9 @@ A client can show its own transient checking indicator while a POST is pending. 
 
 ## Financial ownership and manual information
 
-The requested solver and allocation consumer own quantities, depth, native grids, nonlinear acquisition/pooled settlement fees, independent collateral/holds and cost refunds. SC03 adds optional observed bounds to that solver; its default legacy behavior is preserved. Numerical probes and final quantities stay inside observed supported depth. Local balance search admits at most 192 probes and 25 final allocations, checks cancellation between probes, retains $25 minimum decisive exposure and 20% combined exposure share, and refuses duplicated/shared liquidity. One combined budget funds both independently funded venues; capital cannot be reused between them. Residual cash is explicit. Depth exhaustion can leave most of a large request undeployed.
+The requested solver and allocation consumer own quantities, depth, native grids, nonlinear acquisition/pooled settlement fees, independent collateral/holds and cost refunds. selected-ticket adds optional observed bounds to that solver; its default legacy behavior is preserved. Numerical probes and final quantities stay inside observed supported depth. Local balance search admits at most 192 probes and 25 final allocations, checks cancellation between probes, retains $25 minimum decisive exposure and 20% combined exposure share, and refuses duplicated/shared liquidity. One combined budget funds both independently funded venues; capital cannot be reused between them. Residual cash is explicit. Depth exhaustion can leave most of a large request undeployed.
 
-After sizing, SC02's supported joint-state owner and classifier run on that final allocation. Unknown/incomparable completion clauses retain decisive/tie scenarios and unknown complete minimum, with no fabricated asymmetric settlements. Explicit nested clauses admit only their feasible joint grades. Mandatory unknown admitted-state cashflows/fees/holds fail. Probabilities never exclude feasible losses. One 0.5% default buffer is applied to actual deployed funding, including refundable holds, without consuming additional cash. Metrics name complete minimum, decisive minimum and separate probability-based EV; the denominator is actual deployed capital. Acquisition, state fees and refunded capital reconcile separately. Discovery's supported example and requested sizing remain separate and need not have equal percentages.
+After sizing, scanner's supported joint-state owner and classifier run on that final allocation. Unknown/incomparable completion clauses retain decisive/tie scenarios and unknown complete minimum, with no fabricated asymmetric settlements. Explicit nested clauses admit only their feasible joint grades. Mandatory unknown admitted-state cashflows/fees/holds fail. Probabilities never exclude feasible losses. One 0.5% default buffer is applied to actual deployed funding, including refundable holds, without consuming additional cash. Metrics name complete minimum, decisive minimum and separate probability-based EV; the denominator is actual deployed capital. Acquisition, state fees and refunded capital reconcile separately. Discovery's supported example and requested sizing remain separate and need not have equal percentages.
 
 `result.context` retains event/market/period; `manual_legs` gives exactly two native venue actions, predicates, quantities, units, original prices, American comparison odds and per-leg funding. `legs` adds exact consumed fills, grids, independent funding components/hold returns, native source IDs, clocks, model/provider references and allocation reconciliation. American odds describe observed fill price equivalence before fees and are never a native order limit price. `funding` reconciles requested/deployed/residual, costs, holds and one buffer. `states`, `metrics`, `risks`, `search`, exact source/model inputs and frame expiry support expansion. No fill, reservation, realized gain or order is implied.
 
@@ -41,7 +41,7 @@ The server-owned `scanner-destinations-v1.json` catalog is deliberately empty: r
 
 A future reviewed catalog must bind exact venue/native key/native contract/terms/predicate to a retained observed URL and a separately retained documented route template. Both retained payload hashes, route venue, exact expanded URL and matching position are checked. Only HTTPS and explicit venue hosts are allowed; credentials, ports, queries, fragments, homepages, unsafe paths and mismatched/ambiguous bindings are refused. Catalog entries require source review and candidate rebinding; authored entries cannot grant production readiness. Authored injection in tests is an internal constructor option, never an HTTP setting. URL fixtures establish only implementation behavior and are labeled accordingly.
 
-The SC07 destination review retains observed upcoming official event pages separately from missing documented website routes and exact native-position evidence. The catalog remains empty. Evidence and URL guards execute under Python optimization as well; malformed route expansion remains unavailable.
+Destination guards also execute under Python optimization; malformed route expansion remains unavailable.
 
 ## Capture, causality and bounds
 
@@ -51,6 +51,8 @@ Limits are 64 client slots, 128 selected/replacement frames, 16 MiB serialized r
 
 The 2 GiB SQL, 1 GiB free disk and 768 MiB process limits remain. Fresh ticket publication/adoption refuses oversized SQL; calculation submission checks free disk and process high-water memory. Current-row/ordinary collectors retain their guards. Post-commit observation is copied only from exact retained causal evidence and remains null otherwise; no clock is labeled PostgreSQL's precise commit instant.
 
-## Evidence and next actors
+## Testing scope
 
-Authored financial/state/link examples, race/resource/Stop checks, disposable SQL verification, clean export and measured selected-ticket HTTP timing accompany the SC03 closeout. These do not qualify actual sources, reviewed market destinations, browser render time, installed propagation, hosted CI or owner acceptance. SC04 can continue frozen scanner v1. SC05 integrates this ticket contract and SC04 frontend; SC06 owns episodes and integrated instrumentation; SC07 owns installation/current source/finite genuine propagation and combined performance; SC08/Q04 remains the owner's actual decision.
+Authored state, sizing, destination, resource and Stop tests verify implementation
+behavior. Actual sources, production destinations and source-to-browser timing
+require independent current inputs and measurements.

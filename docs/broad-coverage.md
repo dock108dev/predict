@@ -128,3 +128,8 @@ Primary source descriptions: [Kalshi complete snapshots and deltas](https://docs
 and [US full market data versus trade messages](https://docs.polymarket.us/api-reference/websocket/markets).
 These support the existing book-evidence policy; they do not qualify executions,
 fees, sizes or settlement.
+
+If Coverage reports a capture-capacity or memory-capacity failure, its summary is
+unavailable rather than a measured zero. Check Admin and the safe operation log;
+keep the resource guard intact. Source prices and other background publications
+can remain useful while the independent Coverage worker is unavailable.

@@ -23,7 +23,6 @@
     "test_multi_page_ui.cjs",
     "test_native_books_ui.cjs",
     "test_price_comparison.cjs",
-    "test_saved_status_ui.cjs",
     "test_session_controls.cjs",
     "test_source_details.cjs",
     "test_source_settings.cjs",

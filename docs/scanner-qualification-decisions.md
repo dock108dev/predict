@@ -1,4 +1,4 @@
-# SC02 qualification decisions
+# Scanner financial classification examples
 
 All vectors are explicitly authored. The portable inputs are `tests/fixtures/sc02-financial-vectors.json`; `tests/test_sc02_finance.py` also reconciles the existing cashflow/fee owners independently. None establish a current live opportunity.
 

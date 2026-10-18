@@ -1,8 +1,8 @@
 # Predict
 
-A local, read-only prediction-market comparison app for macOS. **Odds** groups
-observed NFL winner prices, **EV** shows modeled single-trade estimates, and
-**Arbs** compares opposing allocations across venues. Filter all observed games,
+A local, read-only prediction-market comparison app for macOS. The **Scanner**
+ranks supported opportunities, **Odds** groups observed prices by game, and
+**EV** shows modeled single-trade estimates. Filter available games,
 inspect original prices and calculation inputs in Details, and manage collection
 and source status in Admin.
 
@@ -43,8 +43,7 @@ The launcher starts a dedicated socket-only PostgreSQL cluster plus independent
 background data and app processes. Add `--role app` or `--role data` to any command
 to manage them separately. Closing/restarting the app leaves collection and shared
 calculations running. [Lifecycle and result contract](docs/data-app-runtime-contract.md).
-There is no cloud
-service or automatic restart. Current prices keep their original clocks; a recent
+There is no cloud service or automatic restart. Current prices keep their original clocks; a recent
 calculation does not make an old price fresh. Fee and payout models have bounded
 applicability, so missing or expired models can withhold estimates.
 
@@ -62,6 +61,7 @@ node tests/test_stored_views.cjs
 Use affected tests for small changes; [CI](docs/CI.md) describes the broader
 automated checks.
 
+- [Scanner filters, observations and manual tickets](docs/scanner-usage.md)
 - [Architecture and module ownership](docs/architecture.md)
 - [Calculation basis and limitations](docs/benchmark-ev.md)
 - [Current-board API](docs/comparison-board-api-contract.md)

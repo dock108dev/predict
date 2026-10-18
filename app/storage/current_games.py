@@ -33,7 +33,7 @@ def engine_binding():
     paths += ['app/comparison/scanner_transitions.py','app/comparison/scanner_summaries.py','app/storage/scanner_preparation.py']
     paths += ['app/storage/scanner_latest.py','app/storage/latest_board.py','app/storage/slate_reads.py','app/dashboard/read_work.py',
               'app/collection/runtime_status.py','app/collection/runtime_client.py','app/collection/data_runtime.py']
-    paths += ['app/collection/selected_fee_operation.py','app/collection/current_native.py',
+    paths += ['app/collection/selected_fee_operation.py','app/collection/current_native.py','app/collection/current_native_catalog.py',
               'app/collection/native_fee_metadata.py','app/collection/native_http_transport.py',
               'app/collection/prediction_producer.py']
     paths += ['app/collection/coverage.py','app/collection/admission_enrichment.py','app/collection/v1_comparison.py']

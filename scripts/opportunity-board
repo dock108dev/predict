@@ -132,6 +132,8 @@ def main():
     parser.add_argument('--instance', choices=['poc', 'beta'], default='beta')
     parser.add_argument('--current-config', help='Existing data-runtime configuration (start data/both only)')
     args = parser.parse_args()
+    if args.current_config is not None and (args.action != 'start' or args.role == 'app'):
+        parser.error('--current-config requires start with --role data or both')
     if not 1 <= args.port <= 65535:
         parser.error('Loopback port must be between 1 and 65535')
     app_folder = ROOT / ('.local/opportunity-board' if args.instance == 'poc' else '.local/opportunity-board-beta')

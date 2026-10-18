@@ -70,7 +70,7 @@ jobs:
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           python -m ruff check app tests scripts/ci browser_tests
-          python -m ruff format --check scripts/ci browser_tests tests/test_ci_reporting.py
+          python -m ruff format --check scripts/ci browser_tests tests/test_ci_*.py tests/ci_support.py
       - name: Redacted publishable-tree secret scan
         id: secrets
         if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.tools.outcome == 'success' }}
@@ -90,7 +90,7 @@ jobs:
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           mkdir -p test-results/quality
-          python -m pytest -q tests/test_ci_reporting.py --junitxml=test-results/quality/junit.xml
+          python -m pytest -q tests/test_ci_*.py --junitxml=test-results/quality/junit.xml
       - name: Audit locked dependencies
         id: audit
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}

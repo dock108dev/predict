@@ -31,8 +31,9 @@ def create_app(sessions=None, **kwargs):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8783)
-    p.add_argument('--current-config',help='Bounded native operational configuration JSON')
     a=p.parse_args()
+    if not 1 <= a.port <= 65535:
+        p.error('Loopback port must be between 1 and 65535')
     from app.collection.runtime_client import RuntimeClient
     application=create_app(current_provider=RuntimeClient())
     web.run_app(application,host='127.0.0.1',port=a.port,access_log=None,handler_cancellation=True)

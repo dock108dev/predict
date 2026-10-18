@@ -1,7 +1,7 @@
-const assert=require('node:assert/strict'),fs=require('node:fs');
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url'),path=require('node:path');
 (async()=>{
- const source=fs.readFileSync('app/dashboard/opportunity_static/current/board-client.js','utf8');
- const {followGame}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const {followGame}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/board-client.js')));
  const old={game_key:'old',scope:'NFL/full_game/winner',start_at:'2026-10-16T00:15:00+00:00',participants:[{id:'NFL:SEA',role:'away'},{id:'NFL:DEN',role:'home'}],members:[['the_odds_api','original-event'],['kalshi','original-native']],matches:[{status:'matched',conflicts:[]}]};
  const current={...old,game_key:'new',members:[...old.members,['polymarket_us','new-member']]};
  assert.equal(followGame(old,[current],'old'),'new');

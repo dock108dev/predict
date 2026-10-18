@@ -1,4 +1,4 @@
-"""Explicit local handoff; inert on import. Never include credentials in evidence."""
+"""Local credential entry; inert on import. Never log credentials."""
 import os
 import sys
 from pathlib import Path

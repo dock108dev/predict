@@ -1,4 +1,4 @@
-"""SC03 selected requested-budget reconciliation over observed legal fills.
+"""Selected requested-budget reconciliation over observed legal fills.
 
 The existing allocation consumer, settlement-pool algebra and requested balance
 solver remain the owners. Scanner classification is applied once to the final

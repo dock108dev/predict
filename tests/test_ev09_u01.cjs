@@ -1,8 +1,9 @@
 // Authored controller transport over authentic retained B01 data; no installed claim.
-const assert=require('node:assert/strict'),fs=require('node:fs');
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url'),path=require('node:path');
 const {fixture}=require('./current_board_fixture.cjs');
 (async()=>{
- const src=fs.readFileSync('app/dashboard/opportunity_static/current/board-client.js','utf8');const {defaults,settings,checkBoard,checkDetails,LatestRead}=await import('data:text/javascript;base64,'+Buffer.from(src).toString('base64'));
+ const {defaults,settings,checkBoard,checkDetails,LatestRead}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/board-client.js')));
  assert.equal(defaults.sizing_mode,'requested_trade');for(const [input,expected]of [['0.5','0.005'],['1.25','0.0125'],['0','0'],['100','1'],['0.0001','0.000001']])assert.equal(settings('1000',input,'pinnacle').buffer,expected);
  assert.throws(()=>settings('0','0.5','pinnacle'));assert.throws(()=>settings('100000.01','0.5','pinnacle'),/at most \$100,000/);assert.equal(settings('100000','0.5','pinnacle').amount,'100000');assert.throws(()=>settings('1000','101','pinnacle'));assert.throws(()=>settings('1000','0.5','unknown'));
  const c={...defaults,game:fixture.ev.game_key,view:'ev',filter:'all'},copy=v=>JSON.parse(JSON.stringify(v));checkBoard(fixture.ev,c);

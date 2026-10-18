@@ -13,7 +13,7 @@ support the comparison loop; calculation reports are not persisted.
 
 ## Compact views and financial meaning
 
-**Odds** opens on All games, grouping covered upcoming NFL winner games into
+**Odds** opens on All games, grouping observed supported games into
 compact game/team rows with venue columns. Search and game selection are optional.
 Observed Polymarket US Long and Short appear inline with their actual participant,
 side and predicate. Keep NO/Short distinct from opponent YES/Long and bookmaker
@@ -34,8 +34,8 @@ results from missing references, unsupported inputs, calculation failures and
 evaluated results with no positive value. Older inputs from different times do
 not establish a simultaneous historical trade.
 
-**Arbs** groups opposing legs with their shared funding and named buffered margin
-or return. Every ordinary filter requires distinct venues. Rule-sensitive hedges
+**Scanner**, available at `/` and `/arbs`, ranks supported covered-outcome,
+conditional and EV opportunities globally, with named funding and buffered metrics. Every ordinary filter requires distinct venues. Rule-sensitive hedges
 stay separate from pairs positive across every modeled state. One short material
 status/risk note remains visible; full fee and scenario reports belong in Details.
 No positive opportunity is a normal result.
@@ -113,66 +113,19 @@ styling. These presentation choices do not alter financial or protocol guards.
 [Development](development.md#frontend-sources) describes the readable frontend
 modules, generated public assets and verification boundaries.
 
-## October 17 interface review
+## Layout and interaction
 
-Adapted the shared Glass Starter 02 requirements (September 23): cool light
-surfaces, slate text, restrained blue actions, system typography and 44px primary
-controls. No gallery/runtime dependency was added. Reviewed the current source
-scanner, Odds and selected Details; historical installed screenshots are separate.
+Scanner and Odds share navigation, 44px primary controls and visible keyboard
+focus. Scanner keeps core scope filters visible and groups optional size, edge
+and source restrictions in a disclosure whose summary names active restrictions.
+Odds groups league/game/market filters and keeps Details settings beside its
+heading. Identical shared and selected settings appear once; differing policies
+remain explicit.
 
-- Scanner and Odds now share navigation, brand treatment, control sizing and focus
-  styles. Scanner includes the existing Coverage destination. Routine checked
-  status is quiet only when evaluation is complete with no errors; pending,
-  partial, expired, stopped and unavailable messages remain visible.
-- Odds places six common filters in one desktop row and Details settings beside
-  its heading. Identical shared/selected settings are stated once; differing
-  policies still show both. Scanner keeps scope filters visible and groups its
-  optional minimum-size/edge and source restrictions under Size & sources. Applied
-  restrictions remain named in the collapsed summary. These are existing controls,
-  with one additional reveal for those optional restrictions, not new capabilities.
-- First use leads with a single source-setup action instead of zero-count coverage
-  disclosures. Result counts use ordinary catalog wording. Single-metric Details
-  fills its available width rather than leaving an unused metric column; funding,
-  precise residuals, reconciliation and original clocks remain. A future source
-  clock warning no longer repeats the word Source during age updates.
-
-Matched offline Chromium screenshots use identical repository fixture data and
-clocks at 1280×900 and 390×900. At desktop width the first Odds game moves from
-658px to 438px; at 390px it moves from 877px to 707px. The first scanner result
-moves from 392px to 345px on desktop and 783px to 619px on narrow screens. Narrow
-first use moves from 517px to 206px. These measurements describe composition,
-not actual source coverage, performance or new-user success.
-
-Evidence is under `test-results/interface-review-20261017/`: paired
-`before-{scanner,odds,details,empty,failure}-{1280,390}.png`, corresponding `after-`
-images, review harness and JSON observations. Screenshots were visually inspected.
-The final intercepted browser pass also checks optional-filter keyboard access,
-invalid-input feedback/reset, local search, a settings draft surviving refresh,
-Details focus containment/return, long names and 125% text without document
-horizontal overflow. All browser traffic is intercepted; no ordinary SQL, owner
-state or providers are used to populate these screens.
-
-Eight affected JavaScript suites, seven Python asset/contract tests, generated
-asset drift, JavaScript syntax and documentation/whitespace checks pass. Existing
-synthetic preview AppKey warnings remain. Full SC04/SC05 performance campaigns,
-installed/live acceptance and independent new-user testing were not run. The
-working source assets were rebuilt; no ordinary process restart, publication,
-commit or release was performed. Visual conclusions apply to the inspected
-synthetic states and remain provisional for owner/customer use.
-
-### Follow-up browser regression repair
-
-The maintained SC04 and SC05 journeys now pass locally with authored loopback
-inputs. Desktop scanner rows retain their 64px minimum and 44px controls while
-fitting eight complete rows at 1440×900. Narrow navigation wraps when text is
-enlarged to a 24px root size, keeping every destination within the viewport.
-Generated scanner assets were rebuilt and matched screenshots inspected.
-
-The Odds journey expects separate aggregate/native settlement scopes and distinct
-win/not-win positions, rather than assuming one card per team. The two widths
-1280 and 390 pass their full Details, keyboard, retry and Stop journeys. Evidence:
-`test-results/browser-repair-20261017/first-four.json` and matched screenshots.
-SC06's 500-event campaign failed in its retained final run. Formal stress
-qualification was already deferred and nonblocking under the October 16 owner
-decision; its executable campaign was removed at the owner's request on October
-17. These four journey passes do not qualify that historical stress workload.
+First use offers source setup. Pending, partial, expired, stopped and unavailable
+states stay visible; a complete checked zero can be quiet. Details uses available
+width while retaining funding, residuals, reconciliation and original clocks.
+Narrow layouts must preserve value labels, focus containment/return and readable
+long identities without horizontal page overflow. Synthetic browser fixtures test
+these interactions; they do not establish current source availability or full-scale
+performance. See [scanner usage](scanner-usage.md) for the user workflow.

@@ -1,7 +1,7 @@
-const assert=require('node:assert/strict'),fs=require('node:fs');
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url'),path=require('node:path');
 (async()=>{
- const source=fs.readFileSync('app/dashboard/opportunity_static/current/board-client.js','utf8');
- const {LatestRead}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const {LatestRead}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/board-client.js')));
  const requests=[],reader=new LatestRead(()=>new Promise(resolve=>requests.push(resolve)));
  const old=reader.read('old-settings',x=>x);assert.equal(reader.pending,true);
  // Periodic reads coalesce; an explicit changed-settings read still supersedes.

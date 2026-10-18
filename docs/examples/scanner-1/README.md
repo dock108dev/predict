@@ -1,4 +1,4 @@
-# Authored SC02 consumer examples
+# Authored scanner consumer examples
 
 Every JSON file here is an authored protocol fixture, not live/source/model evidence. [Schema](../../contracts/predict-opportunity-scanner-1.schema.json), [consumer rules](../../scanner-projection-contract.md).
 
@@ -12,4 +12,4 @@ Every JSON file here is an authored protocol fixture, not live/source/model evid
 
 Store `server_id`, `epoch`, `publication_revision`, `query_id` and the exact filters/page. Repeat `/api/scanner` with `since`, `epoch`, `query_id` and those same filters. A changed filter/page begins a fresh snapshot. A multi-page reader supplies `expected_revision`; on 409 discard the partial collection. Apply replacement responses atomically. At row `expires_at`, withdraw current authority locally even without another response. Do no client money/percentage/allocation arithmetic and do not treat source receipt, SQL observation or publication time as an original-price renewal.
 
-SC03 will provide stable selected manual tickets and exact verified venue destinations. SC04 uses these scanner responses for selection identity, not legacy game grouping or Details close/reopen behavior. SC06 adds actual delivery/render timing and episode semantics.
+Selected manual tickets use the exact scanner selection identity. Client delivery/render observations and episode summaries remain separate from polling and row rank.

@@ -2,6 +2,8 @@
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 import json
+import io
+import runpy
 import tempfile
 import subprocess
 import sys
@@ -16,6 +18,80 @@ from app.collection import current_aggregate, current_policy, current_quota, cur
 from app.collection.current_aggregate_policy import POLICY
 from tests.test_current_odds_transport import Client, Response
 from app.collection.current_service import CurrentService
+
+
+class RuntimeEntrypoints(unittest.TestCase):
+    def test_app_rejects_data_configuration_and_invalid_ports_before_construction(self):
+        from app.dashboard import opportunity_board
+        for args in (['--current-config', 'synthetic.json'], ['--port', '0'], ['--port', '65536']):
+            with self.subTest(args=args), patch('sys.argv', ['predict', *args]), \
+                    patch('sys.stderr', new_callable=io.StringIO), \
+                    patch.object(opportunity_board, 'create_app') as app, \
+                    patch('app.collection.runtime_client.RuntimeClient') as client, \
+                    self.assertRaises(SystemExit) as error:
+                opportunity_board.main()
+            self.assertEqual(error.exception.code, 2)
+            app.assert_not_called()
+            client.assert_not_called()
+
+    def test_app_uses_runtime_client_and_authoritative_factory(self):
+        from app.dashboard import opportunity_board
+        with patch('sys.argv', ['predict', '--port', '8799']), \
+                patch('app.collection.runtime_client.RuntimeClient') as client, \
+                patch.object(opportunity_board, 'create_app') as app, \
+                patch.object(opportunity_board.web, 'run_app') as serve:
+            opportunity_board.main()
+        client.assert_called_once_with()
+        app.assert_called_once_with(current_provider=client.return_value)
+        serve.assert_called_once_with(app.return_value, host='127.0.0.1', port=8799,
+                                      access_log=None, handler_cancellation=True)
+
+    def test_data_runtime_owns_foreground_configuration(self):
+        from app.collection import data_runtime
+        with patch('sys.argv', ['predict-data', '--current-config', 'synthetic.json']), \
+                patch.object(data_runtime, 'run', new_callable=AsyncMock, return_value=0) as run, \
+                self.assertRaises(SystemExit) as error:
+            data_runtime.main()
+        self.assertEqual(error.exception.code, 0)
+        run.assert_awaited_once_with('synthetic.json')
+
+    def test_launcher_rejects_ignored_config_before_any_local_operations(self):
+        root = Path(__file__).resolve().parents[1]
+        main = runpy.run_path(str(root / 'scripts/opportunity-board'))['main']
+        for args in (['start', '--role', 'app'], ['stop'], ['status']):
+            with self.subTest(args=args), tempfile.TemporaryDirectory() as temp, \
+                    patch.dict(main.__globals__, ROOT=Path(temp)), \
+                    patch('sys.argv', ['opportunity-board', *args, '--current-config', 'synthetic.json']), \
+                    patch('sys.stderr', new_callable=io.StringIO), \
+                    patch.object(main.__globals__['os'], 'open') as opened, \
+                    patch.object(main.__globals__['subprocess'], 'run') as process, \
+                    self.assertRaises(SystemExit) as error:
+                main()
+            self.assertEqual(error.exception.code, 2)
+            opened.assert_not_called()
+            process.assert_not_called()
+
+    def test_launcher_forwards_config_to_data_start(self):
+        root = Path(__file__).resolve().parents[1]
+        main = runpy.run_path(str(root / 'scripts/opportunity-board'))['main']
+        for role in ('data', 'both'):
+            start = Mock()
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as temp, \
+                    patch.dict(main.__globals__, ROOT=Path(temp), start_role=start), \
+                    patch('sys.argv', ['opportunity-board', 'start', '--role', role,
+                                       '--current-config', 'synthetic.json']), \
+                    patch.object(main.__globals__['subprocess'], 'run', return_value=SimpleNamespace(returncode=0)):
+                main()
+            self.assertEqual([call.args[0] for call in start.call_args_list],
+                             ['data'] if role == 'data' else ['data', 'app'])
+            self.assertEqual(start.call_args_list[0].args[2].current_config, 'synthetic.json')
+
+    def test_retired_router_and_frontend_are_absent(self):
+        root = Path(__file__).resolve().parents[1]
+        for name in ('app/dashboard/server.py', 'app/dashboard/static/index.html',
+                     'app/dashboard/static/app.js'):
+            self.assertFalse((root / name).exists(), name)
+        self.assertTrue((root / 'app/dashboard/static/style.css').is_file())
 
 
 class PolicyOwnership(unittest.TestCase):
@@ -103,15 +179,16 @@ class TransportPolicy(unittest.IsolatedAsyncioTestCase):
 
 
 class CalculationOwnership(unittest.TestCase):
-    def test_saved_engine_binding_includes_shared_settings_adapter(self):
+    def test_saved_engine_binding_includes_shared_settings_and_native_catalog(self):
         from app.storage.current_games import engine_binding
         original=Path.read_bytes
         before=engine_binding()
-        def changed(path):
-            data=original(path)
-            return data+b'\n# synthetic settings revision\n' if path.as_posix().endswith('/app/dashboard/query_policy.py') else data
-        with patch.object(Path,'read_bytes',changed):
-            self.assertNotEqual(engine_binding(),before)
+        for module in ('app/dashboard/query_policy.py', 'app/collection/current_native_catalog.py'):
+            def changed(path):
+                data=original(path)
+                return data+b'\n# synthetic owner revision\n' if path.as_posix().endswith('/'+module) else data
+            with self.subTest(module=module), patch.object(Path,'read_bytes',changed):
+                self.assertNotEqual(engine_binding(),before)
 
     def test_removed_unused_adapters_do_not_return(self):
         from app.comparison import current_metrics

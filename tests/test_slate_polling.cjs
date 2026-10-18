@@ -1,8 +1,8 @@
 // Saved-only completion scheduling: no timer starts overlapping or paused reads.
-const assert=require('node:assert/strict'),fs=require('node:fs');
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url'),path=require('node:path');
 (async()=>{
- const source=fs.readFileSync('app/dashboard/opportunity_static/current/board-client.js','utf8');
- const {SavedReadPoller}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const {SavedReadPoller}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/board-client.js')));
  const timers=new Map(), scheduled=[], cancelled=[];let next=0,reads=0,inFlight=false,paused=false;
  const poll=new SavedReadPoller({onRead:()=>{reads++;inFlight=true;},canRead:()=>!inFlight&&!paused,
   setTimer:(callback,delay)=>{const key=++next;timers.set(key,callback);scheduled.push({key,delay,callback});return key;},

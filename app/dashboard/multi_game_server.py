@@ -652,7 +652,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def current_asset(req):
         name=req.match_info['name']
         allowed={'stored.css':static_root/'opportunity_static/current/stored.css','stored.js':static_root/'opportunity_static/current/stored.js','arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
-        for filename in ('scanner.js','scanner.css','board-client.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
+        for filename in ('scanner.js','scanner.css','board-client.js','board-read.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
             allowed[filename]=static_root/'opportunity_static/current'/filename
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])

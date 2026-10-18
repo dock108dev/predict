@@ -7,6 +7,6 @@ from app.collection.credential_handoff import paid_prompt
 from app.collection.local_ownership import LocalOwnership
 owner=LocalOwnership()
 try:owner.acquire("owner-local-paid-key-entry")
-except ValueError:raise SystemExit("Stop the owned Predict app before changing its cached credential. No settings changed.")
+except ValueError:raise SystemExit("Stop the Predict data process and any retained acquisition session before changing its cached credential. No settings changed.")
 try:paid_prompt()
 finally:owner.release()

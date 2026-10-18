@@ -1,4 +1,4 @@
-"""SC02 cashflow classification and observed-only bounded discovery sizing.
+"""Scanner cashflow classification and observed-only bounded discovery sizing.
 
 Existing allocation, nonlinear fee, pool, collateral and joint-cashflow owners
 remain authoritative. Probabilities never remove a feasible cashflow state.

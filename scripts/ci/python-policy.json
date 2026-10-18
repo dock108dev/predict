@@ -136,6 +136,9 @@
     "tests/test_segmented.py::CrashBoundaries::test_native_dependencies_and_clocks_fail_closed": "Archived native dependency journal; synthetic native replay and clock controls remain required."
   },
   "quality": [
-    "tests/test_ci_reporting.py"
+    "tests/test_ci_reporting.py",
+    "tests/test_ci_environment.py",
+    "tests/test_ci_assurance.py",
+    "tests/test_ci_secrets.py"
   ]
 }

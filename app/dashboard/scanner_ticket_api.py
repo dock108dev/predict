@@ -1,4 +1,4 @@
-"""SC03 bounded local ticket commands. Same-origin middleware remains owner."""
+"""Bounded local ticket commands. Same-origin middleware remains owner."""
 import asyncio
 from aiohttp import web
 from .local_security import read_json, PublicRequestError

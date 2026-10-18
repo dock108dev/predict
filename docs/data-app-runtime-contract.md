@@ -115,7 +115,7 @@ finance remains allowed for that selection. Selected/latest/replacement frames,
 explicit adoption, exact-market destination checks and original expiry remain.
 An app restart can require reselection; it does not interrupt data work.
 
-The background scanner alone owns the bounded SC06 summary file and episode
+The background scanner alone owns the bounded summary summary file and episode
 observations. The app reads a replaceable SQL mirror of compact summary facts;
 it never opens a second summary writer. Retention, eviction, censoring and joint
 edge/size disclosure retain the summary contract. The bounded transition journal
@@ -125,4 +125,4 @@ silent resynchronization/censoring; stored rows cannot invent arrivals.
 The focused `scripts/ci/postgres.py --da-separation` lane uses a separate disposable
 PostgreSQL cluster and authored source/model assumptions. It makes no provider
 requests. Fixture evidence supplies engineering verification, not current source
-qualification, exact production destinations, hosted CI or SC08/Q04 acceptance.
+qualification, exact production destinations, hosted CI or live operational validity.

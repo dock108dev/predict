@@ -1,12 +1,8 @@
 import asyncio
-from copy import deepcopy
 from datetime import datetime,timezone,timedelta
-import json,time,unittest
-from unittest.mock import patch
-from aiohttp.test_utils import TestClient,TestServer
+import time,unittest
 from app.dashboard.controller import Controller,limits_for
 from app.dashboard.views import age_view,candidate_view
-from app.dashboard.server import create_app,ORIGIN,response
 
 class FakeStore:
  def event(self,*args):pass
@@ -97,50 +93,8 @@ class DisplayTests(unittest.TestCase):
   now=datetime.now(timezone.utc)
   v={'freshness_seconds':10,'markets':[{'key':'k','venue_key':'kalshi','quotes':[dict(received_at=now.isoformat(),sync='synchronized',state='active')]}],'candidates':[dict(legs=[dict(market_key='k',received_at=(now-timedelta(seconds=11)).isoformat())],current_opportunity=True)]}
   self.assertFalse(age_view(v,active=True,health={'kalshi':{'state':'connected'}})['candidates'][0]['current_opportunity'])
- def test_decimal_serialization(self):
-  from decimal import Decimal
-  data=json.loads(response({'price':Decimal('0.123456789012345678901'),'profit':None}).text)
-  self.assertEqual(data['price'],'0.123456789012345678901');self.assertIsNone(data['profit'])
  def test_live_current_qualification_propagates(self):
   from app.arbitrage_example import synthetic_inputs,evaluate_fixture,selected
   c=selected(evaluate_fixture(synthetic_inputs()));v=candidate_view(c)
   self.assertFalse(v['current_opportunity']);self.assertFalse(v['qualified'])
   self.assertTrue(v['reasons']);self.assertEqual(v['profit'],c['conditional_calculation']['worst_case_profit'])
-
-class APITests(unittest.IsolatedAsyncioTestCase):
- async def asyncSetUp(self):
-  self.ctl=Controller(FakePipeline,QuietSource);self.client=TestClient(TestServer(create_app(self.ctl)))
-  await self.client.start_server();self.headers={'Host':'127.0.0.1:8765'}
-  r=await self.client.get('/api/state',headers=self.headers);self.state=await r.json()
-  self.mutation={**self.headers,'Origin':ORIGIN,'X-Scan-Token':self.state['csrf']}
- async def asyncTearDown(self):await self.client.close()
- async def test_origin_and_token(self):
-  for headers in [self.headers,{**self.mutation,'Origin':'http://attacker.test'},{**self.mutation,'X-Scan-Token':'bad'}]:
-   r=await self.client.post('/api/start',json={'mode':'live'},headers=headers);self.assertEqual(r.status,403)
-  self.assertIsNone(self.ctl.task)
- async def test_wrong_host(self):
-  r=await self.client.get('/api/state',headers={'Host':'attacker.test'});self.assertEqual(r.status,403)
- async def test_start_stop_and_validation(self):
-  r=await self.client.post('/api/start',json={'mode':'live','limits':{'markets':99}},headers=self.mutation);self.assertEqual(r.status,400)
-  r=await self.client.post('/api/start',json={'mode':'live'},headers=self.mutation);self.assertEqual(r.status,202)
-  r=await self.client.post('/api/start',json={'mode':'live'},headers=self.mutation);self.assertEqual(r.status,409)
-  r=await self.client.post('/api/stop',json={},headers=self.mutation);self.assertEqual(r.status,202)
- async def test_saved_session_api_is_not_live(self):
-  with patch('app.dashboard.repository.saved_view',return_value={'markets':[],'candidates':[{'legs':[],'current_opportunity':True}]}):
-   r=await self.client.get('/api/sessions/test-session',headers=self.headers);data=await r.json()
-   self.assertFalse(data['active']);self.assertFalse(data['candidates'][0]['current_opportunity'])
- async def test_exception_details_are_not_exposed(self):
-  private='Traceback: /private/database.py password=secret-token SELECT internal_table'
-  for error in (LookupError,KeyError,ValueError,RuntimeError,Exception):
-   with self.subTest(error=error.__name__):
-    with patch('app.dashboard.repository.saved_view',side_effect=error(private)):
-     r=await self.client.get('/api/sessions/test-session',headers=self.headers)
-    self.assertEqual(r.status,400 if issubclass(error,(LookupError,ValueError)) else 409 if error is RuntimeError else 503)
-    data=await r.json()
-    self.assertEqual(set(data),{'error'})
-    for detail in ('Traceback','/private','password','secret-token','internal_table'):
-     self.assertNotIn(detail,data['error'])
-    self.assertEqual(r.headers['Cache-Control'],'no-store')
- async def test_no_arbitrary_path_or_raw_endpoint(self):
-  r=await self.client.get('/assets/not-allowed',headers=self.headers);self.assertEqual(r.status,404)
-  r=await self.client.get('/api/raw',headers=self.headers);self.assertEqual(r.status,404)

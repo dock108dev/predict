@@ -1,4 +1,4 @@
-"""Versioned, volatile publication observations shared with SC06.
+"""Versioned, volatile publication observations consumed by episode summaries.
 
 No consumers, SQL, providers or financial calculations. Not an episode archive.
 A complete supplied-universe observation is required at both ends; pending

@@ -1,4 +1,4 @@
-"""SC01 read-only readiness contract. No financial classification or acquisition.
+"""Read-only readiness contract. No financial classification or acquisition.
 
 Readiness checks inputs, never the existence or profitability of opportunities.
 All counts name their selected universe; causes intentionally overlap.
@@ -145,7 +145,7 @@ def assemble(instruments, *, selection, at, epoch, input_revision, scopes, evalu
         if any(left[k] != right[k] for k in ('sport', 'league', 'market', 'period', 'overtime')):
             continue
         # Opposing decisive directions retain native NO/Short semantics. This is
-        # input compatibility only; exceptional settlement is SC02's decision.
+        # input compatibility only; exceptional settlement belongs to financial classification.
         if left['direction'] is None or right['direction'] is None or left['direction'] == right['direction']:
             continue
         if len(pairs) >= MAX_PAIRS:
