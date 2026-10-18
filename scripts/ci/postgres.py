@@ -202,6 +202,10 @@ def main(argv=None):
                     "tests/test_sc02_sql.py",
                     "tests/test_sc03_sql.py",
                     "tests/test_sc06_performance_sql.py",
+                    # Positive current-publication/API and restart reuse coverage
+                    # complements legacy archive and unpublished-read regressions.
+                    "tests/test_latest_board_sql.py::LatestBoardSQL::test_sql_only_publication_affected_reuse_restart_and_authoritative_economics",
+                    "tests/test_latest_board_sql.py::LatestBoardSQL::test_actual_http_page_filter_poll_and_selected_amount_use_database_only",
                 ]
             )
             if args.tests:

@@ -78,9 +78,6 @@ def verify_rules(binary, config):
 
 def main():
     config = Path(".gitleaks.toml")
-    review = re.search(r"Review after: (\d{4}-\d{2}-\d{2})", config.read_text())
-    if not review or date.fromisoformat(review[1]) < date.today():
-        raise ValueError("Secret exceptions require review")
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="test-results/quality")
     output = Path(parser.parse_args().output)
@@ -91,63 +88,90 @@ def main():
         raise ValueError(
             "Use fresh secret report paths; existing evidence is preserved"
         )
-    binary = Path(".local/ci-tools/gitleaks").resolve()
-    verify_rules(binary, config)
-    with tempfile.TemporaryDirectory(prefix="predict-secrets-") as folder:
-        source = Path(folder) / "source"
-        export(source)
-        result = subprocess.run(
-            [
-                str(binary),
-                "dir",
-                str(source),
-                "--config",
-                str(config.resolve()),
-                "--redact=100",
-                "--no-banner",
-                "--report-format=json",
-                "--report-path",
-                str((output / "gitleaks.json").resolve()),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        report = output / "gitleaks.json"
-        findings = json.loads(report.read_text()) if report.exists() else None
-        if not isinstance(findings, list):
-            raise ValueError(
-                "Secret scan report missing or malformed; evidence unavailable"
+    stage = "scanner setup"
+    try:
+        stage = "exception policy review"
+        review = re.search(r"Review after: (\d{4}-\d{2}-\d{2})", config.read_text())
+        if not review or date.fromisoformat(review[1]) < date.today():
+            raise ValueError("Secret exceptions require review")
+        binary = Path(".local/ci-tools/gitleaks").resolve()
+        stage = "detection controls"
+        verify_rules(binary, config)
+        with tempfile.TemporaryDirectory(prefix="predict-secrets-") as folder:
+            source = Path(folder) / "source"
+            stage = "publishable file export"
+            export(source, include_retained=False)
+            stage = "gitleaks execution"
+            result = subprocess.run(
+                [
+                    str(binary),
+                    "dir",
+                    str(source),
+                    "--config",
+                    str(config.resolve()),
+                    "--redact=100",
+                    "--no-banner",
+                    "--report-format=json",
+                    "--report-path",
+                    str((output / "gitleaks.json").resolve()),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
-        # Paths only: never publish raw secret/match content or arbitrary scanner logs.
-        safe = [
-            {k: row.get(k) for k in ("RuleID", "StartLine", "EndLine")}
-            | {"File": str(Path(row["File"]).relative_to(source))}
-            for row in findings
-        ]
-        report.write_text(json.dumps(safe, indent=2) + "\n")
+            stage = "gitleaks report validation"
+            report = output / "gitleaks.json"
+            findings = json.loads(report.read_text()) if report.exists() else None
+            if not isinstance(findings, list):
+                raise ValueError(
+                    "Secret scan report missing or malformed; evidence unavailable"
+                )
+            # Paths only: never publish raw secret/match content or arbitrary scanner logs.
+            safe = [
+                {k: row.get(k) for k in ("RuleID", "StartLine", "EndLine")}
+                | {"File": str(Path(row["File"]).relative_to(source))}
+                for row in findings
+            ]
+            report.write_text(json.dumps(safe, indent=2) + "\n")
+            (output / "secret-metrics.json").write_text(
+                json.dumps(
+                    dict(
+                        status="PASS"
+                        if result.returncode == 0 and not findings
+                        else "FAIL",
+                        findings=len(findings),
+                        severity=None,
+                        tool="gitleaks 8.30.1",
+                        scope="publishable current-tree export; no owner state or historical Git scan",
+                        baseline=None,
+                    ),
+                    indent=2,
+                )
+                + "\n"
+            )
+            print(
+                "Secret scan findings:",
+                len(findings),
+                "(redacted report; severity unavailable)",
+            )
+            return int(result.returncode != 0 or bool(findings))
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        KeyError,
+        subprocess.SubprocessError,
+    ) as error:
+        # Never copy arbitrary scanner output/exception text into published reports.
+        reason = f"Secret scan unavailable during {stage} ({type(error).__name__}); inspect the secret-scan step"
         (output / "secret-metrics.json").write_text(
             json.dumps(
-                dict(
-                    status="PASS"
-                    if result.returncode == 0 and not findings
-                    else "FAIL",
-                    findings=len(findings),
-                    severity=None,
-                    tool="gitleaks 8.30.1",
-                    scope="publishable current-tree export; no owner state or historical Git scan",
-                    baseline=None,
-                ),
-                indent=2,
+                dict(status="FAIL", findings=None, stage=stage, reason=reason), indent=2
             )
             + "\n"
         )
-        print(
-            "Secret scan findings:",
-            len(findings),
-            "(redacted report; severity unavailable)",
-        )
-        return int(result.returncode != 0 or bool(findings))
+        print(reason)
+        return 1
 
 
 if __name__ == "__main__":

@@ -114,12 +114,16 @@ def render(
                     raise ValueError("vulnerabilities or unavailable dependencies")
             elif name == "secrets":
                 data = read(path, dict)
+                record["measurements"] = data
                 if (
                     data.get("status") != "PASS"
                     or type(data.get("findings")) is not int
                     or data["findings"] != 0
                 ):
-                    raise ValueError("Secret findings or unavailable scan evidence")
+                    raise ValueError(
+                        data.get("reason")
+                        or "Secret findings or unavailable scan evidence"
+                    )
                 record["measurements"] = data
             else:
                 data = read(path, dict)

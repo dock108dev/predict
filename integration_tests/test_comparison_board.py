@@ -155,8 +155,9 @@ class ComparisonBoardSQL(unittest.TestCase):
             self.rows.upsert_records([])
             self.assertEqual(self.db.execute('SELECT count(*) n FROM current_event').fetchone()['n'], 0)
 
-    def test_loopback_current_details_inputs_stop_and_fail_visible(self):
-        # Independent committed fixture connection; no class rollback visibility issue.
+    def test_loopback_requires_background_publication_and_reports_database_failure(self):
+        # Current ingress alone is not a published financial board. The required
+        # latest-board SQL suite covers positive publication/details/Stop journeys.
         import asyncio
         from app.dashboard.comparison_board_api import mount
         async def check():
@@ -165,29 +166,20 @@ class ComparisonBoardSQL(unittest.TestCase):
             app = web.Application()
             mount(app, provider)
             with patch('app.dashboard.comparison_board_api.connect', side_effect=lambda: connect(self.name)), \
-                 patch('app.storage.comparison_board.utc', return_value=AT), \
+                 patch('app.dashboard.comparison_board_api.calculate_current', side_effect=AssertionError('requests cannot publish missing background results')), \
                  patch('app.collection.current_account_recovery.observe_and_activate', side_effect=AssertionError('no acquisition')), \
                  patch('httpx.Client.send', side_effect=AssertionError('no provider traffic')):
                 async with TestClient(TestServer(app)) as client:
-                    catalog = await (await client.get('/api/boards/games')).json()
-                    game = catalog['games'][0]['game_key']
-                    params = dict(game=game, filter='all')
-                    reply = await client.get('/api/boards/ev', params=params)
-                    self.assertEqual(reply.status, 200)
-                    board = await reply.json()
-                    identity = board['calculation_context']['context_id']
-                    quote = board['prices'][0]['quote_id']
-                    params.update(context_id=identity, quote=quote)
-                    for view in ('details', 'inputs'):
-                        result = await client.get('/api/boards/' + view, params=params)
-                        self.assertEqual(result.status, 200, await result.text())
-                        self.assertEqual((await result.json())['calculation_context']['context_id'], identity)
-                        stale = await client.get('/api/boards/' + view, params=dict(params, context_id='old'))
-                        self.assertEqual(stale.status, 409)
-                    provider.closed = True
-                    stopped = await (await client.get('/api/boards/ev', params=dict(game=game, filter='all'))).json()
-                    self.assertEqual(stopped['delivery_state'], 'stopped')
-                    self.assertEqual(stopped['calculation_context']['context_id'], identity)
+                    catalog_reply = await client.get('/api/boards/games')
+                    self.assertEqual(catalog_reply.status, 200)
+                    catalog = await catalog_reply.json()
+                    self.assertEqual(catalog['games'], [])
+                    self.assertEqual(catalog['provider_requests'], 0)
+                    for view in ('odds', 'ev', 'arbs', 'details', 'inputs'):
+                        result = await client.get('/api/boards/' + view, params=dict(
+                            game='combined:unpublished', filter='all', context_id='unpublished', quote='unpublished'))
+                        self.assertEqual(result.status, 409, await result.text())
+                        self.assertEqual((await result.json())['provider_requests'], 0)
                     history = await client.get('/api/boards/history')
                     self.assertEqual(history.status, 410)
                     with patch('app.dashboard.comparison_board_api.connect', side_effect=OSError('offline')):

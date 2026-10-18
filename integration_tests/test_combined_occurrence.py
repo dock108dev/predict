@@ -8,8 +8,22 @@ from psycopg import sql
 from app.storage.store import connect,Store,hashed
 from app.storage.current_games import GameStore,calculate,age_result
 from app.comparison.estimated_policy import DEFAULT_POLICY
-from app.comparison.combined_inputs import build
+from app.comparison.combined_inputs import build, prepare
 from tests.test_ev09_n01 import retained,AT,SELECTED
+
+def winner_bundle(envelopes):
+    """The archive roundtrip oracle is one full-game winner, not all new lines.
+
+    Keep every original envelope byte and the real financial owner, while making
+    this fixture's intended market scope explicit as the retained catalog grows.
+    """
+    prepared = prepare(envelopes, at=AT)
+    prepared['groups'] = [[r for r in group
+        if r['market_identity']['family'] == 'moneyline'
+        and r['market_identity']['period'] == 'full_game']
+        for group in prepared['groups']]
+    return build(envelopes, at=AT, selected=SELECTED, prepared=prepared)[0]
+
 
 class CombinedStorage(unittest.TestCase):
     @classmethod
@@ -17,7 +31,7 @@ class CombinedStorage(unittest.TestCase):
         cls.name='prediction_arb_test_n01_'+uuid4().hex[:12]
         with connect() as db:db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
         cls.db=connect(cls.name);Store(cls.db).migrate();cls.store=GameStore(cls.db)
-        cls.bundle=deepcopy(retained()[0]);cls.key=cls.store.retain_combined(cls.bundle)
+        cls.bundle=winner_bundle(retained()[0]['envelopes']);cls.key=cls.store.retain_combined(cls.bundle)
         cls.snapshot=cls.store.snapshot(cls.key,DEFAULT_POLICY)
         cls.result=calculate(cls.snapshot);cls.rid,published=cls.store.publish(cls.snapshot,cls.result);assert published
     @classmethod
@@ -59,5 +73,5 @@ class CombinedStorage(unittest.TestCase):
         for e in self.bundle['envelopes']:self.store.import_record(e['record'],e['id'])
         rows=self.store.combined_envelopes();ids={r['id'] for r in rows}
         self.assertTrue(set(self.bundle['envelope_ids'])<=ids)
-        rebuilt=build(rows,at=AT,selected=SELECTED)[0]
+        rebuilt=winner_bundle(rows)
         self.assertEqual(rebuilt['input_version'],self.bundle['input_version'])

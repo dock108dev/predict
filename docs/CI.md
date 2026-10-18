@@ -263,3 +263,33 @@ The offline runner gives JavaScript fixture subprocesses the same Python
 interpreter that owns the locked CI environment. Client tests must not depend on a
 developer's `.venv` being present in a clean hosted checkout. Required suite
 registration and failure handling remain unchanged.
+
+### Secret-scan checkout boundary and failures
+
+The secret scanner exports tracked and nonignored publishable files with
+`include_retained=False`. It does not hydrate or validate the separate historical
+retained-resource manifest, whose ignored local review files can be absent from a
+clean GitHub checkout. The standalone retained-resource export keeps its strict
+manifest/hash validation. No tracked publishable files or credential rules are
+excluded from scanning by this change.
+
+Control, export, scanner and report-validation failures write a failing
+`secret-metrics.json` with the failed stage and unavailable (`null`) findings.
+Arbitrary exception text and scanner output are withheld from that report. The
+quality summary preserves this reason and still fails; absent scans never become
+zero findings or a pass. Detection controls and fresh-output protection remain.
+
+### PostgreSQL fixture and publication boundaries
+
+Archive compatibility roundtrips explicitly select full-game winner records from
+the original retained envelopes; adding supported spread/total markets does not
+silently turn this small compatibility fixture into a large archive workload.
+Envelope bytes, real financial owners, immutable storage and stale-publication
+checks remain intact. Domain-frame node/byte limits are unchanged.
+
+A data-process restart preserves the durable row epoch and unchanged source facts.
+Independent runtime authority still revokes stale selections. HTTP ingress without
+a background publication exposes an empty catalog and refuses unpublished boards;
+requests must not fabricate a financial publication. The primary PostgreSQL lane
+also runs the latest-board publication/reuse and actual HTTP/selected-input/Stop
+regressions. The full latest-board module remains in the focused data/app lane.

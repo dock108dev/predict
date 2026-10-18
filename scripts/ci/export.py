@@ -9,7 +9,7 @@ import json
 from hashlib import sha256
 
 
-def export(target, *, root=None, files=None):
+def export(target, *, root=None, files=None, include_retained=True):
     root = Path(root or Path(__file__).resolve().parents[2]).resolve()
     files = (
         files
@@ -23,9 +23,13 @@ def export(target, *, root=None, files=None):
             .split("\0")
         )
     )
-    retained = json.loads((root / "config/ci-retained-resources.json").read_text())[
-        "resources"
-    ]
+    retained = (
+        json.loads((root / "config/ci-retained-resources.json").read_text())[
+            "resources"
+        ]
+        if include_retained
+        else {}
+    )
     for name, expected in retained.items():
         relative = Path(name)
         if (

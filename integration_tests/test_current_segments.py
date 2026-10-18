@@ -15,7 +15,7 @@ from tests.test_d03_current_rows import future_records
 
 
 class CurrentRestartSQL(unittest.IsolatedAsyncioTestCase):
-    async def test_restart_rotates_context_keeps_rows_and_never_replays_journal(self):
+    async def test_restart_preserves_data_epoch_and_rows_and_never_replays_journal(self):
         name = 'prediction_arb_test_restart_' + uuid4().hex[:12]
         with connect() as db:
             db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
@@ -44,7 +44,10 @@ class CurrentRestartSQL(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(journal.read_bytes(), original)
             with connect(name) as db:
                 after = CurrentRowStore(db).capture()
-                self.assertNotEqual(before['epoch'], after['epoch'])
+                # Process lifetime is separate from durable data identity.
+                # Runtime/selection authority is covered by latest-board SQL tests.
+                self.assertEqual(before['epoch'], after['epoch'])
+                self.assertEqual(before['revision'], after['revision'])
                 self.assertEqual(before['records'], after['records'])
                 for table in ('current_envelope', 'current_import_cursor', 'current_game_snapshot', 'current_game_result'):
                     self.assertEqual(db.execute(sql.SQL('SELECT count(*) n FROM {}').format(
