@@ -274,7 +274,7 @@ class RecoveryTransport(unittest.IsolatedAsyncioTestCase):
         wire=self.wire()
         async def paid(req,key):return dict(status=200,headers=counters(653,3),received_at=self.at,body=b'[]')
         wire.request=paid;worker.transport=wire
-        with patch.object(worker,'check_account_binding'):
+        with patch.object(worker,'check_account_binding'),patch('app.collection.current_aggregate.now',side_effect=lambda:self.at):
             response=await worker.dispatch(request,3)
         self.assertEqual(response['status'],200);self.assertEqual(self.q.snapshot()['reserved'],3)
         self.assertEqual(self.q.snapshot()['available'],99294)

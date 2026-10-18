@@ -48,6 +48,13 @@ only the requested stored Odds/EV/Arbs view, within the existing read deadline a
 memory guards. The consistent-slate SQL test covers expiry between page and Details,
 view projection, and pagination through the actual browser module imports.
 
+Background shutdown cancels active SQL operations as well as cooperative Python
+work. Connections and worker tasks remain owned until they finish, including when
+the cleanup deadline expires. The multisport SQL lane verifies cancellation of
+an active 30-second database sleep within the existing cleanup limit. Offline
+recovery fixtures use their authored clock for scheduler windows, so running CI
+outside collection hours does not change the test outcome.
+
 ## Install tools
 
 ```sh

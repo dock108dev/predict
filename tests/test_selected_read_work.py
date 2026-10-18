@@ -82,6 +82,28 @@ class SelectedReadWork(IsolatedAsyncioTestCase):
             self.assertTrue(finished.is_set())
             self.assertLess(monotonic()-start,.5)
 
+    async def test_background_shutdown_timeout_keeps_live_connection_owned(self):
+        from app.storage.latest_board import LatestBoardOwner
+        owner=LatestBoardOwner(SimpleNamespace(config=dict(cleanup_seconds=.05)))
+        entered=Event();release=Event();db=MagicMock()
+        db.__enter__.return_value=db
+        db.execute.return_value.fetchone.return_value=dict(owned=True)
+        def blocked(*args,**kwargs):entered.set();release.wait(3)
+        with patch('app.storage.latest_board.connect',return_value=db),patch('app.storage.coverage_latest.reconcile',side_effect=blocked):
+            owner.coverage_task=asyncio.create_task(owner.run_coverage())
+            try:
+                while not entered.is_set():await asyncio.sleep(.005)
+                with self.assertRaises(TimeoutError):await owner.close()
+                db.cancel_safe.assert_called_once_with(timeout=1)
+                self.assertIn(db,owner.connections)
+                self.assertFalse(owner.coverage_task.done())
+                self.assertFalse(owner.drain_task.done())
+            finally:
+                release.set()
+                await asyncio.wait_for(asyncio.shield(owner.drain_task),1)
+            self.assertEqual(owner.connections,set())
+            self.assertTrue(owner.coverage_task.done())
+
     async def test_thread_start_failure_returns_all_capacity(self):
         work=ReadWork()
         with patch('app.dashboard.read_work.Thread.start',side_effect=RuntimeError('cannot start')):

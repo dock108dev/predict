@@ -4,6 +4,8 @@ HTTP readers only read these compact rows and committed input/status identities.
 Expanded states, ladders and financial reports are never retained here.
 """
 import asyncio
+from contextlib import contextmanager
+from threading import RLock
 from app.diagnostics import failure
 from copy import deepcopy
 from datetime import timedelta
@@ -412,13 +414,35 @@ class LatestBoardOwner:
         self.observation_error=None;self.estimate_error=None
         self.coverage_task=None;self.coverage_error=None;self.last_coverage=None
         self.admission_status={}
+        self.connections=set();self.connection_lock=RLock();self.drain_task=None
+    @contextmanager
+    def connection(self):
+        # Cooperative Python checkpoints cannot interrupt a blocking SQL query.
+        # Keep its connection owned so shutdown can cancel the server operation.
+        with connect() as db:
+            with self.connection_lock:self.connections.add(db)
+            class WorkerConnection:
+                def execute(self,*args,**kwargs):
+                    checkpoint()
+                    return db.execute(*args,**kwargs)
+                def __getattr__(self,name):return getattr(db,name)
+            try:
+                checkpoint()
+                yield WorkerConnection()
+            finally:
+                with self.connection_lock:self.connections.discard(db)
+    def cancel_queries(self):
+        with self.connection_lock:connections=list(self.connections)
+        for db in connections:
+            try:db.cancel_safe(timeout=1)
+            except Exception as exc:failure(__name__,'latest_board_query_cancel',exc)
     async def start(self):
         self.task=asyncio.create_task(self.run(observations_only=True),name='predict-latest-observation-owner')
         self.estimate_task=asyncio.create_task(self.run(observations_only=False),name='predict-latest-estimate-owner')
         self.coverage_task=asyncio.create_task(self.run_coverage(),name='predict-coverage-owner')
     def coverage_tick(self):
         from .coverage_latest import reconcile as reconcile_coverage, LOCK as COVERAGE_LOCK
-        with cancellation(lambda:self.closed),connect() as db:
+        with cancellation(lambda:self.closed),self.connection() as db:
             if not db.execute('SELECT pg_try_advisory_lock(%s) AS owned',(COVERAGE_LOCK+1,)).fetchone()['owned']:
                 return dict(published=False,reason='another_coverage_owner')
             try:return reconcile_coverage(db)
@@ -432,6 +456,7 @@ class LatestBoardOwner:
                 if self.closed:return
                 raise
             except Exception as exc:
+                if self.closed:return
                 failure(__name__, 'latest_board_coverage', exc)
                 self.coverage_error='background_coverage_unavailable'
             # Independent low-frequency metrics cannot delay source frames or
@@ -444,7 +469,7 @@ class LatestBoardOwner:
             return self._tick(observations_only=observations_only)
     def _tick(self, *, observations_only=False):
         lock=LOCK+1 if observations_only else LOCK
-        with connect() as db:
+        with self.connection() as db:
             if not db.execute('SELECT pg_try_advisory_lock(%s) AS owned',(lock,)).fetchone()['owned']:return dict(published=False,reason='another_board_owner')
             try:
                 from app.collection.background_work import BACKGROUND
@@ -464,6 +489,7 @@ class LatestBoardOwner:
                 if self.closed:return
                 raise
             except Exception as exc:
+                if self.closed:return
                 failure(__name__, 'latest_board_reconciliation', exc)
                 error=type(exc).__name__+': latest_board_reconciliation_failed'
             if observations_only:self.observation_error=error
@@ -477,7 +503,17 @@ class LatestBoardOwner:
         from app.collection.background_work import BACKGROUND
         for kind in ('observations','estimates','coverage'):BACKGROUND.cancel(kind)
         tasks=[task for task in (self.task,self.estimate_task,self.coverage_task) if task]
-        if tasks:await asyncio.wait_for(asyncio.shield(asyncio.gather(*tasks)),timeout=self.service.config['cleanup_seconds'])
+        if tasks:
+            async def drain():
+                await asyncio.to_thread(self.cancel_queries)
+                results=await asyncio.gather(*tasks,return_exceptions=True)
+                for result in results:
+                    if isinstance(result,BaseException):raise result
+            if self.drain_task is None:
+                self.drain_task=asyncio.create_task(drain())
+                self.drain_task.add_done_callback(lambda task:None if task.cancelled() else task.exception())
+            # A timed-out caller cannot detach a live SQL thread from its owner.
+            await asyncio.wait_for(asyncio.shield(self.drain_task),timeout=self.service.config['cleanup_seconds'])
 
 
 def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):

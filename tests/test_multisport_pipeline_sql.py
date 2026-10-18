@@ -67,6 +67,35 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         self.addAsyncCleanup(self.owner.close)
         self.addAsyncCleanup(self.store.close)
 
+    async def test_shutdown_cancels_active_coverage_sql_before_cleanup_deadline(self):
+        from threading import Event
+        from time import monotonic
+        await self.owner.close()
+        owner=latest.LatestBoardOwner(self.service)
+        self.addAsyncCleanup(owner.close)
+        entered=Event();finished=Event();backend=[]
+        def blocked(db):
+            backend.append(db.execute('SELECT pg_backend_pid() AS pid').fetchone()['pid'])
+            entered.set()
+            try:db.execute('SELECT pg_sleep(30)')
+            finally:finished.set()
+            self.fail('SQL sleep must be cancelled by shutdown')
+        with patch('app.storage.coverage_latest.reconcile',side_effect=blocked):
+            owner.coverage_task=asyncio.create_task(owner.run_coverage())
+            async with asyncio.timeout(5):
+                while not entered.is_set():await asyncio.sleep(.01)
+                while True:
+                    with self.connect() as db:
+                        active=db.execute("SELECT wait_event FROM pg_stat_activity WHERE pid=%s",(backend[0],)).fetchone()
+                    if active and active['wait_event']=='PgSleep':break
+                    await asyncio.sleep(.01)
+            start=monotonic()
+            await owner.close()
+        self.assertLess(monotonic()-start,self.config['cleanup_seconds'])
+        self.assertTrue(finished.is_set())
+        self.assertTrue(owner.coverage_task.done())
+        self.assertEqual(owner.connections,set())
+
     async def unseen_event_after_startup(self,league,family,*,flat_season=False):
         from app.dashboard.comparison_board_api import mount
         proxy=RuntimeClient(connector=self.connect)
