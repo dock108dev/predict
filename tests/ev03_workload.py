@@ -42,6 +42,7 @@ def records(games=150, quote_count=2000):
             q['provenance']=dict(mode='synthetic',real_source=False,sha256=sha256(f'authored:{game}:{index}'.encode()).hexdigest())
             r['comparison_source_metadata']=dict(phase='pregame',overtime='included',
                 native_key=[q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]])
+            r['comparison_source_metadata'].update(native_terms={'description':'Authored full-game winner including overtime'}, original_wording={'description':'Authored full-game winner including overtime'})
             r['orientation_evidence']=['authored:ev03:exact-selected-contract']
             # An intentional missing reference is independent from healthy fees,
             # payout, identity, grid and policy. All later games have support.

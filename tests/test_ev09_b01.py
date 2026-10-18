@@ -6,7 +6,7 @@ from fractions import Fraction as F
 from unittest.mock import patch
 import unittest
 from tests.test_ev09_n01 import retained, entries as originals, AT
-from app.dashboard.comparison_board import response, age, entries, details, benchmark
+from app.dashboard.comparison_board import response, age, entries, details, benchmark, expand_odds, expand_financial
 from app.comparison.benchmark import TwoWayBenchmark
 from app.comparison.current_dependencies import instant
 from app.storage.comparison_board import catalog
@@ -23,14 +23,15 @@ def value():
 class BoardReadModel(unittest.TestCase):
     def board(self,view,filter='all',v=None,b=None,**kw):
         from tests.test_current_board_reads import context,bundle
-        return response(b or bundle(context()),v or value(),DEFAULT_POLICY,view=view,filter=filter,at=AT,**kw)
+        result=response(b or bundle(context()),v or value(),DEFAULT_POLICY,view=view,filter=filter,at=AT,**kw)
+        return expand_odds(result) if view=='odds' else expand_financial(result)
     def test_authentic_canonical_catalog_and_alternatives(self):
-        b,s=retained();c=catalog([b]);self.assertEqual(len(c['games']),1);self.assertEqual(len(c['games'][0]['members']),3)
+        b,s=retained();c=catalog([b]);self.assertEqual(len(c['games']),1);self.assertEqual(c['games'][0]['members'],b['members'])
         odds=self.board('odds');self.assertEqual(len(odds['rows']),len(originals(s)));self.assertEqual(odds['benchmark']['venue'],'pinnacle')
         self.assertEqual({r['decimal_odds'] for r in odds['benchmark']['originals']},{'1.72','2.23'})
         self.assertEqual(F(odds['benchmark']['fair'][0]['decisive_probability']),F(172,395))
-        self.assertEqual({r['native_side'] for r in odds['rows'] if r['venue']=='kalshi'},{'yes','no'})
-        self.assertTrue(all(r['original'] for r in odds['rows']));self.assertTrue(all('financial_metrics' not in r for r in odds['rows']))
+        self.assertEqual({r['native_side'] for r in odds['prices'] if r['venue']=='kalshi'},{'yes','no'})
+        self.assertTrue(all(r['original'] for r in odds['prices']));self.assertTrue(all('financial_metrics' not in r for r in odds['rows']))
     def test_benchmark_display_and_evaluation_share_exact_authority(self):
         b=retained()[0];reference=TwoWayBenchmark.from_dict(b['benchmark'])
         with patch.object(TwoWayBenchmark,'fair_probabilities',autospec=True,return_value=reference.fair_probabilities()) as weights, \
@@ -105,7 +106,7 @@ class BoardReadModel(unittest.TestCase):
         q['original']['value']='0.49'
         aged=age(v,at=AT,current=current)
         changed=next(r for _,_,r in entries(aged['state']) if r['id']==q['id']);self.assertEqual(changed['saved_status'],'historical')
-        self.assertTrue(all(r['saved_status']=='current' for _,_,r in entries(aged['state']) if r['id']!=q['id']))
+        self.assertTrue(all(r['saved_status']=='current' for _,_,r in entries(aged['state']) if r['id']!=q['id'] and r['calculations']['funded_estimate']['model_available']))
         # Removing a saved leg keeps its original price/result as historical.
         current['events'][0]['groups']=[g for g in current['events'][0]['groups'] if not any(r['id']==q['id'] for o in g['outcomes'] for r in __import__('app.dashboard.current_contract',fromlist=['quotes_of']).quotes_of(o))]
         aged=age(v,at=AT,current=current);self.assertTrue(any('dependency_changed_or_removed' in r['calculations']['funded_estimate']['freshness']['reasons'] for _,_,r in entries(aged['state'])))

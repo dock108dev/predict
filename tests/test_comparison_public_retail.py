@@ -47,14 +47,18 @@ class RetailInputs(unittest.TestCase):
         self.assertEqual(grid['unit'],{'unit':'dollar_face_contracts','face_usd_per_native':'1'})
         self.assertEqual((grid['grid']['minimum_native'],grid['grid']['increment_native'],grid['grid']['legal_price_tick']),('0.01','0.01','0.0025'))
         self.assertEqual(Fraction(grid['native_price']),Fraction(47,200))
-        payout=profiles['payout']['payload']
-        self.assertEqual(payout['equal']['value'],'0.50')
-        self.assertIsNone(payout['noncompleted']['value'])
+        # Public payout terms exist, but missing scoring scope cannot qualify
+        # them for this exact selection. Quantity evidence remains independent.
+        self.assertNotIn('payout',profiles)
+        self.assertEqual(q['comparison_input_status']['payout']['reason'],'source_overtime_scope_unresolved')
+        payout=value['binding']['facets']['payout']['value']['payout']
+        self.assertEqual(payout['equal'],'0.50')
+        self.assertNotIn('noncompleted',payout)
         self.assertEqual(q['source']['native_outcome_id'],'2165646')
         self.assertEqual(value['metadata']['sibling']['id'],'2165647')
         self.assertFalse(q['calculations']['net_ev']['eligible'])
         self.assertEqual(q['comparison_input_status']['probability']['status'],'absent')
-        for reason in ['source_clock_unknown','exact_pinnacle_opposition_absent','mandatory_settlement_and_other_charges_unqualified','selection_binding_unverified']:
+        for reason in ['source_clock_unknown','public_retail_exact_reference_probability_absent','public_retail_mandatory_settlement_and_other_charges_unqualified','selection_binding_unverified']:
             self.assertIn(reason,q['calculations']['net_ev']['reason'])
 
     def test_literal_public_entry_vectors_and_deployed_cash(self):
@@ -123,7 +127,8 @@ class RetailInputs(unittest.TestCase):
             else:value['normalized_record']['comparison_source_metadata']['material_sha256']='b'*64
             reversion(value);q=quote(state(value))
             self.assertIn(reason,q['comparison_input_status']['quantity']['reason'])
-            self.assertEqual(q['comparison_input_status']['payout']['status'],'available_and_bound' if change!='material' else 'applicability_unresolved')
+            self.assertEqual(q['comparison_input_status']['payout']['status'],'applicability_unresolved')
+            self.assertIsNone(q['comparison_input_refs']['refs']['payout'])
 
     def test_metadata_revision_changes_profile_not_price(self):
         value=retained();before=state(value);oldq=quote(before)

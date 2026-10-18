@@ -241,3 +241,25 @@ financial, stale-input, missing-depth and ordinary browser checks remain require
 This implements the existing October 16 deferral; it does not claim the stress
 campaign passed or establish a new performance baseline. Prior failure reports
 remain retained under `test-results/browser-repair-20261017/`.
+
+### Offline fixture and current-contract repairs
+
+Native metadata enrichment preserves a separately reviewed occurrence ID rather
+than replacing it with a different native game identifier; the occurrence owner
+still revalidates its seal. Synthetic financial workloads supply explicit original
+scoring terms. They do not inherit source qualification or bypass missing-scope
+refusals. Public retail quantity evidence cannot qualify a payout whose exact
+scoring scope remains unknown.
+
+Financial/observation tests resolve the board's existing local price references
+before inspecting complete rows, and endpoint tests exercise the current bounded
+read lane. Unsupported-market tests use actually unsupported markets/leagues;
+explicit linked schedule evidence is distinguished from an absent schedule.
+A valid content-bound book confirmation remains independent currentness evidence.
+The 80-observation board retains its 512 KiB cap; the current-peer frame omits an
+unused repeated explanation while the displayed gross-comparison tooltip retains it.
+
+The offline runner gives JavaScript fixture subprocesses the same Python
+interpreter that owns the locked CI environment. Client tests must not depend on a
+developer's `.venv` being present in a clean hosted checkout. Required suite
+registration and failure handling remain unchanged.

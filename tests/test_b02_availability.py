@@ -28,7 +28,8 @@ class Availability(TestCase):
         f=frame()
         if paused:f['source_status']={'novig':dict(state='unavailable'), 'prophetx':dict(state='unavailable')}
         c=context(f,at=at);b=bundle(c,policy)
-        return response(b,calculate_current(b,policy,context=c),policy,view=view,filter=filter,at=at)
+        from app.dashboard.comparison_board import expand_financial
+        return expand_financial(response(b,calculate_current(b,policy,context=c),policy,view=view,filter=filter,at=at))
 
     def test_current_paused_stale_matrix_with_numeric_counts(self):
         later=(instant(AT)+timedelta(hours=1)).isoformat()

@@ -116,8 +116,8 @@ class RegistrySnapshots(TestCase):
         first['_instrument'] = {'old': True}; first['_fingerprint'] = 'old-locator'
         for kind in ('unsupported_market', 'unsupported_league', 'already_started'):
             excluded = deepcopy(first)
-            if kind == 'unsupported_market':excluded['market_identity']['family'] = 'total'
-            elif kind == 'unsupported_league':excluded['event']['competition'] = 'NBA'
+            if kind == 'unsupported_market':excluded['market_identity']['family'] = 'player_prop'
+            elif kind == 'unsupported_league':excluded['event']['competition'] = 'unsupported_league'
             else:excluded['event']['scheduled_start'] = AT
             records.append(excluded)
         frame = dict(epoch='authored-shells', revision='unchanged-source-facts', records=records,

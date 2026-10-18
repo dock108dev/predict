@@ -21,6 +21,7 @@ def native_fixture():
     from tests.test_nfl_lines import fixture
     e=deepcopy(fixture()[1]['inventory']['kalshi']['events'][0])
     e['id']='test-current-event'
+    e['source_participant_roles']={role:e[role] for role in ('home','away')}
     m=dict(id='test-current-market',event_id=e['id'],market_type='moneyline',period='full_game',status='active',
         exclusion=None,sides=[dict(id='yes',role='yes'),dict(id='no',role='no')])
     binding=dict(version='manual-comparison-2',sha256='test-current-binding',status='BOUND_RAW_PREDICATE',

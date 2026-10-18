@@ -14,6 +14,7 @@ from tests.d03_financial_workload import authored_records,serialize_synthetic
 
 def seed():
     records=next(g for g in prepare(envelopes(),at=AT)['groups'] if any((r['quote']['source']['provider'],r['quote']['source']['native_event_id'])==SELECTED for r in g))
+    records=[r for r in records if r['market_identity']['family']=='moneyline' and r['market_identity']['period']=='full_game']
     for record in records:record['quote']['provenance'].update(mode='synthetic',real_source=False)
     return records
 

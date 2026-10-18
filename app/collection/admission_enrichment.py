@@ -129,7 +129,9 @@ def enrich_game(event):
                 else:e[key]=value
         # Explicit occurrence fields are retained as source facts. A native
         # numeric gameId remains a locator and never becomes a shared game ID.
-        if native.get('sportradarGameId'):
+        if native.get('sportradarGameId') and not e.get('current_occurrence_binding'):
+            # Keep the separately reviewed occurrence ID through enrichment.
+            # The occurrence owner revalidates its seal against native facts.
             e['game_id']=str(native['sportradarGameId'])
         for native_key,key in (('gameNumber','game_number'),('originalStartTime','original_start')):
             if native.get(native_key) is not None:e[key]=native[native_key]

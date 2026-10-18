@@ -90,6 +90,26 @@ class ReportingTests(unittest.TestCase):
                         self.assertEqual(result.stdout, "")
                         self.assertIn("No process changed", result.stderr)
 
+    def test_client_fixture_uses_ci_interpreter_without_checkout_venv(self):
+        from unittest.mock import patch
+        import os
+        import sys
+
+        module = load("run_checks")
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            source = output / "client.cjs"
+            source.write_text(
+                "const {execFileSync}=require('node:child_process');"
+                "process.stdout.write(execFileSync(process.env.PYTHON,"
+                "['-c','import sys; print(sys.executable)'],{encoding:'utf8'}));"
+                "console.log('PASS');"
+            )
+            with patch.dict(os.environ, PYTHON="/missing/developer/.venv/bin/python"):
+                result = module.execute("client", ["node", str(source)], output)
+            self.assertEqual(result["status"], "PASS", result)
+            self.assertIn(sys.executable, (output / "client.log").read_text())
+
     def test_empty_client_execution_cannot_qualify_as_a_passing_suite(self):
         module = load("run_checks")
         with tempfile.TemporaryDirectory() as folder:

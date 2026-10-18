@@ -69,6 +69,9 @@ def execute(name, command, output, timeout=300, junit=False):
     print(f"::group::{name}", flush=True)
     try:
         environment = os.environ.copy()
+        # Client fixtures must use this locked interpreter, including in a clean
+        # hosted checkout with no developer .venv directory.
+        environment["PYTHON"] = sys.executable
         environment["PREDICT_CI_ISOLATED_ROOT"] = str(ROOT)
         environment["PREDICT_CI_REPORT_ROOT"] = str(output)
         environment["PYTHONPATH"] = (

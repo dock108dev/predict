@@ -256,7 +256,9 @@ class NCAAB(unittest.TestCase):
         body=json.dumps(dict(events=[event],milestones=[dict(category='Sports',type='basketball_game',related_event_tickers=['synthetic-ncaab'],start_date='2026-11-10T23:00:00Z')]))
         parsed=parse_event(Response(body,'fixture:synthetic',datetime.fromisoformat(AT)),event,'KXNCAAMBGAME')
         self.assertEqual((parsed.sport,parsed.league),('basketball','NCAAB'))
-        self.assertIsNone(parsed.scheduled_start)
+        self.assertEqual(parsed.scheduled_start,datetime.fromisoformat('2026-11-10T23:00:00+00:00'))
+        absent=parse_event(Response(json.dumps(dict(events=[event])), 'fixture:synthetic', datetime.fromisoformat(AT)),event,'KXNCAAMBGAME')
+        self.assertIsNone(absent.scheduled_start)
         import inspect
         self.assertEqual(inspect.signature(KalshiAdapter).parameters['series'].default,('KXNFLGAME','KXMLBGAME'))
 

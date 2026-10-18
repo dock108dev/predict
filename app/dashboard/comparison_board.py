@@ -448,7 +448,8 @@ def compact_odds(board):
                 continue
             if refs:
                 value['input_refs']=refs;value['inputs']=[]
-                value['meaning']='Peer minus selected, before costs'
+                if field=='gross_comparison':value['meaning']='Peer minus selected, before costs'
+                else:value.pop('meaning',None)  # Only the gross tooltip renders this shared explanation.
     board['comparison_input_encoding']='same-board-price-refs-1'
     board['rows']=odds_rows(board['prices'])
     return board

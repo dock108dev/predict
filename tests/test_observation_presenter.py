@@ -198,6 +198,9 @@ class ObservationPresenter(TestCase):
                 altered=deepcopy(original);selected=self.compared_row(altered)
                 peer=selected['gross_comparison']['inputs'][1]
                 peer['times'][missing]=None
+                # A valid book confirmation is independent currentness evidence.
+                # This case deliberately tests absent original-clock evidence.
+                peer.pop('book_confirmation',None)
                 before=deepcopy(peer['times'])
                 row=self.compared_row(read_board(self.read_frame(altered),key,view='odds',filter='all'))
                 gross=row['gross_comparison'];display=gross['inputs'][1]['observation_display']

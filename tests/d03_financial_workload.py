@@ -41,6 +41,7 @@ def authored_records(records):
         q['rule_note']='Explicit authored normal contract; existing modeled fees and settlement, no venue authority'
         meta=dict(phase='pregame',overtime='included',native_key=[q['venue'],*[source[k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]])
         if q['venue']=='kalshi':meta['series_id']='KXNFLGAME' # Authored choice of the existing named fee model.
+        meta.update(native_terms={'description':'Authored full-game winner including overtime'}, original_wording={'description':'Authored full-game winner including overtime'})
         record['comparison_source_metadata']=meta
         record['comparison_scope']=dict(overtime='included')
         record['orientation_evidence']=[VERSION+':fictional-exact-selection']

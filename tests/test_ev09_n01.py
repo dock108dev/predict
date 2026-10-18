@@ -28,7 +28,7 @@ def entries(state):return [(e,g,q) for e in state['events'] for g in e['groups']
 
 class NativeOccurrence(unittest.TestCase):
     def test_authentic_required_numeric_inputs_and_pair(self):
-        b,s=retained();self.assertEqual(len(b['members']),3);self.assertEqual(len(s['events']),1)
+        b,s=retained();self.assertEqual({tuple(member) for member in b['members']},{('kalshi','KXNFLGAME-26OCT15SEADEN'),('kalshi','KXNFLSPREAD-26OCT15SEADEN'),('kalshi','KXNFLTOTAL-26OCT15SEADEN'),('polymarket_us','136265'),SELECTED});self.assertEqual(len(s['events']),1)
         for venue in ('kalshi','polymarket_us'):
             self.assertTrue(any(q['calculations']['funded_estimate']['financial_metrics']['buffered_ev_usd'] is not None for _,_,q in entries(s) if q['venue']==venue))
         p=next(p for p in s['events'][0]['funded_pairs'] if p['model_available'] and {x['native_key'][0] for x in p['legs']}=={'novig','kalshi'})
