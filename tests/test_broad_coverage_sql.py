@@ -34,6 +34,55 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         await pipeline_fixtures.AutomaticMultisportSQL.asyncSetUp(self)
         with self.connect() as db:db.execute('TRUNCATE coverage_latest')
 
+    async def test_capture_plan_avoids_jit_without_changing_session_policy(self):
+        from app.storage import coverage_latest
+        await self.owner.close()
+        capture_sql=coverage_latest._capture_stream_sql
+        plans=[]
+        with self.connect() as db:
+            db.execute('SET jit=on')
+            db.execute('SET jit_above_cost=0')
+            def planned_capture():
+                query=capture_sql()
+                plan=db.execute('EXPLAIN (FORMAT JSON) '+query).fetchone()['QUERY PLAN'][0]
+                plans.append(('JIT' in plan,db.execute('SHOW jit').fetchone()['jit']))
+                return query
+            with patch.object(coverage_latest,'_capture_stream_sql',side_effect=planned_capture):
+                result=reconcile(db)
+            self.assertTrue(result['published'])
+            self.assertEqual(len(plans),1)
+            self.assertEqual(plans[0],(False,'off'))
+            self.assertEqual(db.execute('SHOW jit').fetchone()['jit'],'on')
+            # The same connection still permits compilation outside the capture.
+            outside=db.execute('EXPLAIN (FORMAT JSON) '+capture_sql()).fetchone()['QUERY PLAN'][0]
+            available=db.execute('SELECT pg_jit_available() AS available').fetchone()['available']
+            self.assertEqual('JIT' in outside,available)
+
+    async def test_shutdown_during_real_capture_first_fetch(self):
+        from threading import Event
+        from psycopg import ServerCursor
+        from app.storage.latest_board import LatestBoardOwner
+        await self.owner.close()
+        owner=LatestBoardOwner(self.service)
+        self.addAsyncCleanup(owner.close)
+        fetching=Event()
+        fetch=ServerCursor.__next__
+        def first_fetch(cursor):
+            fetching.set()
+            return fetch(cursor)
+        with patch.object(ServerCursor,'__next__',first_fetch):
+            owner.coverage_task=asyncio.create_task(owner.run_coverage())
+            async with asyncio.timeout(5):
+                while not fetching.is_set():await asyncio.sleep(.01)
+            # Let the real query enter execution, including compilation when
+            # enabled. Fast captures may already finish before Stop arrives.
+            await asyncio.sleep(.25)
+            await owner.close()
+        self.assertTrue(owner.coverage_task.done())
+        self.assertEqual(owner.connections,set())
+        from app.collection.background_work import BACKGROUND
+        self.assertNotIn('coverage',BACKGROUND.active)
+
     async def matrix(self):
         # Runtime, observation, estimate and Coverage owners precede every event.
         self.service.status=lambda:dict(issues=[],exclusions=[],database=dict(state='available'),

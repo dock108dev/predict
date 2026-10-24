@@ -41,6 +41,13 @@ This also reuses the optional thread's allocator heap across large captures.
 The single observation owner and serialized ingress owner each have a dedicated
 reusable thread; lightweight control and heartbeat writes never queue behind them.
 
+Coverage disables PostgreSQL JIT only inside its bounded capture transaction.
+The JSON projection otherwise compiles hundreds of functions before yielding
+rows, delaying publication and cancellation on slower hosts. Transaction-local
+configuration restores the connection policy on commit or rollback. Shutdown
+still cancels active SQL repeatedly and awaits the actual worker within the
+existing five-second allowance; it never releases a live worker's reservation.
+
 Admin's global/source Stop is a separate acknowledged command to the data owner.
 `data_runtime_command` retains at most 32 pending commands, expires unhandled
 commands, and evicts completed acknowledgments. Each command binds the exact

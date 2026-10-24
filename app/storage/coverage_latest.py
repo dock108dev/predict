@@ -358,6 +358,11 @@ def reconcile(db, *, at=None):
     with ExitStack() as reservations:
         with db.transaction(), ExitStack() as capture_resources:
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            # This bounded JSON projection can trigger hundreds of LLVM JIT
+            # functions even for a small cohort. Compilation delays both first
+            # rows and query cancellation past the worker cleanup allowance.
+            # Keep the setting local to this capture, including on rollback.
+            db.execute('SET LOCAL jit=off')
             cursor=capture_resources.enter_context(db.cursor(name='coverage_publication_rows'))
             cursor.itersize=1
             cursor.execute(_capture_stream_sql())
