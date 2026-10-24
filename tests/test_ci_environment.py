@@ -46,6 +46,41 @@ class EnvironmentTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 export(dict(package=[value]))
 
+    def test_sql_shards_cover_each_target_once(self):
+        module = load("postgres")
+        targets = [f"tests/sql_{index}.py" for index in range(21)]
+        shards = [module.shard_targets(targets, index, 2) for index in (1, 2)]
+        self.assertEqual(sorted(sum(shards, [])), sorted(targets))
+        self.assertFalse(set(shards[0]) & set(shards[1]))
+        self.assertEqual(module.shard_targets(targets, 1, 1), targets)
+        for index, count in ((0, 2), (3, 2), (1, 0), (1, 22)):
+            with self.subTest(index=index, count=count), self.assertRaises(ValueError):
+                module.shard_targets(targets, index, count)
+
+    def test_sql_timeout_reports_real_cause_without_fabricating_test_results(self):
+        import subprocess
+        from unittest.mock import patch
+
+        module = load("postgres")
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "postgres"
+            output.mkdir()
+            with patch.object(
+                module.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired("test", 900),
+            ):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    module.run_tests(["test"], {}, output)
+            self.assertFalse((output / "junit.xml").exists())
+            text, records, errors = load("quality_report").render(
+                {"postgres": {"outcome": "failure"}}, Path(folder), postgres=True
+            )
+            self.assertTrue(errors)
+            self.assertEqual(records[0]["status"], "FAIL")
+            self.assertIn("exceeded 900 seconds", text)
+            self.assertNotIn("No such file", text)
+
     def test_primary_sql_rejects_accidental_older_postgres_selection(self):
         from unittest.mock import patch
 

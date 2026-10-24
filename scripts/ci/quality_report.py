@@ -64,6 +64,9 @@ def render(
         }.get(raw, "NOT RUN")
         record = {"name": name, "status": status, "measurements": None}
         try:
+            if name == "postgres" and (path.parent / "failure.json").exists():
+                failure = read(path.parent / "failure.json", dict)
+                raise ValueError(failure["reason"])
             if path is None:
                 pass  # Exit status is the evidence for source/static checks.
             elif path.suffix == ".xml":

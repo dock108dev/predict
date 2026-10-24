@@ -9,7 +9,7 @@ on:
     outputs:
       storage_result:
         description: Storage command outcome; workflow failure remains authoritative
-        value: ${{ jobs.storage.outputs.result }}
+        value: ${{ jobs.storage_result.outputs.result }}
 permissions:
   contents: read
 env:
@@ -21,8 +21,10 @@ jobs:
     name: SQL migrations and boards
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    outputs:
-      result: ${{ steps.postgres.outcome }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,7 +36,7 @@ jobs:
         run: echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
       - name: Disposable migrations and transaction tests
         id: postgres
-        run: python scripts/ci/postgres.py
+        run: python scripts/ci/postgres.py --shard-index ${{ matrix.shard }} --shard-count 2
       - name: Storage summary
         if: always()
         env:
@@ -44,7 +46,22 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: storage-${{ github.run_id }}-${{ github.run_attempt }}
+          name: storage-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
           path: test-results/postgres/
           if-no-files-found: error
           retention-days: 14
+  storage_result:
+    name: Storage result
+    needs: storage
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      result: ${{ steps.result.outputs.result }}
+    steps:
+      - id: result
+        env:
+          STORAGE_RESULT: ${{ needs.storage.result }}
+        run: |
+          echo "result=$STORAGE_RESULT" >> "$GITHUB_OUTPUT"
+          test "$STORAGE_RESULT" = success

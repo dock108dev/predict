@@ -32,6 +32,30 @@ def postgres_tools(pg_config, allow_other=False):
     return binary, version, major
 
 
+def shard_targets(targets, index, count):
+    """Partition registered targets without dropping or duplicating any target."""
+    if not 1 <= count <= len(targets) or not 1 <= index <= count:
+        raise ValueError("Invalid SQL shard index/count")
+    return targets[index - 1 :: count]
+
+
+def run_tests(command, environment, output, timeout=900):
+    try:
+        subprocess.run(command, env=environment, check=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        (output / "failure.json").write_text(
+            json.dumps(
+                {
+                    "reason": f"SQL test process exceeded {timeout} seconds; "
+                    "see the last test name and thread dump in the job log. "
+                    "The suite did not complete."
+                }
+            )
+            + "\n"
+        )
+        raise
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pg-config", default=os.environ.get("PG_CONFIG", "pg_config"))
@@ -67,7 +91,11 @@ def main(argv=None):
         action="store_true",
         help="Run the SC03 30-sample SQL ticket timing check in this disposable cluster.",
     )
+    parser.add_argument("--shard-index", type=int, default=1)
+    parser.add_argument("--shard-count", type=int, default=1)
     args = parser.parse_args(argv)
+    if not 1 <= args.shard_index <= args.shard_count:
+        parser.error("Invalid SQL shard index/count")
     if args.da_separation and args.sc03_ticket_timing:
         parser.error("Select only one focused PostgreSQL qualification lane")
     if args.da_browser and not args.da_separation:
@@ -101,6 +129,8 @@ def main(argv=None):
             else "compatibility"
         ),
         "report_dir": str(output),
+        "shard_index": args.shard_index,
+        "shard_count": args.shard_count,
         "suite": (
             "da-separation-browser"
             if args.da_browser
@@ -215,12 +245,14 @@ def main(argv=None):
             )
             if args.tests:
                 tests = args.tests
+            tests = shard_targets(tests, args.shard_index, args.shard_count)
+            (output / "targets.json").write_text(json.dumps(tests, indent=2) + "\n")
             if args.fail_fast:
                 tests = [*tests, "-x"]
             code = (
                 "from pathlib import Path; import app.storage.store as s; "
                 's.ROOT=Path(__import__("sys").argv[1]); import pytest; '
-                'raise SystemExit(pytest.main(["-q",*'
+                'raise SystemExit(pytest.main(["-v","-o","faulthandler_timeout=120",*'
                 + repr(tests)
                 + ',"--junitxml="+__import__("sys").argv[2]]))'
             )
@@ -240,11 +272,17 @@ def main(argv=None):
                 + os.pathsep
                 + environment.get("PYTHONPATH", "")
             )
-            subprocess.run(
-                [sys.executable, "-c", code, str(root), str(output / "junit.xml")],
-                env=environment,
-                check=True,
-                timeout=900,
+            run_tests(
+                [
+                    sys.executable,
+                    "-u",
+                    "-c",
+                    code,
+                    str(root),
+                    str(output / "junit.xml"),
+                ],
+                environment,
+                output,
             )
         finally:
             if running or (root / "db/postmaster.pid").exists():
