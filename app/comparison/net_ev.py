@@ -163,7 +163,8 @@ def _independent_buckets(inputs, probability, at, profits):
 def estimated_net_ev(inputs: ScenarioCashflows, costs: dict, reference: ReferenceSet | None, *,
                      at: datetime, live: bool = False, execution_source_at: str | None = None,
                      probability: ProbabilityInputs | None = None, buffer: dict | None = None,
-                     buffer_revision: str | None = None, funded_denominator: str | None = None) -> dict:
+                     buffer_revision: str | None = None, funded_denominator: str | None = None,
+                     allow_last_known: bool = False) -> dict:
     """One selection's exact net return, with independent and benchmark bases.
 
     Base net ranking is a disclosed common-size hypothetical estimate. Original
@@ -230,7 +231,7 @@ def estimated_net_ev(inputs: ScenarioCashflows, costs: dict, reference: Referenc
         return finish("payout_profile_expired_or_not_effective")
     source_age = age_gate(execution_source_at, phase=phase, at=at)
     out["details"]["execution_age"] = source_age
-    if not source_age["eligible"]:
+    if not source_age["eligible"] and not (allow_last_known and source_age["reasons"] == ["source_quote_too_old_for_future_net"]):
         return finish(source_age["reasons"][0])
     if (not isinstance(costs, dict) or costs.get("version") != "comparison-net-costs-1"
             or costs.get("revision") != _digest({key: value for key, value in costs.items() if key != "revision"})):
@@ -298,7 +299,7 @@ def estimated_net_ev(inputs: ScenarioCashflows, costs: dict, reference: Referenc
             qualified = True
         expected = _expectation(tuple((Fraction(row["probability"]), Fraction(row["profit_usd"])) for row in buckets))
         percent = expected / denominator * 100
-        out.update(available=True, ranking_eligible=qualified, expected_profit_usd=exact_wire(expected),
+        out.update(available=True, ranking_eligible=qualified and source_age["eligible"], expected_profit_usd=exact_wire(expected),
                    exact=dict(numerator=str(percent.numerator), denominator=str(percent.denominator)),
                    value=exact_wire(percent), capital_denominator=exact_wire(denominator), conditioning=conditioning,
                    probability_basis=probability_basis, fee_basis=deepcopy(costs["rule"]),

@@ -53,7 +53,7 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
     async def publication(self, count, *, accepts=None):
         def capture():
             with self.connect() as db:
-                return latest.snapshot(db)
+                return latest.snapshot(db,view='odds')
         for _ in range(300):
             # Polling must not block HTTP completion or the runtime heartbeat.
             frame = await asyncio.to_thread(capture)
@@ -63,7 +63,9 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
             await asyncio.sleep(.1)
         self.fail(dict(games=len(games), rows=len(frame['rows']),
             observation_error=self.owner.observation_error, estimate_error=self.owner.estimate_error,
-            errors=frame['status'].get('observation_errors')))
+            errors=frame['status'].get('observation_errors'),admission=self.owner.admission_status,
+            work=__import__('app.collection.background_work',fromlist=['BACKGROUND']).BACKGROUND.snapshot(),
+            sink_error=self.service.sink.error,sink_metrics=self.service.sink.metrics))
 
     async def page(self, client, previous=None, *, changes=None, status=200):
         query = dict(view='odds', filter='all', offset='0', limit='50')
@@ -77,7 +79,7 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
         self.assertEqual(result['provider_requests'], 0)
         return result
 
-    def ingress_books(self, workers, cases, *, price=None, generation=1):
+    async def ingress_books(self, workers, cases, *, price=None, generation=1):
         for venue, worker in workers.items():
             worker.metrics['connections'] = generation
             worker.lifecycle.begin_connection(generation)
@@ -85,6 +87,7 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
                 worker.queue_book(current_book(case, venue, clock=case['clock'],
                     price=price or ('0.48' if venue == 'kalshi' else '0.53')))
             worker.flush_books()
+            if worker.publication_task:await asyncio.shield(worker.publication_task)
             self.assertIsNone(self.service.sink.error)
         self.state.write(self.service)
         self.owner.wake.set()
@@ -157,12 +160,13 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
                 await worker.discover()
                 self.assertEqual(len(worker.markets), len(cases))
                 self.assertLessEqual(len(worker.markets), self.config['markets_per_source'])
-            self.ingress_books(workers, cases, generation=generation)
+            await self.ingress_books(workers, cases, generation=generation)
             await self.publication(offset + len(cases))
         initial = await self.publication(60)
         # A page decodes only its requested stored view; projection preserves
         # exactly the same source clocks, aging and dependency assessments.
-        with self.connect() as db:
+        with self.connect() as db, db.transaction():
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             full = latest.snapshot(db)
             projected = latest.snapshot(db, at=full['at'], view='odds')
         for key in full['rows']:
@@ -170,6 +174,7 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
             self.assertEqual(latest.board(projected,key,view='odds',filter='all'),
                 latest.board(full,key,view='odds',filter='all'))
         self.assertEqual({game['league'] for game in initial['status']['games']}, set(SPORTS))
+        del full,projected,initial
         with self.connect() as db:
             admitted = CurrentRowStore(db).capture()['records']
         self.assertEqual(len(admitted), 240)
@@ -227,7 +232,7 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
             await worker.discover()
         original_clock = changed['clock']
         changed['clock'] = datetime.now(timezone.utc)
-        self.ingress_books(workers, cases, price='0.67', generation=5)
+        await self.ingress_books(workers, cases, price='0.67', generation=5)
         changed['clock'] = original_clock
 
         def changed_published(frame):
@@ -313,6 +318,32 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
         cache.maximum_bytes = capacity
         recovered = await self.page(client)
         self.assertEqual(recovered['coverage']['total_games'], 61)
+
+        # Reproduce the measured ~10 MiB first-page growth in this disposable
+        # HTTP/SQL lane. Padding stands for retained price/disclosure facts;
+        # existing source prices, clocks and identities remain unchanged.
+        from app.storage.store import encoded
+        original_board=latest.board
+        def large_board(*args,**kwargs):
+            result=original_board(*args,**kwargs)
+            result['authored_transport_facts']='x'*220000
+            return result
+        cache.clear()
+        with patch.object(latest,'board',side_effect=large_board):
+            sized=[await self.page(client)]
+            self.assertLess(sized[0]['coverage']['returned_games'],50)
+            while not sized[-1]['coverage']['complete']:
+                sized.append(await self.page(client,sized[-1]))
+            self.assertEqual(len({b['game_key'] for p in sized for b in p['boards']}),61)
+            self.assertTrue(all(len(encoded(p))<=8*1024*1024 for p in sized))
+            self.assertTrue(all(b['authored_transport_facts']=='x'*220000 for p in sized for b in p['boards']))
+            await asyncio.to_thread(self.client_accumulator,sized)
+            held=await self.page(client)
+            self.service.dispatch=False;self.state.write(self.service)
+            refused=await self.page(client,held,status=409)
+            self.assertEqual(refused['reason'],'current_slate_read_authority_changed')
+            self.service.dispatch=True;self.state.write(self.service)
+        cache.clear()
 
         # Runtime, explicit Stop, observation authority and reset epoch withdraw
         # existing reads before another page can be adopted.

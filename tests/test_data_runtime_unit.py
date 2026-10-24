@@ -113,7 +113,7 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
                 directory=root/'state', ownership=LocalOwnership(root/'owner'), worker_factory=FakeWorker)
             store = CurrentStore(service)
             runtime = DataRuntime(service=service)
-            runtime.persist = Mock()
+            runtime.persist_control = unittest.mock.AsyncMock()
             try:
                 await service.start(store)
                 await __import__('asyncio').sleep(0)
@@ -124,7 +124,7 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(service.dispatch)
                 self.assertTrue(all(worker.closed for worker in service.workers.values()))
                 self.assertTrue(all(task.done() for task in service.tasks.values()))
-                runtime.persist.assert_called_with('stopping')
+                runtime.persist_control.assert_awaited_with('stopping')
             finally:
                 await store.close()
                 service.ownership.release()
@@ -161,6 +161,33 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
 
 
 class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
+    async def test_busy_heartbeat_write_yields_to_source_and_does_not_stop_owner(self):
+        import asyncio
+        from threading import Event
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from app.collection.data_runtime import DataRuntime
+        entered=Event();release=Event();source_progress=[]
+        runtime=DataRuntime(service=SimpleNamespace(close=AsyncMock(),background_calculations={}))
+        runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
+        def busy(*args,**kwargs):
+            entered.set();release.wait(2)
+            return False
+        runtime.state.write_snapshot.side_effect=busy
+        task=asyncio.create_task(runtime.heartbeat())
+        try:
+            while not entered.is_set():await asyncio.sleep(.001)
+            # A normal source turn can run while SQL publication holds authority.
+            source_progress.append('complete image committed')
+            self.assertFalse(task.done())
+            runtime.stopping.set();release.set();await task
+            self.assertEqual(source_progress,['complete image committed'])
+            self.assertFalse(runtime.failed)
+            runtime.service.close.assert_not_awaited()
+            runtime.state.write_snapshot.assert_called_once()
+        finally:
+            release.set();task.cancel();await asyncio.gather(task,return_exceptions=True)
+
     async def test_failed_calculation_task_does_not_stop_healthy_collection(self):
         import asyncio
         from types import SimpleNamespace
@@ -174,7 +201,7 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         runtime.board=SimpleNamespace(task=task,error=None)
         def written(*args,**kwargs):runtime.stopping.set()
-        runtime.state.write.side_effect=written
+        runtime.state.write_snapshot.side_effect=written
         await runtime.heartbeat()
         service.close.assert_not_awaited()
         self.assertFalse(runtime.failed)
@@ -191,7 +218,7 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         runtime=DataRuntime(service=service,owner=Mock())
         runtime.store=SimpleNamespace(close=AsyncMock())
         runtime.lock_connection=Mock()
-        runtime.persist=Mock()
+        runtime.persist_control=AsyncMock()
         return runtime
 
     async def test_shutdown_attempts_remaining_resources_after_worker_and_database_failure(self):
@@ -210,7 +237,7 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         runtime.store.close.assert_awaited_once()
         runtime.owner.release.assert_called_once()
         self.assertTrue(runtime.failed)
-        self.assertIn(unittest.mock.call('failed'),runtime.persist.call_args_list)
+        self.assertIn(unittest.mock.call('failed'),runtime.persist_control.call_args_list)
         self.assertNotIn('SECRET',' '.join(logs.output))
 
     async def test_startup_primary_survives_secondary_cleanup_failure(self):
@@ -237,7 +264,7 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
     async def test_failed_heartbeat_logs_and_stops_even_when_status_write_fails(self):
         runtime=self.runtime()
         runtime.lock_connection.execute.side_effect=OSError('SECRET heartbeat')
-        runtime.persist.side_effect=OSError('SECRET persistence')
+        runtime.persist_control.side_effect=OSError('SECRET persistence')
         with self.assertLogs('app.collection.data_runtime',level='ERROR') as logs:
             await runtime.heartbeat()
         self.assertTrue(runtime.failed)
@@ -255,7 +282,7 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         runtime=DataRuntime(service=SimpleNamespace(background_calculations={}))
         runtime.board=SimpleNamespace(task=None,estimate_task=tasks[0],coverage_task=tasks[1],error=None)
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
-        runtime.state.write.side_effect=lambda *a,**kw:runtime.stopping.set()
+        runtime.state.write_snapshot.side_effect=lambda *a,**kw:runtime.stopping.set()
         with self.assertLogs('app.collection.data_runtime',level='ERROR') as logs:
             await runtime.heartbeat()
         self.assertEqual(runtime.service.background_calculations['coverage'],'unavailable')

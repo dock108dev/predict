@@ -10,13 +10,18 @@ existing owners. The shared policy never causes request-side slate calculation.
 
 ## Independent source publication
 
-Each admitted upcoming NFL full-game winner occurrence first uses the profile-free
+Each admitted upcoming supported configured occurrence first uses the profile-free
 catalog and existing source-price validation. Selected depth hydration is bounded.
 Optional benchmark parsing, financial discovery/profile attachment, context
 identity and calculation run separately. Missing/malformed benchmarks and failed
 finance leave valid native prices, exact source IDs, revisions, clocks and retained
 asks visible. A financial error publishes explicit estimate-unavailable reasons;
 invalid source facts remain an explicit observation error, rather than checked zero.
+
+Supported core scope includes NFL, NCAAF, NBA, NCAAB, MLB and NHL winner, spread
+and total inputs with established source meaning; capability does not establish
+actual listings or financial readiness. Observation catalog and financial/readiness
+selection retain different owners. A readiness default is not an acquisition grant.
 
 Migration 015 provides one replaceable status row and at most 500 game rows.
 Migration 016 permits a null calculation clock when no calculation succeeded.
@@ -43,15 +48,48 @@ make publication succeed. Selected reads keep strict validation and refuse the
 conflicting occurrence. Background shutdown cooperates at catalog, occurrence,
 financial and publication boundaries within the existing five-second drain.
 
+The October 20 C1 repair isolates the exact `board_compact_response_capacity`
+refusal per game before observation publication. Failed games remain in the
+catalog with explicit `observation_errors`; scope stays partial, and ordinary
+reads refuse even a retained older row for that failed game. Valid neighbors
+continue publishing. A delayed failure cannot overwrite a newer successful
+observation. Other process, storage, deadline and cancellation failures still
+escape; optional finance cannot turn them into healthy publication.
+
+Prices and their frozen comparison inputs project the same three health fields
+before capture. Full runtime audit objects previously prevented exact same-board
+references, duplicating comparison inputs despite existing compaction. References
+are used only when source facts and captured/read-time assessments agree; differing
+assessments remain explicit. Complete native wording stays pooled without
+truncation. The existing compact explanation also applies to unavailable pairs.
+Both assembly and ordinary read output retain the 512 KiB refusal.
+
+The local C1 receipts (`test-results/sc07-c1-20261020/`) distinguish authored,
+disposable SQL and installed evidence. The shaped 46-price distinct-wording SQL
+frame falls from 647,714 to 520,408 bytes (520,992 through ordinary HTTP). An
+irreducible frame still refuses while a good game publishes. This is a local
+repair, not proof of every installed game's cause. The app was restarted alone;
+the data owner remains unreloaded because startup could recreate acquisition.
+Coverage's separate capture refusal remains C2 work. No source clock, limit or
+owner acceptance is renewed by this repair.
+
 ## Selected Original read ownership
 
 Exact Original and selected financial Details share one bounded worker; ordinary
 stored slate/catalog reads have an independent bounded worker. Admission remains
-five total, split two selected/three ordinary, with one-second queue and
+five total, split two selected/three ordinary, with ten-second queue and
 five-second worker response deadlines. Cancelled or expired work retains its
-lane and conservative memory reservation until its thread actually terminates.
+lane and conservative memory reservation until its job actually exits. The two
+daemon lane threads reuse their allocator heaps between jobs and stop on close. At each allocation checkpoint, the next allocation replaces the preceding reservation because completed allocations are now included in measured RSS. A 16 MiB live-job allowance remains until actual exit; cancellation never releases a running job.
 A 128 MiB selected reservation cap and the shared 768 MiB process guard bound
 parallel memory; no unbounded executor or hidden retry is introduced.
+
+Whole-slate reads detach the selected compact boards and their complete source
+dependency proof in one MVCC snapshot. Only the requested page is decoded,
+validated and rendered, using that captured proof and read clock. Continuations
+never substitute later SQL facts. Operational/source authority is still checked
+before each response. Cancelled workers discard their own captured frames only
+after exit; a malformed continuation does not discard another valid read.
 
 Selected snapshots decode only the complete relevant matching neighborhood.
 Global small event identities detect new possible peers; contracts, benchmark
@@ -126,8 +164,10 @@ including candidate additions/removals and metadata changes. Unrelated games,
 opposing outcomes and routine source-status clocks do not revoke unchanged
 observations. Source health remains material. No freshness threshold is relaxed.
 
-Publication holds current ingress/runtime locks and checks each game's captured
-dependencies before committing it. Relevant late work loses authority; unrelated
+Publication validates each game's captured dependencies before taking the ingress
+lock, then seals the result against a committed marker and runtime authority.
+If ingress changed, it revalidates under the lock rather than rejecting unrelated
+updates. Relevant late work loses authority; unrelated
 games can still publish. A slower estimate pass cannot overwrite a newer source
 frame. A source-only publication commits before optional discovery and estimation,
 and time-only boundaries also trigger source reselection. Independent workers
@@ -186,3 +226,52 @@ advance relative ages and conservatively age status past the supplied original
 policy boundary; they perform no fetch or financial calculation. Close and reopen
 the price to select newer observations. Source health displayed on that retained
 frame describes its last read, not an unseen live health refresh.
+
+SC07-C2 integrates Coverage with the C1 publication shape. Coverage validates exact
+same-board references alongside older frozen inputs and follows per-game
+`observation_errors`; a refused game's older saved row cannot supply displayed
+Coverage authority. Original retained observations remain measurable. Capture
+interning is internal to Coverage and changes neither compact board encoding nor
+ordinary price/Inputs responses. Local C2 evidence is retained under
+`test-results/sc07-c2-20261020/`; owner acceptance remains changes requested.
+
+### October 20 V correction: incremental complete-neighborhood publication
+
+The installed publisher now queries complete possible-peer components in bounded
+batches, retaining the existing identity index, SQL current rows, independent
+source/estimate workers and ordinary API. New peers are checked inside the actual
+capture snapshot before decoding; changed capacity defers that batch. Scoped CAS
+and merged status preserve unrelated games and authoritative withdrawals. Prior
+selected boards, repeated event rows and depth containers remain in reservations;
+total retained-board caps apply across batches. Ordinary reads still never acquire.
+
+On the dated broad cohort, 2,544 rows / 17,871,549 projected bytes partition into
+four batches, largest 902 rows / 5,743,401 bytes. Reservations are 96/96/96/51 MiB
+against the unchanged 160 MiB source runway. Installed SQL-to-HTTP and actual
+screens cover all 47 populated purchase cells across five returned leagues.
+Matching/financial availability, one irreducible game response and broader
+Coverage capture remain separate limitations. See
+`test-results/sc07-d2-20261020/publication-repair/closeout.md` in the local evidence.
+
+### October 22 read/publication integration
+
+An admitted estimate sweep owns one finite catalog turn, like the whole-capture
+Scanner and Coverage workers. Complete match neighborhoods are still packed
+against measured SQL bytes; replacing a planning reservation excludes only that
+owner's prior charge. Every batch rechecks current RSS and its full reservation.
+No expanded prior batch is retained. The lease releases on completion, refusal
+or exception; queued optional owners get the next turn. Source runway, process
+limit and optional concurrency are unchanged. Completed unsupported evaluations
+are unavailable, not indefinitely pending.
+
+Coverage captures intern repeated values and field names, including nested source
+and market identities. SQL materializes restored prices once before projecting
+fields. Transport remains capped at 8 MiB and work at 128 MiB; reservation is the
+larger of twelve times compact bytes and four times expanded bytes, plus 24 MiB.
+Exact round-trip tests retain original facts and clocks. Pending admission is
+reported separately from a successful capture and from source health.
+
+A slower completed estimate may upgrade a newer pending observation only when
+its observation context and validity boundary are identical and current dependency
+checks pass. It preserves the newer Odds frame and all its original clocks. It
+cannot replace a newer calculation, changed source identity or temporal boundary.

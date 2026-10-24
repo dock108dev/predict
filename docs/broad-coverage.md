@@ -133,3 +133,51 @@ If Coverage reports a capture-capacity or memory-capacity failure, its summary i
 unavailable rather than a measured zero. Check Admin and the safe operation log;
 keep the resource guard intact. Source prices and other background publications
 can remain useful while the independent Coverage worker is unavailable.
+
+### Compact capture integration (SC07-C2)
+
+The capture omits prior display-age calculations and selection prose, retains only
+the event start needed for aging and the occurrence identity needed for counts,
+and keeps complete confirmation seals and exact original input frames. PostgreSQL
+interns repeated field values across saved prices, older frozen comparison inputs
+and raw offers/contracts. Native values and generated references have separate
+containers. The adapter restores exact values before the existing observation,
+comparison, matching and dependency owners run; it never fills a frozen peer from
+new ingress. C1 same-board references use the ordinary exact-reference validator.
+
+Schedule bindings are projected when event and contract starts differ. For aligned
+starts that evidence is unused by schedule projection; full contract dependency
+hashes and event revisions still govern revocation. A game refused by the source
+publication owner cannot count an older saved board as displayed in Coverage.
+Its retained observations remain in the denominator and healthy games continue.
+The capture preflight includes book dependency rows and complete runtime/control
+rows as well as events, shared publications/offers, board status and prior queries.
+All capture, reservation, publication, process and storage limits remain unchanged.
+
+
+## Outcome-first presentation (SC07-U3)
+
+Coverage leads with the selected captured scope, original capture/publication
+ages and availability. Ratios and exact clocks remain in a disclosure. Local
+elapsed-time display never renews a capture; a failed read warning persists
+through filtering or pausing. Source/capability, accounting hold, explicit pause,
+missing matching facts, pending publication and unmeasured counts remain distinct.
+Reference observations never substitute for an unknown purchase-peer denominator.
+
+The read response additively carries `publication_worker_state` and
+`publication_error` from the current runtime owner. These describe the worker,
+independently of `publication_state` and the retained capture. In particular,
+`background_coverage_unavailable` can coexist with an inspectable stale capture
+or an unmeasured first publication. Displaying that failure does not repair it.
+
+### Complete streamed capture (October 22 publication repair)
+
+Coverage computes its shared SQL capture once per repeatable-read snapshot. An
+owned server cursor yields admission bytes first, then the bounded shared header
+and offered identities, followed by one complete game at a time. Python admission
+counts the header plus the largest encoded game, metadata and auxiliary facts;
+the separate expanded-work reservation still covers all retained metric inputs.
+Every game is consumed before building/publishing denominators. Cursor and
+reservation lifetimes are scoped to the transaction/worker and cancellation.
+Neither the 8 MiB capture nor 128 MiB work bound increased. Source-price clocks,
+matching authority and scope exclusions remain owned by their existing predicates.

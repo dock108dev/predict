@@ -42,6 +42,16 @@ def repair_registry():
             existing=[a for a in data['aliases'] if a['kind']=='team' and a.get('league')==m['league'] and a.get('venue')=='kalshi' and name_key(a['text'])==name_key(alias['text'])]
             if not existing:data['aliases'].append(alias)
             elif any(a['targets']!=[cid] for a in existing):raise ValueError('Retained alias conflict')
+            # An independently identified institutional display name is shared
+            # vocabulary, unlike a venue-only abbreviation or native UUID.
+            if proof.get('institution_alias') is True:
+                if college.entities[cid]['name']!=proof.get('institution_name') or not proof.get('institution_url'):
+                    raise ValueError('Institutional alias evidence conflict')
+                shared=dict(alias);shared.pop('venue')
+                matches=[a for a in data['aliases'] if a['kind']=='team' and a.get('league')==m['league']
+                    and a.get('venue') is None and name_key(a['text'])==name_key(shared['text'])]
+                if not matches:data['aliases'].append(shared)
+                elif any(a['targets']!=[cid] for a in matches):raise ValueError('Institutional alias conflict')
     data['version']+='+'+extra['version'];return Registry(data)
 
 

@@ -1,5 +1,6 @@
 """One running-app aggregate scheduler under CurrentService ownership."""
 import asyncio
+from .current_ingress import operation, call
 import base64
 import json
 from copy import deepcopy
@@ -10,7 +11,7 @@ from urllib.parse import quote
 import aiohttp
 from app.dashboard.current_contract import stamp
 from app.reference.product import SPORT_KEYS
-from .current_policy import ROOT, aggregate_scope, aggregate_markets
+from .current_policy import ROOT, aggregate_scope, aggregate_requests
 from .current_aggregate_policy import POLICY
 from .current_quota import QuotaLedger, QuotaStop, load_window, now
 
@@ -62,7 +63,7 @@ class CurrentOddsTransport:
             trace.on_dns_resolvehost_end.append(phase('connection'))
             trace.on_connection_create_end.append(phase('awaiting_headers'))
             self.client=aiohttp.ClientSession(auto_decompress=False,trust_env=False,
-                trace_configs=[trace],connector=aiohttp.TCPConnector(limit=1),timeout=aiohttp.ClientTimeout(total=POLICY.timeout_seconds),
+                trace_configs=[trace],connector=aiohttp.TCPConnector(limit=1,force_close=True),timeout=aiohttp.ClientTimeout(total=POLICY.timeout_seconds),
                 read_bufsize=4096,max_line_size=4096,max_field_size=4096)
             self.client._retry_connection=False
         async with self.client.get(BASE+request['path'],params={**request['params'],'apiKey':key},
@@ -136,6 +137,7 @@ class AggregateScheduler:
         if abs((time.time()-self.wall)-elapsed)>120:
             self.ledger.pause('clock_jump');raise QuotaStop('clock_jump')
 
+    @operation
     def state(self, state, code, reason):
         svc=self.service
         if svc.store is None or svc.store.closed:return
@@ -145,13 +147,18 @@ class AggregateScheduler:
         due=plan['next_due_at'] if not plan['open'] else self.ledger.snapshot().get('next_due_at')
         if due and not schedule(due)['open']:due=schedule(due)['next_due_at']
         for venue in ('novig','prophetx'):
-            if code=='aggregate_budget_delayed' and states[venue]['state'] in ('not_offered','unavailable'):
+            # After exact accounting recovery, the old transport hold is no
+            # longer the current cause. Preserve offering/admission failures,
+            # but show the scheduled wait instead of a cleared accounting hold.
+            if (code=='aggregate_budget_delayed' and states[venue]['state'] in ('not_offered','unavailable')
+                    and states[venue].get('reason_code') not in
+                    ('aggregate_transport_uncertain','ambiguous_dispatch_unresolved')):
                 states[venue]['next_due_at']=due
                 continue
             scoped='; '.join(scope+': '+values[venue]['reason'] for scope,values in self.sport_states.items())
             states[venue]=dict(state=state,reason_code=code,reason=reason+(' '+scoped if scoped else ''),next_due_at=due)
         if states==svc.states:return
-        svc.sink.commit(svc.row('source_health','the_odds_api',state=state),states)
+        (yield (svc.row('source_health','the_odds_api',state=state), states))
         svc.states=states
 
     async def dispatch(self, request, cost, *, bootstrap=False):
@@ -200,8 +207,14 @@ class AggregateScheduler:
             self.retain_interrupted_response(aid,'aggregate_cancelled_after_dispatch',receipt=response)
             # No receipt leaves the durable marker uncertain. Never refund it.
             raise
-        except Exception:
-            self.retain_interrupted_response(aid,'aggregate_transport_uncertain')
+        except Exception as exc:
+            from .current_transport_diagnostics import exception_kind
+            phase=getattr(self.transport,'phase',None)
+            diagnostic=dict(**exception_kind(exc),elapsed_seconds=round(time.perf_counter()-tick,6),
+                transport_phase=phase if phase in ('idle','request_start','dns','connection',
+                    'awaiting_headers','body','complete') else 'unknown')
+            self.metrics['last_transport_failure']=diagnostic
+            self.retain_interrupted_response(aid,'aggregate_transport_uncertain',diagnostic=diagnostic)
             self.service.observation('the_odds_api','response',dict(attempt_id=aid,status=None,reason='aggregate_transport_uncertain'))
             self.coverage_failure(sport)
             raise QuotaStop('aggregate_transport_uncertain') from None
@@ -221,13 +234,13 @@ class AggregateScheduler:
             raise QuotaStop(code)
         return response
 
-    def retain_interrupted_response(self, aid, reason, *, receipt=None):
+    def retain_interrupted_response(self, aid, reason, *, receipt=None, diagnostic=None):
         receipt=receipt or getattr(self.transport,'response_receipt',None)
         if receipt is not None:
             self.ledger.reconcile(aid,receipt['headers'],received_at=receipt['received_at'])
             self.metrics['last_quota_headers']=deepcopy(receipt['headers'])
             self.issue_context['charged_credits']=self.ledger._read()['attempts'][aid].get('charged')
-        self.ledger.record_response(aid,receipt,interruption=reason)
+        self.ledger.record_response(aid,receipt,interruption=reason,diagnostic=diagnostic)
         self.service.observation('the_odds_api','interrupted_response',dict(attempt_id=aid,reason=reason,receipt=deepcopy(receipt)))
 
     def coverage_failure(self,sport,checked_at=None):
@@ -243,12 +256,11 @@ class AggregateScheduler:
         if self.acquisition_lock.locked():raise QuotaStop('aggregate_refresh_in_progress')
         async with self.acquisition_lock:
             self.permitted()
+            try:requests=aggregate_requests(self.service.config,sports)
+            except ValueError as exc:raise QuotaStop(str(exc)) from None
             quota=self.ledger.snapshot()
             if quota['pause']:raise QuotaStop(quota['pause'])
             self.ledger.bind_window(self.window_loader())
-            params=deepcopy(PARAMS)
-            if reference and 'pinnacle' not in params['bookmakers'].split(','):params['bookmakers']+=',pinnacle'
-            requests=[dict(path='/v4/sports/'+SPORT_KEYS[s]+'/odds',params=deepcopy(params)) for s in sports]
             self.cycle_requests=0;self.cycle_credits=0;self.transport.bytes=0
             self.cycle_id=self.ledger.begin_manual_cycle(self.service.ownership,requests,identity)
             self.manual=True
@@ -261,11 +273,11 @@ class AggregateScheduler:
                     responses.append((sport,response))
                 errors=[]
                 for sport,response in responses:
-                    try:self.admit_response(response,sport)
+                    try:await call(self.service, self.admit_response, response, sport)
                     except QuotaStop as exc:errors.append(exc)
                 if errors:raise errors[0]
             except QuotaStop as exc:
-                self.state('unavailable',str(exc),'On-demand aggregate refresh stopped: '+str(exc).replace('_',' ')+'. Native sources continue.')
+                await call(self.service, self.state, 'unavailable', str(exc), 'On-demand aggregate refresh stopped: '+str(exc).replace('_',' ')+'. Native sources continue.')
                 self.service.issue('the_odds_api','quota_or_source',str(exc))
                 raise
             finally:self.manual=False;self.cycle_id=None
@@ -276,7 +288,7 @@ class AggregateScheduler:
         from .current_schedule import schedule
         plan=schedule(now())
         if not plan['open']:
-            self.state('budget_delayed','aggregate_outside_window','Aggregate paused outside 09:00–23:00 Eastern; next cycle '+plan['next_due_at']+'. Scope: '+', '.join(aggregate_scope(self.service.config))+'.')
+            await call(self.service, self.state, 'budget_delayed', 'aggregate_outside_window', 'Aggregate paused outside 09:00–23:00 Eastern; next cycle '+plan['next_due_at']+'. Scope: '+', '.join(aggregate_scope(self.service.config))+'.')
             return
         self.cycle_requests=0;self.cycle_credits=0;self.transport.bytes=0
         if not self.prepared:
@@ -308,13 +320,12 @@ class AggregateScheduler:
         if quota['pause']:raise QuotaStop(quota['pause'])
         if quota['reset'] is None:raise QuotaStop('reset_window_unknown')
         if quota['next_due_at'] and stamp(now())<stamp(quota['next_due_at']) and (self.qualification is None or self.metrics['batches']>0):
-            self.state('budget_delayed','aggregate_budget_delayed','Shared aggregate cycle every 15 minutes, 09:00–23:00 Eastern. Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. Inspect original source ages.')
+            await call(self.service, self.state, 'budget_delayed', 'aggregate_budget_delayed', 'Shared aggregate cycle every 15 minutes, 09:00–23:00 Eastern. Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. Inspect original source ages.')
             return
         # Inventory activity is advisory: an empty odds response costs no credits
         # and explicitly retires old quotes for a sport between seasons/rounds.
         sports=list(aggregate_scope(self.service.config))
-        params=dict(PARAMS,markets=','.join(aggregate_markets(self.service.config)))
-        requests=[dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(params)) for sport in sports]
+        requests=aggregate_requests(self.service.config)
         self.cycle_id=self.ledger.begin_cycle(self.service.ownership,requests)
         if self.cycle_id is None:return
         self.metrics['selected_scope']=list(aggregate_scope(self.service.config))
@@ -323,9 +334,10 @@ class AggregateScheduler:
         for sport,request in zip(sports,requests):
             self.permitted()
             response=await self.dispatch(request,POLICY.credits_per_batch)
-            self.admit_response(response,sport)
+            await call(self.service, self.admit_response, response, sport)
         self.cycle_id=None
 
+    @operation
     def admit_response(self,response,sport):
         # One decoded exact frame supplies admission, references and coverage.
         self.permitted() # Revocation forbids admission, independently of charge reconciliation.
@@ -362,10 +374,10 @@ class AggregateScheduler:
         if getattr(self.service,'database',None) is not None:
             complete=list(batches)
             records.extend(batches.get('pinnacle',[]))
-            self.service.sink.commit(dict(type='current_aggregate_records',source='the_odds_api',sport=sport,
-                records=records,complete_venues=complete,received_at=response['received_at']),states)
+            (yield (dict(type='current_aggregate_records',source='the_odds_api',sport=sport,
+                records=records,complete_venues=complete,received_at=response['received_at']), states))
         else:
-            self.service.sink.commit(dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states),states)
+            (yield (dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states), states))
         self.service.states=states
         self.service.observation('the_odds_api','admission',dict(sport=sport,quotes=len(records),venues=sorted({r['quote']['venue'] for r in records})))
         self.metrics.update(admitted_records=len(records),rejected_venues=len(rejected))
@@ -391,10 +403,10 @@ class AggregateScheduler:
                     'current_observation_disk_free_floor','current_observation_segment_cap'}
                 code=str(exc) if isinstance(exc,QuotaStop) or isinstance(exc,BudgetStop) and str(exc) in storage_codes else 'aggregate_admission_failed'
                 if code in ('bootstrap_budget_delayed','aggregate_budget_delayed','aggregate_outside_window'):
-                    self.state('budget_delayed','aggregate_budget_delayed','Shared aggregate delivery waits for its persisted due time.')
+                    await call(self.service, self.state, 'budget_delayed', 'aggregate_budget_delayed', 'Shared aggregate delivery waits for its persisted due time.')
                     await asyncio.sleep(1)
                     continue
-                self.state('unavailable',code,'Aggregate acquisition paused: '+code.replace('_',' ')+'. Native sources continue.')
+                await call(self.service, self.state, 'unavailable', code, 'Aggregate acquisition paused: '+code.replace('_',' ')+'. Native sources continue.')
                 # Preserve independent failures across recovery/reopening. An
                 # unresolved request already blocks through exact eligibility.
                 if code!='ambiguous_dispatch_unresolved' and not self.ledger.snapshot().get('pause'):

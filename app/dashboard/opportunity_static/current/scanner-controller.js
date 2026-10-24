@@ -106,6 +106,7 @@ function bootScanner() {
     if(!page){byId('health').textContent=incompatible?'Update required to verify this scanner.':'Current comparison unavailable. Waiting for a supported response.';return;}const message=healthMessage();if(byId('health').textContent!==message)byId('health').textContent=message;const c=page.coverage;
     byId('health').hidden=message==='Selected markets checked' && c.complete && !c.errors.length;
     byId('coverage-detail').textContent=c.evaluated_pairs+' of '+c.compatible_pairs+' compatible pairs evaluated in the selected scope. '+(c.qualifying_pairs===null?'Qualifying count not established. ':c.qualifying_pairs+' qualifying pairs. ')+(c.complete?'Evaluation complete.':'Incomplete evaluation; zero results do not establish checked-zero.')+(c.errors.length?' A shared evaluation problem affects this scope. See Admin.':'');
+    if(c.capture_only)byId('coverage-detail').textContent+=' Saved scope captured '+(c.captured_at?new Date(c.captured_at).toLocaleString():'at an unknown time')+'. Inputs changed during calculation; current financial results are withdrawn.';
   }
   function capabilityOptions() {
     const signature=JSON.stringify(page.filter_options);if(signature===optionsSignature)return;optionsSignature=signature;

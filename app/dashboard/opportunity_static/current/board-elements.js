@@ -157,7 +157,7 @@ export function comparisonStatusLabel(comparison, now = Date.now()) {
   return ({current: "Current comparison", pending: "Comparison pending publication", last_known: "Last-known comparison", unknown: "Comparison age unknown"})[state] || "Comparison age unknown";
 }
 export function comparisonTakeaway(comparison, now = Date.now()) {
-  if (!comparison?.available) return "Comparison unavailable: " + (comparison?.reason || "No compatible other-venue observation.");
+  if (!comparison?.available) return "Comparison unavailable: " + (comparison?.reason ? words(comparison.reason) : "No compatible other-venue observation.");
   const peer = comparison.inputs?.find(input => input.quote_id === comparison.comparison_quote_id);
   if (!peer || !comparison.exact) return "Comparison inputs unavailable.";
   const n = BigInt(comparison.exact.numerator), d = BigInt(comparison.exact.denominator), magnitude = n < 0n ? -n : n;
@@ -166,7 +166,7 @@ export function comparisonTakeaway(comparison, now = Date.now()) {
   const digits = rounded.toString().padStart(precision + 1, "0");
   const amount = rounded === 0n && magnitude !== 0n ? "less than 0.000001¢" : "about " + (digits.slice(0, -precision) + "." + digits.slice(-precision)).replace(/\.?0+$/, "") + "¢";
   const relation = n === 0n ? "equals" : "is " + amount + (n > 0n ? " lower than" : " higher than");
-  return "Selected price " + relation + " the " + venue(peer.venue) + " quote (" + relativeAge(peer.times?.source_at, now) + "; " + comparisonStatusLabel(comparison, now) + ").";
+  return "Selected price " + relation + " the " + venue(peer.venue) + " quote, before costs (" + relativeAge(peer.times?.source_at, now) + "; " + comparisonStatusLabel(comparison, now) + ").";
 }
 export function estimateSummary(root, estimate, key = "estimate-reasons") {
   if (!estimate) return;
@@ -199,7 +199,14 @@ export function depthSummary(q) {
     " at " + quantity(first.price) + " " + words(depth.price_units) +
     (depth.levels.length > 1 ? " · " + depth.levels.length + " retained levels" : "");
 }
-export function observationSummary(root, q) {
+export function observationSummary(root, q, {compact = false} = {}) {
+  if (compact) {
+    const status = clockedText("small", now => observationStateLabel(observationState(q, now)) + " · " +
+      relativeAge(q.times?.source_at || q.freshness?.source_at, now), "compact-price-status");
+    status.title = observationStatus(q) + " · Open the price for source, depth and comparison details.";
+    root.append(status);
+    return;
+  }
   root.append(el("small", "Native " + quantity(q.original?.value) + " " + words(q.original?.units), "compact-native-price"));
   root.append(clockedText("small", now => observationStatus(q, now), "compact-source-clock"));
   const clock = el("small", undefined, "compact-observation-age");
@@ -331,3 +338,13 @@ export {
   price,
   benchmark,
 };
+
+// Participant identity supplies the game heading; source titles remain evidence.
+export function typedGameTitle(participants, fallback = "Game") {
+  const names = (participants || []).map(p => p.name || p.id).filter(Boolean);
+  return names.length >= 2 ? names.join(" vs ") : fallback;
+}
+export function priceResearch(q, now = Date.now()) {
+  const reasons = [...(q.freshness?.reasons || []), ...(q.observation_display?.reason_codes || [])];
+  return observationState(q, now) !== "current" || reasons.some(r => r === "pregame_ended" || r.startsWith("event_"));
+}

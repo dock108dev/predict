@@ -9,7 +9,7 @@ from threading import RLock
 
 from psycopg.types.json import Jsonb
 
-from app.comparison.current_dependencies import digest
+from app.comparison.current_dependencies import digest, encoded_size
 from app.storage.current_rows import LOCK
 from app.storage.scanner_publication import current_revision
 from app.storage.store import encoded
@@ -48,29 +48,39 @@ def snapshot(scanner):
         value['summary'] = summary_snapshot(scanner.summaries)
         value['deadline'] = scanner.deadline
         value['source_marker'] = scanner.marker
-    if len(encoded(value)) > MAX_BYTES:
+    from app.comparison.readiness_encoding import compact
+    value['frame'] = compact(value['frame'])
+    if encoded_size(value) > MAX_BYTES:
         raise ValueError('scanner_latest_capacity')
     return value
 
 
-def publish(db, scanner, *, proof, runtime_revision):
+def publish(db, scanner, *, proof, runtime_revision, capture_only=False):
     """Serialized final compare-and-publish against ingress and control state."""
     from app.collection.runtime_status import read_runtime
     from app.storage.current_games import utc
     from app.collection.current_storage_policy import require_disk_space, sql_usage, SQL_BYTE_CAP
     from app.storage.store import ROOT
     payload = snapshot(scanner)
-    size=len(encoded(payload))
+    if capture_only:
+        if payload['frame'] is None or str(payload['frame']['epoch'])!=str(proof['epoch']):return False
+        payload.update(capture_only=True,source_marker=None,state='unavailable',
+            rows={},receipts={},cache={},targets={},pending=[],members={},
+            errors=['captured_inputs_changed'],stopped=False)
+    size=encoded_size(payload)
     with db.transaction():
         # All ordinary current-row writers use this same transaction lock.
         db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
-        db.execute('SELECT singleton FROM data_runtime WHERE singleton FOR SHARE')
+        from app.collection.runtime_status import AUTHORITY_LOCK
+        db.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
         runtime = read_runtime(db)
         withdrawal=(payload['stopped'] and not payload['rows'] and not payload['receipts'] and not payload['cache'])
         if (not runtime['healthy'] or (not runtime['active'] and not withdrawal)
                 or runtime['runtime_id'] != scanner.provider.runtime_id
-                or runtime['revision'] != runtime_revision or current_revision(db) != proof):
+                or runtime['revision'] != runtime_revision
+                or (current_revision(db) != proof and not capture_only)):
             return False
+        if capture_only and str(current_revision(db)['epoch'])!=str(proof['epoch']):return False
         require_disk_space(ROOT/'.local/postgres',append_bytes=size)
         if sql_usage(db)+size >= SQL_BYTE_CAP:
             raise ValueError('scanner_sql_storage_guard')
@@ -90,6 +100,8 @@ def restore(projection, value, *, economics_only=False):
         projection.epoch = value['epoch']
         projection.cache = deepcopy(value['cache'])
         return
+    from app.comparison.readiness_encoding import expand
+    value = dict(value, frame=expand(value['frame']))
     from app.comparison.estimated_policy import EstimatePolicy
     with projection.lock:
         for name in FIELDS:

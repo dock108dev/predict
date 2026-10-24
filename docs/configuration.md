@@ -84,7 +84,7 @@ data ends acquisition. Both leave PostgreSQL running; use
 | --- | --- |
 | `/`, `/arbs` | Globally ranked opportunity scanner and selected manual tickets |
 | `/odds`, `/ev` | Observed source prices and single-trade estimates across games |
-| Details and Original | Selected current calculations and their original inputs; changed inputs require a new selection |
+| Details and Original | Selected calculations and original inputs; leased selections retain captured evidence when current inputs change |
 | `/admin` | Source, quota, storage and issue status; collection controls and guarded recovery |
 | `/admin/retained` | Separate finite-session and saved-capture readers |
 

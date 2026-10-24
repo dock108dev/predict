@@ -202,6 +202,12 @@ class NativeScoringRegistry(TestCase):
             with self.subTest(kind=kind), self.assertRaises((ValueError, KeyError)):
                 scope.validate_registry(value)
 
+    def test_retired_event_specific_admission_is_not_callable(self):
+        for name in ('_registered_fact', '_publication_dependency', '_lookup',
+                     '_evidence', 'publication_dependency', 'UNKNOWN_FAILURES'):
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(scope, name))
+
     def test_ordinary_admission_never_reads_historical_event_targets(self):
         with patch.object(scope, 'registry', side_effect=AssertionError('No example event admission')):
             for row in winners():

@@ -132,6 +132,34 @@ class PublicationDependencyIdentity(TestCase):
 
 @skipUnless(fixtures.SOCKET,'Explicit maintained disposable DA PostgreSQL lane required')
 class PublicationRepairSQL(IsolatedAsyncioTestCase):
+    async def test_source_live_planning_keeps_complete_components_and_clocks(self):
+        self.fresh_sources()
+        with self.connect() as db:
+            before=latest.capture_batches(db)
+            planned=latest.prioritize_sources(db,before,self.at.isoformat())
+            self.assertEqual(set(map(tuple,before)),set(map(tuple,planned)))
+            with patch.object(latest,'capture_reservation',wraps=latest.capture_reservation) as reserve:
+                result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True,admission={})
+        self.assertTrue(result['published'],result)
+        # One planning reservation plus pre-admission and snapshot recheck per
+        # processed component; no unused all-catalog packing size scans.
+        self.assertLessEqual(reserve.call_count,1+2*len(result['batches']))
+        self.assertEqual([b['events'] for b in result['batches']],list(map(len,planned)))
+
+    async def test_estimate_planning_turn_reaches_real_work_with_coverage_waiting(self):
+        from app.collection.background_work import BackgroundWork
+        self.fresh_sources()
+        work=BackgroundWork(sampler=lambda:64*1024*1024)
+        original=latest.capture_batches
+        def plan(db):
+            with work.claim('coverage',32*1024*1024) as queued:self.assertFalse(queued)
+            return original(db)
+        with patch('app.collection.background_work.BACKGROUND',work),patch.object(latest,'capture_batches',side_effect=plan):
+            with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),admission={})
+        self.assertGreater(result['computed'],0,result)
+        self.assertTrue(result['published'],result)
+        self.assertEqual(work.snapshot()['reserved_bytes'],0)
+
     connect=classmethod(fixtures.LatestBoardSQL.connect.__func__)
     setUpClass=classmethod(fixtures.LatestBoardSQL.setUpClass.__func__)
     tearDownClass=classmethod(fixtures.LatestBoardSQL.tearDownClass.__func__)
@@ -142,6 +170,110 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
     snapshot=fixtures.LatestBoardSQL.snapshot
     changed_first=fixtures.LatestBoardSQL.changed_first
     fresh_sources=fixtures.LatestBoardSQL.fresh_sources
+
+    async def test_scoped_reservation_counts_prior_optional_boards(self):
+        from app.storage.store import hashed
+        ids=[hashed(member) for member in self.first['members']]
+        with self.connect() as db:
+            before=latest.capture_reservation(db,event_ids=ids)
+            latest.reconcile(db,at=self.at.isoformat())
+            size=db.execute("SELECT octet_length(facts::text) n FROM latest_board WHERE game_key=%s",(self.first['game_key'],)).fetchone()['n']
+            after=latest.capture_reservation(db,event_ids=ids)
+        self.assertGreaterEqual(after-before,size*8-1024*1024)
+        self.assertGreater(after,before)
+
+    async def test_new_peer_after_planning_requires_capacity_before_decoding(self):
+        from app.storage.store import hashed,encoded
+        members=[tuple(member) for member in self.first['members']]
+        def own(member):
+            return [r for r in self.records if (r['quote']['source']['provider'],r['quote']['source']['native_event_id'])==member]
+        peer=max(members,key=lambda member:len(encoded(own(member))))
+        with self.connect() as db:
+            db.execute('DELETE FROM current_event WHERE id=%s',(hashed(peer),))
+            ids=next(group for group in latest.capture_batches(db) if hashed(next(m for m in members if m!=peer)) in group)
+            reserved=latest.capture_reservation(db,observations_only=True,event_ids=ids)
+        self.admit(own(peer))
+        with self.connect() as db,patch.object(latest,'read_context',side_effect=AssertionError('changed capture decoded before admission')):
+            result=latest._reconcile(db,at=self.at.isoformat(),observations_only=True,event_ids=ids,reservation_bytes=reserved)
+        self.assertEqual(result['reason'],'background_capture_changed')
+        self.assertFalse(self.rows())
+        with self.connect() as db:
+            self.assertTrue(latest.reconcile(db,at=self.at.isoformat(),observations_only=True)['published'])
+        board=latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
+        fixtures.LatestBoardSQL.assert_source_frame(self,board)
+
+    async def test_whole_capture_refuses_but_complete_peer_batches_publish_and_withdraw(self):
+        from app.collection.background_work import BackgroundWork
+        from app.storage.store import hashed
+        records=deepcopy(self.records);second={tuple(m) for m in self.second['members']}
+        for record in records:
+            source=record['quote']['source']
+            if (source['provider'],source['native_event_id']) in second:
+                record.setdefault('comparison_source_metadata',{})['original_wording']={'rules':'authored neighboring game '+('x'*32768)}
+        self.fresh_sources(records)
+        with self.connect() as db:
+            groups=latest.capture_batches(db)
+            sizes=[latest.capture_reservation(db,observations_only=True,event_ids=ids) for ids in groups]
+            whole=latest.capture_reservation(db,observations_only=True)
+        self.assertGreater(len(groups),1)
+        bound=max(sizes)+1024
+        self.assertGreater(whole,bound)
+        work=BackgroundWork(sampler=lambda:64*1024*1024,source_runway_bytes=bound)
+        with work.claim('observations',whole,source=True) as refused:
+            self.assertFalse(refused);self.assertEqual(refused.reason,'background_source_capacity')
+        original=latest.read_context;captures=[]
+        def selected(db,**kwargs):
+            ids=kwargs['event_ids'];captures.append(set(ids))
+            return original(db,**kwargs)
+        with patch('app.collection.background_work.BACKGROUND',work),patch.object(latest,'read_context',side_effect=selected):
+            with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+        self.assertTrue(result['published'],result)
+        self.assertEqual(set(self.rows()),{self.first['game_key'],self.second['game_key']})
+        for game in (self.first,self.second):
+            members={hashed(member) for member in game['members']}
+            self.assertTrue(any(members<=ids for ids in captures))
+            board=latest.board(self.snapshot(),game['game_key'],view='odds',filter='all')
+            fixtures.LatestBoardSQL.assert_source_frame(self,board)
+            self.assertIsNone(board['calculated_at'])
+        # A later authoritative withdrawal retires only that occurrence. Its
+        # valid neighbor keeps exact original clocks and native identities.
+        second=self.rows()[self.second['game_key']]['facts']['boards']['odds']['prices']
+        first_ids=[hashed(member) for member in self.first['members']]
+        with self.connect() as db:
+            db.execute('DELETE FROM current_event WHERE id=ANY(%s)',(first_ids,))
+            latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+        self.assertNotIn(self.first['game_key'],set(self.rows()))
+        self.assertNotIn(self.first['game_key'],{g['game_key'] for g in self.snapshot()['status']['games']})
+        self.assertEqual(self.rows()[self.second['game_key']]['facts']['boards']['odds']['prices'],second)
+        self.service.dispatch=False;self.state.write(self.service)
+        stopped=latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
+        self.assertTrue(stopped['prices'])
+        self.assertTrue(all(q['freshness']['status']=='historical' for q in stopped['prices']))
+        self.assertIn('updates_stopped',stopped['background_reasons'])
+
+    async def test_oversized_component_cannot_block_valid_neighbor(self):
+        from app.collection.background_work import BackgroundWork
+        from app.storage.store import hashed
+        self.fresh_sources()
+        members={tuple(m) for m in self.first['members']};records=deepcopy(self.records)
+        for record in records:
+            q=record['quote']
+            if (q['source']['provider'],q['source']['native_event_id']) in members:
+                record.setdefault('comparison_source_metadata',{})['original_wording']={'rules':'authored oversized game '*2048}
+        self.admit(records)
+        with self.connect() as db:
+            groups=latest.capture_batches(db)
+            good=next(ids for ids in groups if hashed(self.second['members'][0]) in ids)
+            bound=max(latest.capture_reservation(db,observations_only=True,event_ids=good),
+                latest.capture_reservation(db,observations_only=True,event_ids=[]))+1024
+        work=BackgroundWork(sampler=lambda:64*1024*1024,source_runway_bytes=bound)
+        with patch('app.collection.background_work.BACKGROUND',work):
+            with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+        self.assertTrue(result['published'],result)
+        self.assertTrue(any(b['reason']=='background_source_capacity' for b in result['batches']))
+        self.assertIn(self.second['game_key'],self.rows())
+        self.assertNotIn(self.first['game_key'],set(self.rows()))
+        self.assertTrue(latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')['prices'])
 
     async def test_unrelated_game_update_preserves_published_game(self):
         self.fresh_sources();self.reconcile()
@@ -183,6 +315,8 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             self.assertEqual(set(frame['rows']),{self.first['game_key'],self.second['game_key']})
             for game in (self.first,self.second):
                 odds=latest.board(frame,game['game_key'],view='odds',filter='all')
+                from app.dashboard.comparison_board import expand_price_fields
+                expand_price_fields(odds)
                 self.assertTrue(all(q['observation_display']['state']=='current' for q in odds['prices']))
             seen.append(True)
             return real(*args,**kwargs)
@@ -362,6 +496,8 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             current=latest.board(refreshed,self.first['game_key'],view='odds',filter='all')
             self.assertTrue(all(row['observation_display']['state']=='current' for row in current['prices']))
         affected=latest.board(frame,self.first['game_key'],view='odds',filter='all')
+        from app.dashboard.comparison_board import expand_price_fields
+        expand_price_fields(affected)
         own=[row for row in affected['prices'] if row['source']==source]
         self.assertTrue(own)
         self.assertTrue(all(row['observation_display']['state']=='pending' for row in own))
@@ -391,6 +527,8 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                 for key,prior in zip(keys,real(keys,contexts=contexts))]
         with patch.object(scope,'publication_dependencies',side_effect=changed):frame=self.snapshot()
         affected=latest.board(frame,self.first['game_key'],view='odds',filter='all')
+        from app.dashboard.comparison_board import expand_price_fields
+        expand_price_fields(affected)
         applicable=[row for row in affected['prices'] if row['venue']=='kalshi' and row['source']['native_event_id']==event]
         unaffected=[row for row in affected['prices'] if not (row['venue']=='kalshi' and row['source']['native_event_id']==event)]
         self.assertTrue(applicable)
@@ -419,6 +557,8 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             frame=self.snapshot()
         for game in (self.first,self.second):
             odds=latest.board(frame,game['game_key'],view='odds',filter='all')
+            from app.dashboard.comparison_board import expand_price_fields
+            expand_price_fields(odds)
             self.assertTrue(all(row['observation_display']['state']=='current' for row in odds['prices']))
 
     async def test_observation_code_change_republishes_unchanged_sources_despite_new_global_status(self):

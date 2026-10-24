@@ -37,7 +37,10 @@ def _bind_v1(event, market, venue, *, revised=False):
     if venue == 'kalshi' and market.get('market_type')=='moneyline' and market.get('period')=='full_game':
         from app.normalization.native_registry import native_registry
         team=native.get('yes_sub_title'); text=native.get('rules_primary','')
-        resolved=native_registry(live=True).resolve('team',team,league=event.get('competition'),venue=venue)
+        from .admission_enrichment import repair_registry, TEAM_KEYS
+        reg=repair_registry() if revised else native_registry(live=True)
+        resolved=reg.resolve('team',team,league=event.get('competition'),venue=venue,
+            environment='production',native_id=(native.get('custom_strike') or {}).get(TEAM_KEYS.get(event.get('competition'))))
         if resolved.status=='resolved' and text.startswith('If '+str(team)+' wins ') and text.endswith(', then the market resolves to Yes.'):
             result['predicate']=[dict(native_id='yes',participant=resolved.canonical_id,predicate='win'),
                                  dict(native_id='no',participant=resolved.canonical_id,predicate='not_win')]

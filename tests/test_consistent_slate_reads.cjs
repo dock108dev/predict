@@ -32,6 +32,20 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
   const {defaults, SlateAccumulator, LatestRead, readSlate, checkInputs} = await import(asset('board-client.js'));
   const {relativeAge} = await import(asset('board-elements.js'));
   const context = {...defaults,view:'odds',filter:'all'};
+  // Variable byte-boundary pages must cover every game, including >10 pages,
+  // without changing the 8 MiB page or 80 MiB complete-read envelopes.
+  const variable = frame(61), accumulator = new SlateAccumulator(context);
+  let cursor=0;
+  for (const count of [31, 17, ...Array(13).fill(1)]) {
+    const part=page(variable,cursor);
+    part.boards=copy(variable.boards.slice(cursor,cursor+count));
+    part.coverage={...part.coverage,returned_games:count,next_offset:cursor+count<61?cursor+count:null,complete:cursor+count===61};
+    accumulator.append(part,new TextEncoder().encode(JSON.stringify(part)).length);cursor+=count;
+  }
+  assert.equal(accumulator.result().boards.length,61);
+  assert.equal(new Set(accumulator.result().boards.map(b=>b.game_key)).size,61);
+  const stalled=page(variable);stalled.boards=[];stalled.coverage.returned_games=0;stalled.coverage.next_offset=0;
+  assert.throws(()=>new SlateAccumulator(context).append(stalled,100));
   let current = frame(), nextToken = 0, providerRequests = 0;
   const captured = new Map(), requests = [];
   const localAPI = async url => {

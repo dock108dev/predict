@@ -327,8 +327,22 @@ def _calculate_quote(q, profiles, at, *, ceiling=None, event=None, group=None, o
         from .net_ev import estimated_net_ev, ProbabilityInputs
         reference = reference_set(values['reference']['payload']) if 'reference' in values else None
         probability_policy = values['probability']['payload']
-        probability = None if probability_policy == {'version':'comparison-benchmark-basis-1',
-            'method':'pinnacle_proportional_no_vig'} else ProbabilityInputs.from_dict(probability_policy)
+        if (probability_policy.get('version')=='comparison-benchmark-basis-1' and
+                probability_policy.get('method')=='pinnacle_proportional_no_vig'):
+            # The ordinary producer retains extra conditional-basis evidence.
+            # It is not a complete state distribution. Recompute weights from
+            # the exact original reference through the existing benchmark owner.
+            if reference is None:raise ValueError('exact_reference_inputs_unavailable')
+            if probability_policy.get('reference_receipt_sha256',reference.receipt_sha256)!=reference.receipt_sha256:
+                raise ValueError('conditional_reference_receipt_conflict')
+            if probability_policy.get('conditioning',reference.conditioning)!=reference.conditioning:
+                raise ValueError('conditional_reference_conditioning_conflict')
+            if 'probabilities' in probability_policy:
+                weights=[1/r.decimal_odds.value for r in reference.outcomes];total=sum(weights)
+                if list(map(Fraction,probability_policy['probabilities']))!=[w/total for w in weights]:
+                    raise ValueError('conditional_reference_weights_conflict')
+            probability=None
+        else:probability=ProbabilityInputs.from_dict(probability_policy)
         natural = estimated_net_ev(scenario,costs,reference,at=at,
             live=q['comparison_input_refs']['phase']=='live',execution_source_at=q['times']['source_at'],
             probability=probability,buffer=buffer)

@@ -18,6 +18,13 @@ hide admitted source prices.
 
 ## Ordinary current data flow
 
+Acquisition, storage/publication, matching, financial logic, frontend and
+integration QA have distinct responsibilities. Current architecture has **two OS processes**:
+the background data process hosts collection and calculation workers; the app
+process reads publications. Logical worker separation does not establish complete
+resource/failure isolation. The completion slices must verify those boundaries;
+a further process split requires an evidenced proposal rather than an assumed rewrite.
+
 The ordinary launcher runs an independent background data process and an app
 process against the existing PostgreSQL database. The data runtime owns
 collection, expiry, the shared scanner, Odds/EV calculations and compact episode
@@ -87,8 +94,10 @@ NO, Short, tie treatment, completion windows and quantity units remain distinct.
 Conflict or ambiguity cannot authorize a cross-venue hedge.
 
 Shared versioned fee/payout/reference definitions are referenced by current
-offers and transient calculation inputs. Selected Details expands only its coherent
-current context, using an expected-revision check.
+offers and transient calculation inputs. Selected Details expands its coherent input context, using an expected-revision
+check or its bounded captured selection frame. A leased selection retains its
+original facts across live updates and becomes captured when dependencies change;
+that cache lease never renews price freshness or current financial eligibility.
 A context binds game, instrument/pair, relevant input revisions, policy and engine;
 it does not require a permanent sports snapshot/result. Changed/reset/removed
 inputs are explicit rather than new clocks beside old money. Defaults and HTTP overrides use one policy owner. Financial and display benchmark
@@ -144,7 +153,7 @@ Paths are relative to `app/`.
 | Native discovery selection | `collection/current_native_catalog.py` owns pure bounded selection/diagnostics; `collection/current_native.py` owns discovery/stream lifecycle |
 | Direct admitted-only current ingress and guards | `collection/current_database.py`, `collection/current_storage_policy.py` |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
-| Shared latest publications and readers | `storage/scanner_latest.py`, `storage/latest_board.py`, `dashboard/scanner_api.py` |
+| Shared latest publications and readers | `storage/scanner_latest.py`, `storage/latest_board.py`, `dashboard/scanner_api.py`; `storage/board_capture.py` owns bounded capture planning and `storage/board_view.py` owns pure captured-result rendering |
 | Selected current inputs and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `dashboard/comparison_slate.py` |
 | Occurrence and native adaptation | `comparison/occurrence_matching.py`, `comparison/event_links.py`, `comparison/combined_inputs.py`, `comparison/combined_native.py`, `comparison/domain.py`, `comparison/source_inputs.py` |
 | Policy and request overrides | `comparison/estimated_policy.py`, `comparison/effective_policy.py`, `dashboard/query_policy.py` |
@@ -156,6 +165,29 @@ Paths are relative to `app/`.
 | Browser boundary and presentation | `dashboard/local_security.py`, `dashboard/request_guard.py`; authored current-board modules under `dashboard/opportunity_static/current/` |
 | Retained lifecycle and projection | `dashboard/coverage_owner.py`, `dashboard/session_projection.py`, `dashboard/session_history.py`, `collection/continuous.py`, `collection/continuous_streams.py` |
 | Shared domain mathematics | `fees/`, `settlement.py`, `normalization/`, `depth.py`, `opportunities/percentages.py` |
+
+Native scoring applicability has one ordinary owner:
+`comparison/native_scoring_scope.py` (`resolve`, `attach`, `source_rules` and
+`publication_dependencies`). `combined_native` and `current_normalized` use it
+for admission; observation publication and Coverage use its source/type dependency
+keys. It verifies shared source evidence plus each observation's own identity,
+predicate, terms and exceptions. Event-specific target registries cannot authorize
+ordinary scoring or invalidate current publications. Their bounded schema readers
+remain only for retained-fixture inspection; the unreachable event-specific
+admission and dependency implementations have been removed.
+
+NFL and NHL spread/total inventory checks both route through
+`normalization/reviewed_winner.py:line_inventory_gaps`, then its shared
+`inventory_gaps` identity conflict checker. `nfl_lines` and `nhl_lines` retain their
+sport-specific event and score rules. Winner-only events are excluded from line
+review rather than subjected to a second, conflicting identity policy.
+
+The unused `storage/comparison_board.view_bundle` identity wrapper and
+`prophetx_verify.ResponseLike` adapter have been removed. Current selected reads
+use `ReadContext` and the bounded selected-frame owner; retired archive operations
+continue to refuse explicitly. Applied migrations, frozen packages, versioned
+estimate policies and explicitly injected research/preview routes remain supported
+contracts, not ordinary-runtime fallback implementations.
 
 Keep state owners cohesive, transports independent and current API versions explicit.
 The launcher and `python -m app.dashboard` enter through `opportunity_board`,

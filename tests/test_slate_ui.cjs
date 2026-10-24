@@ -72,9 +72,9 @@ function slate(view = 'odds') {
   const ev=slate('ev'); ev.boards[0].rows=ev.boards[0].rows.slice(0,1);ev.boards[1].rows=ev.boards[1].rows.slice(0,1);
   ev.boards[0].rows[0].financial_metrics.buffered_return_percent='-20'; ev.boards[1].rows[0].financial_metrics.buffered_return_percent='10';
   checkSlate(ev,{...c,view:'ev'}); renderer.draw(ev,{view:'ev',filter:'all'});
-  assert(content.querySelectorAll('.slate-comparison-game')[0].textContent.includes('Second synthetic NFL game'),'global sort uses supplied dollar metrics');
+  assert.equal(content.querySelectorAll('.slate-comparison-game')[0].dataset.key,'synthetic-second-occurrence','global sort uses supplied exact return percentages');
   content.querySelectorAll('button')[0].onclick();assert.equal(details[0].g.game_key,'synthetic-second-occurrence');assert.equal(details[0].r.details.context_id,ev.boards[1].calculation_context.context_id);
-  renderer.draw(ev,{view:'ev',filter:'all',sort:'start'});assert(content.querySelectorAll('.slate-comparison-game')[0].textContent.includes(fixture.catalog.games[0].title));
+  renderer.draw(ev,{view:'ev',filter:'all',sort:'start'});assert.equal(content.querySelectorAll('.slate-comparison-game')[0].dataset.key,fixture.catalog.games[0].game_key);
   renderer.draw(slate('arbs'),{view:'arbs',filter:'all'});assert.equal(content.querySelectorAll('.slate-result').length,28);assert(!content.textContent.includes('Complete EV unknown'));assert(!content.textContent.includes('Modeled minimum · buffered'));assert(content.textContent.includes('Margin · decisive outcomes only'));
   const pending=slate();pending.storage={state:'unavailable',error:'current_database_storage_cap'};pending.boards.forEach(b=>b.delivery_state='pending');renderer.draw(pending,{view:'odds',filter:'all'});
   assert(content.textContent.includes('Current updates paused'));assert(!content.textContent.includes('Calculation pending'));

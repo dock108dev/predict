@@ -9,3 +9,11 @@ def supported(league, family, period):
     if period == 'first_half':
         return league in ('NFL', 'NCAAF', 'NBA', 'NCAAB')
     return league == 'MLB' and (period == 'first_5' or period == 'first_3' and family == 'moneyline')
+
+
+LEAGUE_SPORT = dict(NFL='football', NCAAF='football', NBA='basketball',
+                    NCAAB='basketball', MLB='baseball', NHL='hockey')
+
+
+def sport(league):
+    return LEAGUE_SPORT.get(league)

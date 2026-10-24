@@ -10,6 +10,81 @@ from app.dashboard.read_work import ReadWork, ReadDeadline, Trace, TRACE
 
 
 class SelectedReadWork(IsolatedAsyncioTestCase):
+    async def test_completed_allocation_is_resident_not_reserved_twice(self):
+        work=ReadWork();ordinary=Trace('ordinary');selected=Trace('selected')
+        token=TRACE.set(ordinary)
+        try:
+            with patch('app.dashboard.read_work.process_bytes',return_value=400*1024**2):
+                work.guard(200*1024**2)
+            with patch('app.dashboard.read_work.process_bytes',return_value=550*1024**2):
+                work.guard()
+                self.assertEqual(work.reservations[ordinary],16*1024**2)
+                TRACE.set(selected)
+                work.guard(128*1024**2)
+                with self.assertRaisesRegex(ValueError,'memory_capacity'):
+                    work.guard(129*1024**2)
+                TRACE.set(ordinary)
+                with self.assertRaisesRegex(ValueError,'memory_capacity'):
+                    work.guard(100*1024**2)
+        finally:TRACE.reset(token)
+
+    async def test_refusal_releases_captured_graph_without_waiting_for_cyclic_gc(self):
+        import gc,weakref
+        class Captured:pass
+        references=[];work=ReadWork()
+        def refused():
+            captured=Captured();references.append(weakref.ref(captured))
+            raise ValueError('current_slate_read_authority_changed')
+        enabled=gc.isenabled();gc.disable()
+        try:
+            try:await self.run_work(work,False,refused)
+            except ValueError as error:
+                self.assertEqual(str(error),'current_slate_read_authority_changed')
+                self.assertIsNone(references[0]())
+            else:self.fail('Expected a refusal')
+        finally:
+            if enabled:gc.enable()
+            await work.close()
+
+    async def test_read_lanes_reuse_distinct_threads_and_close_idle_workers(self):
+        from threading import get_ident
+        work=ReadWork()
+        ordinary=[await self.run_work(work,False,get_ident) for _ in range(3)]
+        selected=[await self.run_work(work,True,get_ident) for _ in range(3)]
+        self.assertEqual(len(set(ordinary)),1)
+        self.assertEqual(len(set(selected)),1)
+        self.assertNotEqual(ordinary[0],selected[0])
+        self.assertEqual(work.diagnostics()['running'],0)
+        await work.close()
+        for _ in range(20):
+            if not any(t.is_alive() for t in work.worker_threads.values()):break
+            await asyncio.sleep(.005)
+        self.assertFalse(any(t.is_alive() for t in work.worker_threads.values()))
+
+    async def test_cancelled_read_discards_only_its_frame_after_worker_exit(self):
+        from app.storage.slate_reads import CapturedReads
+        cache=CapturedReads(resource_bytes=lambda:0)
+        other=cache.capture({},[b'{}'],context='other',authority='same')
+        trace=Trace('ordinary');release=Event();entered=Event()
+        def blocked():
+            frame=cache.capture({},[b'{}'],context='owned',authority='same')
+            trace.frames.add(frame.token);entered.set();release.wait(3)
+        trace.cleanup=lambda:[cache.discard(token) for token in trace.frames]
+        work=ReadWork(work_seconds=1)
+        token=TRACE.set(trace)
+        try:task=asyncio.create_task(work.run(False,blocked,trace))
+        finally:TRACE.reset(token)
+        while not entered.is_set():await asyncio.sleep(.005)
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await task
+        self.assertEqual(len(cache.frames),2)
+        self.assertGreater(work.diagnostics()['reserved_bytes'],0)
+        release.set()
+        while work.running:await asyncio.sleep(.005)
+        self.assertEqual(list(cache.frames),[other.token])
+        self.assertEqual(work.diagnostics()['reserved_bytes'],0)
+        await work.close()
+
     async def run_work(self, work, selected, fn):
         trace=Trace('selected' if selected else 'ordinary'); token=TRACE.set(trace)
         try:return await work.run(selected,fn,trace)

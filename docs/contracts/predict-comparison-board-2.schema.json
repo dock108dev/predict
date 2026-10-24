@@ -125,111 +125,32 @@
       "items": {
         "type": "object",
         "required": [
-          "quote_id",
-          "selection",
-          "venue",
-          "source",
-          "original",
-          "common_odds",
-          "times"
+          "quote_id"
         ],
         "properties": {
           "quote_id": {
             "type": "string",
             "minLength": 1,
             "maxLength": 256
-          },
-          "selection": {
-            "type": "object"
-          },
-          "venue": {
-            "enum": [
-              "novig",
-              "prophetx",
-              "kalshi",
-              "polymarket_us"
-            ]
-          },
-          "source": {
-            "type": "object"
-          },
-          "original": {
-            "type": "object",
-            "required": [
-              "value",
-              "units",
-              "payout",
-              "payout_units",
-              "quantity_units"
-            ]
-          },
-          "common_odds": {
-            "type": "object",
-            "required": [
-              "american",
-              "meaning"
-            ]
-          },
-          "times": {
-            "type": "object",
-            "required": [
-              "source_at",
-              "received_at",
-              "projected_at"
-            ]
-          },
-          "freshness": {
-            "type": "object",
-            "required": [
-              "status",
-              "reasons"
-            ],
-            "properties": {
-              "status": {
-                "enum": [
-                  "current",
-                  "historical"
-                ]
-              },
-              "reasons": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 256
-                },
-                "maxItems": 64
-              }
-            }
-          },
-          "observation_display": {
-            "$ref": "#/$defs/observationDisplay"
-          },
-          "gross_comparison": {
-            "$ref": "#/$defs/grossComparison"
-          },
-          "captured_source_state": {
-            "type": "string"
-          },
-          "captured_source_health": {
-            "type": "object"
-          },
-          "native_contract_summary": {"type": "object"},
-          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
-          "market": {"type": "object"},
-          "event": {"type": "object"},
-          "current_comparison": {
-            "$ref": "#/$defs/grossComparison"
           }
         }
-      }
+      },
+      "description": "For encoded boards, restore the field-name and value pools before validating the complete logical price and its captured references."
     },
-    "comparison_input_encoding": {"const": "same-board-price-refs-1"},
-    "native_wordings": {"type": "array", "maxItems": 1024},
+    "comparison_input_encoding": {
+      "const": "same-board-price-refs-1"
+    },
+    "native_wordings": {
+      "type": "array",
+      "maxItems": 1024
+    },
     "rows": {
       "type": "array",
       "maxItems": 128,
       "description": "Odds uses a compact reference index into prices; financial views retain full calculation rows.",
-      "items": {"type": "object"}
+      "items": {
+        "type": "object"
+      }
     },
     "empty_reason": {
       "type": [
@@ -356,6 +277,10 @@
             "not_evaluated": {
               "type": "integer",
               "minimum": 0
+            },
+            "missing_inputs": {
+              "type": "integer",
+              "minimum": 0
             }
           },
           "additionalProperties": false
@@ -404,6 +329,24 @@
             },
             "additionalProperties": false
           }
+        },
+        "evaluation_complete": {
+          "type": "boolean"
+        },
+        "evaluated_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_scope": {
+          "type": "object"
+        },
+        "partial_results": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "additionalProperties": false
@@ -487,6 +430,32 @@
         "type": "string"
       },
       "maxItems": 64
+    },
+    "price_field_pool": {
+      "type": "array",
+      "maxItems": 4096,
+      "description": "Exact repeated fields shared only within this frozen board. Restore each price field_refs before interpreting the price."
+    },
+    "price_key_pool": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Exact field names for wide boards. Decode numeric price keys and field_refs keys before expanding price_field_pool; quote_id, quote_revision and field_refs stay literal."
+    },
+    "financial_field_pool": {
+      "type": "array",
+      "maxItems": 4096,
+      "description": "Frozen repeated financial row values. Restore financial_field_refs into each row before logical schema validation or financial price references."
+    },
+    "price_object_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Exact one-level keys of every object-valued price field, after price_key_pool and price_field_pool expansion. Nested values remain literal. Decode before logical validation or aging."
     }
   },
   "additionalProperties": false,
@@ -593,11 +562,19 @@
                 "captured_source_health": {
                   "type": "object"
                 },
-                "native_contract_summary": {"type": "object"},
-          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
-          "market": {"type": "object"},
-          "event": {"type": "object"},
-          "current_comparison": {
+                "native_contract_summary": {
+                  "type": "object"
+                },
+                "same_outcome": {
+                  "$ref": "#/$defs/sameOutcome"
+                },
+                "market": {
+                  "type": "object"
+                },
+                "event": {
+                  "type": "object"
+                },
+                "current_comparison": {
                   "$ref": "#/$defs/grossComparison"
                 }
               }
@@ -612,6 +589,11 @@
           "view": {
             "const": "ev"
           }
+        },
+        "not": {
+          "required": [
+            "financial_field_pool"
+          ]
         }
       },
       "then": {
@@ -710,11 +692,19 @@
                     "captured_source_health": {
                       "type": "object"
                     },
-                    "native_contract_summary": {"type": "object"},
-          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
-          "market": {"type": "object"},
-          "event": {"type": "object"},
-          "current_comparison": {
+                    "native_contract_summary": {
+                      "type": "object"
+                    },
+                    "same_outcome": {
+                      "$ref": "#/$defs/sameOutcome"
+                    },
+                    "market": {
+                      "type": "object"
+                    },
+                    "event": {
+                      "type": "object"
+                    },
+                    "current_comparison": {
                       "$ref": "#/$defs/grossComparison"
                     }
                   }
@@ -784,6 +774,11 @@
                           "maxLength": 256
                         },
                         "context_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "read_token": {
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 256
@@ -982,6 +977,30 @@
                           ],
                           "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
                           "maxLength": 256
+                        },
+                        "conditional_known_state_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_conditional_known_state_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_conditional_known_state_minimum_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
                         }
                       },
                       "required": [
@@ -1078,7 +1097,8 @@
                             "missing_reference",
                             "unsupported_inputs",
                             "calculation_failed",
-                            "not_evaluated"
+                            "not_evaluated",
+                            "missing_inputs"
                           ]
                         },
                         "reason_codes": {
@@ -1095,11 +1115,11 @@
                           "items": {
                             "type": "string"
                           },
-                          "maxItems": 4
+                          "maxItems": 5
                         },
                         "metrics": {
                           "type": "object",
-                          "maxProperties": 4,
+                          "maxProperties": 5,
                           "additionalProperties": {
                             "type": "object",
                             "required": [
@@ -1114,7 +1134,8 @@
                                   "missing_reference",
                                   "unsupported_inputs",
                                   "calculation_failed",
-                                  "not_evaluated"
+                                  "not_evaluated",
+                                  "missing_inputs"
                                 ]
                               },
                               "reason_codes": {
@@ -1131,6 +1152,9 @@
                           }
                         },
                         "current_opportunity_eligible": {
+                          "type": "boolean"
+                        },
+                        "evaluation_complete": {
                           "type": "boolean"
                         }
                       },
@@ -1192,6 +1216,18 @@
                         }
                       },
                       "additionalProperties": false
+                    },
+                    "bound_financial_inputs": {
+                      "type": "boolean"
+                    },
+                    "bound_details": {
+                      "type": "object"
+                    },
+                    "gross_decisive_benchmark": {
+                      "type": "object"
+                    },
+                    "evaluator_version": {
+                      "type": "string"
                     }
                   },
                   "not": {
@@ -1221,6 +1257,11 @@
           "view": {
             "const": "arbs"
           }
+        },
+        "not": {
+          "required": [
+            "financial_field_pool"
+          ]
         }
       },
       "then": {
@@ -1296,6 +1337,11 @@
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 256
+                        },
+                        "read_token": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
                         }
                       },
                       "additionalProperties": false
@@ -1491,6 +1537,30 @@
                           ],
                           "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
                           "maxLength": 256
+                        },
+                        "conditional_known_state_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_conditional_known_state_minimum_usd": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
+                        },
+                        "buffered_conditional_known_state_minimum_return_percent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+                          "maxLength": 256
                         }
                       },
                       "required": [
@@ -1587,7 +1657,8 @@
                             "missing_reference",
                             "unsupported_inputs",
                             "calculation_failed",
-                            "not_evaluated"
+                            "not_evaluated",
+                            "missing_inputs"
                           ]
                         },
                         "reason_codes": {
@@ -1604,11 +1675,11 @@
                           "items": {
                             "type": "string"
                           },
-                          "maxItems": 4
+                          "maxItems": 5
                         },
                         "metrics": {
                           "type": "object",
-                          "maxProperties": 4,
+                          "maxProperties": 5,
                           "additionalProperties": {
                             "type": "object",
                             "required": [
@@ -1623,7 +1694,8 @@
                                   "missing_reference",
                                   "unsupported_inputs",
                                   "calculation_failed",
-                                  "not_evaluated"
+                                  "not_evaluated",
+                                  "missing_inputs"
                                 ]
                               },
                               "reason_codes": {
@@ -1640,6 +1712,9 @@
                           }
                         },
                         "current_opportunity_eligible": {
+                          "type": "boolean"
+                        },
+                        "evaluation_complete": {
                           "type": "boolean"
                         }
                       },
@@ -1701,6 +1776,18 @@
                         }
                       },
                       "additionalProperties": false
+                    },
+                    "bound_financial_inputs": {
+                      "type": "boolean"
+                    },
+                    "bound_details": {
+                      "type": "object"
+                    },
+                    "gross_decisive_benchmark": {
+                      "type": "object"
+                    },
+                    "evaluator_version": {
+                      "type": "string"
                     }
                   },
                   "not": {
@@ -1826,11 +1913,19 @@
                               "captured_source_health": {
                                 "type": "object"
                               },
-                              "native_contract_summary": {"type": "object"},
-          "same_outcome": {"$ref": "#/$defs/sameOutcome"},
-          "market": {"type": "object"},
-          "event": {"type": "object"},
-          "current_comparison": {
+                              "native_contract_summary": {
+                                "type": "object"
+                              },
+                              "same_outcome": {
+                                "$ref": "#/$defs/sameOutcome"
+                              },
+                              "market": {
+                                "type": "object"
+                              },
+                              "event": {
+                                "type": "object"
+                              },
+                              "current_comparison": {
                                 "$ref": "#/$defs/grossComparison"
                               }
                             }
@@ -1883,27 +1978,233 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "price_field_pool"
+              ]
+            },
+            {
+              "required": [
+                "price_key_pool"
+              ]
+            },
+            {
+              "required": [
+                "price_object_keys"
+              ]
+            }
+          ]
+        }
+      },
+      "then": {
+        "properties": {
+          "prices": {
+            "items": {
+              "required": [
+                "quote_id",
+                "selection",
+                "venue",
+                "source",
+                "original",
+                "common_odds",
+                "times"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "price_object_keys"
+          ]
+        }
+      },
+      "then": {
+        "properties": {
+          "prices": {
+            "items": {
+              "properties": {
+                "selection": {
+                  "type": "object"
+                },
+                "venue": {
+                  "enum": [
+                    "novig",
+                    "prophetx",
+                    "kalshi",
+                    "polymarket_us"
+                  ]
+                },
+                "source": {
+                  "type": "object"
+                },
+                "original": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "units",
+                    "payout",
+                    "payout_units",
+                    "quantity_units"
+                  ]
+                },
+                "common_odds": {
+                  "type": "object",
+                  "required": [
+                    "american",
+                    "meaning"
+                  ]
+                },
+                "times": {
+                  "type": "object",
+                  "required": [
+                    "source_at",
+                    "received_at",
+                    "projected_at"
+                  ]
+                },
+                "freshness": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "reasons"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "current",
+                        "historical"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "maxItems": 64
+                    }
+                  }
+                },
+                "observation_display": {
+                  "$ref": "#/$defs/observationDisplay"
+                },
+                "gross_comparison": {
+                  "$ref": "#/$defs/grossComparison"
+                },
+                "captured_source_state": {
+                  "type": "string"
+                },
+                "captured_source_health": {
+                  "type": "object"
+                },
+                "native_contract_summary": {
+                  "type": "object"
+                },
+                "same_outcome": {
+                  "$ref": "#/$defs/sameOutcome"
+                },
+                "market": {
+                  "type": "object"
+                },
+                "event": {
+                  "type": "object"
+                },
+                "current_comparison": {
+                  "$ref": "#/$defs/grossComparison"
+                },
+                "field_refs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
     "oddsRowReference": {
-      "type": "object", "required": ["quote_id", "quote_revision", "price_ref", "venue", "selection", "market"],
+      "type": "object",
+      "required": [
+        "quote_id",
+        "quote_revision",
+        "price_ref",
+        "venue",
+        "selection",
+        "market"
+      ],
       "properties": {
-        "quote_id": {"type": "string", "maxLength": 256},
-        "quote_revision": {"type": ["string", "integer"]},
-        "price_ref": {"type": "string", "maxLength": 256},
-        "venue": {"type": "string"},
-        "selection": {"type": "object"},
-        "market": {"type": "object"}
-      }, "additionalProperties": false
+        "quote_id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "quote_revision": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "price_ref": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "venue": {
+          "type": "string"
+        },
+        "selection": {
+          "type": "object"
+        },
+        "market": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     },
     "sameOutcome": {
-      "type": "object", "required": ["supported", "key", "reason", "missing_fields"],
+      "type": "object",
+      "required": [
+        "supported",
+        "key",
+        "reason",
+        "missing_fields"
+      ],
       "properties": {
-        "supported": {"type": "boolean"},
-        "key": {"type": ["array", "null"]},
-        "reason": {"type": ["string", "null"]},
-        "missing_fields": {"type": "array", "items": {"type": "string"}, "maxItems": 32}
+        "supported": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "missing_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32
+        }
       },
       "additionalProperties": false
     },
@@ -2042,9 +2343,16 @@
         "source": {
           "type": "object"
         },
-        "same_outcome": {"$ref": "#/$defs/sameOutcome"},
-        "native_contract_summary": {"type": "object", "description": "Captured native wording, original predicate and explicit equality/scoring facts; id points to the complete locally retained contract evidence."},
-        "market": {"type": "object"},
+        "same_outcome": {
+          "$ref": "#/$defs/sameOutcome"
+        },
+        "native_contract_summary": {
+          "type": "object",
+          "description": "Captured native wording, original predicate and explicit equality/scoring facts; id points to the complete locally retained contract evidence."
+        },
+        "market": {
+          "type": "object"
+        },
         "native_contract_id": {
           "type": [
             "string",
@@ -2068,7 +2376,30 @@
         "reason"
       ],
       "properties": {
-        "input_refs": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object", "required": ["quote_id", "quote_revision"], "properties": {"quote_id": {"type": "string"}, "quote_revision": {"type": ["string", "integer"]}}, "additionalProperties": false}},
+        "input_refs": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "quote_id",
+              "quote_revision"
+            ],
+            "properties": {
+              "quote_id": {
+                "type": "string"
+              },
+              "quote_revision": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "available": {
           "type": "boolean"
         },

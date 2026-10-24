@@ -9,7 +9,7 @@ from copy import deepcopy
 from itertools import combinations
 from typing import Literal
 
-from .current_dependencies import digest, encoded, instant
+from .current_dependencies import digest, instant
 
 VERSION = 'predict-scanner-readiness-1'
 POLICY = 'predict-scanner-readiness-policy-1'
@@ -41,9 +41,9 @@ LIMITS = POLICY_FACTS['limits']
 @dataclass(frozen=True)
 class Selection:
     venues: tuple[str, ...] = EXECUTION_VENUES
-    sports: tuple[str, ...] = ('football',)
-    leagues: tuple[str, ...] = ('NFL',)
-    markets: tuple[str, ...] = ('winner',)
+    sports: tuple[str, ...] = ('football', 'basketball', 'baseball', 'hockey')
+    leagues: tuple[str, ...] = ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL')
+    markets: tuple[str, ...] = ('winner', 'spread', 'total')
     periods: tuple[str, ...] = ('full_game',)
 
     def __post_init__(self):
@@ -174,7 +174,8 @@ def assemble(instruments, *, selection, at, epoch, input_revision, scopes, evalu
                     instruments=instruments, scopes=scopes, pairs=pairs)
     # Stable for repeated reads between boundaries; causal receipt changes still
     # alter inputs. Age seconds are calculated by consumers from original clocks.
-    revision = digest(boundary)
+    from .current_dependencies import streaming_digest
+    revision = streaming_digest(boundary)
     by_id = {i['id']: i for i in instruments}
     ready = {p['id'] for p in pairs if p['input_check']['state'] == 'ready'}
     receipts = {}
@@ -231,6 +232,7 @@ def assemble(instruments, *, selection, at, epoch, input_revision, scopes, evalu
                                no_qualifying_opportunities=bool(checked and checked == len(ready) and not qualifying and all(s['state'] == 'ready' for s in scopes))),
                causes=[dict(purpose=p, code=c, count=_count(len(ids), len(instruments), 'instruments', 'selected_observed')) for (p, c), ids in sorted(causes.items())],
                causes_overlap=True, provider_requests=0)
-    if len(encoded(out)) > MAX_BYTES:
+    from .readiness_encoding import transport_size
+    if transport_size(out) > MAX_BYTES:
         raise ValueError('readiness_response_capacity')
     return out

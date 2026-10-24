@@ -121,3 +121,28 @@ One active capture/finance worker; a single coalescing wake bit; at most 16 pair
 Synthetic timing measurements describe only their fixture workload. Full-finance
 initialization, source-to-browser propagation and burst behavior require separate
 measurements and are not implied by small protocol tests.
+
+## Complete saved captures during live ingress
+
+When the complete readiness capture finishes but its current-row proof has changed,
+publication may retain the frame as `capture_only`, with its actual capture time.
+It removes rows, receipts, cache, targets and pending adoption authority; it is
+unavailable, never an evaluated zero or a current financial result. Runtime identity,
+configuration, reset epoch and Stop authority must still match. A later read exposes
+the saved scope and original clocks explicitly while withdrawing current results.
+
+### Durable readiness encoding (October 22 publication repair)
+
+The background readiness frame uses `readiness-shared-fields-1` for its physical
+publication bound. `instruments`, `pairs` and `scopes` are tables with a `keys`
+dictionary and rows of `[literal_fields, referenced_fields]`. Each field is an
+index/value pair; referenced values index `field_pool`. All other frame fields,
+including revision, selection, original clocks, denominators and availability,
+retain their exact logical values. Decode before projection or any financial
+reasoning. The revision is still computed from the complete logical frame before
+encoding. The ordinary Scanner API continues to return its existing scope summary.
+Legacy saved frames remain readable. References are checked and expanded into
+detached values; sharing does not discount expanded worker memory reservations.
+The readiness 8 MiB and durable publication 32 MiB limits are unchanged. A full
+saved readiness capture after changed inputs supplies dated scope information,
+never current economic/action authority or an evaluated-zero claim.

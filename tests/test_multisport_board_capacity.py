@@ -48,5 +48,6 @@ class MarketBoardCapacity(IsolatedAsyncioTestCase):
    self.assertTrue(all(len(q['current_comparison']['inputs'])==2 for q in expanded['prices']))
    self.assertTrue(all(q['native_contract_summary']['wording'] for q in expanded['prices']))
    frozen=encoded(expanded['prices'][0]['current_comparison']['inputs'])
-   r['prices'][0]['original']['value']='0.99'
+   from app.dashboard.comparison_board import expand_price_fields
+   expand_price_fields(r)['prices'][0]['original']['value']='0.99'
    self.assertEqual(encoded(expanded['prices'][0]['current_comparison']['inputs']),frozen)

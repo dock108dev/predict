@@ -45,6 +45,19 @@ def latest_frame(c=None):
 
 
 class CurrentBoardReads(unittest.TestCase):
+    def test_large_field_pool_is_exact_and_rejects_crossed_references(self):
+        from app.dashboard.comparison_board import compact_price_fields,expand_price_fields
+        original=dict(prices=[dict(quote_id=str(n),original={'value':'0.47'},times={'source_at':AT},
+            observed_depth={'levels':[{'price':'0.47','quantity':'100'}]*200}) for n in range(80)])
+        wire=compact_price_fields(deepcopy(original))
+        self.assertLess(len(encoded(wire)),len(encoded(original)))
+        restored=expand_price_fields(deepcopy(wire))
+        self.assertEqual(restored,original)
+        restored['prices'][0]['observed_depth']['levels'][0]['quantity']='1'
+        self.assertEqual(restored['prices'][1]['observed_depth']['levels'][0]['quantity'],'100')
+        bad=deepcopy(wire);bad['prices'][0]['field_refs']['observed_depth']=len(wire['price_field_pool'])
+        with self.assertRaisesRegex(ValueError,'comparison_field_reference_conflict'):expand_price_fields(bad)
+
     def test_observation_identity_survives_age_boundary_but_binds_changed_facts(self):
         from datetime import timedelta
         from app.storage.store import stamp
@@ -118,6 +131,13 @@ class CurrentBoardReads(unittest.TestCase):
         self.assertEqual(d['calculation_context'],b['calculation_context'])
         self.assertNotIn('snapshot_id',d);self.assertNotIn('result_id',d)
         self.assertEqual(d['quote']['original'],q['original'])
+        from app.dashboard.comparison_board import price, age_observation
+        from app.storage.store import stamp
+        event=next(e for e,_,candidate in entries(v['state']) if candidate['id']==q['id'])
+        observed=age_observation(price(q),event,stamp(AT))
+        self.assertEqual(d['quote']['observation_display'],observed['observation_display'])
+        self.assertEqual(d['quote']['source_state'],q['state'])
+        self.assertEqual(d['quote']['times'],q['times'])
 
     def test_details_percentage_companions_match_board_for_singles_and_pairs(self):
         c=context();b=bundle(c);v=calculate_current(b,DEFAULT_POLICY,context=c,details=True)
@@ -189,6 +209,11 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
                 for view in ('odds','ev','arbs'):
                     r=await client.get('/api/boards/'+view,params=params)
                     output[view]=await r.json();self.assertEqual(r.status,200,output[view])
+                    # Ordinary selected reads must leave unrelated games and
+                    # other optional views in SQL, retaining neighborhood proof.
+                    captured=patches[1].target.snapshot.call_args.kwargs
+                    self.assertEqual(captured['game'],game)
+                    self.assertEqual(captured['view'],view)
                 selected=output['ev']['rows'][0]['details'];identity=selected['context_id'];quote=selected['quote_id']
                 for view in ('details','inputs'):
                     expected=identity if view=='details' else output['odds']['calculation_context']['context_id']
@@ -207,7 +232,9 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(r.status,409);self.assertEqual((await r.json())['reason'],'current_slate_changed')
                 r=await client.get('/api/boards/history',params=dict(game=game));self.assertEqual(r.status,410)
                 r=await client.get('/api/boards/details',params=dict(params,context_id='superseded',quote=quote))
-                self.assertEqual(r.status,409);self.assertEqual((await r.json())['reason'],'current_inputs_changed_or_removed')
+                self.assertEqual(r.status,409);refused=await r.json()
+                self.assertEqual(refused['reason'],'current_inputs_changed_or_removed')
+                self.assertEqual(refused['availability']['state'],'not_evaluated')
                 current['records']=[]
                 r=await client.get('/api/boards/details',params=dict(params,context_id=identity,quote=quote))
                 self.assertEqual(r.status,409)
@@ -286,3 +313,70 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class C1CompactProjection(unittest.TestCase):
+    def authored(self):
+        from app.dashboard import comparison_board as projection
+        c=context();observed=c.observation_bundles()[0]
+        observed['calculation_context']=observation_identity(observed,c)
+        observed['source_status']={venue:dict(state='available',reason_code=None,reason=None,
+            diagnostic='Authored runtime audit; not a source-price field')
+            for venue in ('novig','prophetx','pinnacle','kalshi','polymarket_us')}
+        for _,_,quote in entries(observed['state_inputs']):
+            quote['native_contract']['wording']={'rules':('Authored unique '+quote['id']+' ').ljust(4352,'x')}
+        original=deepcopy(observed)
+        result=projection.response(observed,None,DEFAULT_POLICY,view='odds',filter='all',at=c.at)
+        self.assertEqual(observed,original)
+        self.assertLessEqual(len(encoded(result)),projection.MAX_RESPONSE)
+        return result
+
+    def test_distinct_wording_and_audit_health_share_exact_frozen_prices(self):
+        from app.dashboard.comparison_board import expand_odds,compact_odds,comparison_input,expand_price_fields
+        board=self.authored();captured=deepcopy(board);expand_price_fields(board)
+        self.assertEqual(board['comparison_input_encoding'],'same-board-price-refs-1')
+        self.assertEqual(len(board['prices']),46)
+        byid={p['quote_id']:p for p in board['prices']}
+        available=0
+        for price in board['prices']:
+            for field in ('gross_comparison','current_comparison'):
+                value=price[field]
+                if not value['available']:continue
+                available+=1
+                self.assertEqual(value['inputs'],[])
+                self.assertEqual(len(value['input_refs']),2)
+        self.assertGreater(available,0)
+        expanded=expand_odds(deepcopy(board))
+        for price in expanded['prices']:
+            for field in ('gross_comparison','current_comparison'):
+                for item in price[field].get('inputs',[]):
+                    expected=comparison_input(next(q for q in expanded['prices'] if q['quote_id']==item['quote_id']))
+                    self.assertEqual(item,expected)
+        self.assertEqual(compact_odds(deepcopy(expanded)),captured)
+        self.assertEqual(byid.keys(),{p['quote_id'] for p in expanded['prices']})
+        comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
+        comparison['inputs'][1]['observation_display']['publication_reason_codes']=['current_dependencies_changed']
+        compact_odds(expanded)
+        self.assertNotIn('input_refs',comparison)
+        self.assertEqual(comparison['inputs'][1]['observation_display']['publication_reason_codes'],['current_dependencies_changed'])
+
+    def test_malformed_and_conflicting_wording_or_price_references_refuse(self):
+        from app.dashboard.comparison_board import expand_odds,compact_odds,expand_price_fields
+        board=expand_price_fields(self.authored())
+        for index in (-1,True,0.5,'0',len(board['native_wordings'])):
+            bad=deepcopy(board);bad['prices'][0]['native_contract_summary']['wording_refs']=[['rules',index]]
+            with self.subTest(index=index),self.assertRaisesRegex(ValueError,'comparison_wording_reference_conflict'):
+                expand_odds(bad)
+        bad=deepcopy(board);bad['prices'].append(deepcopy(bad['prices'][0]))
+        with self.assertRaisesRegex(ValueError,'comparison_captured_reference_conflict'):expand_odds(bad)
+        for reference in ({'quote_id':'absent','quote_revision':1},{'quote_id':board['prices'][0]['quote_id'],'quote_revision':'crossed'},None):
+            bad=deepcopy(board)
+            comparison=next(q['gross_comparison'] for q in bad['prices'] if q['gross_comparison']['available'])
+            comparison['input_refs'][1]=reference
+            with self.subTest(reference=reference),self.assertRaisesRegex(ValueError,'comparison_captured_reference_conflict'):expand_odds(bad)
+        expanded=expand_odds(deepcopy(board))
+        comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
+        comparison['inputs'][1]['source']['native_market_id']='different-frozen-source'
+        compact_odds(expanded)
+        self.assertNotIn('input_refs',comparison)
+        self.assertEqual(comparison['inputs'][1]['source']['native_market_id'],'different-frozen-source')

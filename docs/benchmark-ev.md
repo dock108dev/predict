@@ -84,3 +84,47 @@ research engines keep their own stricter dependencies and meanings.
 
 See [data limitations](market-data-gaps.md), [combined inputs](combined-occurrence-input-contract.md),
 [API](comparison-board-api-contract.md) and [configuration](configuration.md).
+
+## SC07-M2 integrated extension — October 20, 2026
+
+The dated NFL recipes above retain their original October 16 expiry. No fee,
+quantity, settlement or model horizon was renewed. Ordinary funded results can
+also use the existing strictly bound shared cashflow/cost/probability owners via
+`bound_finance`: this path has no NFL prior and admits only exact applicable
+profiles. It preserves fees/funding, computes one selected deployed-capital
+haircut, and distinguishes full EV from conditional EV and complete joint minima
+from winner decisive margins. Generic line portfolios use a separately named
+listed-known-state minimum. Their bounded allocation search is not a global
+optimality proof. Unknown mandatory cashflows remain unknown at probability zero.
+
+The ordinary producer's conditional benchmark metadata is accepted as a basis annotation, with exact original weights/receipt checks; it is never parsed as a complete independent probability model.
+
+The financial identity adapter now retains M1's validated native scoring and
+supported equality descriptors. Completion and payout/fee qualification remain
+separate. Where no funded size can be established, a separate
+`gross_decisive_benchmark` companion can still report exact winner benchmark
+expectation per $1 normal claim, with its own original source/reference clocks.
+This is before fees, has no executable size, supplies no exceptional probability,
+and never contributes to the net-EV/arb availability or positive filters. A
+winner reference cannot qualify spread/total probabilities.
+
+Availability counts the selected input/result scope before positive filtering.
+Empty and pending scopes are not evaluated no-positive. Missing inputs,
+unsupported inputs and actual calculation failures remain distinct. Conditional
+numbers with unavailable full EV are partial; old numbers are last known.
+Changed/removed contexts and pending selected Details return not-evaluated
+availability rather than a fabricated calculation failure. See the
+local M2 closeout (`test-results/sc07-m2-20261020/closeout.md`) for installed evidence
+and the remaining authentic financial inputs.
+
+## October 22 public NFLWIN product model
+
+Novig aggregate NFL pregame full-game winners now use the reusable
+[`novig-nflwin-public-model-20261022-1` basis](novig-nflwin-modeled-basis.md).
+Original two-sided references support conditional net EV; a separately disclosed,
+uncalibrated tie/void sensitivity supports full modeled expected value. The UI
+names the assumption basis. This is not calibrated EV or execution qualification.
+Hypothetical USD risk does not require account membership or observed depth.
+Actual void receipts and the complete minimum remain unknown even though the
+model supplies an expected receipt within that bucket. Other venues, markets and
+native NO/Short sides retain their existing financial dependencies.

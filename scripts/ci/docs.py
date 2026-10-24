@@ -9,6 +9,7 @@ DOCUMENTS = (
     "docs/CI.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
+    "docs/novig-nflwin-modeled-basis.md",
     "docs/combined-occurrence-input-contract.md",
     "docs/comparison-board-api-contract.md",
     "docs/comparison-slate-api-contract.md",

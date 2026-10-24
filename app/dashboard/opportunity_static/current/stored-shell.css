@@ -1,18 +1,19 @@
 :root {
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  font-size:16px; line-height:1.5; color:#1e293b; background:#f3f6fb;
+  font-size:16px; line-height:1.5; color:#1e293b; background:#f5f7fb;
   --blue:#245bcc; --muted:#526278; --line:#d9e1ec; --surface:#fff;
   --soft:#edf3fe; --radius:12px;
+  --shadow:0 2px 8px #172b4606;
 }
 * { box-sizing:border-box }
 body { margin:0 }
 main { max-width:1320px; margin:auto; padding:0 28px 24px }
 a { color:var(--blue) }
-header { display:flex; align-items:center; gap:28px; min-height:72px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:rgba(243,246,251,.97); backdrop-filter:blur(12px) }
+header { display:flex; align-items:center; gap:28px; min-height:72px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:rgba(245,247,251,.97); backdrop-filter:blur(12px) }
 .brand { display:flex; align-items:center; gap:8px; color:#172b46; font-weight:750; font-size:25px; letter-spacing:-.8px; text-decoration:none }
 .brand-mark { background:#e7eefc; color:var(--blue); font-size:23px; width:32px; height:32px; text-align:center; border-radius:9px; letter-spacing:0 }
-nav { display:flex; gap:4px; margin-right:auto }
-nav a { display:flex; align-items:center; justify-content:center; min-height:44px; padding:8px 16px; text-decoration:none; color:var(--muted); border-radius:8px; font-weight:600 }
+nav { display:flex; flex-wrap:wrap; gap:4px; margin-right:auto }
+nav a { display:flex; align-items:center; justify-content:center; min-height:44px; padding:8px 14px; text-decoration:none; color:var(--muted); border-radius:8px; font-weight:600 }
 nav a[aria-current] { background:#e5edfc; color:#1649ae }
 nav a:hover { background:#e7edf6 }
 .heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:18px 0 16px }
@@ -46,7 +47,7 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
 .board-controls #settings { display:block; margin:0; min-width:0 }
 .calculation-settings { border:1px solid #c8d4e6; border-radius:10px; background:#fff; margin:0 }
-.calculation-settings>summary { display:flex; align-items:center; justify-content:space-between; gap:12px; list-style:none; padding:8px 14px; min-height:70px; font-weight:400 }
+.calculation-settings>summary { cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; list-style:none; padding:8px 14px; min-height:52px; font-weight:400 }
 .calculation-settings>summary::-webkit-details-marker { display:none }
 .calculation-settings>summary strong { display:block; font-size:.8125rem; font-weight:600; color:#23354c }
 .calculation-settings>summary::after { content:""; display:block; width:8px; height:8px; border-right:2px solid #526278; border-bottom:2px solid #526278; transform:rotate(45deg); flex-shrink:0; margin-right:4px }
@@ -89,3 +90,10 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .board-controls #sort-setting { grid-column:5/7 }
 button,input,select { border-color:#8595ac }
 #applied { line-height:1.4 }
+
+/* Selected sizing is secondary, but remains a complete, readable control. */
+main>#settings { display:block; width:min(100%,440px); margin:20px 0 0 }
+main>#settings .settings-body { min-width:100%; padding-top:12px }
+.settings-body>#applied { margin:0 14px 12px }
+main>#settings .calculation-settings[open] .settings-body { position:static; border:0; box-shadow:none }
+main>#settings .calculation-settings[open] { border-radius:10px }

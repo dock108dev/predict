@@ -92,7 +92,17 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         else:
             key=(ordinary_event_key(event) if market['event'][0]=='predict-occurrence-1' else
                  current_event_key(event) if market['event'][0]=='comparison-reviewed-occurrence-1' else event_key(event))
-        if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition')]) or any(market.get(k)!=event.get(k) for k in ('season','stage')):
+        admission=record.get('comparison_source_metadata',{}).get('comparison_admission',{})
+        display_context=(key[0]=='comparison-provider-occurrence-1' and record['verified'] is False
+            and admission.get('supported') is False and admission.get('reason')=='comparison_context_missing')
+        # SQL shares current event metadata across retained instruments. A later
+        # source witness may fill missing context before every old book rebinds.
+        # Display that event without promoting the old contract or its refusal;
+        # populated contradictions still fail and originals remain in the audit.
+        context_conflict=any(market.get(k)!=event.get(k) and not (
+            display_context and market.get(k) in (None,'','unknown','unverified')
+            and k in admission.get('missing_fields',[])) for k in ('season','stage'))
+        if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition')]) or context_conflict:
             raise ValueError('Normalized market/event binding conflict')
         if any(event.get(k) is None for k in ('season','stage')) and not (
                 key[0]=='comparison-provider-occurrence-1' and record['verified'] is False):
@@ -114,6 +124,10 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         e['id']=event_identity(e)
         if e['id'] not in events:events[e['id']]=e;result['events'].append(e)
         e=events[e['id']]
+        # Metadata joins can contain source-specific advertised starts. The
+        # earliest supported start closes current pregame eligibility; every
+        # original schedule remains in its occurrence audit and Details frame.
+        e['start_at']=min(stamp(e['start_at']),stamp(event['scheduled_start'])).isoformat()
         fields(selection,{'participant','predicate','signed_line','label'},{'result_interpretation'})
         # The descriptor/normalizer owns operator/equality/push and native-side
         # correspondence. Its exact meaning remains part of group identity.

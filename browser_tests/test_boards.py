@@ -1,6 +1,7 @@
 """Ordinary frontend journey with all traffic intercepted; no owner/provider state."""
 
 from copy import deepcopy
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -88,6 +89,7 @@ def test_saved_board_journey(width):
             service_workers="block",
         )
         page = context.new_page()
+        page.clock.install(time=datetime(2026, 10, 14, 1, 15, 2, tzinfo=timezone.utc))
         page.on("pageerror", lambda error: errors.append(str(error)))
 
         def route(request):
@@ -110,6 +112,10 @@ def test_saved_board_journey(width):
                 request.fulfill(
                     path=str(assets / "stored.html"), content_type="text/html"
                 )
+                return
+            if u.path == "/api/boards/read-lease":
+                assert query["read_token"] == ["authored-browser-read-0001"]
+                request.fulfill(json={"retained": True})
                 return
             if u.path == "/api/admin/current":
                 assert json.loads(request.request.post_data)["action"] == "stop"
@@ -191,7 +197,7 @@ def test_saved_board_journey(width):
 
         context.route("**/*", route)
         try:
-            page.goto("http://board.invalid/")
+            page.goto("http://board.invalid/odds")
             page.wait_for_selector(".team")
             # Same participants have distinct settlement scopes: aggregate,
             # Polymarket and Kalshi win/not-win must remain separate cards.
@@ -205,17 +211,17 @@ def test_saved_board_journey(width):
                 "Seattle Seahawks · does not win": 1,
             }
             page.goto("http://board.invalid/ev")
-            page.wait_for_selector(".empty")
-            page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".slate-result")
+            page.wait_for_selector(".opportunity-group")
+            for group in page.locator(".opportunity-group").all():
+                group.locator("summary").first.click()
             page.locator(
-                'button[data-key="'
+                'button[data-key="conditional:'
                 + fixture["ev"]["game_key"]
                 + ":"
                 + fixture["single"]["quote"]["id"]
                 + '"]'
             ).click()
-            page.wait_for_selector("#detail-content dl")
+            page.wait_for_selector("#detail-content dl", state="attached")
             page.keyboard.press("Shift+Tab")
             assert page.evaluate(
                 "document.getElementById('details').contains(document.activeElement)"
@@ -225,7 +231,10 @@ def test_saved_board_journey(width):
             page.keyboard.press("Escape")
             assert (
                 page.evaluate("document.activeElement.dataset.key")
-                == fixture["ev"]["game_key"] + ":" + fixture["single"]["quote"]["id"]
+                == "conditional:"
+                + fixture["ev"]["game_key"]
+                + ":"
+                + fixture["single"]["quote"]["id"]
             )
             page.goto("http://board.invalid/arbs")
             page.wait_for_selector(".empty")
@@ -246,7 +255,7 @@ def test_saved_board_journey(width):
                 + fixture["pair"]["pair"]["id"]
                 + '"]'
             ).click()
-            page.wait_for_selector("#detail-content dl")
+            page.wait_for_selector("#detail-content dl", state="attached")
             page.keyboard.press("Escape")
             state["mode"] = "failure"
             page.reload()
@@ -277,7 +286,13 @@ def test_saved_board_journey(width):
         except Exception:
             target = ROOT / "test-results/browser"
             target.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(target / f"failure-{width}.png"))
+            try:
+                page.screenshot(path=str(target / f"failure-{width}.png"), timeout=5000)
+            except Exception as diagnostic_error:
+                # A broken page/route must not replace the original test failure.
+                (target / f"screenshot-{width}.txt").write_text(
+                    type(diagnostic_error).__name__
+                )
             raise
         finally:
             context.close()

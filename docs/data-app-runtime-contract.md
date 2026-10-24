@@ -17,6 +17,30 @@ also requires an OS ownership lock and a session-level PostgreSQL advisory lock
 before constructing or dispatching sources. Process stop checks both command and
 birth identity. The launcher never stops PostgreSQL or unrelated processes.
 
+Heartbeat persistence copies loop-owned status before sending its SQL write to
+a background thread. Publications take a shared advisory authority lock;
+startup and explicit controls take its exclusive counterpart. Heartbeat writes
+remain independent, so a long publication cannot suppress liveness. A genuine
+control-row conflict has a 100 ms heartbeat wait and the next normal cadence
+retries; the eight-second reader death bound is unchanged. Conditional updates
+cannot overwrite a changed runtime, Stop, source pause or stopping state.
+
+Native books, source health, catalogs and aggregate admission use one serialized
+ingress owner with at most eight outstanding operations. SQL and normalization
+run off the event loop; reducer adoption and committed acknowledgments resume on
+the loop in order. Cancellation revokes adoption while the actual worker remains
+owned. Stop/pause withdraw dispatch immediately, then persist their authority;
+the transaction rechecks runtime/control identity and revocation before commit.
+Shutdown reports incomplete cleanup rather than releasing a live ingress owner.
+
+Estimates, Scanner and Coverage share one reusable optional-work thread. Each of
+the three owners awaits its existing turn before submitting another; queued work
+contains callables, not captured graphs. Existing memory admission, FIFO turns
+and source runway remain in force. Observations and ingress run independently.
+This also reuses the optional thread's allocator heap across large captures.
+The single observation owner and serialized ingress owner each have a dedicated
+reusable thread; lightweight control and heartbeat writes never queue behind them.
+
 Admin's global/source Stop is a separate acknowledged command to the data owner.
 `data_runtime_command` retains at most 32 pending commands, expires unhandled
 commands, and evicts completed acknowledgments. Each command binds the exact
@@ -109,6 +133,14 @@ health withdraw financial authority without renewing or withdrawing healthy sour
 clocks; separate collection and estimate labels expose those meanings. Checked-zero requires
 complete current evaluated scope; absent/failed/partial storage is unavailable.
 
+In database mode, native image continuity binds original source event/market
+material rather than derived comparison season/stage or counterpart enrichment.
+An unchanged image keeps its exact source/receipt/confirmation clocks while new
+metadata is normalized independently. Changed source terms, sides, eligibility or
+schedule still withdraw the affected image. A transient rediscovery timeout keeps
+an existing healthy socket during the same finite retry/backoff policy; exhausted
+discovery reports unavailable. This adds no requests, retries or budget allowance.
+
 Tickets bind the published exact row/dependency/economic/engine/policy/epoch
 identity and capture only the selected occurrence's inputs. Amount-specific
 finance remains allowed for that selection. Selected/latest/replacement frames,
@@ -126,3 +158,13 @@ The focused `scripts/ci/postgres.py --da-separation` lane uses a separate dispos
 PostgreSQL cluster and authored source/model assumptions. It makes no provider
 requests. Fixture evidence supplies engineering verification, not current source
 qualification, exact production destinations, hosted CI or live operational validity.
+
+
+October 20 broad-acquisition integration: the unchanged 256 KiB runtime status
+bound applies after deduplicating structured metrics. Full discovery, identity
+and coverage diagnostics are retained once in `sources[].metrics`; legacy root
+`metrics` retains scalar counters and any distinct unmirrored fields.
+`status_retention.structured_metrics_location` identifies the detail location.
+This avoids a broad-scope heartbeat shutdown caused by serializing the same
+large diagnostic structures twice. Account/quota/hold history, source panels,
+clocks, controls, Coverage meaning and the final hard capacity guard are preserved.

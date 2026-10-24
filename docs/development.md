@@ -99,6 +99,11 @@ git diff --check
 | Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
 | CI reporting and isolation failures | `test_ci_reporting.py`, `test_ci_environment.py`, `test_ci_assurance.py`, `test_ci_secrets.py` |
 
+Client tests that generate server fixtures also need the locked Python environment.
+Set `PYTHON="$PWD/.venv/bin/python"` when running them directly, for example
+`PYTHON="$PWD/.venv/bin/python" node tests/test_b02_client.cjs`. The full portable
+runner selects its own Python interpreter for these child processes.
+
 Run resource-sensitive Python modules in fresh processes: some deliberately
 measure process caps. Use authored fixtures and temporary state. For SQL tests,
 use `.venv/bin/python scripts/ci/postgres.py`; it creates a disposable socket-only
@@ -154,7 +159,7 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
 
 - `scanner-client.js` validates scanner v1, bounded page reads and compatibility;
   `scanner-controller.js`, `scanner-style.css` and `scanner-shell.html` own the
-  compact landing scanner. `ticket-client.js` and `ticket-view.js` own selected
+  advanced Scanner at `/scanner`. `ticket-client.js` and `ticket-view.js` own selected
   commands, persistent panel/sheet and exact frame presentation;
   `scanner-arrivals.js` consumes filter-wide server transition observations;
   `scanner-summaries.js` validates the optional bounded observed-summary disclosure. The generator
@@ -162,9 +167,13 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
   [client contract](scanner-client-contract.md) for bounds, ticket interaction and summary reads.
 - [Readiness preparation reuse](scanner-preparation-contract.md) documents the
   bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
-- `stored-controller.js` owns auxiliary Odds/EV settings, selection, polling, cancellable reads,
+- `opportunity-dashboard.js` renders the default `/` opportunity dashboard, exact supplied-value ordering, independent availability, and separate research groups.
+- `stored-controller.js` owns dashboard and Odds/EV settings, selection, polling, cancellable reads,
   dialogs and Stop.
-- `board-client.js` validates settings and response identities; `board-elements.js`
+- `board-client.js` owns settings, game continuity and coherent slate pagination;
+  `board-contract.js` validates and expands response identities, and `board-values.js`
+  owns presentation numbers and exact decimal equality. The public client exports
+  remain compatible. `board-elements.js`
   provides shared formatting and display primitives. `board-read.js` owns bounded
   cancellable reads and completion-based polling; `board-client.js` preserves its
   public read-helper exports for existing controllers.
@@ -193,8 +202,10 @@ page after rebuilding assets; restart the app after backend or credential change
 [Architecture](architecture.md) describes module ownership. Ordinary ingress uses
 `CurrentRowStore`; background owners calculate affected shared results and the app
 reads latest database publications. Only selected Details/tickets calculate amounts
-on request. Details binds to the clicked input context and requires a new selection
-when those inputs change. Older archive readers serve separate retained-research
+on request. Details binds to the clicked input context. A leased selected frame preserves
+its original evidence across current-input changes, labels it captured and withdraws
+current eligibility; View updated results selects the latest inputs. Expired or
+unknown frames still require a new selection. Older archive readers serve separate retained-research
 interfaces. See the [storage guide](current-row-storage.md) and
 [board contract](comparison-board-api-contract.md).
 
@@ -225,6 +236,26 @@ operations share the same socket/task/credential/budget ownership. Splitting its
 methods into stateful mixins would obscure that ownership. Review another
 extraction if a separate transport or lifecycle owner becomes necessary.
 
+Latest-board SQL capture sizing and fair source scheduling live in
+`storage/board_capture.py`; `storage/board_view.py` renders captured results and
+bounds wire pages without acquiring inputs. `latest_board.py` owns transactional
+publication, reconciliation, snapshot authority and its background task. The
+public `board`/`bounded_page` imports remain available there. Engine identity
+includes both extracted modules. SQL tests share disposable setup in
+`tests/latest_board_fixture.py`; `test_latest_board_sql.py` retains its public test
+class and independently reset behavioral cases.
+
+The native worker remains just above 1,000 lines after adding async book publication:
+its queued books, pending publication task, discovery replacement and close path
+share one cancellation/Stop owner. The existing catalog extraction remains the
+stateless boundary; separating publication into a second state owner would make
+shutdown and resync ordering harder to verify. The 648-line `stored-controller.js`
+likewise retains one UI lifecycle: generation cancellation, applied settings,
+selection leases, modal focus and Stop all mutate the same current view. Rendering,
+wire validation, pagination and read scheduling are already separate modules;
+extract a new controller only when it can own an independent state lifecycle.
+Review these decisions when those responsibilities change.
+
 CI regression tests are separated into `test_ci_reporting.py`,
 `test_ci_environment.py`, `test_ci_assurance.py` and `test_ci_secrets.py`, with
 tool loading in `tests/ci_support.py`. The quality workflow runs all four:
@@ -241,3 +272,11 @@ are required fixture or frozen-package inputs. Preserve them alongside their
 manifests; they are not disposable test evidence. Existing ignore rules cover
 local output, caches, reports and private state; inspect tracked ignored files
 with `git ls-files -ci --exclude-standard` before adding new exceptions.
+
+EV uses the dashboard's metric-specific renderer with a single EV scope. Its
+controller requests all retained results so an empty positive subset cannot stand
+in for complete evaluation. `coverage.js`, `coverage-model.js` and
+`coverage-view.js` are authored ES modules served directly, with `coverage.html`
+and `coverage.css`; they are not generated into `stored.js`. After changing the
+Coverage read contract, restart the app owner. Static-only edits need the normal
+asset build (for stored modules) and reload.

@@ -20,7 +20,7 @@ jobs:
   storage:
     name: SQL migrations and boards
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     outputs:
       result: ${{ steps.postgres.outcome }}
     steps:

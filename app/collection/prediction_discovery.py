@@ -16,7 +16,10 @@ def participant_mapping(event, *, live=False, scope_binding=None):
     from app.normalization.observations import enrich_event
     from app.normalization.registry import Registry
     from app.normalization.native_registry import native_registry
-    registry=native_registry(live=live)
+    if live:
+        from .admission_enrichment import repair_registry
+        registry=repair_registry()
+    else:registry=native_registry()
     normalized=enrich_event(event,environment='production',registry=registry,scope_binding=scope_binding);mapping={}
     for p in normalized.participants:
         value=p.resolution.canonical_id

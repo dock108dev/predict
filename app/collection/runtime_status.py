@@ -16,6 +16,7 @@ HEARTBEAT_SECONDS = 8
 COMMAND_SECONDS = 12
 STATUS_BYTES = 256 * 1024
 RUNTIME_LOCK = 120013
+AUTHORITY_LOCK = 120015
 
 
 def clock():
@@ -65,6 +66,11 @@ class RuntimeState:
         return (set(row['paused_sources']), row['global_stopped']) if row else (set(), False)
 
     def write(self, service, *, state='running', paused_sources=(), global_stopped=False):
+        self.write_snapshot(self.snapshot(service, state=state, paused_sources=paused_sources,
+                                          global_stopped=global_stopped))
+
+    def snapshot(self, service, *, state='running', paused_sources=(), global_stopped=False):
+        """Copy loop-owned state before any asynchronous database work."""
         # CurrentService projects only local bounded vocabulary and validated
         # configuration; exception text is never added to this persisted view.
         status = service.status()
@@ -72,6 +78,17 @@ class RuntimeState:
         status['exclusions'] = status.get('exclusions', [])[-100:]
         status['status_retention'] = dict(issue_limit=32, exclusion_limit=100,
                                          note='Compact latest status; bounded local diagnostic records retain additional issues.')
+        # Source panels already retain these exact structured diagnostics.
+        # Repeating discovery/identity/coverage lists in the legacy root metrics
+        # can exceed the heartbeat bound after a valid broad acquisition and
+        # terminate every source. Keep counters here and full details once.
+        panels={p.get('provider'):p.get('metrics',{}) for p in status.get('sources',[])}
+        if isinstance(status.get('metrics'),dict):
+            status['metrics']={provider:{key:value for key,value in metrics.items()
+                if not (isinstance(value,(dict,list)) and key in panels.get(provider,{})
+                        and panels[provider][key]==value)}
+                for provider,metrics in status['metrics'].items()}
+            status['status_retention']['structured_metrics_location']='sources[].metrics; exact repeated root details omitted'
         status['background_calculations'] = deepcopy(getattr(service, 'background_calculations', {}))
         status['background_work'] = deepcopy(getattr(service, 'background_work', {}))
         if status.get('database'):
@@ -90,21 +107,50 @@ class RuntimeState:
                                       paused_sources=sorted(paused_sources), global_stopped=global_stopped)
         if len(json.dumps(status, separators=(',', ':')).encode()) > STATUS_BYTES:
             raise ValueError('data_runtime_status_capacity')
+        return dict(runtime_id=service.runtime_id, state=state, status=status, config=config,
+                    states=states, dispatch=bool(service.dispatch), fingerprint=fingerprint,
+                    paused_sources=sorted(paused_sources), global_stopped=global_stopped)
+
+    def write_snapshot(self, value, *, heartbeat=False):
+        from psycopg.errors import LockNotAvailable
         with self.connector() as db:
-            db.execute('''INSERT INTO data_runtime
-                (singleton,runtime_id,owner_pid,started_at,heartbeat_at,state,config,source_status,
-                 dispatch,status,revision,fingerprint,paused_sources,global_stopped)
-                VALUES (true,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,%s,%s,%s)
-                ON CONFLICT(singleton) DO UPDATE SET
-                 runtime_id=excluded.runtime_id,owner_pid=excluded.owner_pid,started_at=excluded.started_at,
-                 heartbeat_at=excluded.heartbeat_at,state=excluded.state,config=excluded.config,
-                 source_status=excluded.source_status,dispatch=excluded.dispatch,status=excluded.status,
-                 revision=data_runtime.revision+CASE WHEN data_runtime.fingerprint<>excluded.fingerprint THEN 1 ELSE 0 END,
-                 fingerprint=excluded.fingerprint,paused_sources=excluded.paused_sources,
-                 global_stopped=excluded.global_stopped''',
-                (service.runtime_id, os.getpid(), self.started_at, clock(), state, Jsonb(config),
-                 Jsonb(states), bool(service.dispatch), Jsonb(status), fingerprint,
-                 Jsonb(sorted(paused_sources)), global_stopped))
+            if heartbeat:
+                # Publication/control serialization uses AUTHORITY_LOCK, so a
+                # long publication cannot suppress liveness. Keep the bounded
+                # row wait for actual control writes; expiry stays eight seconds.
+                db.execute("SET lock_timeout='100ms'")
+                try:
+                    changed=db.execute('''UPDATE data_runtime SET heartbeat_at=%s,
+                        source_status=%s,status=%s,dispatch=%s,
+                        revision=revision+CASE WHEN fingerprint<>%s THEN 1 ELSE 0 END,
+                        fingerprint=%s
+                        WHERE singleton AND runtime_id=%s AND state='running'
+                        AND paused_sources=%s AND global_stopped=%s''',
+                        (clock(),Jsonb(value['states']),Jsonb(value['status']),value['dispatch'],
+                         value['fingerprint'],value['fingerprint'],value['runtime_id'],
+                         Jsonb(value['paused_sources']),value['global_stopped'])).rowcount
+                except LockNotAvailable:
+                    return False
+                return bool(changed)
+            with db.transaction():
+                db.execute('SELECT pg_advisory_xact_lock(%s)', (AUTHORITY_LOCK,))
+                self._write_authority(db, value)
+
+    def _write_authority(self, db, value):
+        db.execute('''INSERT INTO data_runtime
+            (singleton,runtime_id,owner_pid,started_at,heartbeat_at,state,config,source_status,
+             dispatch,status,revision,fingerprint,paused_sources,global_stopped)
+            VALUES (true,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,%s,%s,%s)
+            ON CONFLICT(singleton) DO UPDATE SET
+             runtime_id=excluded.runtime_id,owner_pid=excluded.owner_pid,started_at=excluded.started_at,
+             heartbeat_at=excluded.heartbeat_at,state=excluded.state,config=excluded.config,
+             source_status=excluded.source_status,dispatch=excluded.dispatch,status=excluded.status,
+             revision=data_runtime.revision+CASE WHEN data_runtime.fingerprint<>excluded.fingerprint THEN 1 ELSE 0 END,
+             fingerprint=excluded.fingerprint,paused_sources=excluded.paused_sources,
+             global_stopped=excluded.global_stopped''',
+            (value['runtime_id'], os.getpid(), self.started_at, clock(), value['state'], Jsonb(value['config']),
+             Jsonb(value['states']), value['dispatch'], Jsonb(value['status']), value['fingerprint'],
+             Jsonb(value['paused_sources']), value['global_stopped']))
 
     def read(self):
         with self.connector() as db:

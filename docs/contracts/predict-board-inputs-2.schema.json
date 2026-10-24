@@ -101,6 +101,19 @@
     },
     "observation_revision": {
       "type": "string"
+    },
+    "selection_status": {
+      "enum": [
+        "unchanged",
+        "captured"
+      ]
+    },
+    "read_token": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
     }
   },
   "additionalProperties": false

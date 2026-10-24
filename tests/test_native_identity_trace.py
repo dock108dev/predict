@@ -205,13 +205,17 @@ class IdentityTrace(unittest.TestCase):
         service.issues = [issue(service, 'kalshi', 'identity_exclusion', 'native_identity_exclusion') for _ in range(32)]
         class Database:
             def __init__(self): self.calls = []
+            def transaction(self):
+                from contextlib import nullcontext
+                return nullcontext()
             def __enter__(self): return self
             def __exit__(self, *_): return False
             def execute(self, statement, params): self.calls.append((statement, params))
         database = Database()
         RuntimeState(connector=lambda: database).write(service)
-        self.assertEqual(len(database.calls), 1)
-        stored = database.calls[0][1][8].obj
+        self.assertEqual(len(database.calls), 2)
+        self.assertIn("pg_advisory_xact_lock", database.calls[0][0])
+        stored = database.calls[1][1][8].obj
         self.assertLessEqual(len(json.dumps(stored, separators=(',', ':')).encode()), STATUS_BYTES)
         self.assertEqual(len(stored['issues']), 32)
         self.assertEqual(set(stored['metrics']), {'kalshi', 'polymarket_us'})

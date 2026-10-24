@@ -56,7 +56,7 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  assert.equal(JSON.stringify(payload),before,'all filters/rendering preserve captured originals and clocks');assert.equal(reads,0);assert.equal(dispatches,0);
  // Execute the ordinary controller: initial read only; filters/open/close do
  // not read again and cannot dispatch a provider. Background reads remain separate.
- const ids=['league','venue','market','period','attention','sort','global-totals','filtered-totals','coverage','coverage-details','cell-title','cell-content','close-coverage-details','pause-coverage','retry-coverage','filters','test-notice','flow','clear-filters'];
+ const ids=['league','venue','market','period','attention','sort','coverage-outcome','capture-evidence','global-totals','filtered-totals','coverage','coverage-details','cell-title','cell-content','close-coverage-details','pause-coverage','retry-coverage','filters','test-notice','flow','clear-filters'];
  document.body.replaceChildren();
  for(const id of ids){const node=new Element(['league','venue','market','period','attention','sort'].includes(id)?'select':id==='coverage-details'?'dialog':'div');node.id=id;if(id==='sort')node.value='scope';document.body.append(node);}
  const handlers={};global.window={addEventListener:(type,fn)=>handlers[type]=fn};
@@ -70,6 +70,12 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  document.getElementById('market').value='spread';document.getElementById('market').onchange();assert.equal(document.getElementById('cell-content').textContent,frame);
  document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(dispatches,0);
  document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
+ global.fetch=async()=>{reads++;return {ok:false,json:async()=>({reason:'authored_read_failure'})};};
+ document.getElementById('retry-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));
+ document.getElementById('league').value='NBA';document.getElementById('league').onchange();
+ assert.match(document.getElementById('flow').textContent,/failed/);
+ assert.match(document.getElementById('coverage-outcome').textContent,/freshness is unverified/);
+ assert.equal(document.getElementById('flow').dataset.state,'error');
  handlers.pagehide();
  // A source filter retains exact peer snapshots for Original Details.
  document.createTextNode=text=>{const node=new Element('span');node.textContent=text;return node;};

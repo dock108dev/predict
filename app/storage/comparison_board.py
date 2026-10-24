@@ -248,6 +248,9 @@ def calculate_current(bundle,policy, *, context, details=False, selected_quote=N
                 if q['id']==selected_quote:q['calculations']['funded_estimate']=evaluate(q,state['comparison_profiles'],at=stamp(bundle['as_of']),event=e,group=group,policy=policy,details=True)
             event['funded_pairs']=[]
         else:event['funded_pairs'],event['funded_pair_search']=assemble(event,state['comparison_profiles'],stamp(bundle['as_of']),policy=policy,details=details,selected_pair_id=selected_pair)
+    from app.comparison.bound_finance import pairs
+    for event in state['events']:
+        event['funded_pairs'].extend(pairs(event,state['comparison_profiles'],policy,existing=event['funded_pairs']))
     identity=context_identity(bundle,policy,context)
     return dict(version='predict-current-calculation-2',game_key=bundle['game_key'],input_version=bundle['input_version'],as_of=bundle['as_of'],calculated_at=utc(),state=state,policy=policy.to_dict(),engine_binding=context.engine,calculation_context=identity,representation=bundle['representation'],superseded=False)
 
@@ -270,7 +273,6 @@ def choose(bundles,game):
 
 def capture(*args,**kwargs):raise ValueError('sports_snapshot_archive_retired')
 def saved(*args,**kwargs):raise ValueError('sports_result_archive_retired')
-def view_bundle(store,bundle,policy, *, context=None):return bundle
 
 
 def catalog(bundles):

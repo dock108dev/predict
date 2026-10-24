@@ -205,7 +205,9 @@ class TicketSQL(IsolatedAsyncioTestCase):
             real,detached,meta,elapsed=scanner._capture()
             captures.append(dict(actual_revision=meta['current_rows_revision'],capture_ms=elapsed))
             self.assertTrue(all(db.closed for db in connections))
-            self.assertTrue(detached)
+            self.assertTrue(real['instruments'])
+            self.assertEqual(set(detached),{i['id'] for i in real['instruments']
+                if all(i['checks'][purpose]['state']=='ready' for purpose in ('execution','contract'))})
             # Only readiness/inputs substitute authored supported data. SQL is real.
             return deepcopy(f),deepcopy(x)
         def selected(*a,**kw):

@@ -8,11 +8,59 @@ from unittest.mock import patch
 from app.collection.background_work import BackgroundWork,resident_bytes
 
 
+class SharedOptionalThread(IsolatedAsyncioTestCase):
+    async def test_reuses_one_heap_and_keeps_cancelled_work_charged(self):
+        from app.collection.background_work import optional_thread
+        from threading import get_ident
+        work=budget();entered=Event();release=Event();threads=[]
+        def first():
+            with work.claim('estimates',100):
+                threads.append(get_ident());entered.set();release.wait(3)
+        task=asyncio.create_task(optional_thread(first))
+        while not entered.is_set():await asyncio.sleep(.005)
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await task
+        second=asyncio.create_task(optional_thread(lambda:threads.append(get_ident())))
+        await asyncio.sleep(.01)
+        self.assertEqual(work.snapshot()['active'],{'estimates':100})
+        self.assertEqual(len(threads),1)
+        with work.claim('observations',100,source=True) as source:self.assertTrue(source)
+        release.set();await second
+        self.assertEqual(threads[0],threads[1])
+        self.assertEqual(work.snapshot()['active'],{})
+
+
 def budget():
     return BackgroundWork(sampler=lambda:100,limit_bytes=1000,source_runway_bytes=200,ingress_headroom_bytes=100)
 
 
 class BackgroundAdmission(TestCase):
+    def test_resize_planning_replaces_only_its_own_reservation(self):
+        work=budget()
+        with work.claim('estimates',100):
+            self.assertEqual(work.capacity('estimates'),499)
+            self.assertEqual(work.capacity('estimates',replacing=True),599)
+            self.assertEqual(work.capacity('coverage',replacing=True),499)
+            work.resize('estimates',599)
+            self.assertEqual(work.snapshot()['reserved_bytes'],599)
+            with work.claim('coverage',1) as denied:self.assertFalse(denied)
+        self.assertEqual(work.snapshot()['reserved_bytes'],0)
+        with work.claim('estimates',100) as denied:self.assertFalse(denied)
+        with work.claim('coverage',100) as admitted:self.assertTrue(admitted)
+        self.assertFalse(work.snapshot()['active'])
+
+    def test_live_growth_remains_charged_and_cannot_overcommit(self):
+        work=budget()
+        with work.claim('scanner',100):
+            work.resize('scanner',300)
+            self.assertEqual(work.snapshot()['active']['scanner'],300)
+            work.resize('scanner',50)
+            self.assertEqual(work.snapshot()['active']['scanner'],300)
+            with self.assertRaisesRegex(ValueError,'background_memory_capacity'):
+                work.resize('scanner',600)
+            self.assertEqual(work.snapshot()['active']['scanner'],300)
+        self.assertEqual(work.snapshot()['reserved_bytes'],0)
+
     def test_coverage_can_start_during_source_work_with_reserved_source_runway(self):
         work=budget()
         with work.claim('observations',200,source=True) as source:
@@ -85,11 +133,12 @@ class BackgroundAdmission(TestCase):
         class DB:
             def __enter__(self):return self
             def __exit__(self,*args):pass
+            def transaction(self):return self
             def execute(self,*args):return self
             def fetchone(self):return dict(owned=True)
         with patch('app.storage.latest_board.connect',return_value=DB()),\
                 patch('app.storage.latest_board.capture_reservation',return_value=700) as preflight,\
-                patch('app.storage.latest_board.reconcile',side_effect=AssertionError('denied capture decoded')),\
+                patch('app.storage.latest_board._reconcile',side_effect=AssertionError('denied capture decoded')),\
                 patch('app.collection.background_work.BACKGROUND',work):
             result=owner.tick(observations_only=False)
         preflight.assert_called_once();self.assertTrue(result['deferred'])

@@ -190,6 +190,13 @@ def temporal(q, profiles, at, event):
         if instant(source)>at or instant(receipt)>at:return 'future'
         return 'expired' if (at-instant(source)).total_seconds()>limit else 'current'
     result=[clock(q['times']['source_at'],q['times']['received_at'],900)]
+    if (q['venue']=='novig' and q['source']['provider']=='the_odds_api' and
+            event is not None and event['league']=='NFL' and
+            not any(kind in values or q.get('comparison_input_status',{}).get(kind,{}).get('estimate_content')
+                    for kind in ('fee','payout'))):
+        from .modeled_winner import START, END
+        # Boolean entries are refusals, shared by board aging and stored reads.
+        result.append(not (instant(START)<=at<instant(END)))
     # Legacy reference payloads may carry only the original aggregate clocks.
     # Missing per-outcome authority remains unknown, rather than throwing during
     # aging/Stop or inventing a source/receipt timestamp.
@@ -330,6 +337,30 @@ def _refusal(q, policy, reason):
 def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_quantity=None,
              extra_funding=(), hold_returns_usd=None, state_cashflows=None,
              settlement_charge_already_withheld=False, details=False, supported_result=True, benchmark=None):
+    from .bound_finance import single, gross_quote
+    # Explicit fixed-allocation/scenario calls retain their existing owner.
+    direct = (getattr(policy,'sizing_mode',None) is not None and native_quantity is None and
+        not extra_funding and hold_returns_usd is None and state_cashflows is None and
+        not settlement_charge_already_withheld and not any(
+            q.get('comparison_input_status',{}).get(kind,{}).get('estimate_content') for kind in ('fee','payout')))
+    try:
+        result=single(q,profiles,at=at,event=event,group=group,policy=policy) if direct else None
+        if result is None and direct:
+            from .modeled_winner import single as modeled_single
+            result=modeled_single(q,profiles,at=at,event=event,group=group,policy=policy,benchmark=benchmark)
+    except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+        result=_refusal(q,policy,str(exc))
+    if result is None:
+        result=_evaluate(q,profiles,at=at,event=event,group=group,policy=policy,native_quantity=native_quantity,
+            extra_funding=extra_funding,hold_returns_usd=hold_returns_usd,state_cashflows=state_cashflows,
+            settlement_charge_already_withheld=settlement_charge_already_withheld,details=details,
+            supported_result=supported_result,benchmark=benchmark)
+    return gross_quote(result,q,profiles,at=at,event=event,group=group,policy=policy,benchmark=benchmark)
+
+
+def _evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_quantity=None,
+             extra_funding=(), hold_returns_usd=None, state_cashflows=None,
+             settlement_charge_already_withheld=False, details=False, supported_result=True, benchmark=None):
     """Size on the declared grid, or inspect an explicit fixed allocation.
 
     A fixed allocation never optimizes away a loss. All price/fill/state changes
@@ -339,9 +370,9 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
         if state_cashflows is not None and native_quantity is None:
             raise ValueError('estimate_absolute_cashflows_require_fixed_allocation')
         content = describe(q, profiles, at=at)
-        for item in content.values():
-            if not item['available']:
-                raise ValueError('; '.join(item['reasons']) or 'estimate_content_unavailable')
+        unavailable_reasons=sorted({r for item in content.values() if not item['available'] for r in item['reasons']})
+        if any(not item['available'] for item in content.values()):
+            raise ValueError('; '.join(unavailable_reasons) or 'estimate_content_unavailable')
         roles, scope_assumptions = _scope(q, event, group, content, at)
         values = references(q, profiles)
         for kind in ('identity','reference'):
@@ -578,7 +609,8 @@ def compact(result):
         'unused_cash_usd','buffer_usd','fee_adjusted_expected_profit_usd','buffered_profit_usd',
         'unbuffered_return_percent','buffered_return_percent','size_status','supported_native_quantity',
         'modeled_native_quantity','supported_capital_usd','policy_revision','evaluated_at','as_of_basis','display',
-        'supported_size_evaluation','supported_size_result','material_note','evaluation_frame')
+        'supported_size_evaluation','supported_size_result','material_note','evaluation_frame',
+        'gross_decisive_benchmark','bound_financial_inputs')
     from .financial_metrics import SUCCESSOR_FIELDS
-    fields += SUCCESSOR_FIELDS
+    fields += (*SUCCESSOR_FIELDS, "modeled_basis")
     return {k:(compact(result[k]) if k=='supported_size_result' else result[k]) for k in fields if k in result}

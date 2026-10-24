@@ -1,0 +1,3384 @@
+{
+  "evidence_class": "retained_replay_not_live",
+  "captured_at": "2026-10-22T12:34:10.009564+00:00",
+  "event": {
+    "id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+    "sport": "american_football",
+    "league": "NFL",
+    "season": "2026",
+    "stage": "regular_season",
+    "event_discriminator": "predict-occurrence-1:occurrence:9607fb32c1847a9795f6ed6b673d8249",
+    "participants": [
+      {
+        "id": "NFL:TB",
+        "name": "Tampa Bay Buccaneers",
+        "role": "away"
+      },
+      {
+        "id": "NFL:CAR",
+        "name": "Carolina Panthers",
+        "role": "home"
+      }
+    ],
+    "title": "Tampa Bay vs Carolina: Total Points",
+    "start_at": "2026-10-25T17:00:00+00:00",
+    "groups": [
+      {
+        "id": "group:fd68366cacd4df047f870cd036c245d0",
+        "market": "winner",
+        "period": "full_game",
+        "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+        "outcome_cardinality": 2,
+        "line": null,
+        "anchor_participant": null,
+        "outcomes": [
+          {
+            "id": "outcome:6cbc283e681a3a69cbdddf9716f52599",
+            "label": "Carolina Panthers",
+            "predicate": "win",
+            "participant": "NFL:CAR",
+            "signed_line": null,
+            "quotes": {
+              "novig": {
+                "state": "budget_delayed",
+                "times": {
+                  "projected_at": "2026-10-22T02:45:02.800703+00:00",
+                  "source_time_kind": "provider_book",
+                  "source_at": "2026-10-22T02:44:36Z",
+                  "received_at": "2026-10-22T02:45:02.800703+00:00"
+                },
+                "venue": "novig",
+                "source": {
+                  "provider": "the_odds_api",
+                  "binding_id": "fd73f7810b6ee9a092b6399c20d91276a6c0063a673d21dd7b235d4f45e5024b",
+                  "quote_side": "buy",
+                  "native_line": null,
+                  "native_side": "bookmaker_outcome",
+                  "binding_version": "odds-aggregate-1",
+                  "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                  "native_market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+                  "native_outcome_id": "Carolina Panthers"
+                },
+                "original": {
+                  "role": "comparison",
+                  "units": "decimal_odds",
+                  "value": "1.64",
+                  "payout": "1",
+                  "payout_units": "USD",
+                  "quantity_units": "unknown"
+                },
+                "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+                "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+                "provenance": {
+                  "mode": "current",
+                  "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                  "real_source": true
+                },
+                "provider_clocks": {
+                  "book": "2026-10-22T02:44:37Z",
+                  "market": "2026-10-22T02:44:36Z",
+                  "selected_basis": "market"
+                },
+                "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-22T02:44:37Z\", \"market\": \"2026-10-22T02:44:36Z\"}; selected basis: market; upstream delay unknown.",
+                "id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                "revision": 1,
+                "occurrence_match": {
+                  "version": "predict-occurrence-match-1",
+                  "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+                  "method": "unique_metadata",
+                  "estimated": true,
+                  "status": "matched",
+                  "members": [
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+                    },
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+                    },
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+                    },
+                    {
+                      "provider": "polymarket_us",
+                      "native_event_id": "154447",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+                    },
+                    {
+                      "provider": "the_odds_api",
+                      "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                      "provider_version": "odds-aggregate-1",
+                      "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+                    }
+                  ],
+                  "conflicts": [],
+                  "candidate_members": [
+                    [
+                      "kalshi",
+                      "KXNFLTOTAL-26OCT25TBCAR"
+                    ],
+                    [
+                      "kalshi",
+                      "KXNFLSPREAD-26OCT25TBCAR"
+                    ],
+                    [
+                      "polymarket_us",
+                      "154447"
+                    ],
+                    [
+                      "kalshi",
+                      "KXNFLGAME-26OCT25TBCAR"
+                    ]
+                  ],
+                  "original_event": {
+                    "id": "2823e986597c449ab94126cd5ed3fae9",
+                    "away": "NFL:TB",
+                    "home": "NFL:CAR",
+                    "sport": "american_football",
+                    "stage": "unverified",
+                    "title": "Tampa Bay Buccaneers at Carolina Panthers",
+                    "season": "unverified",
+                    "competition": "NFL",
+                    "participants": {
+                      "Carolina Panthers": "NFL:CAR",
+                      "Tampa Bay Buccaneers": "NFL:TB"
+                    },
+                    "scheduled_start": "2026-10-25T17:00:00Z"
+                  },
+                  "original_market_identity": {
+                    "line": null,
+                    "event": [
+                      "comparison-provider-occurrence-1",
+                      "the_odds_api",
+                      "NFL",
+                      "2823e986597c449ab94126cd5ed3fae9",
+                      "NFL:CAR",
+                      "NFL:TB"
+                    ],
+                    "rules": "aggregate-common-1",
+                    "sport": "american_football",
+                    "stage": "unverified",
+                    "family": "moneyline",
+                    "period": "full_game",
+                    "season": "unverified",
+                    "competition": "NFL",
+                    "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+                    "scheduled_start": "2026-10-25T17:00:00Z"
+                  },
+                  "original_selection": {
+                    "label": "Carolina Panthers",
+                    "predicate": "win",
+                    "participant": "NFL:CAR",
+                    "signed_line": null
+                  },
+                  "revision": "a2d4b60e691f52bff5fc35904e6409b5be26dd235f364d6514ab270df4c759e8"
+                },
+                "native_contract": {
+                  "version": "predict-native-contract-1",
+                  "source": {
+                    "provider": "the_odds_api",
+                    "binding_id": "fd73f7810b6ee9a092b6399c20d91276a6c0063a673d21dd7b235d4f45e5024b",
+                    "quote_side": "buy",
+                    "native_line": null,
+                    "native_side": "bookmaker_outcome",
+                    "binding_version": "odds-aggregate-1",
+                    "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                    "native_market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+                    "native_outcome_id": "Carolina Panthers"
+                  },
+                  "predicate": {
+                    "label": "Carolina Panthers",
+                    "predicate": "win",
+                    "participant": "NFL:CAR",
+                    "signed_line": null
+                  },
+                  "wording": {
+                    "selection": "Carolina Panthers",
+                    "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified."
+                  },
+                  "result_policy": "aggregate-common-1:h2h",
+                  "scope": {
+                    "period": "full_game",
+                    "overtime": "included"
+                  },
+                  "material_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                  "id": "native-contract:cdee023f560ebd2ec4bdbc8a48fd3314b5f9e1952d4edb8fcf220d1004063d63"
+                },
+                "comparison_input_refs": {
+                  "version": "comparison-current-dependencies-1",
+                  "refs": {
+                    "identity": "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e",
+                    "payout": null,
+                    "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                    "fee": null,
+                    "quantity": null,
+                    "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                    "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                  },
+                  "phase": "pregame"
+                },
+                "comparison_input_status": {
+                  "identity": {
+                    "status": "available_and_bound",
+                    "reason": "source_native_selection_bound"
+                  },
+                  "payout": {
+                    "status": "applicability_unresolved",
+                    "reason": "selected_instrument_payout_terms_unqualified",
+                    "evidence": []
+                  },
+                  "fee": {
+                    "status": "applicability_unresolved",
+                    "reason": "source_channel_rule_not_established",
+                    "evidence": [],
+                    "trading_scope": "standard_direct_site_retail"
+                  },
+                  "quantity": {
+                    "status": "absent",
+                    "reason": "legal_minimum_increment_tick_unavailable",
+                    "evidence": []
+                  },
+                  "reference": {
+                    "status": "available_and_bound",
+                    "reason": "selected_two_way_benchmark_originals_bound"
+                  },
+                  "probability": {
+                    "status": "available_and_bound",
+                    "reason": "probability_source_inputs_bound",
+                    "evidence": []
+                  },
+                  "buffer": {
+                    "status": "available_and_bound",
+                    "reason": "buffer_source_inputs_bound",
+                    "evidence": []
+                  },
+                  "phase": {
+                    "status": "available_and_bound",
+                    "reason": "scheduled_pregame_or_observed_phase",
+                    "evidence": []
+                  },
+                  "depth": {
+                    "status": "absent",
+                    "reason": "observed_depth_unavailable",
+                    "levels": 0,
+                    "fill_assumption": "hypothetical_one_order",
+                    "observed_fills": false
+                  }
+                },
+                "binding": {
+                  "verified": true,
+                  "evidence": [
+                    "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+                    "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+                  ],
+                  "selection": {
+                    "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                    "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+                    "outcome_id": "outcome:6cbc283e681a3a69cbdddf9716f52599",
+                    "participant": "NFL:CAR",
+                    "predicate": "win",
+                    "signed_line": null,
+                    "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                    "outcome_cardinality": 2,
+                    "result_interpretation": "normal_win"
+                  }
+                },
+                "display": {
+                  "supported": true,
+                  "american": "-156",
+                  "cents": "61.0",
+                  "equivalent": true,
+                  "reason": null,
+                  "conversion": {
+                    "original": "1.64",
+                    "units": "decimal_odds",
+                    "payout": "1",
+                    "method": "normal-win-dollar-1",
+                    "decimal_approx": "1.64",
+                    "price_approx": "0.609756097560975609756097560975609756097560975609756097560976",
+                    "precision": 60
+                  }
+                },
+                "age_seconds": 35374.009564,
+                "confirmation_age_seconds": null,
+                "comparison_age_seconds": 35374.009564,
+                "stale": true,
+                "comparison": {
+                  "eligible": false,
+                  "reasons": [
+                    "Stale or unqualified source age policy",
+                    "Source budget delayed"
+                  ],
+                  "contexts": {
+                    "kalshi": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "-2500",
+                          "denominator": "3403",
+                          "decimal_approx": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814"
+                        },
+                        "display_value": "-0.7c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "kalshi+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "-2500",
+                          "denominator": "3403",
+                          "decimal_approx": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814"
+                        },
+                        "display_value": "-0.7c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "polymarket_us+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "-2500",
+                          "denominator": "3403",
+                          "decimal_approx": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814"
+                        },
+                        "display_value": "-0.7c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "kalshi+polymarket_us+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "-2500",
+                          "denominator": "3403",
+                          "decimal_approx": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814"
+                        },
+                        "display_value": "-0.7c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    }
+                  }
+                },
+                "calculations": {
+                  "arbitrage": {
+                    "eligible": true,
+                    "value": "-0.9661835748792270531400966183574879227053140096618357487922705314009661835748792270531400966183574879",
+                    "unit": "percent",
+                    "reason": null,
+                    "basis": {
+                      "version": "normalized-gross-percent-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1,
+                          "venue": "novig",
+                          "original": {
+                            "role": "comparison",
+                            "units": "decimal_odds",
+                            "value": "1.64",
+                            "payout": "1",
+                            "payout_units": "USD",
+                            "quantity_units": "unknown"
+                          },
+                          "source_at": "2026-10-22T02:44:36Z",
+                          "received_at": "2026-10-22T02:45:02.800703+00:00"
+                        },
+                        {
+                          "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                          "quote_revision": 1,
+                          "venue": "prophetx",
+                          "original": {
+                            "role": "comparison",
+                            "units": "decimal_odds",
+                            "value": "2.5",
+                            "payout": "1",
+                            "payout_units": "USD",
+                            "quantity_units": "unknown"
+                          },
+                          "source_at": "2026-10-22T02:44:46Z",
+                          "received_at": "2026-10-22T02:45:02.800703+00:00"
+                        }
+                      ],
+                      "denominator": "1.009756097560975609756097560975609756097560975609756097560975609756097560975609756097560975609756098",
+                      "denominator_basis": "Combined acquisition cost for one $1 normal-win payout on each opposing outcome",
+                      "normal_payout": "1",
+                      "formula": "100 \u00d7 (1 \u2212 (left price + right price)) / (left price + right price)",
+                      "outcome_coverage": [
+                        {
+                          "label": "Carolina Panthers",
+                          "participant": "NFL:CAR",
+                          "predicate": "win",
+                          "line": null
+                        },
+                        {
+                          "label": "Tampa Bay Buccaneers",
+                          "participant": "NFL:TB",
+                          "predicate": "win",
+                          "line": null
+                        }
+                      ],
+                      "settlement_basis": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                      "exceptions": "Completed decisive outcome only; ties, cancellations, refunds, postponement differences and exceptional settlement excluded. Both quoted acquisitions assumed; fees excluded."
+                    },
+                    "display_value": "-0.97 %",
+                    "exact": {
+                      "numerator": "-200",
+                      "denominator": "207"
+                    },
+                    "engine_version": "settlement-portfolio-1",
+                    "scope": "Observed gross conditional Arb %; original inputs, before costs; source ages shown separately"
+                  },
+                  "ev": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "No matched current Pinnacle baseline",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "sizing": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Executable depth and quantity rules unknown",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "manual": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Enter explicit probability, costs and settlement assumptions",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "raw_difference": {
+                    "eligible": true,
+                    "value": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814",
+                    "unit": "cents",
+                    "reason": null,
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1
+                        },
+                        {
+                          "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                          "quote_revision": 1
+                        }
+                      ]
+                    },
+                    "exact": {
+                      "numerator": "-2500",
+                      "denominator": "3403",
+                      "decimal_approx": "-0.7346459006758742286218042903320599471054951513370555392300910960916838084043491037320011754334410814"
+                    },
+                    "display_value": "-0.7c",
+                    "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                  },
+                  "net_arbitrage": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Settlement, costs and depth are not established",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "net_ev": {
+                    "eligible": false,
+                    "exact": null,
+                    "value": null,
+                    "display_value": null,
+                    "reason": "legal_minimum_increment_tick_unavailable; reference_expired; selected_instrument_payout_terms_unqualified; source_channel_rule_not_established; source_price_expired",
+                    "estimate_class": "unavailable",
+                    "label": "estimated net benchmark EV",
+                    "basis": {
+                      "conditioning": null,
+                      "probability_basis": null,
+                      "size_basis": {
+                        "policy": "predict-estimate-policy-3",
+                        "policy_revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                        "ceiling_usd": "1000",
+                        "role": "taker",
+                        "portfolio": "standalone"
+                      },
+                      "fee_basis": null,
+                      "capital_denominator": null,
+                      "dependency_revisions": {
+                        "quote": 1,
+                        "refs": {
+                          "version": "comparison-current-dependencies-1",
+                          "refs": {
+                            "identity": "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e",
+                            "payout": null,
+                            "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                            "fee": null,
+                            "quantity": null,
+                            "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                            "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                          },
+                          "phase": "pregame"
+                        }
+                      }
+                    },
+                    "details": {
+                      "input_status": {
+                        "identity": {
+                          "status": "available_and_bound",
+                          "reason": "source_native_selection_bound"
+                        },
+                        "payout": {
+                          "status": "applicability_unresolved",
+                          "reason": "selected_instrument_payout_terms_unqualified",
+                          "evidence": []
+                        },
+                        "fee": {
+                          "status": "applicability_unresolved",
+                          "reason": "source_channel_rule_not_established",
+                          "evidence": [],
+                          "trading_scope": "standard_direct_site_retail"
+                        },
+                        "quantity": {
+                          "status": "absent",
+                          "reason": "legal_minimum_increment_tick_unavailable",
+                          "evidence": []
+                        },
+                        "reference": {
+                          "status": "available_and_bound",
+                          "reason": "selected_two_way_benchmark_originals_bound"
+                        },
+                        "probability": {
+                          "status": "available_and_bound",
+                          "reason": "probability_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "buffer": {
+                          "status": "available_and_bound",
+                          "reason": "buffer_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "phase": {
+                          "status": "available_and_bound",
+                          "reason": "scheduled_pregame_or_observed_phase",
+                          "evidence": []
+                        },
+                        "depth": {
+                          "status": "absent",
+                          "reason": "observed_depth_unavailable",
+                          "levels": 0,
+                          "fill_assumption": "hypothetical_one_order",
+                          "observed_fills": false
+                        }
+                      },
+                      "bound_input_kinds": [
+                        "buffer",
+                        "identity",
+                        "probability",
+                        "reference"
+                      ],
+                      "input_revisions": {
+                        "version": "comparison-current-dependencies-1",
+                        "refs": {
+                          "identity": "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e",
+                          "payout": null,
+                          "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                          "fee": null,
+                          "quantity": null,
+                          "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                          "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                        },
+                        "phase": "pregame"
+                      }
+                    },
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified"
+                  },
+                  "conservative": {
+                    "eligible": false,
+                    "exact": null,
+                    "value": null,
+                    "display_value": null,
+                    "reason": "legal_minimum_increment_tick_unavailable; reference_expired; selected_instrument_payout_terms_unqualified; source_channel_rule_not_established; source_price_expired",
+                    "estimate_class": "unavailable",
+                    "label": "estimated net benchmark EV",
+                    "basis": {
+                      "conditioning": null,
+                      "probability_basis": null,
+                      "size_basis": {
+                        "policy": "predict-estimate-policy-3",
+                        "policy_revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                        "ceiling_usd": "1000",
+                        "role": "taker",
+                        "portfolio": "standalone"
+                      },
+                      "fee_basis": null,
+                      "capital_denominator": null,
+                      "dependency_revisions": {
+                        "quote": 1,
+                        "refs": {
+                          "version": "comparison-current-dependencies-1",
+                          "refs": {
+                            "identity": "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e",
+                            "payout": null,
+                            "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                            "fee": null,
+                            "quantity": null,
+                            "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                            "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                          },
+                          "phase": "pregame"
+                        }
+                      }
+                    },
+                    "details": {
+                      "input_status": {
+                        "identity": {
+                          "status": "available_and_bound",
+                          "reason": "source_native_selection_bound"
+                        },
+                        "payout": {
+                          "status": "applicability_unresolved",
+                          "reason": "selected_instrument_payout_terms_unqualified",
+                          "evidence": []
+                        },
+                        "fee": {
+                          "status": "applicability_unresolved",
+                          "reason": "source_channel_rule_not_established",
+                          "evidence": [],
+                          "trading_scope": "standard_direct_site_retail"
+                        },
+                        "quantity": {
+                          "status": "absent",
+                          "reason": "legal_minimum_increment_tick_unavailable",
+                          "evidence": []
+                        },
+                        "reference": {
+                          "status": "available_and_bound",
+                          "reason": "selected_two_way_benchmark_originals_bound"
+                        },
+                        "probability": {
+                          "status": "available_and_bound",
+                          "reason": "probability_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "buffer": {
+                          "status": "available_and_bound",
+                          "reason": "buffer_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "phase": {
+                          "status": "available_and_bound",
+                          "reason": "scheduled_pregame_or_observed_phase",
+                          "evidence": []
+                        },
+                        "depth": {
+                          "status": "absent",
+                          "reason": "observed_depth_unavailable",
+                          "levels": 0,
+                          "fill_assumption": "hypothetical_one_order",
+                          "observed_fills": false
+                        }
+                      },
+                      "bound_input_kinds": [
+                        "buffer",
+                        "identity",
+                        "probability",
+                        "reference"
+                      ],
+                      "input_revisions": {
+                        "version": "comparison-current-dependencies-1",
+                        "refs": {
+                          "identity": "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e",
+                          "payout": null,
+                          "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                          "fee": null,
+                          "quantity": null,
+                          "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                          "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                        },
+                        "phase": "pregame"
+                      }
+                    },
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified",
+                    "sensitivity_name": "adverse_price_stress"
+                  },
+                  "direct_site_estimate": {
+                    "eligible": false,
+                    "display_value": null,
+                    "reason": "direct_site_cost_case_unbound",
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified"
+                  }
+                },
+                "comparison_dependency_reasons": [
+                  "legal_minimum_increment_tick_unavailable",
+                  "reference_expired",
+                  "selected_instrument_payout_terms_unqualified",
+                  "source_channel_rule_not_established",
+                  "source_price_expired"
+                ],
+                "comparison_temporal_revision": null
+              }
+            },
+            "alternatives": {}
+          },
+          {
+            "id": "outcome:c86ae497d1244a3a59222e03ecad7390",
+            "label": "Tampa Bay Buccaneers",
+            "predicate": "win",
+            "participant": "NFL:TB",
+            "signed_line": null,
+            "quotes": {
+              "novig": {
+                "state": "budget_delayed",
+                "times": {
+                  "projected_at": "2026-10-22T02:45:02.800703+00:00",
+                  "source_time_kind": "provider_book",
+                  "source_at": "2026-10-22T02:44:36Z",
+                  "received_at": "2026-10-22T02:45:02.800703+00:00"
+                },
+                "venue": "novig",
+                "source": {
+                  "provider": "the_odds_api",
+                  "binding_id": "7efec776b4b1c1da58d46b5c3df5c37a2b2a58d6a23cbee499783740fbb8ad07",
+                  "quote_side": "buy",
+                  "native_line": null,
+                  "native_side": "bookmaker_outcome",
+                  "binding_version": "odds-aggregate-1",
+                  "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                  "native_market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+                  "native_outcome_id": "Tampa Bay Buccaneers"
+                },
+                "original": {
+                  "role": "comparison",
+                  "units": "decimal_odds",
+                  "value": "2.5",
+                  "payout": "1",
+                  "payout_units": "USD",
+                  "quantity_units": "unknown"
+                },
+                "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+                "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+                "provenance": {
+                  "mode": "current",
+                  "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                  "real_source": true
+                },
+                "provider_clocks": {
+                  "book": "2026-10-22T02:44:37Z",
+                  "market": "2026-10-22T02:44:36Z",
+                  "selected_basis": "market"
+                },
+                "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-22T02:44:37Z\", \"market\": \"2026-10-22T02:44:36Z\"}; selected basis: market; upstream delay unknown.",
+                "id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                "revision": 1,
+                "occurrence_match": {
+                  "version": "predict-occurrence-match-1",
+                  "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+                  "method": "unique_metadata",
+                  "estimated": true,
+                  "status": "matched",
+                  "members": [
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+                    },
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+                    },
+                    {
+                      "provider": "kalshi",
+                      "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+                    },
+                    {
+                      "provider": "polymarket_us",
+                      "native_event_id": "154447",
+                      "provider_version": "manual-comparison-2",
+                      "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+                    },
+                    {
+                      "provider": "the_odds_api",
+                      "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                      "provider_version": "odds-aggregate-1",
+                      "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+                    }
+                  ],
+                  "conflicts": [],
+                  "candidate_members": [
+                    [
+                      "kalshi",
+                      "KXNFLTOTAL-26OCT25TBCAR"
+                    ],
+                    [
+                      "kalshi",
+                      "KXNFLSPREAD-26OCT25TBCAR"
+                    ],
+                    [
+                      "polymarket_us",
+                      "154447"
+                    ],
+                    [
+                      "kalshi",
+                      "KXNFLGAME-26OCT25TBCAR"
+                    ]
+                  ],
+                  "original_event": {
+                    "id": "2823e986597c449ab94126cd5ed3fae9",
+                    "away": "NFL:TB",
+                    "home": "NFL:CAR",
+                    "sport": "american_football",
+                    "stage": "unverified",
+                    "title": "Tampa Bay Buccaneers at Carolina Panthers",
+                    "season": "unverified",
+                    "competition": "NFL",
+                    "participants": {
+                      "Carolina Panthers": "NFL:CAR",
+                      "Tampa Bay Buccaneers": "NFL:TB"
+                    },
+                    "scheduled_start": "2026-10-25T17:00:00Z"
+                  },
+                  "original_market_identity": {
+                    "line": null,
+                    "event": [
+                      "comparison-provider-occurrence-1",
+                      "the_odds_api",
+                      "NFL",
+                      "2823e986597c449ab94126cd5ed3fae9",
+                      "NFL:CAR",
+                      "NFL:TB"
+                    ],
+                    "rules": "aggregate-common-1",
+                    "sport": "american_football",
+                    "stage": "unverified",
+                    "family": "moneyline",
+                    "period": "full_game",
+                    "season": "unverified",
+                    "competition": "NFL",
+                    "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+                    "scheduled_start": "2026-10-25T17:00:00Z"
+                  },
+                  "original_selection": {
+                    "label": "Tampa Bay Buccaneers",
+                    "predicate": "win",
+                    "participant": "NFL:TB",
+                    "signed_line": null
+                  },
+                  "revision": "7f92608a8c3907bd087395732d9be9c05ca1d72fe560c0b39ad7df712eaab296"
+                },
+                "native_contract": {
+                  "version": "predict-native-contract-1",
+                  "source": {
+                    "provider": "the_odds_api",
+                    "binding_id": "7efec776b4b1c1da58d46b5c3df5c37a2b2a58d6a23cbee499783740fbb8ad07",
+                    "quote_side": "buy",
+                    "native_line": null,
+                    "native_side": "bookmaker_outcome",
+                    "binding_version": "odds-aggregate-1",
+                    "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                    "native_market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+                    "native_outcome_id": "Tampa Bay Buccaneers"
+                  },
+                  "predicate": {
+                    "label": "Tampa Bay Buccaneers",
+                    "predicate": "win",
+                    "participant": "NFL:TB",
+                    "signed_line": null
+                  },
+                  "wording": {
+                    "selection": "Tampa Bay Buccaneers",
+                    "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified."
+                  },
+                  "result_policy": "aggregate-common-1:h2h",
+                  "scope": {
+                    "period": "full_game",
+                    "overtime": "included"
+                  },
+                  "material_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                  "id": "native-contract:851f62860fc2259231bb438ff4491cea512a86251d957e6c7dbd1e9d86ddd454"
+                },
+                "comparison_input_refs": {
+                  "version": "comparison-current-dependencies-1",
+                  "refs": {
+                    "identity": "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923",
+                    "payout": null,
+                    "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                    "fee": null,
+                    "quantity": null,
+                    "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                    "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                  },
+                  "phase": "pregame"
+                },
+                "comparison_input_status": {
+                  "identity": {
+                    "status": "available_and_bound",
+                    "reason": "source_native_selection_bound"
+                  },
+                  "payout": {
+                    "status": "applicability_unresolved",
+                    "reason": "selected_instrument_payout_terms_unqualified",
+                    "evidence": []
+                  },
+                  "fee": {
+                    "status": "applicability_unresolved",
+                    "reason": "source_channel_rule_not_established",
+                    "evidence": [],
+                    "trading_scope": "standard_direct_site_retail"
+                  },
+                  "quantity": {
+                    "status": "absent",
+                    "reason": "legal_minimum_increment_tick_unavailable",
+                    "evidence": []
+                  },
+                  "reference": {
+                    "status": "available_and_bound",
+                    "reason": "selected_two_way_benchmark_originals_bound"
+                  },
+                  "probability": {
+                    "status": "available_and_bound",
+                    "reason": "probability_source_inputs_bound",
+                    "evidence": []
+                  },
+                  "buffer": {
+                    "status": "available_and_bound",
+                    "reason": "buffer_source_inputs_bound",
+                    "evidence": []
+                  },
+                  "phase": {
+                    "status": "available_and_bound",
+                    "reason": "scheduled_pregame_or_observed_phase",
+                    "evidence": []
+                  },
+                  "depth": {
+                    "status": "absent",
+                    "reason": "observed_depth_unavailable",
+                    "levels": 0,
+                    "fill_assumption": "hypothetical_one_order",
+                    "observed_fills": false
+                  }
+                },
+                "binding": {
+                  "verified": true,
+                  "evidence": [
+                    "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+                    "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+                  ],
+                  "selection": {
+                    "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                    "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+                    "outcome_id": "outcome:c86ae497d1244a3a59222e03ecad7390",
+                    "participant": "NFL:TB",
+                    "predicate": "win",
+                    "signed_line": null,
+                    "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                    "outcome_cardinality": 2,
+                    "result_interpretation": "normal_win"
+                  }
+                },
+                "display": {
+                  "supported": true,
+                  "american": "+150",
+                  "cents": "40.0",
+                  "equivalent": true,
+                  "reason": null,
+                  "conversion": {
+                    "original": "2.5",
+                    "units": "decimal_odds",
+                    "payout": "1",
+                    "method": "normal-win-dollar-1",
+                    "decimal_approx": "2.5",
+                    "price_approx": "0.4",
+                    "precision": 60
+                  }
+                },
+                "age_seconds": 35374.009564,
+                "confirmation_age_seconds": null,
+                "comparison_age_seconds": 35374.009564,
+                "stale": true,
+                "comparison": {
+                  "eligible": false,
+                  "reasons": [
+                    "Stale or unqualified source age policy",
+                    "Source budget delayed"
+                  ],
+                  "contexts": {
+                    "kalshi": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us+novig": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "polymarket_us+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "kalshi+polymarket_us+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": false,
+                        "value": null,
+                        "unit": "cents",
+                        "reason": "Stale or unqualified source age policy; Source budget delayed",
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "0",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "0",
+                          "denominator": "1",
+                          "decimal_approx": "0"
+                        },
+                        "display_value": "0.0c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "kalshi+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "0",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "0",
+                          "denominator": "1",
+                          "decimal_approx": "0"
+                        },
+                        "display_value": "0.0c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "polymarket_us+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "0",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "0",
+                          "denominator": "1",
+                          "decimal_approx": "0"
+                        },
+                        "display_value": "0.0c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    },
+                    "kalshi+polymarket_us+novig+prophetx": {
+                      "cue": "",
+                      "raw_difference": {
+                        "eligible": true,
+                        "value": "0",
+                        "unit": "cents",
+                        "reason": null,
+                        "basis": {
+                          "version": "predict-current-1",
+                          "inputs": [
+                            {
+                              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                              "quote_revision": 1
+                            },
+                            {
+                              "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                              "quote_revision": 1
+                            }
+                          ]
+                        },
+                        "exact": {
+                          "numerator": "0",
+                          "denominator": "1",
+                          "decimal_approx": "0"
+                        },
+                        "display_value": "0.0c",
+                        "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                      }
+                    }
+                  }
+                },
+                "calculations": {
+                  "arbitrage": {
+                    "eligible": true,
+                    "value": "-0.2403846153846153846153846153846153846153846153846153846153846153846153846153846153846153846153846154",
+                    "unit": "percent",
+                    "reason": null,
+                    "basis": {
+                      "version": "normalized-gross-percent-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1,
+                          "venue": "novig",
+                          "original": {
+                            "role": "comparison",
+                            "units": "decimal_odds",
+                            "value": "2.5",
+                            "payout": "1",
+                            "payout_units": "USD",
+                            "quantity_units": "unknown"
+                          },
+                          "source_at": "2026-10-22T02:44:36Z",
+                          "received_at": "2026-10-22T02:45:02.800703+00:00"
+                        },
+                        {
+                          "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+                          "quote_revision": 1,
+                          "venue": "prophetx",
+                          "original": {
+                            "role": "comparison",
+                            "units": "decimal_odds",
+                            "value": "1.66",
+                            "payout": "1",
+                            "payout_units": "USD",
+                            "quantity_units": "unknown"
+                          },
+                          "source_at": "2026-10-22T02:44:46Z",
+                          "received_at": "2026-10-22T02:45:02.800703+00:00"
+                        }
+                      ],
+                      "denominator": "1.002409638554216867469879518072289156626506024096385542168674698795180722891566265060240963855421687",
+                      "denominator_basis": "Combined acquisition cost for one $1 normal-win payout on each opposing outcome",
+                      "normal_payout": "1",
+                      "formula": "100 \u00d7 (1 \u2212 (left price + right price)) / (left price + right price)",
+                      "outcome_coverage": [
+                        {
+                          "label": "Carolina Panthers",
+                          "participant": "NFL:CAR",
+                          "predicate": "win",
+                          "line": null
+                        },
+                        {
+                          "label": "Tampa Bay Buccaneers",
+                          "participant": "NFL:TB",
+                          "predicate": "win",
+                          "line": null
+                        }
+                      ],
+                      "settlement_basis": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                      "exceptions": "Completed decisive outcome only; ties, cancellations, refunds, postponement differences and exceptional settlement excluded. Both quoted acquisitions assumed; fees excluded."
+                    },
+                    "display_value": "-0.24 %",
+                    "exact": {
+                      "numerator": "-25",
+                      "denominator": "104"
+                    },
+                    "engine_version": "settlement-portfolio-1",
+                    "scope": "Observed gross conditional Arb %; original inputs, before costs; source ages shown separately"
+                  },
+                  "ev": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "No matched current Pinnacle baseline",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "sizing": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Executable depth and quantity rules unknown",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "manual": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Enter explicit probability, costs and settlement assumptions",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "raw_difference": {
+                    "eligible": true,
+                    "value": "0",
+                    "unit": "cents",
+                    "reason": null,
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1
+                        },
+                        {
+                          "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+                          "quote_revision": 1
+                        }
+                      ]
+                    },
+                    "exact": {
+                      "numerator": "0",
+                      "denominator": "1",
+                      "decimal_approx": "0"
+                    },
+                    "display_value": "0.0c",
+                    "interpretation": "Observed aggregate gross difference; delayed inputs, no current-price advantage or execution claim."
+                  },
+                  "net_arbitrage": {
+                    "eligible": false,
+                    "value": null,
+                    "unit": null,
+                    "reason": "Settlement, costs and depth are not established",
+                    "basis": {
+                      "version": "predict-current-1",
+                      "inputs": [
+                        {
+                          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+                          "quote_revision": 1
+                        }
+                      ]
+                    }
+                  },
+                  "net_ev": {
+                    "eligible": false,
+                    "exact": null,
+                    "value": null,
+                    "display_value": null,
+                    "reason": "legal_minimum_increment_tick_unavailable; reference_expired; selected_instrument_payout_terms_unqualified; source_channel_rule_not_established; source_price_expired",
+                    "estimate_class": "unavailable",
+                    "label": "estimated net benchmark EV",
+                    "basis": {
+                      "conditioning": null,
+                      "probability_basis": null,
+                      "size_basis": {
+                        "policy": "predict-estimate-policy-3",
+                        "policy_revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                        "ceiling_usd": "1000",
+                        "role": "taker",
+                        "portfolio": "standalone"
+                      },
+                      "fee_basis": null,
+                      "capital_denominator": null,
+                      "dependency_revisions": {
+                        "quote": 1,
+                        "refs": {
+                          "version": "comparison-current-dependencies-1",
+                          "refs": {
+                            "identity": "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923",
+                            "payout": null,
+                            "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                            "fee": null,
+                            "quantity": null,
+                            "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                            "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                          },
+                          "phase": "pregame"
+                        }
+                      }
+                    },
+                    "details": {
+                      "input_status": {
+                        "identity": {
+                          "status": "available_and_bound",
+                          "reason": "source_native_selection_bound"
+                        },
+                        "payout": {
+                          "status": "applicability_unresolved",
+                          "reason": "selected_instrument_payout_terms_unqualified",
+                          "evidence": []
+                        },
+                        "fee": {
+                          "status": "applicability_unresolved",
+                          "reason": "source_channel_rule_not_established",
+                          "evidence": [],
+                          "trading_scope": "standard_direct_site_retail"
+                        },
+                        "quantity": {
+                          "status": "absent",
+                          "reason": "legal_minimum_increment_tick_unavailable",
+                          "evidence": []
+                        },
+                        "reference": {
+                          "status": "available_and_bound",
+                          "reason": "selected_two_way_benchmark_originals_bound"
+                        },
+                        "probability": {
+                          "status": "available_and_bound",
+                          "reason": "probability_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "buffer": {
+                          "status": "available_and_bound",
+                          "reason": "buffer_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "phase": {
+                          "status": "available_and_bound",
+                          "reason": "scheduled_pregame_or_observed_phase",
+                          "evidence": []
+                        },
+                        "depth": {
+                          "status": "absent",
+                          "reason": "observed_depth_unavailable",
+                          "levels": 0,
+                          "fill_assumption": "hypothetical_one_order",
+                          "observed_fills": false
+                        }
+                      },
+                      "bound_input_kinds": [
+                        "buffer",
+                        "identity",
+                        "probability",
+                        "reference"
+                      ],
+                      "input_revisions": {
+                        "version": "comparison-current-dependencies-1",
+                        "refs": {
+                          "identity": "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923",
+                          "payout": null,
+                          "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                          "fee": null,
+                          "quantity": null,
+                          "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                          "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                        },
+                        "phase": "pregame"
+                      }
+                    },
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified"
+                  },
+                  "conservative": {
+                    "eligible": false,
+                    "exact": null,
+                    "value": null,
+                    "display_value": null,
+                    "reason": "legal_minimum_increment_tick_unavailable; reference_expired; selected_instrument_payout_terms_unqualified; source_channel_rule_not_established; source_price_expired",
+                    "estimate_class": "unavailable",
+                    "label": "estimated net benchmark EV",
+                    "basis": {
+                      "conditioning": null,
+                      "probability_basis": null,
+                      "size_basis": {
+                        "policy": "predict-estimate-policy-3",
+                        "policy_revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                        "ceiling_usd": "1000",
+                        "role": "taker",
+                        "portfolio": "standalone"
+                      },
+                      "fee_basis": null,
+                      "capital_denominator": null,
+                      "dependency_revisions": {
+                        "quote": 1,
+                        "refs": {
+                          "version": "comparison-current-dependencies-1",
+                          "refs": {
+                            "identity": "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923",
+                            "payout": null,
+                            "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                            "fee": null,
+                            "quantity": null,
+                            "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                            "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                          },
+                          "phase": "pregame"
+                        }
+                      }
+                    },
+                    "details": {
+                      "input_status": {
+                        "identity": {
+                          "status": "available_and_bound",
+                          "reason": "source_native_selection_bound"
+                        },
+                        "payout": {
+                          "status": "applicability_unresolved",
+                          "reason": "selected_instrument_payout_terms_unqualified",
+                          "evidence": []
+                        },
+                        "fee": {
+                          "status": "applicability_unresolved",
+                          "reason": "source_channel_rule_not_established",
+                          "evidence": [],
+                          "trading_scope": "standard_direct_site_retail"
+                        },
+                        "quantity": {
+                          "status": "absent",
+                          "reason": "legal_minimum_increment_tick_unavailable",
+                          "evidence": []
+                        },
+                        "reference": {
+                          "status": "available_and_bound",
+                          "reason": "selected_two_way_benchmark_originals_bound"
+                        },
+                        "probability": {
+                          "status": "available_and_bound",
+                          "reason": "probability_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "buffer": {
+                          "status": "available_and_bound",
+                          "reason": "buffer_source_inputs_bound",
+                          "evidence": []
+                        },
+                        "phase": {
+                          "status": "available_and_bound",
+                          "reason": "scheduled_pregame_or_observed_phase",
+                          "evidence": []
+                        },
+                        "depth": {
+                          "status": "absent",
+                          "reason": "observed_depth_unavailable",
+                          "levels": 0,
+                          "fill_assumption": "hypothetical_one_order",
+                          "observed_fills": false
+                        }
+                      },
+                      "bound_input_kinds": [
+                        "buffer",
+                        "identity",
+                        "probability",
+                        "reference"
+                      ],
+                      "input_revisions": {
+                        "version": "comparison-current-dependencies-1",
+                        "refs": {
+                          "identity": "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923",
+                          "payout": null,
+                          "reference": "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e",
+                          "fee": null,
+                          "quantity": null,
+                          "buffer": "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df",
+                          "probability": "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9"
+                        },
+                        "phase": "pregame"
+                      }
+                    },
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified",
+                    "sensitivity_name": "adverse_price_stress"
+                  },
+                  "direct_site_estimate": {
+                    "eligible": false,
+                    "display_value": null,
+                    "reason": "direct_site_cost_case_unbound",
+                    "estimate_policy": {
+                      "version": "predict-estimate-policy-3",
+                      "revision": "05b72ddd97a3f520814f6bb1d998530ac1e4b82c9875586353a9d502e94c06df",
+                      "capital_ceiling_usd": "1000",
+                      "buffer_rate": "0.005",
+                      "sizing_mode": "requested_trade",
+                      "requested_amount_usd": "1000",
+                      "benchmark_venue": "pinnacle",
+                      "benchmark_method": "proportional_no_vig"
+                    },
+                    "buffer_applied": false,
+                    "size_status": "size_unverified"
+                  }
+                },
+                "comparison_dependency_reasons": [
+                  "legal_minimum_increment_tick_unavailable",
+                  "reference_expired",
+                  "selected_instrument_payout_terms_unqualified",
+                  "source_channel_rule_not_established",
+                  "source_price_expired"
+                ],
+                "comparison_temporal_revision": null
+              }
+            },
+            "alternatives": {}
+          }
+        ],
+        "result_policy": "aggregate-common-1:h2h",
+        "display_group": {
+          "version": "predict-display-group-1",
+          "id": "display-group:406124b814ff48ff902a27706f522f7e",
+          "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "market": "winner",
+          "period": "full_game",
+          "overtime": "included",
+          "line": null
+        },
+        "comparison_pairs": [],
+        "comparison_search": {
+          "version": "comparison-net-arbs-1",
+          "limits": {
+            "candidate_pairs": 256,
+            "allocation_evaluations": 1024,
+            "returned_results": 128,
+            "points_per_leg": 128
+          },
+          "candidate_pairs": 0,
+          "theoretical_candidate_pairs": 0,
+          "allocation_evaluations": 0,
+          "returned_results": 0,
+          "truncated": false,
+          "truncation": {
+            "candidate_pairs": false,
+            "allocation_evaluations": false,
+            "returned_results": false
+          },
+          "diagnostics": [
+            {
+              "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+              "reasons": [
+                "legal_minimum_increment_tick_unavailable",
+                "selected_instrument_payout_terms_unqualified",
+                "source_channel_rule_not_established",
+                "source_price_expired",
+                "execution_source_unavailable"
+              ]
+            },
+            {
+              "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+              "reasons": [
+                "payout_source_rules_expired",
+                "quantity_source_rules_expired",
+                "source_price_expired",
+                "source_rules_expired",
+                "execution_source_unavailable"
+              ]
+            },
+            {
+              "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+              "reasons": [
+                "legal_minimum_increment_tick_unavailable",
+                "selected_instrument_payout_terms_unqualified",
+                "source_channel_rule_not_established",
+                "source_price_expired",
+                "execution_source_unavailable"
+              ]
+            },
+            {
+              "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+              "reasons": [
+                "payout_source_rules_expired",
+                "quantity_source_rules_expired",
+                "source_price_expired",
+                "source_rules_expired",
+                "execution_source_unavailable"
+              ]
+            }
+          ],
+          "policy_revision": "a84aefaf6256a09095cf51933f02a7f4077d101d99eae8cbd318ecf051283212",
+          "limitations": [
+            "best evaluated allocation only",
+            "related candidates cannot sum shared liquidity",
+            "modeled complete hypothetical fills; actual fragmentation and execution remain unqualified"
+          ],
+          "revision": "5a5e9a5d7733872131b8e240166b7608c9445bd7b66062268b339660ce41b34e"
+        }
+      }
+    ],
+    "funded_pairs": [],
+    "funded_pair_search": {
+      "version": "predict-funded-pair-1",
+      "candidate_legs": 0,
+      "candidate_pairs": 0,
+      "evaluated_pairs": 0,
+      "results": 0,
+      "maximum_pairs_per_occurrence": 256,
+      "maximum_evaluations_per_pair": 256,
+      "unexamined_legs": 0,
+      "maximum_candidate_legs": 128,
+      "truncated": false,
+      "limitation": null,
+      "allocation_consumer_probes": 0,
+      "diagnostics": [
+        {
+          "quote_id": "quote:709a437eb0f741ca37939fc3c460e4ce",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_channel_rule_not_established; payout_estimate_model_expired_or_not_effective; selected_instrument_payout_terms_unqualified"
+        },
+        {
+          "quote_id": "quote:80f35daa08765fc12566104e4a3b74b3",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:849a92ba90ab95928354cb87c2c23e8e",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_channel_rule_not_established; payout_estimate_model_expired_or_not_effective; selected_instrument_payout_terms_unqualified"
+        },
+        {
+          "quote_id": "quote:e7283b9d64b5663c2f1569e357585e83",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:49a619cf3d4bbababa167beea0858bc8",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:8d9ca89d03cc338ecd54dd2cb58fe865",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:b11cda23f228247e1028c5281c2665f3",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:9658788dbb8c212fa4506ba468e693b4",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:55a5dce9a4c7ad196819ef6736cfe760",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        },
+        {
+          "quote_id": "quote:8041e0991984a0b17d4f9315509e08ba",
+          "reason": "fee_estimate_model_expired_or_not_effective; source_rules_expired; payout_estimate_model_expired_or_not_effective; payout_source_rules_expired"
+        }
+      ],
+      "constraints_version": "ev06-meaningful-exposure-1",
+      "minimum_decisive_exposure_usd": "25",
+      "minimum_exposure_share": "0.2",
+      "sampled_search_limitation": "best evaluated legal grid; nonlinear fees/depth may permit a better unsampled allocation",
+      "percentage_denominator": "actual modeled deployed capital including refundable holds"
+    }
+  },
+  "profiles": {
+    "0508b4f3b556401319491954783b0582e7bb984fcdd7d1d233e2e99b247b837e": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "identity",
+      "payload": {
+        "version": "comparison-ordinary-source-bindings-1",
+        "selection": {
+          "schema_version": "comparison-domain-1",
+          "event": {
+            "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+            "league": "NFL",
+            "home_id": "NFL:CAR",
+            "away_id": "NFL:TB",
+            "identity_evidence": [
+              {
+                "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "family": "moneyline",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "unverified"
+          },
+          "participant_id": "NFL:CAR",
+          "signed_line": null,
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "gt",
+            "threshold": "0",
+            "subject_id": null
+          },
+          "equality": {
+            "treatment": "unknown",
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "unknown_reason": "source_equality_payout_unqualified"
+          },
+          "native": {
+            "venue": "novig",
+            "event_id": "2823e986597c449ab94126cd5ed3fae9",
+            "market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+            "instrument_id": "Carolina Panthers",
+            "side_id": "bookmaker_outcome",
+            "original_wording": "Carolina Panthers",
+            "evidence": [
+              {
+                "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "payout": null,
+          "price": {
+            "amount": "1.64",
+            "unit": "decimal_odds",
+            "payout_unit": "usd_per_usd_stake",
+            "currency": "USD"
+          },
+          "payout_unknown": {
+            "value": null,
+            "reason": "exact_rule_completion_payout_unqualified",
+            "missing_evidence": [
+              "selected instrument payout terms",
+              "completion and exceptional cashflows"
+            ]
+          }
+        },
+        "current_selection_binding": {
+          "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+          "outcome_id": "outcome:6cbc283e681a3a69cbdddf9716f52599",
+          "participant": "NFL:CAR",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "current_scope_binding": {
+          "current_event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+          "result_policy": "aggregate-common-1:h2h",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "unverified"
+          },
+          "evidence": [
+            {
+              "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+              "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "source": {
+          "provider": "the_odds_api",
+          "binding_id": "fd73f7810b6ee9a092b6399c20d91276a6c0063a673d21dd7b235d4f45e5024b",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "bookmaker_outcome",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+          "native_market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+          "native_outcome_id": "Carolina Panthers"
+        },
+        "original_clocks": {
+          "projected_at": "2026-10-22T02:45:02.800703+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-22T02:44:36Z",
+          "received_at": "2026-10-22T02:45:02.800703+00:00"
+        },
+        "provider_clocks": {
+          "book": "2026-10-22T02:44:37Z",
+          "market": "2026-10-22T02:44:36Z",
+          "selected_basis": "market"
+        },
+        "native_predicate": null,
+        "occurrence_link": null,
+        "orientation_evidence": [
+          "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+          "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+          "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+        ],
+        "occurrence_qualification": "source_local",
+        "rule_revision": null,
+        "completion_context": null,
+        "occurrence_match": {
+          "version": "predict-occurrence-match-1",
+          "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+          "method": "unique_metadata",
+          "estimated": true,
+          "status": "matched",
+          "members": [
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+            },
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+            },
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+            },
+            {
+              "provider": "polymarket_us",
+              "native_event_id": "154447",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+            },
+            {
+              "provider": "the_odds_api",
+              "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+              "provider_version": "odds-aggregate-1",
+              "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+            }
+          ],
+          "conflicts": [],
+          "candidate_members": [
+            [
+              "kalshi",
+              "KXNFLTOTAL-26OCT25TBCAR"
+            ],
+            [
+              "kalshi",
+              "KXNFLSPREAD-26OCT25TBCAR"
+            ],
+            [
+              "polymarket_us",
+              "154447"
+            ],
+            [
+              "kalshi",
+              "KXNFLGAME-26OCT25TBCAR"
+            ]
+          ],
+          "original_event": {
+            "id": "2823e986597c449ab94126cd5ed3fae9",
+            "away": "NFL:TB",
+            "home": "NFL:CAR",
+            "sport": "american_football",
+            "stage": "unverified",
+            "title": "Tampa Bay Buccaneers at Carolina Panthers",
+            "season": "unverified",
+            "competition": "NFL",
+            "participants": {
+              "Carolina Panthers": "NFL:CAR",
+              "Tampa Bay Buccaneers": "NFL:TB"
+            },
+            "scheduled_start": "2026-10-25T17:00:00Z"
+          },
+          "original_market_identity": {
+            "line": null,
+            "event": [
+              "comparison-provider-occurrence-1",
+              "the_odds_api",
+              "NFL",
+              "2823e986597c449ab94126cd5ed3fae9",
+              "NFL:CAR",
+              "NFL:TB"
+            ],
+            "rules": "aggregate-common-1",
+            "sport": "american_football",
+            "stage": "unverified",
+            "family": "moneyline",
+            "period": "full_game",
+            "season": "unverified",
+            "competition": "NFL",
+            "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+            "scheduled_start": "2026-10-25T17:00:00Z"
+          },
+          "original_selection": {
+            "label": "Carolina Panthers",
+            "predicate": "win",
+            "participant": "NFL:CAR",
+            "signed_line": null
+          },
+          "revision": "a2d4b60e691f52bff5fc35904e6409b5be26dd235f364d6514ab270df4c759e8"
+        },
+        "combined_occurrence_binding": {
+          "version": "predict-combined-occurrence-inputs-1",
+          "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "original_identity": {
+            "version": "comparison-current-dependencies-1",
+            "kind": "identity",
+            "payload": {
+              "version": "comparison-ordinary-source-bindings-1",
+              "selection": {
+                "schema_version": "comparison-domain-1",
+                "event": {
+                  "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                  "league": "NFL",
+                  "home_id": "NFL:CAR",
+                  "away_id": "NFL:TB",
+                  "identity_evidence": [
+                    {
+                      "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "evidence_class": "retained"
+                    }
+                  ]
+                },
+                "family": "moneyline",
+                "scope": {
+                  "period": "full_game",
+                  "overtime": "included",
+                  "completion": "unverified"
+                },
+                "participant_id": "NFL:CAR",
+                "signed_line": null,
+                "predicate": {
+                  "domain": "home_margin",
+                  "operator": "gt",
+                  "threshold": "0",
+                  "subject_id": null
+                },
+                "equality": {
+                  "treatment": "unknown",
+                  "payout": null,
+                  "refund_fees": "not_applicable",
+                  "unknown_reason": "source_equality_payout_unqualified"
+                },
+                "native": {
+                  "venue": "novig",
+                  "event_id": "2823e986597c449ab94126cd5ed3fae9",
+                  "market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+                  "instrument_id": "Carolina Panthers",
+                  "side_id": "bookmaker_outcome",
+                  "original_wording": "Carolina Panthers",
+                  "evidence": [
+                    {
+                      "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "evidence_class": "retained"
+                    }
+                  ]
+                },
+                "payout": null,
+                "price": {
+                  "amount": "1.64",
+                  "unit": "decimal_odds",
+                  "payout_unit": "usd_per_usd_stake",
+                  "currency": "USD"
+                },
+                "payout_unknown": {
+                  "value": null,
+                  "reason": "exact_rule_completion_payout_unqualified",
+                  "missing_evidence": [
+                    "selected instrument payout terms",
+                    "completion and exceptional cashflows"
+                  ]
+                }
+              },
+              "current_selection_binding": {
+                "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+                "outcome_id": "outcome:6cbc283e681a3a69cbdddf9716f52599",
+                "participant": "NFL:CAR",
+                "predicate": "win",
+                "signed_line": null,
+                "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                "outcome_cardinality": 2,
+                "result_interpretation": "normal_win"
+              },
+              "current_scope_binding": {
+                "current_event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                "result_policy": "aggregate-common-1:h2h",
+                "scope": {
+                  "period": "full_game",
+                  "overtime": "included",
+                  "completion": "unverified"
+                },
+                "evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "source": {
+                "provider": "the_odds_api",
+                "binding_id": "fd73f7810b6ee9a092b6399c20d91276a6c0063a673d21dd7b235d4f45e5024b",
+                "quote_side": "buy",
+                "native_line": null,
+                "native_side": "bookmaker_outcome",
+                "binding_version": "odds-aggregate-1",
+                "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                "native_market_id": "fd805c44966fde97b6f9fc4db9f2450490631bddc0c756ac515fd47e083894a2",
+                "native_outcome_id": "Carolina Panthers"
+              },
+              "original_clocks": {
+                "projected_at": "2026-10-22T02:45:02.800703+00:00",
+                "source_time_kind": "provider_book",
+                "source_at": "2026-10-22T02:44:36Z",
+                "received_at": "2026-10-22T02:45:02.800703+00:00"
+              },
+              "provider_clocks": {
+                "book": "2026-10-22T02:44:37Z",
+                "market": "2026-10-22T02:44:36Z",
+                "selected_basis": "market"
+              },
+              "native_predicate": null,
+              "occurrence_link": null,
+              "orientation_evidence": [
+                "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+                "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+              ],
+              "occurrence_qualification": "source_local",
+              "rule_revision": null,
+              "completion_context": null,
+              "occurrence_match": {
+                "version": "predict-occurrence-match-1",
+                "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+                "method": "unique_metadata",
+                "estimated": true,
+                "status": "matched",
+                "members": [
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+                  },
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+                  },
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+                  },
+                  {
+                    "provider": "polymarket_us",
+                    "native_event_id": "154447",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+                  },
+                  {
+                    "provider": "the_odds_api",
+                    "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                    "provider_version": "odds-aggregate-1",
+                    "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+                  }
+                ],
+                "conflicts": [],
+                "candidate_members": [
+                  [
+                    "kalshi",
+                    "KXNFLTOTAL-26OCT25TBCAR"
+                  ],
+                  [
+                    "kalshi",
+                    "KXNFLSPREAD-26OCT25TBCAR"
+                  ],
+                  [
+                    "polymarket_us",
+                    "154447"
+                  ],
+                  [
+                    "kalshi",
+                    "KXNFLGAME-26OCT25TBCAR"
+                  ]
+                ],
+                "original_event": {
+                  "id": "2823e986597c449ab94126cd5ed3fae9",
+                  "away": "NFL:TB",
+                  "home": "NFL:CAR",
+                  "sport": "american_football",
+                  "stage": "unverified",
+                  "title": "Tampa Bay Buccaneers at Carolina Panthers",
+                  "season": "unverified",
+                  "competition": "NFL",
+                  "participants": {
+                    "Carolina Panthers": "NFL:CAR",
+                    "Tampa Bay Buccaneers": "NFL:TB"
+                  },
+                  "scheduled_start": "2026-10-25T17:00:00Z"
+                },
+                "original_market_identity": {
+                  "line": null,
+                  "event": [
+                    "comparison-provider-occurrence-1",
+                    "the_odds_api",
+                    "NFL",
+                    "2823e986597c449ab94126cd5ed3fae9",
+                    "NFL:CAR",
+                    "NFL:TB"
+                  ],
+                  "rules": "aggregate-common-1",
+                  "sport": "american_football",
+                  "stage": "unverified",
+                  "family": "moneyline",
+                  "period": "full_game",
+                  "season": "unverified",
+                  "competition": "NFL",
+                  "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+                  "scheduled_start": "2026-10-25T17:00:00Z"
+                },
+                "original_selection": {
+                  "label": "Carolina Panthers",
+                  "predicate": "win",
+                  "participant": "NFL:CAR",
+                  "signed_line": null
+                },
+                "revision": "a2d4b60e691f52bff5fc35904e6409b5be26dd235f364d6514ab270df4c759e8"
+              }
+            },
+            "expires_at": null
+          },
+          "match_revision": "a2d4b60e691f52bff5fc35904e6409b5be26dd235f364d6514ab270df4c759e8"
+        }
+      },
+      "expires_at": null
+    },
+    "39afd65ef1dc46e936966a57620f663bdde459580a6aa5b673ac6f16e05fb62e": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "reference",
+      "payload": {
+        "version": "comparison-two-way-benchmark-1",
+        "venue": "pinnacle",
+        "method": "proportional_no_vig",
+        "source_revision": "a8eac3c874f5e009f28e5af7e98b72fc5a0f4686b898324ac011c3732a36d45e",
+        "outcomes": [
+          {
+            "selection": {
+              "schema_version": "comparison-domain-1",
+              "event": {
+                "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "league": "NFL",
+                "home_id": "NFL:CAR",
+                "away_id": "NFL:TB",
+                "identity_evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "family": "moneyline",
+              "scope": {
+                "period": "full_game",
+                "overtime": "included",
+                "completion": "conditional_decisive_win_loss"
+              },
+              "participant_id": "NFL:CAR",
+              "signed_line": null,
+              "predicate": {
+                "domain": "home_margin",
+                "operator": "gt",
+                "threshold": "0",
+                "subject_id": null
+              },
+              "equality": {
+                "treatment": "unknown",
+                "payout": null,
+                "refund_fees": "not_applicable",
+                "unknown_reason": "source_equality_payout_unqualified"
+              },
+              "native": {
+                "venue": "pinnacle",
+                "event_id": "2823e986597c449ab94126cd5ed3fae9",
+                "market_id": "declared-aggregate-h2h:ba46351b959ce4d55487c6effdf2122f7da52caa83d2a58cdf9d0c6e2104a6b1",
+                "instrument_id": "Carolina Panthers",
+                "side_id": "bookmaker_outcome",
+                "original_wording": "Carolina Panthers",
+                "evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "payout": null,
+              "price": {
+                "amount": "1.6",
+                "unit": "decimal_odds",
+                "payout_unit": "usd_per_usd_stake",
+                "currency": "USD"
+              },
+              "payout_unknown": {
+                "value": null,
+                "reason": "exact_rule_completion_payout_unqualified",
+                "missing_evidence": [
+                  "selected instrument payout terms",
+                  "completion and exceptional cashflows"
+                ]
+              }
+            },
+            "decimal_odds": "1.6",
+            "book_at": "2026-10-22T02:44:46Z",
+            "market_at": "2026-10-22T02:44:46Z",
+            "received_at": "2026-10-22T02:45:02.800703+00:00",
+            "revision": "68a8a633047836e60f237a8bf8bd9dd3c257c479ef2bc67828000da17a0e2fae"
+          },
+          {
+            "selection": {
+              "schema_version": "comparison-domain-1",
+              "event": {
+                "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "league": "NFL",
+                "home_id": "NFL:CAR",
+                "away_id": "NFL:TB",
+                "identity_evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "family": "moneyline",
+              "scope": {
+                "period": "full_game",
+                "overtime": "included",
+                "completion": "conditional_decisive_win_loss"
+              },
+              "participant_id": "NFL:TB",
+              "signed_line": null,
+              "predicate": {
+                "domain": "home_margin",
+                "operator": "lt",
+                "threshold": "0",
+                "subject_id": null
+              },
+              "equality": {
+                "treatment": "unknown",
+                "payout": null,
+                "refund_fees": "not_applicable",
+                "unknown_reason": "source_equality_payout_unqualified"
+              },
+              "native": {
+                "venue": "pinnacle",
+                "event_id": "2823e986597c449ab94126cd5ed3fae9",
+                "market_id": "declared-aggregate-h2h:ba46351b959ce4d55487c6effdf2122f7da52caa83d2a58cdf9d0c6e2104a6b1",
+                "instrument_id": "Tampa Bay Buccaneers",
+                "side_id": "bookmaker_outcome",
+                "original_wording": "Tampa Bay Buccaneers",
+                "evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "payout": null,
+              "price": {
+                "amount": "2.47",
+                "unit": "decimal_odds",
+                "payout_unit": "usd_per_usd_stake",
+                "currency": "USD"
+              },
+              "payout_unknown": {
+                "value": null,
+                "reason": "exact_rule_completion_payout_unqualified",
+                "missing_evidence": [
+                  "selected instrument payout terms",
+                  "completion and exceptional cashflows"
+                ]
+              }
+            },
+            "decimal_odds": "2.47",
+            "book_at": "2026-10-22T02:44:46Z",
+            "market_at": "2026-10-22T02:44:46Z",
+            "received_at": "2026-10-22T02:45:02.800703+00:00",
+            "revision": "0c86065954fd2a997d62374206b98300cb507b5a87525ea22e149c10bb80db82"
+          }
+        ],
+        "receipt_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+        "conditioning": "decisive_win_loss",
+        "partition_evidence_sha256": null,
+        "source_at": [
+          "2026-10-22T02:44:46Z",
+          "2026-10-22T02:44:46Z"
+        ],
+        "revision": "cb28dfa343b831cc921b4dba86556fdb71277c9723e2188f58ce7f9a8f080984"
+      },
+      "expires_at": null
+    },
+    "88997f51105c2b3c425b831488cb8c55d8be59eaa9259aa290d04ba1024363df": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "buffer",
+      "payload": {
+        "version": "comparison-cost-policy-1",
+        "ceiling_usd": "100",
+        "role": "taker",
+        "portfolio_basis": "standalone",
+        "funding_basis": "already_prefunded",
+        "denominator": "actual_deployed_capital",
+        "optional_override_surface": "Details",
+        "pregame_age_seconds": 900,
+        "live_age_seconds": 15,
+        "gross_pinnacle_baseline_age_seconds": 1800,
+        "adverse_price_per_dollar_face": "0.01",
+        "extra_arbitrary_reserve_usd": "0",
+        "contingent_funding_credit_usd": "0"
+      },
+      "expires_at": null
+    },
+    "efb7eba7deee3d8f90d9abda1e0c6e34a8137cd5d0ee542805864043b80c14f9": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "probability",
+      "payload": {
+        "version": "comparison-benchmark-basis-1",
+        "method": "pinnacle_proportional_no_vig"
+      },
+      "expires_at": null
+    },
+    "b9e7f32ab0842510fe99f4c6be70484bec5e7d518559ab4b270239c1aa0f8923": {
+      "version": "comparison-current-dependencies-1",
+      "kind": "identity",
+      "payload": {
+        "version": "comparison-ordinary-source-bindings-1",
+        "selection": {
+          "schema_version": "comparison-domain-1",
+          "event": {
+            "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+            "league": "NFL",
+            "home_id": "NFL:CAR",
+            "away_id": "NFL:TB",
+            "identity_evidence": [
+              {
+                "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "family": "moneyline",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "unverified"
+          },
+          "participant_id": "NFL:TB",
+          "signed_line": null,
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "lt",
+            "threshold": "0",
+            "subject_id": null
+          },
+          "equality": {
+            "treatment": "unknown",
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "unknown_reason": "source_equality_payout_unqualified"
+          },
+          "native": {
+            "venue": "novig",
+            "event_id": "2823e986597c449ab94126cd5ed3fae9",
+            "market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+            "instrument_id": "Tampa Bay Buccaneers",
+            "side_id": "bookmaker_outcome",
+            "original_wording": "Tampa Bay Buccaneers",
+            "evidence": [
+              {
+                "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "evidence_class": "retained"
+              }
+            ]
+          },
+          "payout": null,
+          "price": {
+            "amount": "2.5",
+            "unit": "decimal_odds",
+            "payout_unit": "usd_per_usd_stake",
+            "currency": "USD"
+          },
+          "payout_unknown": {
+            "value": null,
+            "reason": "exact_rule_completion_payout_unqualified",
+            "missing_evidence": [
+              "selected instrument payout terms",
+              "completion and exceptional cashflows"
+            ]
+          }
+        },
+        "current_selection_binding": {
+          "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+          "outcome_id": "outcome:c86ae497d1244a3a59222e03ecad7390",
+          "participant": "NFL:TB",
+          "predicate": "win",
+          "signed_line": null,
+          "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+          "outcome_cardinality": 2,
+          "result_interpretation": "normal_win"
+        },
+        "current_scope_binding": {
+          "current_event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+          "result_policy": "aggregate-common-1:h2h",
+          "scope": {
+            "period": "full_game",
+            "overtime": "included",
+            "completion": "unverified"
+          },
+          "evidence": [
+            {
+              "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+              "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+              "evidence_class": "retained"
+            }
+          ]
+        },
+        "source": {
+          "provider": "the_odds_api",
+          "binding_id": "7efec776b4b1c1da58d46b5c3df5c37a2b2a58d6a23cbee499783740fbb8ad07",
+          "quote_side": "buy",
+          "native_line": null,
+          "native_side": "bookmaker_outcome",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+          "native_market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+          "native_outcome_id": "Tampa Bay Buccaneers"
+        },
+        "original_clocks": {
+          "projected_at": "2026-10-22T02:45:02.800703+00:00",
+          "source_time_kind": "provider_book",
+          "source_at": "2026-10-22T02:44:36Z",
+          "received_at": "2026-10-22T02:45:02.800703+00:00"
+        },
+        "provider_clocks": {
+          "book": "2026-10-22T02:44:37Z",
+          "market": "2026-10-22T02:44:36Z",
+          "selected_basis": "market"
+        },
+        "native_predicate": null,
+        "occurrence_link": null,
+        "orientation_evidence": [
+          "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+          "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+          "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+        ],
+        "occurrence_qualification": "source_local",
+        "rule_revision": null,
+        "completion_context": null,
+        "occurrence_match": {
+          "version": "predict-occurrence-match-1",
+          "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+          "method": "unique_metadata",
+          "estimated": true,
+          "status": "matched",
+          "members": [
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+            },
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+            },
+            {
+              "provider": "kalshi",
+              "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+            },
+            {
+              "provider": "polymarket_us",
+              "native_event_id": "154447",
+              "provider_version": "manual-comparison-2",
+              "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+            },
+            {
+              "provider": "the_odds_api",
+              "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+              "provider_version": "odds-aggregate-1",
+              "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+            }
+          ],
+          "conflicts": [],
+          "candidate_members": [
+            [
+              "kalshi",
+              "KXNFLTOTAL-26OCT25TBCAR"
+            ],
+            [
+              "kalshi",
+              "KXNFLSPREAD-26OCT25TBCAR"
+            ],
+            [
+              "polymarket_us",
+              "154447"
+            ],
+            [
+              "kalshi",
+              "KXNFLGAME-26OCT25TBCAR"
+            ]
+          ],
+          "original_event": {
+            "id": "2823e986597c449ab94126cd5ed3fae9",
+            "away": "NFL:TB",
+            "home": "NFL:CAR",
+            "sport": "american_football",
+            "stage": "unverified",
+            "title": "Tampa Bay Buccaneers at Carolina Panthers",
+            "season": "unverified",
+            "competition": "NFL",
+            "participants": {
+              "Carolina Panthers": "NFL:CAR",
+              "Tampa Bay Buccaneers": "NFL:TB"
+            },
+            "scheduled_start": "2026-10-25T17:00:00Z"
+          },
+          "original_market_identity": {
+            "line": null,
+            "event": [
+              "comparison-provider-occurrence-1",
+              "the_odds_api",
+              "NFL",
+              "2823e986597c449ab94126cd5ed3fae9",
+              "NFL:CAR",
+              "NFL:TB"
+            ],
+            "rules": "aggregate-common-1",
+            "sport": "american_football",
+            "stage": "unverified",
+            "family": "moneyline",
+            "period": "full_game",
+            "season": "unverified",
+            "competition": "NFL",
+            "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+            "scheduled_start": "2026-10-25T17:00:00Z"
+          },
+          "original_selection": {
+            "label": "Tampa Bay Buccaneers",
+            "predicate": "win",
+            "participant": "NFL:TB",
+            "signed_line": null
+          },
+          "revision": "7f92608a8c3907bd087395732d9be9c05ca1d72fe560c0b39ad7df712eaab296"
+        },
+        "combined_occurrence_binding": {
+          "version": "predict-combined-occurrence-inputs-1",
+          "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+          "original_identity": {
+            "version": "comparison-current-dependencies-1",
+            "kind": "identity",
+            "payload": {
+              "version": "comparison-ordinary-source-bindings-1",
+              "selection": {
+                "schema_version": "comparison-domain-1",
+                "event": {
+                  "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                  "league": "NFL",
+                  "home_id": "NFL:CAR",
+                  "away_id": "NFL:TB",
+                  "identity_evidence": [
+                    {
+                      "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "evidence_class": "retained"
+                    }
+                  ]
+                },
+                "family": "moneyline",
+                "scope": {
+                  "period": "full_game",
+                  "overtime": "included",
+                  "completion": "unverified"
+                },
+                "participant_id": "NFL:TB",
+                "signed_line": null,
+                "predicate": {
+                  "domain": "home_margin",
+                  "operator": "lt",
+                  "threshold": "0",
+                  "subject_id": null
+                },
+                "equality": {
+                  "treatment": "unknown",
+                  "payout": null,
+                  "refund_fees": "not_applicable",
+                  "unknown_reason": "source_equality_payout_unqualified"
+                },
+                "native": {
+                  "venue": "novig",
+                  "event_id": "2823e986597c449ab94126cd5ed3fae9",
+                  "market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+                  "instrument_id": "Tampa Bay Buccaneers",
+                  "side_id": "bookmaker_outcome",
+                  "original_wording": "Tampa Bay Buccaneers",
+                  "evidence": [
+                    {
+                      "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                      "evidence_class": "retained"
+                    }
+                  ]
+                },
+                "payout": null,
+                "price": {
+                  "amount": "2.5",
+                  "unit": "decimal_odds",
+                  "payout_unit": "usd_per_usd_stake",
+                  "currency": "USD"
+                },
+                "payout_unknown": {
+                  "value": null,
+                  "reason": "exact_rule_completion_payout_unqualified",
+                  "missing_evidence": [
+                    "selected instrument payout terms",
+                    "completion and exceptional cashflows"
+                  ]
+                }
+              },
+              "current_selection_binding": {
+                "event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "group_id": "group:fd68366cacd4df047f870cd036c245d0",
+                "outcome_id": "outcome:c86ae497d1244a3a59222e03ecad7390",
+                "participant": "NFL:TB",
+                "predicate": "win",
+                "signed_line": null,
+                "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                "outcome_cardinality": 2,
+                "result_interpretation": "normal_win"
+              },
+              "current_scope_binding": {
+                "current_event_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "occurrence_id": "event:8a38e73ee9859af539e85b1cbf6ae9e0",
+                "period_boundary": "Provider full-game market; exceptional settlement unverified | aggregate-common-1:h2h | Scoring overtime: included",
+                "result_policy": "aggregate-common-1:h2h",
+                "scope": {
+                  "period": "full_game",
+                  "overtime": "included",
+                  "completion": "unverified"
+                },
+                "evidence": [
+                  {
+                    "ref": "ordinary-source-receipt:0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                    "evidence_class": "retained"
+                  }
+                ]
+              },
+              "source": {
+                "provider": "the_odds_api",
+                "binding_id": "7efec776b4b1c1da58d46b5c3df5c37a2b2a58d6a23cbee499783740fbb8ad07",
+                "quote_side": "buy",
+                "native_line": null,
+                "native_side": "bookmaker_outcome",
+                "binding_version": "odds-aggregate-1",
+                "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                "native_market_id": "e3dededfc3147e029cbe04c4393831bd4207d500d96cd0bcf08d42d93a2a7bbd",
+                "native_outcome_id": "Tampa Bay Buccaneers"
+              },
+              "original_clocks": {
+                "projected_at": "2026-10-22T02:45:02.800703+00:00",
+                "source_time_kind": "provider_book",
+                "source_at": "2026-10-22T02:44:36Z",
+                "received_at": "2026-10-22T02:45:02.800703+00:00"
+              },
+              "provider_clocks": {
+                "book": "2026-10-22T02:44:37Z",
+                "market": "2026-10-22T02:44:36Z",
+                "selected_basis": "market"
+              },
+              "native_predicate": null,
+              "occurrence_link": null,
+              "orientation_evidence": [
+                "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+                "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352",
+                "predict-occurrence-match-1:78073f7cc33c890dc8020d7efed3e5f2c4fef04dd1d4ddaa4bf9df15fc7c788c"
+              ],
+              "occurrence_qualification": "source_local",
+              "rule_revision": null,
+              "completion_context": null,
+              "occurrence_match": {
+                "version": "predict-occurrence-match-1",
+                "occurrence_id": "provider-game:37a3a770003cf2cacb4a2d469a9e7fc85e3a0c3ebd3c53831a39eaff9ae94a82",
+                "method": "unique_metadata",
+                "estimated": true,
+                "status": "matched",
+                "members": [
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLGAME-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "7c96e172f419c162f42f32b45366bef514f1e6e3f16f5f6e10ff3b1e8324afb0"
+                  },
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLSPREAD-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "b93fc1b27af8bd95307715297f4765482304fcbff138effe73804fc0c4efed81"
+                  },
+                  {
+                    "provider": "kalshi",
+                    "native_event_id": "KXNFLTOTAL-26OCT25TBCAR",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "7b8575e527853dee4e9854e46b31de3210cac2627d791ab58359de5e4e1f84f2"
+                  },
+                  {
+                    "provider": "polymarket_us",
+                    "native_event_id": "154447",
+                    "provider_version": "manual-comparison-2",
+                    "evidence_sha256": "72a4287c6c9c44e8c1fa9fecf5191814bfe4394fa3ebf258f66f0a9eb4cc5cc7"
+                  },
+                  {
+                    "provider": "the_odds_api",
+                    "native_event_id": "2823e986597c449ab94126cd5ed3fae9",
+                    "provider_version": "odds-aggregate-1",
+                    "evidence_sha256": "0fee97d935daf2242ffd142b1a17dd09a9ef05a7ef8fc3afd2503af7f5611352"
+                  }
+                ],
+                "conflicts": [],
+                "candidate_members": [
+                  [
+                    "kalshi",
+                    "KXNFLTOTAL-26OCT25TBCAR"
+                  ],
+                  [
+                    "kalshi",
+                    "KXNFLSPREAD-26OCT25TBCAR"
+                  ],
+                  [
+                    "polymarket_us",
+                    "154447"
+                  ],
+                  [
+                    "kalshi",
+                    "KXNFLGAME-26OCT25TBCAR"
+                  ]
+                ],
+                "original_event": {
+                  "id": "2823e986597c449ab94126cd5ed3fae9",
+                  "away": "NFL:TB",
+                  "home": "NFL:CAR",
+                  "sport": "american_football",
+                  "stage": "unverified",
+                  "title": "Tampa Bay Buccaneers at Carolina Panthers",
+                  "season": "unverified",
+                  "competition": "NFL",
+                  "participants": {
+                    "Carolina Panthers": "NFL:CAR",
+                    "Tampa Bay Buccaneers": "NFL:TB"
+                  },
+                  "scheduled_start": "2026-10-25T17:00:00Z"
+                },
+                "original_market_identity": {
+                  "line": null,
+                  "event": [
+                    "comparison-provider-occurrence-1",
+                    "the_odds_api",
+                    "NFL",
+                    "2823e986597c449ab94126cd5ed3fae9",
+                    "NFL:CAR",
+                    "NFL:TB"
+                  ],
+                  "rules": "aggregate-common-1",
+                  "sport": "american_football",
+                  "stage": "unverified",
+                  "family": "moneyline",
+                  "period": "full_game",
+                  "season": "unverified",
+                  "competition": "NFL",
+                  "outcome_set": "aa1d76d6f05506c819e9457f12672a20629ed1b707507e10364fe594a589de5e",
+                  "scheduled_start": "2026-10-25T17:00:00Z"
+                },
+                "original_selection": {
+                  "label": "Tampa Bay Buccaneers",
+                  "predicate": "win",
+                  "participant": "NFL:TB",
+                  "signed_line": null
+                },
+                "revision": "7f92608a8c3907bd087395732d9be9c05ca1d72fe560c0b39ad7df712eaab296"
+              }
+            },
+            "expires_at": null
+          },
+          "match_revision": "7f92608a8c3907bd087395732d9be9c05ca1d72fe560c0b39ad7df712eaab296"
+        }
+      },
+      "expires_at": null
+    }
+  }
+}

@@ -95,7 +95,7 @@ def create_app():
 
     async def asset(req):
         name=req.match_info['name']
-        if name not in ('scanner.js','scanner.css','stored.js','stored.css','board-client.js','board-read.js'):raise web.HTTPNotFound()
+        if name not in ('scanner.js','scanner.css','stored.js','stored.css','board-client.js','board-contract.js','board-values.js','board-read.js'):raise web.HTTPNotFound()
         return web.FileResponse(ASSETS/name)
 
     async def shell(req):

@@ -112,6 +112,9 @@ def _native_key(q):
 
 
 def _phase(record, metadata, at):
+    from .event_eligibility import assess
+    if not assess(record['event'],at.isoformat())['eligible']:
+        return 'unknown'
     value=metadata.get('phase')
     if value in ('pregame', 'live', 'unknown'):
         return value

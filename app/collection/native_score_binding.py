@@ -30,6 +30,10 @@ def bind(native, binding, *, revised=False):
     literal=re.escape(phrase)
     if revised:literal=r'wins by (?:more than|over) ' if family=='spread' else r'collectively score more (?:than )?'
     match=re.search(literal+r'(-?\d+(?:\.\d+)?) '+unit+r' in ',text)
+    if not match and revised and family=='total' and period=='full_game':
+        # Current NBA source wording uses a passive combined-game total. This
+        # literal excludes team totals and still requires the structured strike.
+        match=re.match(r'^If over (\d+(?:\.\d+)?) total '+unit+r' are scored in the ',text)
     if not match or Decimal(match[1])!=threshold:return None
     segment='in the 1st half of ' if period=='first_half' else 'in the first '+period.split('_')[1]+' innings of ' if period in ('first_3','first_5') else None
     if not revised and period=='first_3':segment=None

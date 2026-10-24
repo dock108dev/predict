@@ -38,6 +38,39 @@ def validate_wheel(names, source):
         raise ValueError("Private/check-out-only inputs entered wheel")
 
 
+def copy_source(root, source):
+    """Match a publishable checkout; ignored local catalogs cannot qualify a build."""
+    names = (
+        subprocess.check_output(
+            [
+                "git",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--",
+                "app",
+                "pyproject.toml",
+                "README.md",
+            ],
+            cwd=root,
+            timeout=15,
+        )
+        .decode()
+        .split("\0")
+    )
+    for name in set(names) - {""}:
+        path = root / name
+        if path.is_symlink():
+            raise ValueError("Package input must be an ordinary file: " + name)
+        if not path.is_file():
+            continue  # A tracked deletion is absent from the candidate.
+        destination = source / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report-dir", default="test-results/package")
@@ -52,11 +85,7 @@ def main():
         root = Path(folder)
         source = root / "source"
         source.mkdir()
-        shutil.copy2("pyproject.toml", source / "pyproject.toml")
-        shutil.copy2("README.md", source / "README.md")
-        shutil.copytree(
-            "app", source / "app", ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
-        )
+        copy_source(Path.cwd(), source)
         subprocess.run(
             [sys.executable, "-m", "build", "--no-isolation", "--outdir", str(root)],
             check=True,
@@ -121,6 +150,8 @@ async def smoke():
     from app.dashboard.current_state import CurrentStateProvider
     provider=CurrentStateProvider()
     provider.database_mode = True  # Serve ordinary SQL-mode assets without starting SQL or sources.
+    provider.closing = False
+    provider.dispatch = False  # No acquisition is permitted by this smoke provider.
     app=app_module.create_app(owner=owner, sessions={},current_provider=provider)
     runner=web.AppRunner(app)
     await runner.setup()
@@ -133,7 +164,8 @@ async def smoke():
                          '/api/scanner/summaries',
                          '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
-                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js'):
+                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
+                         '/current/assets/board-contract.js','/current/assets/board-values.js'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     await response.read()
@@ -153,7 +185,7 @@ async def smoke():
                     assert state['error']=='database_unavailable',(path,state)
                     assert state['provider_requests']==0,(path,state)
             async with client.get(url+'/') as response:
-                assert '/current/assets/scanner.js' in await response.text()
+                assert '/current/assets/stored.js' in await response.text()
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

@@ -151,7 +151,7 @@ class ReportingTests(unittest.TestCase):
             root = Path(folder)
             (root / "test-results/postgres").mkdir(parents=True)
             (root / "test-results/postgres/junit.xml").write_text(
-                "<testsuite><testcase><failure/></testcase></testsuite>"
+                '<testsuite><testcase classname="storage" name="roundtrip&lt;bad&gt;"><failure/></testcase></testsuite>'
             )
             output = io.StringIO()
             with (
@@ -168,6 +168,8 @@ class ReportingTests(unittest.TestCase):
                 self.assertEqual(module.main(), 1)
             self.assertIn("| postgres | FAIL |", output.getvalue())
             self.assertIn("failed or entirely skipped suite", output.getvalue())
+            self.assertIn("storage::roundtrip&lt;bad&gt;", output.getvalue())
+            self.assertNotIn("roundtrip<bad>", output.getvalue())
             self.assertEqual(
                 output.getvalue(),
                 (root / "test-results/postgres/summary.md").read_text(),
@@ -210,7 +212,10 @@ class ReportingTests(unittest.TestCase):
             path = root / "postgres/junit.xml"
             for contents, expected in [
                 ("<testsuite><testcase/></testsuite>", False),
-                ("<testsuite><testcase><failure/></testcase></testsuite>", True),
+                (
+                    '<testsuite><testcase classname="storage" name="roundtrip&lt;bad&gt;"><failure/></testcase></testsuite>',
+                    True,
+                ),
                 ("<testsuite><testcase><skipped/></testcase></testsuite>", True),
             ]:
                 path.write_text(contents)
@@ -301,6 +306,8 @@ class ScheduledAuditTests(unittest.TestCase):
             path.write_text(
                 json.dumps({"dependencies": [{"name": "fixture", "vulns": []}]})
             )
+            alternate = root / "quality/uv-audit.json"
+            alternate.write_text(path.read_text())
             for outcome, expected in (
                 ("success", "PASS"),
                 ("skipped", "SKIPPED"),
@@ -308,9 +315,12 @@ class ScheduledAuditTests(unittest.TestCase):
             ):
                 with self.subTest(outcome=outcome):
                     _, records, failed = module.render(
-                        {"audit": {"outcome": outcome}}, root, audit=True
+                        {name: {"outcome": outcome} for name in ("audit", "uv_audit")},
+                        root,
+                        audit=True,
                     )
-                    self.assertEqual(len(records), 1)
+                    self.assertEqual(len(records), 2)
+                    self.assertEqual(records[1]["status"], expected)
                     self.assertEqual(records[0]["status"], expected)
                     self.assertEqual(failed, outcome != "success")
             path.unlink()
@@ -319,3 +329,15 @@ class ScheduledAuditTests(unittest.TestCase):
             )
             self.assertTrue(failed)
             self.assertEqual(records[0]["status"], "FAIL")
+
+            path.write_text(
+                json.dumps({"dependencies": [{"name": "fixture", "vulns": []}]})
+            )
+            alternate.unlink()
+            _, records, failed = module.render(
+                {name: {"outcome": "success"} for name in ("audit", "uv_audit")},
+                root,
+                audit=True,
+            )
+            self.assertTrue(failed)
+            self.assertEqual(records[1]["status"], "FAIL")

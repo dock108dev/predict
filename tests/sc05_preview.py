@@ -107,7 +107,7 @@ def create_app(connector=None):
     async def stop(req):provider.dispatch=False;scanner.projection.stop();return web.json_response(dict(stopped=True))
     async def asset(req):
         name=req.match_info['name']
-        if name not in ('scanner.js','scanner.css','board-client.js','board-read.js'):raise web.HTTPNotFound()
+        if name not in ('scanner.js','scanner.css','board-client.js','board-contract.js','board-values.js','board-read.js'):raise web.HTTPNotFound()
         return web.FileResponse(ASSETS/name)
     async def shell(req):
         return web.Response(text=(ASSETS/'scanner.html').read_text().replace('<body>','<body><p style="background:#fff0cc;padding:4px 12px;font-size:12px">Authored SC05 preview · invented qualified routes · zero provider requests · no source/installed authority</p>'),content_type='text/html')

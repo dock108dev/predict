@@ -118,6 +118,30 @@ class Templates(unittest.TestCase):
         self.assertEqual(selected['quote']['calculations']['net_ev']['exact'],q['calculations']['net_ev']['exact'])
         self.assertIn('costs',selected['quote']['calculations']['net_ev']['details'])
         self.assertIn('identity',selected['comparison_inputs'])
+        from app.comparison.funded_explanation import explanation
+        funded=selected['quote']['calculations']['funded_estimate']
+        explained=funded['explanation']
+        self.assertEqual(Fraction(explained['fee_adjusted_expected_profit_usd']),
+            Fraction(funded['buffered_profit_usd'])+Fraction(funded['buffer_usd']))
+        self.assertIsNone(explained['expected_fee_refund_usd'])
+        other_basis=deepcopy(funded)
+        other_basis['bound_details']['natural']['conditioning']='completed_three_way_results_only'
+        self.assertIsNone(explanation(other_basis)['gross_decisive_value_usd'])
+        corrupt=deepcopy(funded);corrupt['buffered_profit_usd']='999999'
+        with self.assertRaisesRegex(ValueError,'does not reconcile'):explanation(corrupt)
+        # Equal net outcomes do not imply equal component amounts inside a bucket.
+        grouped=deepcopy(funded)
+        details=grouped['bound_details'];bucket=details['natural']['details']['probability_buckets'][0]
+        key=bucket['state_ids'][0];other=deepcopy(details['costs']['states'][key])
+        other['gross_return_usd']=str(Fraction(other['gross_return_usd'])+1)
+        other['settlement_fee_usd']=str(Fraction(other['settlement_fee_usd'])+1)
+        details['costs']['states']['authored-equal-net']=other
+        bucket['state_ids'].append('authored-equal-net')
+        unknown=explanation(grouped)
+        self.assertIsNone(unknown['expected_payable_charge_usd'])
+        self.assertIsNone(unknown['gross_decisive_value_usd'])
+        self.assertEqual(unknown['fee_adjusted_expected_profit_usd'],explained['fee_adjusted_expected_profit_usd'])
+
         lease=store.create(dict(schema='predict-current-1',runtime_id=original['runtime_id'],state_revision=1,
             quote_id=q['id'],quote_revision=q['revision'],client_id='authored-ev03'))
         held=deepcopy(lease['review']);changed=snapshot_inputs(store._state);changed['state_revision']=2

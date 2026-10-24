@@ -85,6 +85,26 @@ class ConservativeRecovery(unittest.TestCase):
         with self.assertRaisesRegex(QuotaStop,'authentication'):self.activate()
         self.q.pause(None);self.q.transact(lambda v,at:v.update(account_transitions=[dict(at=at)]))
         with self.assertRaisesRegex(QuotaStop,'context'):self.activate()
+    def test_server_error_without_quota_headers_preserves_exact_unknown_charge(self):
+        receipt=dict(status=502,headers=[],received_at='2026-10-03T14:00:01+00:00')
+        self.q.reconcile(self.aid,[],received_at=receipt['received_at'])
+        self.q.record_response(self.aid,receipt)
+        old=deepcopy(self.q._read()['attempts'][self.aid]);self.covered={self.aid:digest(old)}
+        self.activate()
+        self.assertEqual(self.q._read()['attempts'][self.aid],old)
+        self.assertEqual(self.q.snapshot()['held_uncertain_credits'],3)
+        self.assertIsNone(self.q.snapshot()['blocking_reason'])
+    def test_missing_headers_on_success_authentication_or_partial_headers_stay_blocked(self):
+        for status,items in ((200,[]),(401,[]),(429,[]),(502,[['x-requests-used','622']])):
+            with self.subTest(status=status,items=items):
+                self.q.reconcile(self.aid,items,received_at='2026-10-03T14:00:01+00:00')
+                self.q.transact(lambda v,at:v['attempts'][self.aid].update(
+                    response_receipt=dict(status=status,headers=items,received_at='2026-10-03T14:00:01+00:00')))
+                covered={self.aid:digest(self.q._read()['attempts'][self.aid])}
+                before=(self.q.directory/'quota.json').read_bytes()
+                with self.assertRaisesRegex(QuotaStop,'quota_missing_duplicate_or_malformed'):
+                    self.activate(covered=covered)
+                self.assertEqual((self.q.directory/'quota.json').read_bytes(),before)
     def test_duplicate_activation_and_atomic_persistence_failure(self):
         before=(self.q.directory/'quota.json').read_bytes()
         with patch('app.collection.current_quota.os.replace',side_effect=OSError('CONTROLLED')):

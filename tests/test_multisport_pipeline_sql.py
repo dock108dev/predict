@@ -193,6 +193,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
             worker.lifecycle.begin_connection(1)
             worker.queue_book(current_book(case,venue,price='0.48' if venue=='kalshi' else '0.53'))
             worker.flush_books()
+            if worker.publication_task:await asyncio.shield(worker.publication_task)
         before=own_records()
         self.assertEqual(len(before),2)
         frozen={r['quote']['source']['native_outcome_id']:dict(
@@ -271,6 +272,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         worker.lifecycle.begin_connection(2)
         worker.queue_book(current_book(case,'kalshi',price='0.67'))
         worker.flush_books()
+        if worker.publication_task:await asyncio.shield(worker.publication_task)
         recovered=own_records()
         self.assertEqual(len(recovered),2)
         for record in recovered:

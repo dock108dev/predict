@@ -31,9 +31,9 @@ class DataRuntime:
         self.failed = False
         self.selected_fees = None
 
-    def persist(self, phase='running'):
+    def prepare_status(self):
         from .background_work import BACKGROUND
-        self.service.background_work = BACKGROUND.snapshot()
+        self.service.background_work = dict(BACKGROUND.snapshot(),progress=getattr(self.board,'progress',{}))
         self.service.background_calculations = dict(
             scanner='pending' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
             scanner_error=None if self.scanner is None or not getattr(self.scanner, 'error', None) else 'background_scanner_unavailable',
@@ -41,13 +41,28 @@ class DataRuntime:
             board_error=None if self.board is None or not getattr(self.board, 'error', None) else 'background_board_unavailable',
             coverage='pending' if self.board is None else 'unavailable'
                 if getattr(self.board,'coverage_error',None) else 'pending'
-                if not getattr(self.board,'last_coverage',None) else 'running',
+                if not getattr(self.board,'last_coverage',None) or getattr(self.board,'last_coverage',{}).get('deferred') else 'running',
             coverage_error=None if self.board is None else getattr(self.board,'coverage_error',None),
             observations='pending' if self.board is None else 'unavailable'
                 if getattr(self.board,'observation_error',None) or getattr(self.board,'task',None) and self.board.task.done()
                 else 'stopped' if getattr(self.board,'closed',False) else 'running')
+
+    def persist(self, phase='running'):
+        self.prepare_status()
         self.state.write(self.service, state=phase, paused_sources=self.paused_sources,
                          global_stopped=self.global_stopped)
+
+    async def persist_control(self, phase='running'):
+        self.prepare_status()
+        value=self.state.snapshot(self.service,state=phase,paused_sources=self.paused_sources,
+                                  global_stopped=self.global_stopped)
+        await asyncio.to_thread(self.state.write_snapshot,value)
+
+    async def persist_heartbeat(self):
+        self.prepare_status()
+        value=self.state.snapshot(self.service, paused_sources=self.paused_sources,
+                                  global_stopped=self.global_stopped)
+        return await asyncio.to_thread(self.state.write_snapshot, value, heartbeat=True)
 
     async def start(self):
         # Acquire before migration, epoch access, source construction or dispatch.
@@ -72,9 +87,9 @@ class DataRuntime:
             if self.global_stopped and self.service.digest is None:
                 self.service.digest = candidate()[0]
             self.store = CurrentStore(self.service)
-            self.persist('starting')
+            await self.persist_control('starting')
             await self.service.start(self.store)
-            self.persist()
+            await self.persist_control()
             if self.scanner_factory is None:
                 from app.dashboard.scanner_api import Scanner
                 self.scanner = Scanner(self.service, connector=self.connector, durable=True)
@@ -137,8 +152,8 @@ class DataRuntime:
                         setattr(worker, error_field, 'background_calculation_worker_stopped')
                         if error_field != 'coverage_error':
                             worker.error = 'background_calculation_worker_stopped'
-                self.resource_guard()
-                self.persist()
+                await asyncio.to_thread(self.resource_guard)
+                await self.persist_heartbeat()
                 try:
                     await asyncio.wait_for(self.stopping.wait(), 1)
                 except TimeoutError:
@@ -147,7 +162,7 @@ class DataRuntime:
             failure(__name__, 'data_runtime_heartbeat', exc)
             self.failed = True
             self.stopping.set()
-            try:self.persist('stopping')
+            try:await self.persist_control('stopping')
             except Exception as secondary:
                 failure(__name__, 'data_runtime_failure_status', secondary)
             await self.service.close()
@@ -159,17 +174,17 @@ class DataRuntime:
                     if command['runtime_id'] != self.service.runtime_id:
                         raise SelectionError(409, 'runtime_conflict', 'The owning runtime changed before this control was applied.')
                     details = await self.control(command['action'], command['body'])
-                    self.persist()
+                    await self.persist_control()
                     result = dict(acknowledged=True, runtime_id=self.service.runtime_id,
                                   action=command['action'])
                     if isinstance(details,dict):result.update(details)
                     await asyncio.to_thread(self.state.acknowledge, command['id'], result)
                 except SelectionError as exc:
-                    self.persist()
+                    await self.persist_control()
                     await asyncio.to_thread(self.state.acknowledge, command['id'], exc.body, failed=True)
                 except Exception as exc:
                     failure(__name__, 'data_runtime_control', exc)
-                    self.persist()
+                    await self.persist_control()
                     await asyncio.to_thread(self.state.acknowledge, command['id'],
                         dict(error='data_runtime_control_failed', reason='The owning data runtime could not safely finish this control.'), failed=True)
             await asyncio.sleep(.1)
@@ -177,7 +192,9 @@ class DataRuntime:
     async def control(self, action, body):
         if action == 'stop' and body == {}:
             self.global_stopped = self.service.globally_stopped = True
-            self.persist('stopping')
+            self.service.dispatch=False
+            self.service.ingress.revoke()
+            await self.persist_control('stopping')
             finite_clean = await self.withdraw(self.service.close())
             if not finite_clean:
                 raise SelectionError(409,'cleanup_safety_unresolved','The finite operation has not confirmed transport cleanup.')
@@ -185,11 +202,12 @@ class DataRuntime:
             venue = body['source']
             if venue not in self.service.workers:
                 raise SelectionError(409, 'source_not_running', 'This source is not running.')
+            self.service.workers[venue].closed=True
+            if hasattr(self.service.workers[venue],'lifecycle'):self.service.workers[venue].lifecycle.revoke()
+            self.service.ingress.revoke(venue)
             self.paused_sources.add(venue)
             self.service.paused_sources = set(self.paused_sources)
-            for affected in ('novig', 'prophetx') if venue == 'the_odds_api' else (venue,):
-                self.service.source_state(affected, 'stopped', 'Source Stop acknowledged; safe transport cleanup is in progress.')
-            self.persist()
+            await self.persist_control()
             finite_clean = await self.withdraw(self.service.pause(venue), finite=venue=='kalshi')
             if not finite_clean:
                 raise SelectionError(409,'cleanup_safety_unresolved','The finite operation has not confirmed transport cleanup.')
@@ -263,7 +281,7 @@ class DataRuntime:
                 await attempt('data_runtime_task_close', join)
         if self.service is not None:
             if self.store:
-                await attempt('data_runtime_stopping_status', lambda: self.persist('stopping'))
+                await attempt('data_runtime_stopping_status', lambda: self.persist_control('stopping'))
             # Revoke dispatch even when startup failed before store construction.
             await attempt('data_runtime_source_close', self.service.close)
             if getattr(self.service, 'cleanup_errors', None):self.failed = True
@@ -271,7 +289,7 @@ class DataRuntime:
                 if worker:await attempt('data_runtime_worker_close', worker.close)
             if self.store:
                 await attempt('data_runtime_store_close', self.store.close)
-                await attempt('data_runtime_terminal_status', lambda: self.persist('failed' if self.failed else 'stopped'))
+                await attempt('data_runtime_terminal_status', lambda: self.persist_control('failed' if self.failed else 'stopped'))
         if self.lock_connection is not None:
             await attempt('data_runtime_database_close', self.lock_connection.close)
             self.lock_connection = None

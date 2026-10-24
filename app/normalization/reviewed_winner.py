@@ -115,6 +115,17 @@ def assessment(config,rows,cutoff,game):
     return dict(assessed_at=game['assessment_at'],observation_cutoff=cutoff,profiles=profiles,sources=sources,pmus_coefficient=coefficient,note=f'Reviewed {league} normal-winner conditional calculation; exceptional probabilities unknown.',**{key+'_fee_bases':fee_bases})
 
 
+def line_inventory_gaps(config, inventory):
+    """Apply the shared identity checks only to listed spread/total events."""
+    selected = {}
+    for source, catalog in inventory.items():
+        ids = {market['event_id'] for market in catalog.get('markets', [])
+               if market.get('market_type') in ('spread', 'total')}
+        selected[source] = dict(events=[event for event in catalog.get('events', [])
+                                       if event['id'] in ids])
+    return inventory_gaps(config, selected)
+
+
 def inventory_gaps(config,inventory):
     league=config.LEAGUE; event_key=config.event_key
     gaps={};buckets={};native={};slots={}

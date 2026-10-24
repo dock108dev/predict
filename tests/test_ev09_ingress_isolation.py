@@ -17,14 +17,18 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
         database = object()
         rows = Mock()
         with patch('app.collection.current_database.connect', return_value=nullcontext(database)), \
-                patch('app.storage.current_rows.CurrentRowStore', return_value=rows) as store:
+                patch('app.storage.current_rows.CurrentRowStore', return_value=rows) as store, \
+                patch('app.collection.current_database.sql_usage', return_value=123) as usage:
             self.assertEqual(pipe.tick(), 0)
+            usage.assert_called_once_with(database)
+            self.assertEqual(pipe.used, 123)
             store.assert_called_once_with(database)
             rows.expire.assert_called_once_with()
             self.assertEqual(rows.method_calls, [('expire', (), {})])
             pipe.closed = True
             pipe.tick()
             store.assert_called_once_with(database)
+            usage.assert_called_once_with(database)
 
     async def test_close_joins_active_expiry_without_starting_more_work(self):
         pipe = self.pipeline()

@@ -45,6 +45,10 @@ def validate(root):
         raise ValueError("Unexplained Python omission")
     browser = json.loads((root / "scripts/ci/browser-suites.json").read_text())
     active, deferred = set(browser["required"]), set(browser["deferred"])
+    if len(active) != len(browser["required"]) or any(
+        not reason.strip() for reason in browser["deferred"].values()
+    ):
+        raise ValueError("Duplicate client input or unexplained client omission")
     actual_browser = {p.name for p in (root / "tests").glob("test_*.cjs")}
     if active & deferred or active | deferred != actual_browser or not active:
         raise ValueError("Browser test classification drift")

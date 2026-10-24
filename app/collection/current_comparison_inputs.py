@@ -34,7 +34,7 @@ def evidence(q):
 
 
 def selection(event, group, outcome, q):
-    """Source-local selection with unknown rule scope; no opponent substitution."""
+    """Keep emitted native scoring/equality facts; completion stays unqualified."""
     roles={p['role']:p['id'] for p in event['participants']}
     participant=outcome['participant']
     family={'winner':'moneyline','spread':'spread','total':'total'}[group['market']]
@@ -53,10 +53,20 @@ def selection(event, group, outcome, q):
                   unknown_reason='source_equality_payout_unqualified')
     if Fraction(threshold).denominator==2:
         equality.update(treatment='not_feasible',unknown_reason=None)
+    overtime='unknown'
+    if q.get('native_contract') is not None:
+        from app.comparison.estimated_content import native_contract
+        contract=native_contract(q,group)
+        if contract['scope']['period']==group['period']:
+            overtime=contract['scope']['overtime']
+        from app.comparison.same_outcome import quote_identity
+        descriptor=contract.get('same_outcome',{})
+        if quote_identity(q,group,event)['supported'] and descriptor.get('equality') is not None:
+            equality=deepcopy(descriptor['equality'])
     value=dict(schema_version='comparison-domain-1',
         event=dict(occurrence_id=event['id'],league=event['league'],home_id=roles['home'],
                    away_id=roles['away'],identity_evidence=[ev]), family=family,
-        scope=dict(period=group['period'],overtime='unknown',completion='unverified'),
+        scope=dict(period=group['period'],overtime=overtime,completion='unverified'),
         participant_id=participant,signed_line=signed,
         predicate=dict(domain=domain,operator=operator,threshold=threshold,subject_id=None),
         equality=equality,native=dict(venue=q['venue'],event_id=native['native_event_id'],

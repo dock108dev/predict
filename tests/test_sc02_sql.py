@@ -61,7 +61,9 @@ class SQL(IsolatedAsyncioTestCase):
                 self.assertEqual(frame,read(db,config=DEFAULT,authority=GRANT,at=AT))
             self.assertEqual(db.info.transaction_status,psycopg.pq.TransactionStatus.IDLE)
             self.assertEqual(frame['provider_requests'],0)
-            self.assertTrue(inputs);self.assertTrue(metadata['current_rows_revision'])
+            self.assertTrue(frame['instruments'])
+            self.assertEqual(set(inputs),{i['id'] for i in frame['instruments'] if all(i['checks'][purpose]['state']=='ready' for purpose in ('execution','contract'))})
+            self.assertTrue(metadata['current_rows_revision'])
             self.assertFalse(frame['evaluation']['no_qualifying_opportunities'])
 
     async def test_true_post_commit_revision_and_nested_rollback_unknown(self):

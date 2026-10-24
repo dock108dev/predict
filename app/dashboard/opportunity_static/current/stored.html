@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Predict · Odds, EV and Arbs</title>
+<title>Predict · Opportunities and prices</title>
 <link rel="stylesheet" href="/current/assets/stored.css">
 <script type="module" src="/current/assets/stored.js"></script>
 </head>
 <body><a class="skip-link" href="#content">Skip to comparisons</a><main>
 <header>
 <a class="brand" href="/" aria-label="Predict home">Predict<span class="brand-mark" aria-hidden="true">↗</span></a>
-<nav aria-label="Views"><a href="/">Scanner</a><a href="/odds">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/current/coverage">Coverage</a><a href="/admin">Admin</a></nav>
+<nav aria-label="Views"><a href="/">Dashboard</a><a href="/odds">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/current/coverage">Coverage</a><a href="/admin">Admin</a></nav>
 <button id="stop" class="secondary">Stop collection</button>
 </header>
-<div class="heading"><div class="view-title"><h1 id="title">Odds</h1><span class="scope">Multi-sport · Winner, spread &amp; total</span></div>
+<div class="heading"><div class="view-title"><h1 id="title">Odds</h1></div>
 <div class="heading-actions"><form id="settings" aria-label="Calculation settings">
 <details class="calculation-settings"><summary><span><strong>Details settings</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
 <label>Details amount ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
@@ -23,11 +23,11 @@
 <div class="board-controls">
 <section class="selection slate-selection" aria-label="Game filters">
 <label>League<select id="league"><option value="">All leagues</option></select></label>
-<label>Source<select id="venue"><option value="">All sources</option></select></label>
+<label>Venue<select id="venue"><option value="">All sources</option></select></label>
 <label>Market<select id="family"><option value="">All markets</option></select></label>
 <label>Period<select id="period"><option value="">All periods</option></select></label>
 <label>Games<select id="game"><option value="">All games</option></select></label>
-<label class="search-field">Search games or teams<input id="search" type="search" placeholder="Team, game or league" autocomplete="off"></label>
+<label class="search-field">Search<input id="search" type="search" placeholder="Team or game" autocomplete="off"></label>
 <label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Return / margin %</option><option value="start">Start time</option></select></label>
 </section>
 
@@ -36,5 +36,5 @@
 <div id="filters" hidden role="group" aria-label="Results"><button data-filter="positive" aria-pressed="true">Positive</button><button data-filter="all" aria-pressed="false">All comparisons</button><button data-filter="hedges" aria-pressed="false" hidden>Rule-sensitive hedges</button></div>
 <section id="content" aria-label="Comparison results" tabindex="-1"></section>
 <dialog id="details" aria-labelledby="details-title"><div class="dialog-head"><h2 id="details-title">Details</h2><button id="close-details">Close</button></div><div id="detail-content"></div></dialog>
-<footer>Source observations and modeled estimates have separate availability. Actual fills, fees and venue grades remain unknown. <a href="/admin">Source status &amp; collection</a></footer>
+<footer><span>Read-only comparisons · No trades placed</span><div><a href="/admin">Source status</a><a href="/scanner">Advanced Scanner</a></div></footer>
 </main></body></html>

@@ -32,7 +32,9 @@ def dependency(q,profiles):
     return hashed(dict(quote={k:q.get(k) for k in fields},profiles=references(q,profiles)))
 
 
-def freshness(q, profiles, event, at, *, financial=True):
+def freshness(q, profiles, event, at, *, financial=True, bound_financial=False):
+    from app.comparison.event_eligibility import assess as eligibility, quote_event
+    event_reason=eligibility(quote_event(q,event),at.isoformat())['reason']
     # Observation age is owned by original source/receipt clocks. Optional
     # profiles and reference/link applicability only govern derived metrics.
     if not financial:
@@ -41,9 +43,11 @@ def freshness(q, profiles, event, at, *, financial=True):
         reasons=list(clocks['reasons']);times=q['times'];source=times.get('source_at');receipt=times.get('received_at')
         if q['state'] not in ('available','budget_delayed'):reasons.append('source_unavailable')
         if at>=stamp(event['start_at']):reasons.append('pregame_ended')
+        if event_reason:reasons.append(event_reason)
         return dict(status='historical' if reasons else 'current',reasons=sorted(set(reasons)),source_at=source,received_at=receipt,
             currentness_basis=clocks['basis'],currentness_at=clocks['clock_at'],current_until=clocks['current_until'])
     reasons=list(link_reasons(q,at))
+    if event_reason:reasons.append(event_reason)
     if q['state'] not in ('available','budget_delayed'):reasons.append('source_unavailable')
     checks=temporal(q,profiles,at,event)
     if checks[0]!='current':reasons.append('source_'+checks[0])
@@ -54,7 +58,7 @@ def freshness(q, profiles, event, at, *, financial=True):
             values=references(q,profiles)
             for kind,p in values.items():
                 if p is not None and p.get('expires_at') is not None and at>=stamp(p['expires_at']):reasons.append(kind+'_profile_expired')
-            for c in describe(q,profiles,at=at).values():
+            for c in ({} if bound_financial else describe(q,profiles,at=at)).values():
                 if not c['available']:reasons.extend(c['reasons'])
         except (ValueError,KeyError,TypeError) as exc:reasons.append(str(exc))
     return dict(status='historical' if reasons else 'current',reasons=sorted(set(reasons)),
@@ -67,7 +71,7 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
     newest={quote_key(q):dependency(q,current['comparison_profiles']) for _,_,q in entries(current)} if current else None
     changed={};statuses=[]
     for e,g,q in entries(v['state']):
-        r=q['calculations']['funded_estimate'];f=freshness(q,p,e,instant)
+        r=q['calculations']['funded_estimate'];f=freshness(q,p,e,instant,bound_financial=r.get('bound_financial_inputs',False))
         changed[q['id']]=newest is not None and newest.get(q['id'])!=dependency(q,p)
         if changed[q['id']]:f['reasons'].append('dependency_changed_or_removed')
         if stopped:f['reasons'].append('updates_stopped')
@@ -79,6 +83,9 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
             r['ranking_eligible']=False
             for key in ('main_positive_eligible','positive_rule_sensitive_eligible'):
                 if 'classification' in r:r['classification'][key]=False
+        gross=r.get('gross_decisive_benchmark',{})
+        if gross.get('available') and f['reasons']:
+            gross['state']='numeric_last_known'
         r['availability']=result_availability(r)
         statuses.append(f['status'])
     byid={q['id']:q for _,_,q in entries(v['state'])}
@@ -127,6 +134,12 @@ def price(q):
     result['common_odds']={key:value for key,value in result['common_odds'].items()
         if key in ('supported','american','cents','equivalent','reason','meaning')}
     if 'occurrence_match' in result:
+        original=q['occurrence_match']['original_event']
+        # Keep the small source lifecycle witness when the full occurrence
+        # audit is compacted. HTTP aging must not lose a source postponement.
+        from app.comparison.event_eligibility import witness
+        lifecycle=witness(original)
+        if lifecycle:result['event_lifecycle']=lifecycle
         # Full native/event copies remain available in exact local Original
         # inputs. Repeating them for every line would consume the board budget.
         result['occurrence_match']={key:deepcopy(value) for key,value in q['occurrence_match'].items()
@@ -198,7 +211,7 @@ def age_gross_comparison(value, at, *, source_states=None, publication_reasons=(
             and q.get('quote_revision')==item.get('quote_revision') and q.get('original')==item.get('original')
             and q.get('times')==item.get('times')),None)
         if original:
-            for field in ('source_state','source_health','captured_source_state','captured_source_health','freshness_policy','event','book_confirmation'):
+            for field in ('source_state','source_health','captured_source_state','captured_source_health','freshness_policy','event','event_lifecycle','book_confirmation'):
                 if field not in item and field in original:item[field]=deepcopy(original[field])
         if not item.get('event') or 'source_state' not in item:
             item['freshness']=dict(status='historical',reasons=['comparison_input_metadata_unknown'],**item.get('times',{}))
@@ -331,7 +344,15 @@ def gross_comparison(q,group,event,state,at,*,source_states=None,include_display
                 native_contract_summary={key:deepcopy(value) for key,value in item.get('native_contract',{}).items()
                     if key in ('wording','same_outcome')},same_outcome=same_outcome(item,input_group,event),market={key:deepcopy(input_group[key]) for key in ('market','period','period_boundary','line')},source_state=item['state'],source_health=deepcopy((source_states or {}).get(item['venue'],dict(state=item['state'],reason_code=None,reason=None))),
                 freshness_policy=deepcopy(item.get('freshness_policy',{})),event={key:deepcopy(event[key]) for key in ('id','title','start_at','sport','league')})
+            # Prices and frozen inputs have the same health contract. Capturing
+            # an entire runtime audit here prevents exact same-board references
+            # from sharing an otherwise identical original source frame.
+            captured['source_health']={key:deepcopy(captured['source_health'].get(key))
+                for key in ('state','reason_code','reason')}
             if item.get('book_confirmation'):captured['book_confirmation']=deepcopy(item['book_confirmation'])
+            from app.comparison.event_eligibility import witness, quote_event
+            lifecycle=witness(quote_event(item,event))
+            if lifecycle:captured['event_lifecycle']=lifecycle
         age_gross_comparison(result,at,source_states=source_states)
     return result
 
@@ -360,7 +381,7 @@ def details_id(value, *, quote=None,pair=None):
 
 def financial_row(r):
     fields=('revision','dependency_revision','model_available','ranking_eligible','reasons','eligibility_reasons',
-        'availability','evaluation_frame','financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
+        'modeled_basis','availability','evaluation_frame','gross_decisive_benchmark','financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
     result={k:deepcopy(r[k]) for k in fields if k in r}
     b=r.get('benchmark',{})
     result['benchmark_identity']={k:deepcopy(b.get(k)) for k in ('venue','method','revision','available','reason','conditioning')}
@@ -368,7 +389,7 @@ def financial_row(r):
     metrics=result.get('financial_metrics')
     capital=r.get('deployed_capital_usd')
     if metrics is not None:
-        for source,target in (('conditional_net_ev_usd','conditional_net_return_percent'),('conditional_buffered_ev_usd','conditional_buffered_return_percent'),('buffered_complete_modeled_minimum_usd','buffered_complete_minimum_return_percent')):
+        for source,target in (('buffered_conditional_known_state_minimum_usd','buffered_conditional_known_state_minimum_return_percent'),('conditional_net_ev_usd','conditional_net_return_percent'),('conditional_buffered_ev_usd','conditional_buffered_return_percent'),('buffered_decisive_opposing_margin_usd','buffered_decisive_return_percent'),('buffered_complete_modeled_minimum_usd','buffered_complete_minimum_return_percent')):
             x=metrics.get(source);metrics[target]=None if x is None or not capital or F(capital)==0 else str(100*F(x)/F(capital))
     return result
 
@@ -377,30 +398,176 @@ def comparison_input(row):
     """Detached original frame from the same captured board, never newer rows."""
     fields=('quote_id','quote_revision','venue','native_side','selection','original','times','source','native_contract_id',
         'native_contract_summary','same_outcome','market','source_state','source_health','captured_source_state',
-        'captured_source_health','freshness_policy','event','freshness','observation_display','book_confirmation')
+        'captured_source_health','freshness_policy','event','event_lifecycle','freshness','observation_display','book_confirmation')
     return {key:deepcopy(row[key]) for key in fields if key in row}
+
+
+def expand_price_fields(board):
+    pool=board.pop('financial_field_pool',None)
+    if pool is not None:
+        if not isinstance(pool,list):raise ValueError('financial_field_reference_conflict')
+        for row in board['rows']:
+            refs=row.pop('financial_field_refs',{})
+            if not isinstance(refs,dict):raise ValueError('financial_field_reference_conflict')
+            for key,index in refs.items():
+                if key in row or type(index) is not int or not 0<=index<len(pool):
+                    raise ValueError('financial_field_reference_conflict')
+                row[key]=deepcopy(pool[index])
+    names=board.pop('price_key_pool',None)
+    if names is not None:
+        if not isinstance(names,list) or any(not isinstance(k,str) for k in names) or len(set(names))!=len(names):
+            raise ValueError('comparison_field_reference_conflict')
+        def key(value):
+            if not isinstance(value,str) or not value.isascii() or not value.isdigit() or str(int(value))!=value or not 0<=int(value)<len(names):
+                raise ValueError('comparison_field_reference_conflict')
+            return names[int(value)]
+        for row in board['prices']:
+            restored={}
+            for name,value in row.items():
+                decoded=name if name in ('quote_id','quote_revision','field_refs') else key(name)
+                if decoded in restored:raise ValueError('comparison_field_reference_conflict')
+                restored[decoded]={key(k):v for k,v in value.items()} if name=='field_refs' else value
+            row.clear();row.update(restored)
+    pool=board.pop('price_field_pool',None)
+    if pool is None:pool=[]
+    if not isinstance(pool,list):raise ValueError('comparison_field_reference_conflict')
+    for row in board['prices']:
+        refs=row.pop('field_refs',{})
+        if not isinstance(refs,dict):raise ValueError('comparison_field_reference_conflict')
+        for key,index in refs.items():
+            if key in row or type(index) is not int or not 0<=index<len(pool):
+                raise ValueError('comparison_field_reference_conflict')
+            row[key]=deepcopy(pool[index])
+    has_object_keys='price_object_keys' in board
+    names=board.pop('price_object_keys',None)
+    if has_object_keys:
+        if (not isinstance(names,list) or any(not isinstance(k,str) or k in ('__proto__','constructor','prototype') for k in names)
+                or len(set(names))!=len(names)):
+            raise ValueError('comparison_object_key_conflict')
+        for row in board['prices']:
+            for field,value in list(row.items()):
+                if not isinstance(value,dict):continue
+                restored={}
+                for key,item in value.items():
+                    if (not isinstance(key,str) or not key.isascii() or not key.isdigit()
+                            or str(int(key))!=key or not 0<=int(key)<len(names)):
+                        raise ValueError('comparison_object_key_conflict')
+                    restored[names[int(key)]]=item
+                row[field]=restored
+    return board
+
+
+def compact_price_objects(board):
+    """One-level name dictionary for unique price objects; values stay literal."""
+    if len(encoded(board))<480*1024:return board
+    objects=[value for row in board['prices'] for key,value in row.items()
+             if key!='field_refs' and isinstance(value,dict)]
+    objects.extend(value for value in board.get('price_field_pool',[]) if isinstance(value,dict))
+    names=sorted({key for value in objects for key in value})
+    if not names:return board
+    indexes={key:str(index) for index,key in enumerate(names)}
+    # Use only when the complete dictionary pays for itself. Nothing is dropped.
+    saving=sum(len(encoded(key))-len(encoded(indexes[key])) for value in objects for key in value)
+    if saving<=len(encoded(names))+len('price_object_keys')+4:return board
+    renamed_objects=[{indexes[key]:item for key,item in value.items()} for value in objects]
+    for value,renamed in zip(objects,renamed_objects):
+        value.clear();value.update(renamed)
+    board['price_object_keys']=names
+    return board
+
+
+def compact_price_fields(board):
+    """Lossless sharing within one board, including exact frozen prices and clocks."""
+    expand_price_fields(board)
+    if len(encoded(board))<450*1024:return board
+    # Wide financial boards repeat complete availability/model frames. Share
+    # frozen values only; every row and its exact identities remain present.
+    if board.get('view') in ('ev','arbs'):
+        counts={};values={};excluded={'quote_id','quote_revision','price_ref','pair_id'}
+        for row in board['rows']:
+            for key,value in row.items():
+                body=encoded(value)
+                if key in excluded or len(body)<64:continue
+                counts[body]=counts.get(body,0)+1;values[body]=value
+        pool=[deepcopy(values[b]) for b in sorted(counts) if counts[b]>1]
+        indexes={encoded(value):i for i,value in enumerate(pool)}
+        if pool:
+            for row in board['rows']:
+                refs={}
+                for key,value in list(row.items()):
+                    if key not in excluded and encoded(value) in indexes:
+                        refs[key]=indexes[encoded(value)];del row[key]
+                if refs:row['financial_field_refs']=refs
+            board['financial_field_pool']=pool
+    excluded={'quote_id','quote_revision'}
+    counts={};values={}
+    for row in board['prices']:
+        for key,value in row.items():
+            if key in excluded:continue
+            body=encoded(value)
+            if len(body)<32:continue
+            counts[body]=counts.get(body,0)+1;values[body]=value
+    pool=[];indexes={}
+    for body in sorted(counts):
+        if counts[body]>1:indexes[body]=len(pool);pool.append(deepcopy(values[body]))
+    if not pool:return compact_price_objects(board)
+    for row in board['prices']:
+        refs={}
+        for key,value in list(row.items()):
+            if key not in excluded and encoded(value) in indexes:
+                refs[key]=indexes[encoded(value)];del row[key]
+        if refs:row['field_refs']=refs
+    board['price_field_pool']=pool
+    # Repeated field names themselves dominate wide 100+ price boards. Keep
+    # identity keys literal; encode remaining names through one exact dictionary.
+    if len(encoded(board))>500*1024:
+        literal={'quote_id','quote_revision','field_refs'}
+        names=sorted({k for q in board['prices'] for k in q if k not in literal} |
+                     {k for q in board['prices'] for k in q.get('field_refs',{})})
+        ids={name:str(i) for i,name in enumerate(names)}
+        for row in board['prices']:
+            renamed={k if k in literal else ids[k]:
+                     ({ids[n]:v for n,v in value.items()} if k=='field_refs' else value)
+                     for k,value in row.items()}
+            row.clear();row.update(renamed)
+        board['price_key_pool']=names
+    return compact_price_objects(board)
 
 
 def expand_odds(board):
     """Resolve a bounded wire frame locally; no ingress or provider reads."""
+    expand_price_fields(board)
     if board.get('comparison_input_encoding')!='same-board-price-refs-1':return board
     prices={q['quote_id']:q for q in board['prices']}
+    if len(prices)!=len(board['prices']):raise ValueError('comparison_captured_reference_conflict')
     for original in prices.values():
         original.setdefault('captured_source_health',deepcopy(original.get('source_health',{})))
         summary=original.get('native_contract_summary',{})
         refs=summary.get('wording_refs')
         if refs is not None:
-            try:summary['wording']={label:deepcopy(board['native_wordings'][index]) for label,index in refs}
-            except (KeyError,IndexError,TypeError):raise ValueError('comparison_wording_reference_conflict')
+            try:
+                pool=board['native_wordings']
+                if not isinstance(pool,list) or not isinstance(refs,list):raise ValueError
+                wording={}
+                for label,index in refs:
+                    if not isinstance(label,str) or label in wording or type(index) is not int or not 0<=index<len(pool):raise ValueError
+                    wording[label]=deepcopy(pool[index])
+                summary.setdefault('wording',wording)
+            except (KeyError,IndexError,TypeError,ValueError):raise ValueError('comparison_wording_reference_conflict') from None
     for row in board['prices']:
         for field in ('gross_comparison','current_comparison'):
             value=row.get(field,{})
             if not value.get('available'):continue
             if value.get('inputs'):
+                refs=value.get('input_refs')
+                if refs is not None and (not isinstance(refs,list) or len(refs)!=2 or len(value['inputs'])!=2 or
+                        any(not isinstance(ref,dict) or ref.get('quote_id')!=item.get('quote_id') or ref.get('quote_revision')!=item.get('quote_revision')
+                            for ref,item in zip(refs,value['inputs']))):raise ValueError('comparison_captured_reference_conflict')
                 value.pop('input_refs',None)
                 continue
             refs=value.get('input_refs',[])
-            if len(refs)!=2 or any(ref['quote_id'] not in prices or prices[ref['quote_id']]['quote_revision']!=ref['quote_revision'] for ref in refs):
+            if (not isinstance(refs,list) or len(refs)!=2 or any(not isinstance(ref,dict) or
+                    ref.get('quote_id') not in prices or prices[ref['quote_id']]['quote_revision']!=ref.get('quote_revision') for ref in refs)):
                 raise ValueError('comparison_captured_reference_conflict')
             value['inputs']=[comparison_input(prices[ref['quote_id']]) for ref in refs]
             value.pop('input_refs',None)
@@ -410,6 +577,7 @@ def expand_odds(board):
 def compact_odds(board):
     """Store exact frozen source inputs once within this bounded board frame."""
     if board.get('view')!='odds':return board
+    expand_price_fields(board)
     prices={q['quote_id']:q for q in board['prices']}
     for row in board['prices']:
         snapshot=row.get('native_contract_summary',{})
@@ -429,6 +597,8 @@ def compact_odds(board):
             row.pop('captured_source_health',None)
         for field in ('gross_comparison','current_comparison'):
             value=row.get(field,{})
+            if field=='gross_comparison':value['meaning']='Peer minus selected, before costs'
+            else:value.pop('meaning',None)  # The gross tooltip owns this shared explanation.
             if not value.get('available'):continue
             refs=[];compatible=True
             for item in value.get('inputs',[]):
@@ -436,7 +606,9 @@ def compact_odds(board):
                 # Older self-contained captures may differ from a price still
                 # retained beside them. Keep those immutable inputs; a reference
                 # may share only the exact scalar frame and capture assessment.
-                if original is None or any(original.get(key)!=item.get(key) for key in ('quote_revision','original','times','selection')):
+                if original is None or any(original.get(key)!=item.get(key) for key in
+                        ('quote_revision','original','times','selection','venue','native_side','source','native_contract_id',
+                         'source_state','source_health','event_lifecycle','freshness','observation_display')):
                     compatible=False;break
                 for key,default in (('captured_source_state','source_state'),('captured_source_health','source_health')):
                     if item.get(key,item.get(default))!=original.get(key,original.get(default)):
@@ -448,11 +620,9 @@ def compact_odds(board):
                 continue
             if refs:
                 value['input_refs']=refs;value['inputs']=[]
-                if field=='gross_comparison':value['meaning']='Peer minus selected, before costs'
-                else:value.pop('meaning',None)  # Only the gross tooltip renders this shared explanation.
     board['comparison_input_encoding']='same-board-price-refs-1'
     board['rows']=odds_rows(board['prices'])
-    return board
+    return compact_price_fields(board)
 
 
 def odds_rows(prices):
@@ -476,6 +646,7 @@ def compact_financial(board):
 
 
 def expand_financial(board):
+    expand_price_fields(board)
     prices={q['quote_id']:q for q in board['prices']}
     for row in board['rows']:
         for item in row.get('legs',[row]):
@@ -543,10 +714,17 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
                     c=row.get('classification',{})
                     if filter=='all' or filter=='positive' and c.get('main_positive_eligible') or filter=='hedges' and c.get('positive_rule_sensitive_eligible'):out['rows'].append(row)
             for event in saved['state']['events']:
+                if event.get('funded_pair_search',{}).get('truncated') or any(g.get('comparison_search',{}).get('truncated') for g in event['groups']):
+                    availability_items.append((bundle['game_key'],[],dict(state='not_evaluated',reason_codes=['pair_search_incomplete'],current_opportunity_eligible=False)))
                 for diagnostic in event.get('funded_pair_search',{}).get('diagnostics',[]):
-                    state,codes=refusal([diagnostic['reason']])
-                    availability_items.append((bundle['game_key'],[],dict(state=state,reason_codes=codes,current_opportunity_eligible=False)))
+                    refusal_state,codes=refusal([diagnostic['reason']])
+                    availability_items.append((bundle['game_key'],[],dict(state=refusal_state,reason_codes=codes,current_opportunity_eligible=False)))
+    if saved is None and view!='odds':
+        availability_items=[(bundle['game_key'],[q['venue']],dict(state='not_evaluated',reason_codes=['background_estimates_pending'],current_opportunity_eligible=False)) for _,_,q in entries(state)]
     out['availability']=summary(availability_items,evaluated=saved is not None and view!='odds',failures=failures)
+    out['availability']['input_scope']=dict(game_key=bundle['game_key'],input_version=bundle['input_version'],
+        observations=len(out['prices']),leagues=sorted({e['league'] for e,_,_ in entries(state)}),
+        markets=sorted({g['market'] for _,g,_ in entries(state)}))
     if not out['rows']:out['empty_reason']='Calculation pending' if saved is None else 'No positive EV found' if view=='ev' and filter=='positive' else 'No estimated arbitrage found' if view=='arbs' and filter=='positive' else 'No eligible comparisons found'
     if not out['rows'] and view!='odds':
         outcome=out['availability']['outcome']
@@ -556,12 +734,21 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
                 'last_known_only':'Only last-known estimates available; see All comparisons'}[outcome]
     if view=='odds':compact_odds(out)
     else:compact_financial(out)
+    compact_price_fields(out)
     if len(encoded(out))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
     return out
 
 
 def details(value, *, quote=None,pair=None,at=None,current=None,stopped=False,history=False):
     v=age(value,at=at,current=current,stopped=stopped,history=history)
+    # Details carries domain quotes, while the shared clock renderer consumes
+    # price observation fields. Derive the same source-only assessment as Odds;
+    # missing financial inputs must not mislabel a current original price.
+    for event,_,original in entries(v['state']):
+        observed=age_observation(price(original),event,stamp(v['read_at']),
+            publication_reasons=['updates_stopped'] if stopped else [])
+        for field in ('source_state','source_health','observation_display'):
+            original[field]=observed[field]
     rows={q['id']:q for _,_,q in entries(v['state'])}
     if bool(quote)==bool(pair):raise ValueError('one_exact_saved_selection_required')
     q=rows.get(quote);p=next((p for e in v['state']['events'] for p in e.get('funded_pairs',[]) if p['id']==pair),None)

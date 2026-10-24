@@ -76,14 +76,19 @@ def payload_row(cursor):
     """Decode saved payload columns at the shared read boundary, never in SQL."""
     from psycopg.rows import dict_row
     make_row = dict_row(cursor)
+    # A row factory belongs to its cursor. Capturing that cursor here creates
+    # a cycle which retains its entire libpq result until cyclic GC, even after
+    # fetchall and connection close. Keep only the decoder's connection/type.
+    from psycopg import ServerCursor
+    connection=cursor.connection
+    server_cursor=isinstance(cursor,ServerCursor)
     def row(values):
         result = make_row(values)
         value = result.get('payload')
         if isinstance(value, str) and value.startswith(PREFIXES+DOMAIN_PREFIXES):
-            from psycopg import ServerCursor
-            if value.startswith(DOMAIN_PREFIXES) and isinstance(cursor,ServerCursor):
+            if value.startswith(DOMAIN_PREFIXES) and server_cursor:
                 raise ValueError('saved_domain_server_cursor_requires_explicit_decode')
-            result['payload'] = decode_for_connection(value,cursor.connection) if value.startswith(DOMAIN_PREFIXES) else decode(value)
+            result['payload'] = decode_for_connection(value,connection) if value.startswith(DOMAIN_PREFIXES) else decode(value)
         return result
     return row
 

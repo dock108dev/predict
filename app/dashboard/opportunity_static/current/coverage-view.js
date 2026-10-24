@@ -43,11 +43,12 @@ export function renderCoverageMatrix(root, data, filters, onOpen) {
     heading.append(coverageElement('strong', row.sport), coverageElement('span', sourceName(row.source)));
     if (row.cells.some(cell => cell.role === 'reference')) heading.append(coverageElement('span', 'Reference', 'role-label'));
     else if (row.cells.some(cell => cell.provider && cell.provider !== row.source)) heading.append(coverageElement('span', 'Aggregate supplied', 'role-label'));
+    else heading.append(coverageElement('span', 'Native acquisition', 'role-label'));
     row.cells.sort((a, b) => (families.indexOf(coverageFamily(a)) < 0 ? 3 : families.indexOf(coverageFamily(a))) - (families.indexOf(coverageFamily(b)) < 0 ? 3 : families.indexOf(coverageFamily(b))) || coverageFamily(a).localeCompare(coverageFamily(b)) || coveragePeriod(a).localeCompare(coveragePeriod(b)));
     for (const cell of row.cells) {
       const button = coverageElement('button', undefined, 'coverage-cell'), ratio = cellRatio(cell), state = coverageCellState(cell), cause = mainCause(cell);
       button.type = 'button'; button.dataset.cellId = cell.id;
-      button.dataset.state = ['Implemented', 'Reference only'].includes(state) ? ratio.value !== null && ratio.value < 0.5 ? 'gap' : 'measured' : 'inactive';
+      button.dataset.state = ['Implemented', 'Current supported comparisons', 'Reference only'].includes(state) ? ratio.value !== null && ratio.value < 0.5 ? 'gap' : 'measured' : 'inactive';
       button.setAttribute('aria-label', 'Inspect ' + cellTitle(cell) + ' · ' + state + ' · ' + coveragePercent(ratio) + ' supported comparison coverage');
       const arrow = coverageElement('span', '↗', 'cell-open'); arrow.setAttribute('aria-hidden', 'true');
       button.append(coverageElement('span', familyName(cell), 'cell-family'), coverageElement('span', coverageWords(coveragePeriod(cell)), 'cell-period'), coverageElement('strong', coveragePercent(ratio), 'cell-ratio'), coverageElement('span', coverageCount(ratio.numerator) + ' with a supported peer / ' + coverageCount(ratio.denominator) + ' retained comparison-source observations', 'cell-denominator'), coverageElement('span', state, 'cell-status'));
@@ -127,3 +128,35 @@ export function renderCoverageDetails(root, cell, data) {
   diagnostic(root, 'Configuration, capability & publication diagnostics', {id:cell.id, configured:cell.configured, configuration_state:cell.configuration_state, capability:cell.capability, provider:cell.provider, role:cell.role, captured_at:data.captured_at, publication_at:data.publication_at, publication_state:data.publication_state});
 }
 export {cellTitle};
+
+// Display ages from original capture clocks; reads and filters never reset them.
+export function coverageAge(value, now = Date.now()) {
+  const at = Date.parse(value);
+  if (!Number.isFinite(at)) return 'Unknown';
+  if (at > now) return 'Clock is in the future';
+  const seconds = Math.floor((now - at) / 1000);
+  if (seconds < 60) return seconds + 's ago';
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor(seconds % 3600 / 60) + 'm ago';
+  return Math.floor(seconds / 86400) + 'd ago';
+}
+export function renderCoverageOutcome(root, data, filters, readError = '') {
+  if (!root) return;
+  const cells = filterCoverageCells(data?.cells || [], filters), counts = data ? filteredCoverageTotals(data, cells) : {};
+  const scope = [filters.league || 'All sports', filters.venue ? sourceName(filters.venue) : 'All sources', filters.market ? coverageFamilies[filters.market] || filters.market : 'All families', filters.period ? coverageWords(filters.period) : 'All periods'];
+  if (filters.attention) scope.push('Investigate: ' + coverageWords(filters.attention));
+  root.replaceChildren(coverageElement('strong', scope.join(' · ')));
+  const failure = data?.publication_error;
+  const stale = data?.publication_state === 'stale' || (data?.captured_at && Date.now() - Date.parse(data.captured_at) > 15000);
+  const title = readError ? 'Coverage read failed' : failure ? 'Coverage publication failed' : !data || !data.captured_at ? 'Coverage pending · counts unmeasured' : stale ? 'Last-known coverage capture' : 'Captured comparison availability';
+  root.append(coverageElement('h2', title));
+  root.append(coverageElement('p', 'Capture ' + coverageAge(data?.captured_at) + ' · Publication ' + coverageAge(data?.publication_at), 'capture-age'));
+  if (readError || failure) root.append(coverageElement('p', (data?.captured_at ? 'Prior captured measurements remain inspectable; freshness is unverified. ' : 'Current coverage cannot be established. ') + (failure || readError)));
+  else if (stale) root.append(coverageElement('p', 'These measurements describe the older capture. A successful page read does not verify current comparisons.'));
+  else if (!data?.captured_at) root.append(coverageElement('p', 'No measured capture is available. Pending publication is not zero coverage.'));
+  if (data?.captured_at) root.append(coverageElement('p', coverageCount(counts.current_comparison_observations) + ' observations with current supported peers at capture · ' + coverageCount(counts.retained_comparison_observations) + ' retained purchase-source observations. Reference observations excluded.'));
+  const states = new Map();
+  for (const cell of cells) {const state = coverageCellState(cell); states.set(state, (states.get(state) || 0) + 1);}
+  if (states.size) root.append(coverageElement('p', [...states].map(([state,n]) => n + ' ' + state.toLowerCase() + ' cells').join(' · '), 'scope-states'));
+  const link = coverageElement('a', 'Browse captured prices →'); link.href = '/odds'; root.append(link);
+}

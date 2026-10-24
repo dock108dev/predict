@@ -50,6 +50,10 @@
     "test_multisport_market_ui.cjs",
     "test_selected_input_reads.cjs",
     "test_broad_coverage_client.cjs",
-    "test_shared_current_comparisons.cjs"
+    "test_shared_current_comparisons.cjs",
+    "test_opportunity_dashboard.cjs",
+    "test_publication_encoding.cjs",
+    "test_sc07_u2.cjs",
+    "test_sc07_u3.cjs"
   ]
 }

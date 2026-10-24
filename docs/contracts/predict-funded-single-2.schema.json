@@ -151,7 +151,10 @@
       ]
     },
     "evaluator_version": {
-      "const": "predict-funded-single-2"
+      "enum": [
+        "predict-funded-single-2",
+        "predict-bound-finance-1"
+      ]
     },
     "model_available": {
       "type": "boolean"
@@ -832,6 +835,30 @@
         },
         "actual_charges": {
           "type": "null"
+        },
+        "conditional_known_state_minimum_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_conditional_known_state_minimum_usd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
+        },
+        "buffered_conditional_known_state_minimum_return_percent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+|/[1-9][0-9]*)?$",
+          "maxLength": 256
         }
       },
       "required": [
@@ -911,7 +938,8 @@
             "missing_reference",
             "unsupported_inputs",
             "calculation_failed",
-            "not_evaluated"
+            "not_evaluated",
+            "missing_inputs"
           ]
         },
         "reason_codes": {
@@ -928,11 +956,11 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 4
+          "maxItems": 5
         },
         "metrics": {
           "type": "object",
-          "maxProperties": 4,
+          "maxProperties": 5,
           "additionalProperties": {
             "type": "object",
             "required": [
@@ -947,7 +975,8 @@
                   "missing_reference",
                   "unsupported_inputs",
                   "calculation_failed",
-                  "not_evaluated"
+                  "not_evaluated",
+                  "missing_inputs"
                 ]
               },
               "reason_codes": {
@@ -964,6 +993,9 @@
           }
         },
         "current_opportunity_eligible": {
+          "type": "boolean"
+        },
+        "evaluation_complete": {
           "type": "boolean"
         }
       },
@@ -1025,6 +1057,21 @@
         }
       },
       "additionalProperties": false
+    },
+    "bound_financial_inputs": {
+      "type": "boolean"
+    },
+    "bound_details": {
+      "type": "object"
+    },
+    "gross_decisive_benchmark": {
+      "type": "object"
+    },
+    "modeled_basis": {
+      "type": "object"
+    },
+    "modeled_expected_void_receipt_usd": {
+      "type": "string"
     }
   },
   "additionalProperties": false

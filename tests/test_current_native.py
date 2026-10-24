@@ -40,6 +40,29 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_transient_rediscovery_failure_keeps_owned_healthy_socket(self):
+        from app.collection.odds_http import BudgetStop
+        states=[];calls=0
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+            source_state=lambda *a:states.append(a),issue=lambda *a:None,observation=lambda *a:None)
+        worker=NativeWorker(service,'polymarket_us')
+        worker.stream_task=asyncio.create_task(asyncio.Event().wait())
+        worker.socket=SimpleNamespace(close=AsyncMock())
+        socket=worker.socket;stream=worker.stream_task
+        client=SimpleNamespace(budget=SimpleNamespace(requests=1,bytes=0),aclose=AsyncMock())
+        async def discover():
+            nonlocal calls
+            calls+=1
+            self.assertFalse(stream.done());socket.close.assert_not_awaited()
+            if calls<3:raise BudgetStop('native_http_timeout')
+            worker.closed=True
+        with patch('app.collection.current_native.load_credentials',return_value={'polymarket_us':Credential()}),patch('app.collection.current_native.REST',return_value=client),patch('app.collection.current_native.native_payload.configure_transport'),patch.object(worker,'discover',side_effect=discover),patch('app.collection.current_native.asyncio.sleep',new=AsyncMock()) as sleep:
+            await worker.run()
+        self.assertEqual(calls,3);self.assertFalse(worker.failed)
+        self.assertEqual(worker.metrics['discovery_deferrals'],2)
+        self.assertEqual([c.args[0] for c in sleep.await_args_list[:2]],[2,5])
+        self.assertEqual(states,[]);self.assertTrue(stream.cancelled());socket.close.assert_awaited_once()
+
     async def test_transient_http_timeout_retries_without_terminal_source_failure(self):
         states=[]
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,

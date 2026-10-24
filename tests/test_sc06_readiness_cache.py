@@ -343,6 +343,8 @@ class ReadinessCaptureReuse(TestCase):
         class Database:
             def transaction(self): return nullcontext()
             def execute(self, statement, args=()):
+                if 'current_source_status' in statement:
+                    return Rows([dict(venue=k,state=v) for k,v in owner.status.items()])
                 if 'current_native_book' in statement:
                     return Rows([owner.book])
                 if 'SELECT c.id' in statement:
@@ -375,6 +377,10 @@ class ReadinessCaptureReuse(TestCase):
 
         self.db = Database()
         self.stack = ExitStack(); self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch('app.storage.scanner_publication.current_revision',
+            side_effect=lambda db:dict(epoch=self.epoch,current_rows_revision='unchanged-whole-frame-revision')))
+        self.stack.enter_context(patch('app.storage.latest_board.capture_batches',return_value=[['authored-event']]))
+        self.stack.enter_context(patch('app.storage.current_games.engine_binding',side_effect=lambda:self.engine))
         self.stack.enter_context(patch.object(scanner_readiness, 'ReadContext', Context))
         self.stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'capture', side_effect=lambda **kwargs: self.frame()))
         self.instrument = self.stack.enter_context(patch.object(scanner_readiness, 'instrument', wraps=instrument))

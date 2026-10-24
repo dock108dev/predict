@@ -107,9 +107,16 @@ def start_role(role, folder, args):
         else:
             raise SystemExit('No free loopback port')
         command += ['app.dashboard.opportunity_board', '--port', str(port)]
+    environment={'PATH': '/usr/bin:/bin', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'}
+    # The installed 3.14 build provides mimalloc. Repeated large read graphs
+    # otherwise strand resident arenas despite releasing their Python objects.
+    # Preserve compatibility with builds that do not include this allocator.
+    allocator=subprocess.check_output([command[0], '-c',
+        'import sysconfig; print(int(bool(sysconfig.get_config_var("WITH_MIMALLOC"))))'],text=True).strip()
+    if allocator=='1':environment['PYTHONMALLOC']='mimalloc'
     with open_log(folder / ('data.log' if role == 'data' else 'server.log')) as log:
         process = subprocess.Popen(command, cwd=ROOT,
-            env={'PATH': '/usr/bin:/bin', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'},
+            env=environment,
             stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
     time.sleep(1)
     if process.poll() is not None:

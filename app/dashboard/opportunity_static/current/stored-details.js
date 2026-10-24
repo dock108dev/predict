@@ -21,9 +21,37 @@ import {
   estimateSummary,
   clockedText,
   marketCaption,
+  typedGameTitle,
 } from "./board-elements.js";
 
 export function renderOriginalDetails(q, inputs, { root, participants, title }) {
+  root.replaceChildren(el("h3", typedGameTitle(participants, "Selected game") + " · " + marketCaption(q)));
+  root.append(el("p", [q.event?.league || q.event?.sport, q.event?.start_at ? "Scheduled " + time(q.event.start_at) : "Scheduled start unknown"].filter(Boolean).join(" · ")));
+  const captured = q.current_comparison?.available ? q.current_comparison : q.gross_comparison;
+  const frames = el("div", undefined, "comparison-inputs price-lead");
+  // Use only the already captured pair, never a supplementary response's peers.
+  const peers = captured?.available ? (captured.inputs || []).filter(i => i.quote_id !== q.quote_id) : [];
+  for (const [index, input] of [q, ...peers].entries()) {
+    const card = el("section", undefined, "comparison-input");
+    card.append(el("h4", (index ? "Captured peer · " : "Original price · ") + venue(input.venue)),
+      el("strong", String(input.original?.value ?? "Unknown") + " " + words(input.original?.units), "original-price-value"),
+      el("p", labelsFor(participants).selection(input)),
+      clockedText("small", now => observationStatus(input, now)));
+    const age = el("p"); age.append(ageNode(input.times?.source_at || input.freshness?.source_at, "Source: ")); card.append(age);
+    if (input.original?.native_value != null) textLine(card, "Source input", String(input.original.native_value) + " " + words(input.original.native_units));
+    frames.append(card);
+  }
+  root.append(frames, clockedText("p", now => comparisonTakeaway(captured, now), "comparison-takeaway"));
+  if (captured?.available) root.append(el("p", "Difference is peer minus selected, before costs. It does not establish net EV or covered arbitrage."));
+  root.append(el("small", "Captured prices stay fixed. Close and reopen for updated inputs."));
+  const evidence = el("details"); evidence.dataset.key = "captured-price-evidence";
+  evidence.append(el("summary", "Source details & observed depth"));
+  evidence.append(el("p", "A passed scheduled start does not establish completion or settlement."));
+  const body = el("div"); renderOriginalEvidence(q, inputs, {root:body, participants, title});
+  evidence.append(body); root.append(evidence);
+}
+
+function renderOriginalEvidence(q, inputs, { root, participants, title }) {
   root.replaceChildren(el("h3", labelsFor(participants).selection(q)), el("p", (title ? title + " · " : "") + venue(q.venue) + " · " + price(q)));
   root.append(clockedText("p", now => comparisonTakeaway(q.current_comparison?.available ? q.current_comparison : q.gross_comparison, now), "comparison-takeaway"));
   const captured = q.current_comparison?.available ? q.current_comparison : q.gross_comparison;
@@ -161,33 +189,53 @@ export function renderSavedDetails(v, { root, participants }) {
         .join(" + "),
     ),
   );
+  for (const q of quotes)
+    textLine(
+      root,
+      venue(q.venue) + " original price",
+      String(q.original.value) +
+        " " +
+        words(q.original.units) +
+        " · " +
+        side(q.source.native_side),
+    );
+  root.append(clockedText("p", now => quotes.map(q => observationStatus(q, now)).join(" · ")));
   const primary = primaryComparisonMetric(selected, v.pair ? "arbs" : "ev");
   if (primary) {
     const headline = el("div", undefined, "metrics selected-primary");
     metric(headline, (primary.state === "numeric_last_known" ? "Last-known · " : "") + primary.label, primary.value, x => (numeric(x) > 0 ? "+" : "") + percent(x));
     root.append(headline);
   }
-  const age = el("div");
-  age.id = "detail-freshness";
-  freshness(age, selected.freshness);
-  root.append(age);
-  root.append(el("small", "Inputs captured " + time(v.as_of)));
-  const frame = selected.evaluation_frame;
-  if (frame) root.append(el("small", "Evaluated " + time(frame.evaluated_at) + (frame.mixed_source_times ? " · Last-known prices from different times; no simultaneous historical trade is established." : " · Original price clocks retained.")));
-  for (const q of quotes)
-    textLine(
-      root,
-      venue(q.venue) + " original price",
-      quantity(q.original.value) +
-        " " +
-        words(q.original.units) +
-        " · " +
-        side(q.source.native_side),
-    );
+  const gross = selected.gross_decisive_benchmark;
+  if (gross?.available && numeric(gross.return_percent) !== null) {
+    const companion = el("section", undefined, "gross-benchmark-companion");
+    companion.append(el("h3", "Gross decisive benchmark"));
+    metric(companion, (gross.state === "numeric_last_known" ? "Last-known · " : "") + "Return on normal acquisition", gross.return_percent, x => (numeric(x) > 0 ? "+" : "") + percent(x));
+    companion.append(el("p", "Per $1 normal claim, before fees and exceptional settlement. No executable quantity, complete net EV or covered arbitrage is established."));
+    root.append(companion);
+  }
+  if (selected.modeled_basis) {
+    const basis = selected.modeled_basis;
+    const disclosure = el("details", undefined, "modeled-product-basis");
+    disclosure.append(el("summary", "Model, scenarios & sensitivity"));
+    for (const key of ["product", "quantity", "charges", "probability", "exceptional_model", "rules", "historical_context", "sensitivity_scope", "review_horizon", "missing"])
+      disclosure.append(el("p", basis[key]));
+    if (selected.modeled_expected_void_receipt_usd != null) disclosure.append(el("p", "Assumed expected void receipt at this amount: " + money(selected.modeled_expected_void_receipt_usd) + ". Actual void receipt and guaranteed minimum remain unknown."));
+    const sensitivity = basis.sensitivity;
+    if (sensitivity) {
+      disclosure.append(el("h4", "Full EV sensitivity · hypothetical parameters"));
+      disclosure.append(el("p", "After one buffer: " + money(sensitivity.buffered_ev_low_usd) + " to " + money(sensitivity.buffered_ev_high_usd) + ". " + (sensitivity.sign_changes ? "Assumptions reverse the sign." : "No sign reversal within this hypothetical range.") + " This is not a confidence interval or guaranteed minimum."));
+      disclosure.append(el("p", sensitivity.threshold_condition));
+      disclosure.append(el("p", "Break-even expected void receipt per $1 face: " + money(sensitivity.break_even_expected_void_receipt_per_face) + (sensitivity.break_even_receipt_feasible ? ". Higher expected receipt gives positive buffered EV." : " (outside the feasible $0-$1 interval).")));
+      if (sensitivity.break_even_void_probability_zero_receipt != null) disclosure.append(el("p", "Break-even void rate with zero void receipt: " + percent(100 * numeric(sensitivity.break_even_void_probability_zero_receipt)) + (sensitivity.break_even_void_feasible ? "." : " (outside the feasible probability interval).")));
+      disclosure.append(el("p", sensitivity.formula));
+    }
+    root.append(disclosure);
+  }
   const metrics = el("div", undefined, "metrics");
   metric(
     metrics,
-    v.pair ? "Buffered decisive margin" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
+    v.pair ? "Buffered decisive margin" : selected.modeled_basis?.scenario_parameters?.refund_given_void === "1" ? "Hypothetical refund scenario · buffered" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
     v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd ?? m.conditional_buffered_ev_usd,
   );
   if (v.pair) {
@@ -195,7 +243,22 @@ export function renderSavedDetails(v, { root, participants }) {
     if (m.buffered_complete_modeled_minimum_usd == null) metrics.append(el("small","Complete modeled minimum unknown; the decisive margin does not cover every outcome.","conditional-label"));
   }
   root.append(metrics);
+  if (selected.modeled_basis) {
+    metric(metrics, "Conditional net EV · decisive outcomes · buffered", m.conditional_buffered_ev_usd);
+    root.append(el("p", "Conditional EV assumes a decisive winner. The full-EV scenario uses hypothetical tie and void assumptions; neither is a guaranteed return."));
+  }
   if (!v.pair && m.buffered_ev_usd == null) metrics.append(el("small", "Complete modeled EV unavailable", "conditional-label"));
+  const main = root;
+  const sizing = el("details"); sizing.dataset.key = "selected-sizing-evidence";
+  sizing.append(el("summary", "Selected amount, fees, buffer & reconciliation"));
+  main.append(sizing); root = sizing;
+  const age = el("div");
+  age.id = "detail-freshness";
+  freshness(age, selected.freshness);
+  root.append(age);
+  root.append(el("small", "Inputs captured " + time(v.as_of)));
+  const frame = selected.evaluation_frame;
+  if (frame) root.append(el("small", "Evaluated " + time(frame.evaluated_at) + (frame.mixed_source_times ? " · Last-known prices from different times; no simultaneous historical trade is established." : " · Original price clocks retained.")));
   const funding = el("div", undefined, "detail-funding");
   for (const [label, value] of [["Requested funding",money(f.requested_usd)],["Deployed",money(f.deployed_usd)],["Residual",residual(f.residual_usd)]]) {
     const item=el("div");item.append(el("small",label),el("strong",value));funding.append(item);
@@ -223,7 +286,7 @@ export function renderSavedDetails(v, { root, participants }) {
   );
   const dl = el("dl", undefined, "detail-reconciliation");
   for (const [name, value] of [
-    ["Gross benchmark estimate", m.gross_benchmark_ev_usd],
+    ["Gross benchmark estimate at requested size", m.gross_benchmark_ev_usd],
     ["Rule effects", m.rule_adjustment_usd],
     ["Upfront fees", m.net_upfront_fee_usd],
     ["Expected settlement fees", m.reconciliation_expected_settlement_fee_usd],
@@ -254,6 +317,7 @@ export function renderSavedDetails(v, { root, participants }) {
       " · " +
       (f.residual_reason || "Unknown residual reason"),
   );
+  root = main;
   const outcomes=el("details",undefined,"detail-outcomes");
   outcomes.dataset.key="outcomes";
   outcomes.append(el("summary", "Modeled outcomes"));

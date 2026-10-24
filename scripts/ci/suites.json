@@ -5,6 +5,11 @@
       "tests/test_current_contract.py",
       "tests/test_current_state.py",
       "tests/test_current_native.py",
+      "tests/test_source_recovery.py",
+      "tests/test_native_admission.py",
+      "tests/test_aggregate_scope_controls.py",
+      "tests/test_runtime_status_capacity.py",
+      "tests/test_sc07_matching.py",
       "tests/test_current_native_discovery.py",
       "tests/test_current_multisport_ingress.py",
       "tests/test_source_local_sink.py",
@@ -41,7 +46,9 @@
     "name": "b02-availability",
     "tests": [
       "tests/test_b02_arithmetic.py",
-      "tests/test_b02_availability.py"
+      "tests/test_b02_availability.py",
+      "tests/test_sc07_finance.py",
+      "tests/test_modeled_winner.py"
     ]
   },
   {
@@ -547,6 +554,16 @@
       "tests/test_broad_pipeline.py",
       "tests/test_broad_coverage.py",
       "tests/test_shared_current_comparisons.py"
+    ]
+  },
+  {
+    "name": "current-ingress-and-publication",
+    "tests": [
+      "tests/test_current_ingress.py",
+      "tests/test_publication_encoding.py",
+      "tests/test_selected_frame_cache.py",
+      "tests/test_slate_byte_pages.py",
+      "tests/test_worker_memory.py"
     ]
   }
 ]

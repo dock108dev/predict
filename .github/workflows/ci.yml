@@ -95,6 +95,12 @@ jobs:
         id: audit
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: python -m pip_audit -r requirements-ci.txt -r requirements-browser.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/audit.json
+      - name: Audit alternate runtime lock
+        id: uv_audit
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: |
+          python scripts/ci/uv_audit_requirements.py
+          python -m pip_audit -r test-results/quality/uv-requirements.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/uv-audit.json
       - name: Build and install package
         id: package
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}

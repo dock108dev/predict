@@ -76,7 +76,18 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
     from .current_quota import QuotaStop
     if v['pause'] not in (None, 'ambiguous_dispatch_unresolved'):
         lost=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
-        related=v['pause']=='aggregate_transport_uncertain' and lost and all(covering(v,a) or a.get('interruption')==v['pause'] and a.get('response_receipt') is None and a.get('quota_failure') is None for a in lost)
+        transport=v['pause']=='aggregate_transport_uncertain' and lost and all(covering(v,a) or a.get('interruption')==v['pause'] and a.get('response_receipt') is None and a.get('quota_failure') is None for a in lost)
+        # A server error without charge headers is still an unknown charge, not
+        # an authentication failure or contradictory balance. Independent balance
+        # recovery may cover its exact inactive record while keeping its full hold.
+        missing=v['pause']=='quota_missing_duplicate_or_malformed' and lost and all(
+            covering(v,a) or (a.get('quota_failure')==v['pause']
+                and type((a.get('response_receipt') or {}).get('status')) is int
+                and 500 <= a['response_receipt']['status'] <= 599
+                and a['response_receipt'].get('headers')==[]
+                and a.get('quota_headers')==[])
+            for a in lost)
+        related=transport or missing
         if not related:raise QuotaStop(v['pause'])
     if not isinstance(recovery_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', recovery_id):
         raise QuotaStop('recovery_identity_invalid')

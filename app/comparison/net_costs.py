@@ -279,6 +279,11 @@ def calculate_net_costs(request, scenario, *, native_quantity, native_price, gri
             return result
         if rule.terms.basis == "net_gain":
             fee, refund, engine_ref = ZERO, ZERO, dict(engine="generic-fees-1")
+        elif (rule.source_kind == "controlled_scenario" and rule.channel == "public_pregame_model"
+                and request.venue == "novig" and rule.unit.unit == "stake_usd"
+                and rule.terms.rate == "0" and rule.terms.basis == "quantity"):
+            # Explicit zero-charge product scenario; never native fill accounting.
+            fee, refund, engine_ref = ZERO, ZERO, dict(engine="generic-fees-1", modeled=True)
         elif request.venue in {"kalshi", "polymarket_us", "novig"}:
             engine_acquisition, fee, refund, engine_ref = _venue_entry(
                 rule, request, fills, fill_inputs, engine_context, engine_registry)

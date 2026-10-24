@@ -47,7 +47,8 @@ def normalize(catalog, books, *, at, associations=None, include_missing=False):
         phase = 'unknown'; evidence = []
         if source == 'kalshi':
             facts = [f for f in event.get('observed_identity_facts', [])
-                     if f.get('main_game_event_ticker') == event['id']]
+                     if f.get('main_game_event_ticker') == event['id'] or
+                     event.get('related_game_event_id') and f.get('main_game_event_ticker') == event['related_game_event_id']]
             if len(facts) == 1 and facts[0].get('status') == 'scheduled' and stamp(facts[0]['start_date']) == stamp(event['scheduled_start']):
                 phase = 'pregame'; evidence = facts
         elif (native.get('period') == 'NS' and native.get('active') is True and native.get('closed') is False

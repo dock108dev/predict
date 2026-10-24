@@ -73,6 +73,20 @@ def aggregate_markets(config):
     return tuple(mapping[family] for family in DEFAULT['families'] if family in families)
 
 
+def aggregate_requests(config, sports=None):
+    """Exact configured requests shared by scheduled and explicit refresh work."""
+    from app.reference.product import SPORT_KEYS
+    configured=aggregate_scope(config)
+    selected=configured if sports is None else sports
+    if (not isinstance(selected,list) or not selected or len(set(selected))!=len(selected)
+            or set(selected)-set(configured)):
+        raise ValueError('aggregate_scope_not_configured')
+    params=dict(bookmakers=','.join(AGGREGATE_POLICY.bookmakers),
+        markets=','.join(aggregate_markets(config)),oddsFormat='decimal',dateFormat='iso')
+    return [dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(params))
+            for sport in selected]
+
+
 def load(path=None):
     explicit = path is not None
     path = Path(path) if path else ROOT / '.local/predict-current-config.json'

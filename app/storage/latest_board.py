@@ -1,13 +1,14 @@
 """One background owner of bounded replaceable compact ordinary board results.
 
 HTTP readers only read these compact rows and committed input/status identities.
-Expanded states, ladders and financial reports are never retained here.
+Selected typed inputs use the bounded lossless payload codec within the same
+total publication budget. Expanded financial reports are never retained here.
 """
 import asyncio
 from contextlib import contextmanager
 from threading import RLock
+from time import monotonic
 from app.diagnostics import failure
-from copy import deepcopy
 from datetime import timedelta
 from psycopg.types.json import Jsonb
 
@@ -15,39 +16,21 @@ from .store import ROOT, connect, encoded, hashed, stamp
 from .current_games import GameStore, engine_binding, observation_binding, utc
 from .comparison_board import ReadContext, discover, calculate_current, context_identity, observation_identity
 from app.comparison.estimated_policy import load
-from app.dashboard.comparison_board import response, entries, freshness, age_observation, age_gross_comparison, odds_rows, compact_odds
-from app.comparison.calculation_availability import summary, combine, result_availability
+from app.dashboard.comparison_board import response, entries
+from app.comparison.calculation_availability import summary, result_availability
 from . import observation_publication as publication
 from .slate_reads import CapturedReads
+from .board_capture import SOURCE_PREVIOUS, capture_reservation, capture_batches, prioritize_sources
+from .board_view import board as board, bounded_page as bounded_page
 from app.comparison.calculation_control import CalculationStopped, cancellation, checkpoint
 
 MAX_BYTES = 64 * 1024 * 1024
 MAX_GAMES = 500
+# Bound simultaneous expanded game graphs as well as serialized input bytes.
+# A complete matching component is indivisible; small components still pack.
+MAX_BATCH_EVENTS = 16
 LOCK = 903015
 _SLATE_READS = CapturedReads()
-SOURCE_PREVIOUS = """jsonb_build_object(
-    'publication_dependencies',facts->'publication_dependencies',
-    'observation_binding',facts->'observation_binding',
-    'observation_valid_until',facts->'observation_valid_until',
-    'valid_until',facts->'valid_until')"""
-
-
-def capture_reservation(db, *, observations_only=False):
-    """Bound decoded captures before reading JSON or hydrated depth rows."""
-    previous=SOURCE_PREVIOUS if observations_only else 'facts'
-    size=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-        SELECT octet_length(facts::text) n FROM current_event
-        UNION ALL SELECT octet_length(facts::text) FROM current_contract
-        UNION ALL SELECT octet_length(facts::text) FROM current_offer
-        UNION ALL SELECT octet_length(('''+previous+''')::text) FROM latest_board) inputs''').fetchone()['n']
-    # Native ask rows are later hydrated per occurrence from the same bounded
-    # tables. Include their Python containers and exact decimal strings too.
-    depth=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-        SELECT octet_length(price_value)+octet_length(quantity_value)+256 n FROM current_native_depth WHERE side='asks'
-        UNION ALL SELECT octet_length(price_value)+octet_length(quantity_value)+256 FROM current_depth WHERE side='asks') levels''').fetchone()['n']
-    return int(size)*8+int(depth)+32*1024*1024
-
-
 def marker(db):
     """Cheap committed identities, including withdrawals independent of quotes."""
     epoch = db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
@@ -140,6 +123,8 @@ def next_boundary(bundle, at):
                 else:walk(item)
         elif isinstance(value,list):
             for item in value:walk(item)
+    from app.comparison.modeled_winner import START, END
+    add(START);add(END)
     for event,_,q in entries(bundle['state_inputs']):
         walk(q)
         add(event['start_at'])
@@ -181,26 +166,47 @@ def _selection_payload(observed, bundle, value, policy, context, error=None):
         boards[view]=response(financial,value if financial_context else None,policy,view=view,filter='all',at=context.at)
     metrics=boards['ev']['availability']
     codes=[cause['code'] for cause in metrics.get('causes',[])]
-    available=dict(state='unavailable' if error or not metrics['numeric_results'] else 'partial' if metrics['numeric_results']<metrics['total_results'] else 'evaluated',
+    available=dict(state='pending' if error=='background_estimates_pending' else 'unavailable' if error or not metrics['numeric_results'] else 'partial' if metrics['numeric_results']<metrics['total_results'] else 'evaluated',
                    reason_codes=[error] if error else codes,calculated_at=None if value is None else value['calculated_at'])
-    if error:
+    if error and error!='background_estimates_pending':
+        from app.comparison.calculation_availability import refusal
+        state,codes=refusal([error])
         for view in ('ev','arbs'):
-            boards[view]['availability']=summary([],failures=[(observed['game_key'],error)])
-            boards[view]['empty_reason']='Estimate unavailable; collected observations remain available'
-    return dict(boards=boards,observation_valid_until=observation_boundary(observed,context.at),
+            boards[view]['availability']=summary([(observed['game_key'],[q['venue']],dict(state=state,reason_codes=codes,current_opportunity_eligible=False)) for _,_,q in entries(observed['state_inputs'])])
+            boards[view]['empty_reason']='Calculations pending' if error=='background_estimates_pending' else 'Estimate unavailable; collected observations remain available'
+    from .selected_frame import pack
+    dependencies=publication.manifest(context.publication_frame,observed)
+    return dict(boards=boards,selection_frame_available=True,selected_frame=pack(observed,bundle if financial_context else None,context,dependencies),observation_valid_until=observation_boundary(observed,context.at),
         valid_until=next_boundary(bundle,context.at) if financial_context else None,
         context=financial_context,observation_context=observed['calculation_context'],estimate_availability=available,calculation_error=error,
         observation_binding=context.observation_binding,
-        publication_dependencies=publication.manifest(context.publication_frame,observed))
+        publication_dependencies=dependencies)
 
 
 def publish(db, *, captured_marker, captured_runtime, status, rows):
     """CAS exact price/membership dependencies; unrelated ingress cannot starve it."""
     checkpoint()
     from .current_rows import LOCK as CURRENT_LOCK
+    scope=status.get('capture_events')
+    def validation(owner):
+        committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
+        frame=publication.capture(db,source_states(committed,owner),
+            selector=dict(events=scope,occurrences=[],shared=[]) if scope is not None else None)
+        checks={row['game_key']:publication.reasons(frame,row['facts']['publication_dependencies'])
+            for row in rows if row['facts'].get('publication_dependencies') is not None}
+        return frame,checks
+    # Dependency decoding and candidate validation can be expensive. Do that
+    # without blocking synchronous ingress callbacks (and their event loop's
+    # heartbeat). Seal against a cheap committed marker under the ingress lock.
+    with db.transaction():
+        db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        validated_marker=marker(db)
+        validation_owner=runtime(db)
+        current,validated_checks=validation(validation_owner)
     with db.transaction():
         db.execute('SELECT pg_advisory_xact_lock(%s)',(CURRENT_LOCK,))
-        db.execute('SELECT revision FROM data_runtime WHERE singleton=true FOR SHARE').fetchone()
+        from app.collection.runtime_status import AUTHORITY_LOCK
+        db.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
         now_runtime=runtime(db)
         current_owner=runtime_identity(now_runtime);captured_owner=runtime_identity(captured_runtime)
         if status.get('observation_only'):
@@ -211,29 +217,61 @@ def publish(db, *, captured_marker, captured_runtime, status, rows):
         source_binding=observation_binding()
         if status.get('observation_binding')!=source_binding:return False
         if not status.get('observation_only') and status.get('engine_binding')!=engine_binding():return False
-        committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
-        current=publication.capture(db,source_states(committed,now_runtime))
+        if marker(db)!=validated_marker or runtime_identity(now_runtime)!=runtime_identity(validation_owner):
+            # Revalidate, rather than rejecting a harmless unrelated update.
+            current,validated_checks=validation(now_runtime)
         if str(status.get('epoch'))!=current['epoch']:return False
-        newest={r['game_key']:r['observation_as_of'] for r in db.execute(
-            "SELECT game_key,facts->'boards'->'odds'->>'as_of' AS observation_as_of FROM latest_board").fetchall()}
+        if scope is not None and status.get('capture_membership')!=hashed(publication.neighborhood(current,
+                dict(events=scope,occurrences=[],shared=[]))):return False
+        prior_observations={r['game_key']:r for r in db.execute(
+            "SELECT game_key,calculated_at,facts#>>'{boards,odds,as_of}' AS observation_as_of,"
+            "facts->'observation_context' context,facts->'observation_valid_until' boundary,"
+            "facts#>>'{estimate_availability,state}' estimate_state FROM latest_board").fetchall()}
+        newest={key:r['observation_as_of'] for key,r in prior_observations.items()}
+        # A delayed refusal must not replace a newer game's successful status,
+        # including a status-only pass with no renderable rows to compare below.
+        if any(newest.get(error['game_key']) and status.get('as_of') and
+                stamp(newest[error['game_key']])>stamp(status['as_of']) for error in status.get('observation_errors',[])):
+            return False
         accepted=[];rejected=[]
         for row in rows:
             saved=row['facts'].get('publication_dependencies')
             if saved is None:
                 valid=marker(db)==captured_marker
             else:
-                checks=publication.reasons(current,saved)
-                valid=not(checks['all'] or any(checks['comparisons'].values()) or any(checks['observations'].values()))
+                checks=validated_checks[row['game_key']]
+                # Source snapshots are immutable evidence, not financial action
+                # authority. A busy sibling book must not starve every quiet
+                # quote in the game. Membership/authority still seals the whole
+                # frame; ordinary reads invalidate changed quotes individually.
+                valid=not checks['all'] and (status.get('observation_only') or
+                    not(any(checks['comparisons'].values()) or any(checks['observations'].values())))
             if row['facts'].get('observation_binding')!=source_binding:valid=False
             # A slow optional owner cannot replace a newer source publication
             # after time alone changed the eligible current comparator roster.
             prior_at=newest.get(row['game_key']);incoming_at=row['facts']['boards']['odds'].get('as_of')
-            if prior_at and incoming_at and stamp(prior_at)>stamp(incoming_at):valid=False
+            if prior_at and incoming_at and stamp(prior_at)>stamp(incoming_at):
+                prior=prior_observations[row['game_key']]
+                upgrade=(valid and not status.get('observation_only')
+                    and row['facts'].get('estimate_availability',{}).get('state') in ('evaluated','partial','unavailable')
+                    and prior['estimate_state']=='pending'
+                    and prior['context']==row['facts'].get('observation_context')
+                    and prior['boundary']==row['facts'].get('observation_valid_until'))
+                if upgrade:
+                    # Complete an identical pending source frame without rolling
+                    # its publication or original clocks back. A changed roster,
+                    # temporal boundary or newer estimate still rejects late work.
+                    row['facts']['boards']['odds']=db.execute(
+                        "SELECT facts#>'{boards,odds}' board FROM latest_board WHERE game_key=%s",
+                        (row['game_key'],)).fetchone()['board']
+                else:valid=False
             (accepted if valid else rejected).append(row)
         if not accepted and rows:return False
         rows=accepted
         size=sum(len(encoded(row['facts'])) for row in rows)
-        if len(rows)>MAX_GAMES or size>MAX_BYTES:raise ValueError('latest_board_capacity')
+        retained_size=db.execute('''SELECT count(*) n,COALESCE(sum(octet_length(facts::text)),0) bytes
+            FROM latest_board WHERE NOT(game_key=ANY(%s))''',([r['game_key'] for r in rows],)).fetchone()
+        if len(rows)+retained_size['n']>MAX_GAMES or size+retained_size['bytes']>MAX_BYTES:raise ValueError('latest_board_capacity')
         from app.collection.current_storage_policy import require_disk_space,sql_usage,SQL_BYTE_CAP
         require_disk_space(ROOT/'.local/postgres',append_bytes=size)
         if sql_usage(db)+size>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
@@ -243,6 +281,25 @@ def publish(db, *, captured_marker, captured_runtime, status, rows):
                 economic_revision=excluded.economic_revision,calculated_at=excluded.calculated_at,facts=excluded.facts
                 WHERE latest_board.economic_revision<>excluded.economic_revision OR latest_board.facts<>excluded.facts''',
                 (row['game_key'],row['dependency_revision'],row['economic_revision'],row['calculated_at'],Jsonb(row['facts'])))
+        if scope is not None:
+            retained=db.execute('SELECT facts FROM latest_board_status WHERE singleton=true').fetchone()
+            if retained:
+                prior=retained['facts'];scoped=set(scope)
+                def outside(game):
+                    members={hashed(member) for member in game['members']}
+                    # Expired ingress no longer appears in any planned batch.
+                    # Do not keep its orphan catalog entry forever merely
+                    # because this pass belongs to a healthy neighboring game.
+                    return bool(members.intersection(current['active_events'])) and not members.intersection(scoped)
+                old_games=[g for g in prior['games'] if outside(g)]
+                old_keys={g['game_key'] for g in old_games}
+                status=dict(status,games=old_games+status['games'],
+                    observation_errors=[e for e in prior.get('observation_errors',[]) if e['game_key'] in old_keys]+status.get('observation_errors',[]),
+                    errors=[e for e in prior.get('errors',[]) if e['game_key'] in old_keys]+status.get('errors',[]),
+                    catalog_errors=[e for e in prior.get('catalog_errors',[]) if outside(e)]+status.get('catalog_errors',[]))
+                status['scope_complete']=not status['observation_errors'] and not status['catalog_errors']
+                status['calculation_scope_complete']=not status.get('observation_only') and status['scope_complete'] and not status['errors']
+        if len(status['games'])>MAX_GAMES:raise ValueError('board_catalog_capacity')
         # Deletion requires a complete unchanged capture. A later newly admitted
         # game must never be erased by partial older work.
         if marker(db)==captured_marker:
@@ -252,7 +309,7 @@ def publish(db, *, captured_marker, captured_runtime, status, rows):
             # while unrelated ingress changes the global marker. Accepted local
             # proofs cover every old member before withdrawing that old group.
             covered={eid for row in accepted for eid in row['facts']['publication_dependencies']['selector']['events']}
-            active={offer['event_id'] for offer in current['offers'].values()}
+            active=current['active_events']
             games={g['game_key'] for g in status['games']}
             captured_at=status.get('as_of')
             obsolete=db.execute("""SELECT game_key,facts#>'{publication_dependencies,selector,events}' members,
@@ -265,7 +322,12 @@ def publish(db, *, captured_marker, captured_runtime, status, rows):
         if rejected:
             retained=db.execute('SELECT facts FROM latest_board_status WHERE singleton=true').fetchone()
             if retained:
-                games={g['game_key']:g for g in retained['facts']['games']}
+                # Accepted replacements may just have retired older occurrence
+                # rows. A rejection for a different game cannot resurrect those
+                # deleted keys through the prior catalog merge.
+                existing={r['game_key'] for r in db.execute('SELECT game_key FROM latest_board').fetchall()}
+                unavailable={e['game_key'] for e in status.get('observation_errors',[])}
+                games={g['game_key']:g for g in retained['facts']['games'] if g['game_key'] in existing|unavailable}
                 games.update({g['game_key']:g for g in status['games'] if g['game_key'] in {r['game_key'] for r in accepted}})
                 status=dict(status,games=list(games.values()))
         db.execute('''INSERT INTO latest_board_status VALUES (true,%s,%s)
@@ -273,19 +335,30 @@ def publish(db, *, captured_marker, captured_runtime, status, rows):
         return not rejected
 
 
-def reconcile(db, *, at=None, observations_only=False):
+def _reconcile(db, *, at=None, observations_only=False, event_ids=None, reservation_bytes=None):
     """Publish source frames even when optional discovery or finance fails."""
     at=at or utc();policy=load()
     with db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         owner=runtime(db,at=at);captured_marker=marker(db);source_binding=observation_binding()
         committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
-        publication_frame=publication.capture(db,source_states(committed,owner))
+        if event_ids is not None:
+            # New possible peers may arrive after planning. Expand and recheck
+            # within this exact MVCC snapshot before decoding any contract.
+            index=publication.identity_index(db)
+            event_ids=sorted({*event_ids,*[r[0] for r in publication.neighborhood(index,
+                dict(events=event_ids,occurrences=[],shared=[]))]})
+            if reservation_bytes is not None and capture_reservation(db,observations_only=observations_only,event_ids=event_ids)>reservation_bytes:
+                return dict(published=False,deferred=True,reason='background_capture_changed')
+        publication_frame=publication.capture(db,source_states(committed,owner),
+            selector=dict(events=event_ids,occurrences=[],shared=[]) if event_ids is not None else None)
         # The observation owner only needs prior dependency/clock proofs. It
         # never decodes the full optional boards which it deliberately retains.
         previous_query=('SELECT game_key,dependency_revision,economic_revision,calculated_at,'+SOURCE_PREVIOUS+' AS facts FROM latest_board'
-            if observations_only else 'SELECT * FROM latest_board')
-        previous={r['game_key']:r for r in db.execute(previous_query).fetchall()}
+            if observations_only else "SELECT game_key,dependency_revision,economic_revision,calculated_at,facts-'boards' AS facts,(facts->'boards')::text AS _boards_text FROM latest_board")
+        if event_ids is not None:
+            previous_query+=" WHERE facts#>'{publication_dependencies,selector,events}' ?| %s"
+        previous={r['game_key']:r for r in db.execute(previous_query,(event_ids,) if event_ids is not None else None).fetchall()}
         prior=db.execute('SELECT facts FROM latest_board_status WHERE singleton=true').fetchone()
         dependency_checks_by_game={}
         if prior:
@@ -293,20 +366,23 @@ def reconcile(db, *, at=None, observations_only=False):
             dependency_checks_by_game={key:publication.reasons(publication_frame,r['facts']['publication_dependencies'])
                 for key,r in previous.items() if r['facts'].get('publication_dependencies')}
             dependency_checks=list(dependency_checks_by_game.values())
-            scoped_unchanged=(len(dependency_checks)==len(previous) and all(not (check['all'] or any(check['observations'].values())
+            covered_events={eid for row in previous.values() for eid in
+                row['facts'].get('publication_dependencies',{}).get('selector',{}).get('events',[])}
+            scoped_unchanged=((event_ids is None or set(event_ids)<=covered_events)
+                and len(dependency_checks)==len(previous) and all(not (check['all'] or any(check['observations'].values())
                 or any(check['comparisons'].values())) for check in dependency_checks)
-                and all(r['facts'].get('observation_binding')==source_binding for r in previous.values()))
-            unchanged=(facts.get('input_marker')==captured_marker and facts.get('runtime')==runtime_identity(owner)
+                and all(r['facts'].get('observation_binding')==source_binding and r['facts'].get('selection_frame_available') for r in previous.values()))
+            unchanged=(bool(previous) and facts.get('input_marker')==captured_marker and facts.get('runtime')==runtime_identity(owner)
                 and facts.get('engine_binding')==engine_binding() and facts.get('policy',{}).get('revision')==policy.revision
                 and facts.get('version')=='predict-latest-board-3' and (observations_only or not facts.get('observation_only'))
                 and (observations_only or not facts.get('errors')) and not facts.get('observation_errors') and not facts.get('catalog_errors') and scoped_unchanged)
             if unchanged and all(all(not r['facts'].get(k) or stamp(at)<stamp(r['facts'][k])
                     for k in (('observation_valid_until',) if observations_only else ('valid_until','observation_valid_until'))) for r in previous.values()):
                 return dict(published=False,unchanged=True,computed=0,reused=len(previous),errors=[])
-        context=read_context(db,at=at,owner=owner,tolerate_invalid_catalog=True)
+        context=read_context(db,at=at,owner=owner,event_ids=event_ids,tolerate_invalid_catalog=True)
         context.publication_frame=publication_frame
         context.observation_binding=source_binding
-        catalog=context.catalog();captured=[];source_errors=[];unchanged_observations=0
+        catalog=context.catalog();captured=[];source_errors=[];unchanged_observations=0;unchanged_estimates=0
         valid_games=list(catalog['games'])
         invalid_members={tuple(member) for error in context.catalog_errors for member in error['members']}
         valid_members={tuple(member) for game in valid_games for member in game['members']}
@@ -322,13 +398,30 @@ def reconcile(db, *, at=None, observations_only=False):
             checkpoint()
             old=previous.get(game['game_key']);checks=dependency_checks_by_game.get(game['game_key'])
             deadline=old['facts'].get('observation_valid_until') if old else None
-            if (observations_only and old and checks and old['facts'].get('observation_binding')==source_binding
+            if (observations_only and old and checks and old['facts'].get('selection_frame_available') and old['facts'].get('observation_binding')==source_binding
                     and not (checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values()))
                     and (not deadline or stamp(at)<stamp(deadline))):
                 # Validate the exact committed proof before expensive hydration
                 # and serialization. Quiet retained games must not delay a live
                 # changed pair behind rebuilding the entire historical slate.
                 unchanged_observations+=1
+                continue
+            if (not observations_only and old and checks and prior
+                    and prior['facts'].get('runtime')==runtime_identity(owner)
+                    and prior['facts'].get('engine_binding')==context.engine
+                    and prior['facts'].get('policy',{}).get('revision')==policy.revision
+                    and (old['facts'].get('context') or {}).get('engine_binding')==context.engine
+                    and (old['facts'].get('context') or {}).get('policy_revision')==policy.revision
+                    and not old['facts'].get('calculation_error')
+                    and old['facts'].get('estimate_availability',{}).get('state') in ('evaluated','partial','unavailable')
+                    and old['facts'].get('selection_frame_available') and old['facts'].get('observation_binding')==source_binding
+                    and not (checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values()))
+                    and all(not old['facts'].get(k) or stamp(at)<stamp(old['facts'][k])
+                        for k in ('valid_until','observation_valid_until'))):
+                # Exact dependency and temporal proofs precede normalization.
+                # An unrelated changing game must not make every quiet game
+                # rebuild its profiles before pending work gets a turn.
+                unchanged_estimates+=1
                 continue
             try:
                 observed=context.observation_bundles(game=game['game_key'],benchmark_venue=policy.benchmark_venue)[0]
@@ -344,44 +437,63 @@ def reconcile(db, *, at=None, observations_only=False):
     def status_for(errors,computed=0,reused=0,observation_only=False):
         return dict(version='predict-latest-board-3',input_marker=captured_marker,epoch=context.epoch,
             engine_binding=context.engine,observation_binding=source_binding,policy=policy.to_dict(),runtime=runtime_identity(owner),
-            games=catalog['games'],errors=errors,observation_errors=source_errors,catalog_errors=context.catalog_errors,as_of=at,
+            capture_events=event_ids,capture_membership=hashed(publication.neighborhood(publication_frame,
+                dict(events=event_ids,occurrences=[],shared=[]))) if event_ids is not None else None,games=catalog['games'],errors=errors,observation_errors=source_errors,catalog_errors=context.catalog_errors,as_of=at,
             scope_complete=not source_errors and not context.catalog_errors,calculation_scope_complete=not observation_only and not errors and not source_errors and not context.catalog_errors,
             observation_only=observation_only,maximum_games=MAX_GAMES,maximum_bytes=MAX_BYTES,computed=computed,reused=reused,provider_requests=0)
-    observations=[]
+    observations=[];rendered=[]
     for game,observed in captured:
         checkpoint()
-        facts=_selection_payload(observed,None,None,policy,context,'background_estimates_pending')
+        old=previous.get(game['game_key']);checks=dependency_checks_by_game.get(game['game_key'])
+        deadline=old['facts'].get('observation_valid_until') if old else None
+        if (old and checks and old['facts'].get('selection_frame_available') and old['facts'].get('observation_binding')==source_binding
+                and not (checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values()))
+                and (not deadline or stamp(at)<stamp(deadline))):
+            rendered.append((game,observed))
+            continue
+        try:facts=_selection_payload(observed,None,None,policy,context,'background_estimates_pending')
+        except ValueError as exc:
+            # Only this bounded projection refusal is local to one game. SQL,
+            # process/deadline guards and cancellation must still abort work.
+            if str(exc)!='board_compact_response_capacity':raise
+            source_errors.append(dict(game_key=game['game_key'],reason=str(exc)))
+            continue
+        rendered.append((game,observed))
         old=previous.get(game['game_key'])
         deadline=old['facts'].get('observation_valid_until') if old else None
-        if old and old['facts'].get('observation_binding')==source_binding and old['facts'].get('publication_dependencies')==facts['publication_dependencies'] and (not deadline or stamp(at)<stamp(deadline)):
+        if old and old['facts'].get('selection_frame_available') and old['facts'].get('observation_binding')==source_binding and old['facts'].get('publication_dependencies')==facts['publication_dependencies'] and (not deadline or stamp(at)<stamp(deadline)):
             # Keep an already evaluated optional board while independent unchanged
             # source observations remain valid. No estimate claim is renewed.
             continue
         observations.append(dict(game_key=game['game_key'],dependency_revision=observed['input_version'],
             economic_revision=hashed(['source',facts['observation_context']]),calculated_at=None,facts=facts))
-    if observations:
+    captured=rendered
+    membership_changed=set(previous)!={game['game_key'] for game in catalog['games']}
+    if observations or source_errors or membership_changed:
         observed_published=publish(db,captured_marker=captured_marker,captured_runtime=owner,
             status=status_for([],observation_only=True),rows=observations)
     else:observed_published=False
     if observations_only:
         return dict(published=observed_published,computed=0,reused=unchanged_observations+len(captured)-len(observations),errors=source_errors)
-    rows=[];errors=[];computed=0;reused=0
+    rows=[];errors=[];computed=0;reused=unchanged_estimates
     for game,observed in captured:
         checkpoint()
         bundle=None;identity=None;error=None
         try:
             bundle=discover(context.store,benchmark_venue=policy.benchmark_venue,context=context,game=game['game_key'])[0]
             identity=context_identity(bundle,policy,context)
-        except CalculationStopped:raise
+        except (CalculationStopped,MemoryError,OSError):raise
         except Exception as exc:
             failure(__name__, 'latest_board_inputs', exc)
             bundle=None;error='calculation_inputs_unavailable'
         economic=hashed(dict(context=identity,observation=observation_identity(observed,context),
             policy=policy.revision,config=owner.get('config',{}),active=owner.get('active',False),error=error))
         old=previous.get(game['game_key'])
-        if old and old['facts'].get('observation_binding')==source_binding and old['economic_revision']==economic and not old['facts'].get('calculation_error'):
+        if old and old['facts'].get('selection_frame_available') and old['facts'].get('observation_binding')==source_binding and old['economic_revision']==economic and old['facts'].get('calculation_error')!='background_estimates_pending':
             # Refresh only conservative temporal metadata. Unchanged economics
             # and source frames keep their original calculation/publication time.
+            import json
+            old['facts']['boards']=json.loads(old.pop('_boards_text'))
             retained=dict(old,facts=dict(old['facts'],valid_until=next_boundary(bundle,context.at) if bundle else None,
                 observation_valid_until=observation_boundary(observed,context.at)))
             rows.append(retained);reused+=1;continue
@@ -393,7 +505,7 @@ def reconcile(db, *, at=None, observations_only=False):
                 # decoration cannot cancel the independent source frame.
                 facts=_selection_payload(observed,bundle,value,policy,context)
                 computed+=1
-            except CalculationStopped:raise
+            except (CalculationStopped,MemoryError,OSError):raise
             except Exception as exc:
                 failure(__name__, 'latest_board_calculation', exc)
                 error='calculation_failed';value=None
@@ -407,11 +519,99 @@ def reconcile(db, *, at=None, observations_only=False):
     return dict(published=publish(db,captured_marker=captured_marker,captured_runtime=owner,status=status,rows=rows),computed=computed,reused=reused,errors=errors+source_errors)
 
 
+def reconcile(db, *, at=None, observations_only=False, admission=None):
+    """Incremental SQL → compact board publication with per-neighborhood leases."""
+    from app.collection.background_work import BACKGROUND
+    from contextlib import ExitStack, nullcontext
+    kind='observations' if observations_only else 'estimates'
+    planning=capture_reservation(db,observations_only=True,event_ids=[])
+    with ExitStack() as planning_owner:
+        lease=planning_owner.enter_context(BACKGROUND.claim(kind,planning,source=observations_only))
+        if not lease:
+            if admission is not None:admission[kind]=dict(state='deferred',reason=lease.reason,
+                reserved_bytes=planning,resident_bytes=lease.resident_bytes)
+            return lease.deferred()
+        with db.transaction():
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            batches=capture_batches(db)
+            # Withdrawn events must also retire their obsolete publications, even
+            # when no offering remains to seed a neighborhood.
+            active={eid for batch in batches for eid in batch}
+            saved=db.execute("SELECT facts#>'{publication_dependencies,selector,events}' members FROM latest_board").fetchall()
+            retired=sorted({eid for row in saved if not active.intersection(row['members'] or []) for eid in row['members'] or []})
+            if retired:batches.append(retired)
+        # Pack small complete components, never their individual source members.
+        # Recheck the actual SQL projection at each boundary, including prior boards.
+        target=min(96*1024*1024,BACKGROUND.capacity(kind,replacing=True))
+        packed=[];pending=[]
+        for ids in ([] if observations_only else batches):
+            proposed=pending+ids
+            if pending and (len(proposed)>MAX_BATCH_EVENTS or
+                    capture_reservation(db,observations_only=observations_only,event_ids=proposed)>target):
+                packed.append(pending);pending=[]
+            pending.extend(ids)
+        if pending:packed.append(pending)
+        # Native observations must commit at a complete occurrence boundary.
+        # Packing unrelated games delays the first game's publication behind
+        # all later hydration/rendering work in the batch.
+        batches=(batches if observations_only else packed) or [None]
+        cursor=int((admission or {}).get(kind+'_cursor',0))%len(batches)
+        anchor=(admission or {}).get(kind+'_after')
+        if anchor is not None:
+            cursor=next((i for i,ids in enumerate(batches) if ids and min(ids)>anchor),0)
+        deadline=monotonic()+(5 if observations_only else 20) if admission is not None else None
+        batches=batches[cursor:]+batches[:cursor]
+        if observations_only and admission is not None:
+            batches=prioritize_sources(db,batches,at or utc())
+        result=dict(published=False,unchanged=True,computed=0,reused=0,errors=[],batches=[],provider_requests=0)
+        # Yield only between complete neighborhoods. The live owner resumes
+        # after a stable event anchor, so repacking or a changing early game
+        # cannot repeatedly restart the queue ahead of independent contexts.
+        owns_planning=True
+        for batch_index,ids in enumerate(batches):
+            checkpoint()
+            required=capture_reservation(db,observations_only=observations_only,event_ids=ids)
+            first_owned=owns_planning
+            if first_owned:
+                try:BACKGROUND.resize(kind,required)
+                except ValueError as exc:
+                    if str(exc) not in ('background_memory_capacity','background_source_capacity'):raise
+                    planning_owner.close();first_owned=False;owns_planning=False
+            with (nullcontext(lease) if first_owned else BACKGROUND.claim(kind,required,source=observations_only)) as lease:
+                state=dict(state='admitted' if lease else 'deferred',reason=lease.reason,
+                    reserved_bytes=required,resident_bytes=lease.resident_bytes,events=len(ids or []))
+                if admission is not None:admission[kind]=state
+                result['batches'].append(state)
+                if admission is not None:
+                    admission[kind+'_cursor']=(cursor+batch_index+1)%len(batches)
+                    if ids:admission[kind+'_after']=min(ids)
+                if not lease:
+                    result['unchanged']=False
+                    result['errors'].append(dict(reason=lease.reason,events=ids))
+                    continue
+                batch=_reconcile(db,at=at,observations_only=observations_only,event_ids=ids,reservation_bytes=required)
+                if batch.get('deferred'):
+                    state.update(state='deferred',reason=batch['reason'])
+                    result['errors'].append(dict(reason=batch['reason'],events=ids))
+                result['published']|=batch.get('published',False)
+                result['unchanged']&=batch.get('unchanged',False)
+                for key in ('computed','reused'):result[key]+=batch.get(key,0)
+                result['errors'].extend(batch.get('errors',[]))
+                if deadline is not None and monotonic()>=deadline:
+                    result.update(yielded=True,remaining_batches=len(batches)-batch_index-1)
+                    break
+
+        if result['batches'] and all(b['state']=='deferred' for b in result['batches']):
+            result.update(deferred=True,reason=result['batches'][0]['reason'])
+        return result
+
+
 class LatestBoardOwner:
     """Runtime-owned polling; page access never starts or wakes this owner."""
     def __init__(self,service):
         self.service=service;self.closed=False;self.task=None;self.estimate_task=None;self.wake=asyncio.Event();self.last=None;self.error=None
         self.observation_error=None;self.estimate_error=None
+        self.progress={}
         self.coverage_task=None;self.coverage_error=None;self.last_coverage=None
         self.admission_status={}
         self.connections=set();self.connection_lock=RLock();self.drain_task=None
@@ -448,9 +648,10 @@ class LatestBoardOwner:
             try:return reconcile_coverage(db)
             finally:db.execute('SELECT pg_advisory_unlock(%s)',(COVERAGE_LOCK+1,))
     async def run_coverage(self):
+        from app.collection.background_work import optional_thread
         while not self.closed:
             try:
-                self.last_coverage=await asyncio.to_thread(self.coverage_tick)
+                self.last_coverage=await optional_thread(self.coverage_tick)
                 self.coverage_error=None
             except CalculationStopped:
                 if self.closed:return
@@ -472,19 +673,18 @@ class LatestBoardOwner:
         with self.connection() as db:
             if not db.execute('SELECT pg_try_advisory_lock(%s) AS owned',(lock,)).fetchone()['owned']:return dict(published=False,reason='another_board_owner')
             try:
-                from app.collection.background_work import BACKGROUND
-                kind='observations' if observations_only else 'estimates'
-                required=capture_reservation(db,observations_only=observations_only)
-                with BACKGROUND.claim(kind,required,source=observations_only) as lease:
-                    self.admission_status[kind]=dict(state='admitted' if lease else 'deferred',reason=lease.reason,
-                        reserved_bytes=required,resident_bytes=lease.resident_bytes)
-                    if not lease:return lease.deferred()
-                    return reconcile(db,observations_only=observations_only)
+                return reconcile(db,observations_only=observations_only,admission=self.admission_status)
             finally:db.execute('SELECT pg_advisory_unlock(%s)',(lock,))
     async def run(self, *, observations_only=False):
+        from app.collection.background_work import optional_thread,source_thread
         while not self.closed:
             error=None
-            try:self.last=await asyncio.to_thread(self.tick,observations_only=observations_only)
+            try:
+                runner=source_thread if observations_only else optional_thread
+                self.last=await runner(self.tick,observations_only=observations_only)
+                self.progress['observations' if observations_only else 'estimates']=dict(
+                    at=utc(),**{key:self.last.get(key) for key in ('published','unchanged','computed','reused','deferred','reason')},
+                    errors=len(self.last.get('errors',[])),batches=len(self.last.get('batches',[])))
             except CalculationStopped:
                 if self.closed:return
                 raise
@@ -516,21 +716,54 @@ class LatestBoardOwner:
             await asyncio.wait_for(asyncio.shield(self.drain_task),timeout=self.service.config['cleanup_seconds'])
 
 
-def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):
+def snapshot(db, *, at=None, resource_guard=None, game=None, view=None, serialized_boards=False):
     """Detached compact database frame; no normalization or financial owner."""
     if view is not None and view not in ('odds','ev','arbs'):raise ValueError('Unsupported board view')
     with db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        scoped_selector=None;scoped_ids=None
+        if game and not serialized_boards:
+            manifest=db.execute("SELECT facts#>'{publication_dependencies,selector}' selector FROM latest_board WHERE game_key=%s",(game,)).fetchone()
+            scoped_selector=manifest['selector'] if manifest else None
+            if game=='__catalog_only__':scoped_selector=dict(events=[],occurrences=[],shared=[])
+            if scoped_selector is not None:
+                # Matching still considers every event identity, including new
+                # peers. Only its complete selected neighborhood loads contracts.
+                if resource_guard is not None:
+                    index_bytes=db.execute('SELECT COALESCE(sum(octet_length(facts::text)),0) n FROM current_event').fetchone()['n']
+                    resource_guard(int(index_bytes)*8)
+                index=publication.identity_index(db)
+                scoped_ids=[row[0] for row in publication.neighborhood(index,scoped_selector)]
+                del index
         if resource_guard is not None:
             # Check the committed logical JSON size before decoding the full
-            # frame. Leave conservative room for Python objects and rendering.
-            size=db.execute('''SELECT COALESCE(sum(n),0) AS byte_count FROM (
-                SELECT octet_length(facts::text) AS n FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)
-                UNION ALL SELECT octet_length(facts::text) FROM current_event
-                UNION ALL SELECT octet_length(facts::text) FROM current_contract
-                UNION ALL SELECT octet_length(facts::text) FROM latest_board_status
-            ) retained''',(game,game)).fetchone()['byte_count']
-            resource_guard(int(size)*8)
+            # frame. Measure the same selected-view projection decoded below;
+            # other views remain in SQL. Keep the conservative 8x allowance.
+            if serialized_boards:
+                sizes=db.execute('''SELECT
+                    COALESCE(sum(octet_length((facts-'boards')::text)),0) metadata,
+                    COALESCE(sum(octet_length((facts->'boards'->%s)::text)),0) boards,
+                    COALESCE(max(octet_length((facts->'boards'->%s)::text)),0) largest
+                    FROM latest_board''',(view,view)).fetchone()
+                other=db.execute('''SELECT COALESCE(sum(n),0) n FROM (
+                    SELECT octet_length(facts::text) n FROM current_event
+                    UNION ALL SELECT octet_length((to_jsonb(c)-'facts')::text) FROM current_contract c
+                    UNION ALL SELECT octet_length(facts::text) FROM latest_board_status) t''').fetchone()['n']
+                contract_batch=db.execute('SELECT COALESCE(max(octet_length(facts::text)),0)*8 AS n FROM current_contract').fetchone()['n']
+                # Keep every board as text, hydrate only one at a time. Account
+                # for libpq/text copies plus that one decoded working graph.
+                resource_guard((int(sizes['metadata'])+int(other)+int(contract_batch))*8+
+                               int(sizes['boards'])*3+int(sizes['largest'])*8)
+            else:
+                size=db.execute('''SELECT COALESCE(sum(n),0) AS byte_count FROM (
+                    SELECT octet_length((CASE WHEN %s::text IS NULL THEN facts ELSE
+                        (facts - 'boards') || jsonb_build_object('boards',jsonb_build_object(%s::text,facts->'boards'->%s::text))
+                        END)::text) AS n FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)
+                    UNION ALL SELECT octet_length(facts::text) FROM current_event
+                    UNION ALL SELECT octet_length(facts::text) FROM current_contract WHERE (%s::text[] IS NULL OR event_id=ANY(%s))
+                    UNION ALL SELECT octet_length(facts::text) FROM latest_board_status
+                ) retained''',(view,view,view,game,game,scoped_ids,scoped_ids)).fetchone()['byte_count']
+                resource_guard(int(size)*8)
         saved=db.execute('SELECT facts FROM latest_board_status WHERE singleton=true').fetchone()
         # Establish the MVCC snapshot before choosing its read clock. A runtime
         # heartbeat committed between function entry and that first SQL query
@@ -538,7 +771,16 @@ def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):
         at=at or utc()
         status=saved['facts'] if saved else dict(games=[],errors=[],epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch'],policy=load().to_dict())
         owner=runtime(db,at=at);current=marker(db)
-        if view is None:
+        if serialized_boards:
+            # A client cursor retains the entire libpq result alongside decoded
+            # strings. Stream complete rows from the same MVCC snapshot instead.
+            with db.cursor(name='predict_slate_boards') as cursor:
+                cursor.itersize=8
+                cursor.execute("""SELECT game_key,dependency_revision,economic_revision,calculated_at,
+                    facts-'boards' AS facts,(facts->'boards'->%s)::text AS _board_text
+                    FROM latest_board""",(view,))
+                retained=list(cursor)
+        elif view is None:
             retained=db.execute('SELECT * FROM latest_board WHERE (%s::text IS NULL OR game_key=%s)',(game,game)).fetchall()
         else:
             # A slate consumes one compact view. Leave the other two in SQL,
@@ -550,7 +792,8 @@ def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):
         committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
         states=source_states(committed,owner)
         selected_manifest=next(iter(rows.values()))['facts'].get('publication_dependencies') if game and len(rows)==1 else None
-        dependencies=publication.capture(db,states,selector=selected_manifest.get('selector') if selected_manifest else None)
+        dependencies=publication.capture(db,states,selector=scoped_selector if scoped_selector is not None else selected_manifest.get('selector') if selected_manifest else None,
+            compact=serialized_boards,resource_guard=resource_guard)
         authority=_slate_authority(dependencies['epoch'],owner,states,_control_barrier(db))
     observation_reasons=[];calculation_reasons=[]
     if not saved:observation_reasons.append('background_results_not_published')
@@ -571,20 +814,27 @@ def snapshot(db, *, at=None, resource_guard=None, game=None, view=None):
     if status['policy']['revision']!=load().revision:calculation_reasons.append('policy_changed')
     reasons=observation_reasons+calculation_reasons
     dependency_reasons={}
-    for key,row in rows.items():
+    for key,row in (() if serialized_boards else rows.items()):
         saved_dependencies=row['facts'].get('publication_dependencies')
         checks=publication.reasons(dependencies,saved_dependencies) if saved_dependencies else dict(all=['current_dependencies_changed'],observations={},comparisons={})
         if row['facts'].get('observation_binding')!=source_binding:
             checks['all']=sorted(set([*checks['all'],'matching_binding_changed']))
         dependency_reasons[key]=checks
-    revision=hashed([current,status.get('as_of'),reasons,status.get('runtime'),dependency_reasons])
+    proof=None
+    if serialized_boards:
+        # Keep the complete MVCC proof, including scoring and source states.
+        # Its derived indexes/caches are reconstructed once per requested page.
+        proof={k:dependencies[k] for k in ('epoch','events','offers','states','selection_identities')}
+        proof.update(books=list(dependencies['books'].values()),active_events=sorted(dependencies['active_events']))
+    revision=hashed([current,status.get('as_of'),reasons,status.get('runtime'),proof if serialized_boards else dependency_reasons])
     if status.get('input_marker')!=current:
         # Summary diagnostics describe pending work, without applying a global
         # stale bit to independent source observations or games.
         reasons=sorted(set([*reasons,'current_dependencies_changed']))
     return dict(status=status,rows=rows,reasons=reasons,observation_reasons=observation_reasons,
         calculation_reasons=calculation_reasons,dependency_reasons=dependency_reasons,
-        source_states=states,at=at,owner=owner,read_revision=revision,read_authority=authority)
+        source_states=states,at=at,owner=owner,read_revision=revision,read_authority=authority,
+        _dependencies=proof,_source_binding=source_binding)
 
 
 def selected_dependencies(db, saved, *, stopped=False):
@@ -610,79 +860,6 @@ def selected_dependencies(db, saved, *, stopped=False):
     return token,ids
 
 
-def _withdraw(board, reasons):
-    if not reasons:return
-    board.update(status='historical',delivery_state='pending' if 'current_dependencies_changed' in reasons else 'stopped' if 'updates_stopped' in reasons else 'unavailable')
-    items=[]
-    for row in board['rows']:
-        row['ranking_eligible']=False
-        classification=row.get('classification',{})
-        for key in ('main_positive_eligible','positive_rule_sensitive_eligible'):classification[key]=False
-        f=row.setdefault('freshness',dict(status='historical',reasons=[]));f.update(status='historical',reasons=sorted(set(f['reasons']+reasons)))
-        if board['view']!='odds':
-            row['availability']=result_availability(row,pair=board['view']=='arbs')
-            items.append((board['game_key'],[l['venue'] for l in row.get('legs',[])] if board['view']=='arbs' else [row['venue']],row['availability']))
-    if board['view']!='odds':board['availability']=summary(items)
-
-
-def board(frame, game_key, *, view, filter):
-    row=frame['rows'].get(game_key)
-    if row is None:
-        error=next((e['reason'] for e in frame['status'].get('observation_errors',[]) if e['game_key']==game_key),None)
-        raise ValueError(error or 'background_observation_unavailable')
-    output=deepcopy(row['facts']['boards'][view]);source_reasons=list(frame.get('observation_reasons',frame['reasons']))
-    local=frame.get('dependency_reasons',{}).get(game_key,dict(all=[],observations={},comparisons={}))
-    source_reasons=sorted(set([*source_reasons,*local['all']]))
-    comparison_reasons=sorted(set([*source_reasons,*[reason for values in local['comparisons'].values() for reason in values]]))
-    calculation_reasons=list(frame.get('calculation_reasons',[]))
-    if any(local['observations'].values()) or any(local['comparisons'].values()):
-        calculation_reasons.append('current_dependencies_changed')
-    deadline=row['facts'].get('valid_until')
-    if deadline and stamp(frame['at'])>=stamp(deadline):calculation_reasons.append('calculation_authority_boundary')
-    states=frame.get('source_states',frame['owner'].get('states',{}))
-    for q in output['prices']:
-        event=q.get('event') or next(g for g in frame['status']['games'] if g['game_key']==game_key)
-        from .current_rows import contract_id
-        own_reasons=sorted(set([*source_reasons,*local['observations'].get(contract_id(dict(quote=q)),[])]))
-        if view=='odds':age_observation(q,event,frame['at'],source_states=states,publication_reasons=own_reasons)
-        else:
-            state=states.get(q['venue'],{}).get('state',q['source_state'])
-            f=freshness(dict(q,state=state),{},event,stamp(frame['at']),financial=False)
-            f['reasons']=sorted(set(f['reasons']+own_reasons));f['status']='historical' if f['reasons'] else 'current'
-            q['freshness']=f;q['source_state']=state
-            health=states.get(q['venue'],{})
-            q['source_health']=dict(q.get('source_health',{}),**{k:health[k] for k in ('state','reason_code','reason') if k in health})
-    if view=='odds':
-        for q in output['prices']:
-            cid=contract_id(dict(quote=q))
-            peer_reasons=sorted(set([*source_reasons,*local['observations'].get(cid,[]),*local['comparisons'].get(cid,[])]))
-            for field in ('gross_comparison','current_comparison'):
-                if field in q:
-                    age_gross_comparison(q[field],frame['at'],source_states=states,
-                        publication_reasons=peer_reasons,captured_rows=output['prices'])
-    reasons=source_reasons+calculation_reasons
-    if view=='odds':
-        output['rows']=odds_rows(output['prices'])
-        statuses={q['freshness']['status'] for q in output['prices']}
-        output['status']='mixed' if len(statuses)>1 else next(iter(statuses),'historical')
-        output['delivery_state']='pending' if any(q.get('observation_display',{}).get('state')=='pending' for q in output['prices']) or 'current_dependencies_changed' in comparison_reasons else 'stopped' if 'updates_stopped' in source_reasons else 'unavailable' if 'data_runtime_unhealthy' in source_reasons else 'complete'
-    else:_withdraw(output,reasons)
-    estimate=deepcopy(row['facts'].get('estimate_availability',dict(state='evaluated',reason_codes=[])))
-    if reasons:estimate.update(state='last_known' if estimate['state'] in ('evaluated','partial') else 'unavailable',reason_codes=sorted(set(estimate['reason_codes']+reasons)))
-    output.update(filter=filter,read_at=frame['at'],sizing_scope='shared_default_selected_details',
-        economic_revision=row['economic_revision'],calculated_at=row['calculated_at'],background_reasons=source_reasons if view=='odds' else reasons,
-        observation_reasons=sorted(set([*source_reasons,*[reason for values in local['observations'].values() for reason in values]])),
-        comparison_reasons=comparison_reasons,calculation_reasons=calculation_reasons,estimate_availability=estimate,
-        collection=dict(healthy=frame['owner'].get('healthy',False),active=frame['owner'].get('active',False),
-                        stopped=bool(frame['owner'].get('global_stopped',False)),
-                        sources=frame.get('source_states',frame['owner'].get('states',{}))))
-    if view!='odds' and filter!='all':
-        key='positive_rule_sensitive_eligible' if filter=='hedges' else 'main_positive_eligible'
-        output['rows']=[r for r in output['rows'] if r.get('classification',{}).get(key)]
-    if not output['rows'] and reasons:output['empty_reason']='Latest results await background reconciliation' if 'current_dependencies_changed' in reasons else 'Only last-known estimates available; see All comparisons'
-    return compact_odds(output)
-
-
 def slate(db, policy, *, view, filter, stopped=False, offset=0, limit=25, expected_revision=None,
           read_token=None, read_frames=None, storage=None):
     if not 0<=offset<500 or not 1<=limit<=50:raise ValueError('slate_page_capacity')
@@ -690,6 +867,7 @@ def slate(db, policy, *, view, filter, stopped=False, offset=0, limit=25, expect
     context=hashed([policy.to_dict(),view,filter,limit])
     if read_token:
         captured=reads.get(read_token,context=context)
+        reads.guard(len(captured.header)*8)
         header=reads.decode(captured.header)
         if not expected_revision or expected_revision!=header['read_revision']:
             raise ValueError('current_slate_read_context_changed')
@@ -697,15 +875,16 @@ def slate(db, policy, *, view, filter, stopped=False, offset=0, limit=25, expect
     else:
         if offset:raise ValueError('current_slate_read_token_required')
         reads.cleanup();reads.guard()
-        frame=snapshot(db,resource_guard=reads.guard,view=view);status=frame['status']
+        frame=snapshot(db,resource_guard=reads.guard,view=view,serialized_boards=True);status=frame['status']
         if expected_revision and expected_revision!=frame['read_revision']:raise ValueError('current_slate_changed')
         games=sorted(status['games'],key=lambda g:(g.get('start_at') or '',g['game_key']))
         if len(games)>MAX_GAMES:raise ValueError('slate_page_capacity')
         records=[];retained=0
         for game in games:
             reads.guard()
-            try:value=dict(board=board(frame,game['game_key'],view=view,filter=filter))
-            except ValueError as exc:value=dict(error=dict(game_key=game['game_key'],reason=str(exc),availability=result_availability(dict(reasons=['calculation_read_failed']))))
+            key=game['game_key']
+            value=dict(game_key=key,row=frame['rows'].get(key),
+                dependencies=frame.get('dependency_reasons',{}).get(key))
             record=encoded(value);retained+=len(record)+256
             if retained+4096>reads.maximum_bytes:raise ValueError('current_slate_read_capacity')
             reads.guard(len(record));records.append(record)
@@ -716,29 +895,52 @@ def slate(db, policy, *, view, filter, stopped=False, offset=0, limit=25, expect
             collection=dict(healthy=frame['owner'].get('healthy',False),active=frame['owner'].get('active',False),stopped=bool(frame['owner'].get('global_stopped',False))),
             background=dict(reasons=frame['reasons'],scope_complete=status.get('scope_complete',False)),
             bounds=dict(maximum_games=500,maximum_page_games=50,maximum_bytes=8*1024*1024),provider_requests=0,
-            _evaluated=view!='odds' and status.get('version') in ('predict-latest-board-1','predict-latest-board-2','predict-latest-board-3'))
+            _evaluated=view!='odds' and status.get('version') in ('predict-latest-board-1','predict-latest-board-2','predict-latest-board-3'),
+            _frame={k:v for k,v in frame.items() if k not in ('rows','dependency_reasons')})
         authority=hashed([frame['read_authority'],bool(stopped)])
         # Release the full captured SQL frame before retaining the compact view.
         del frame
         captured=reads.capture(header,records,context=context,authority=authority)
         header=reads.decode(captured.header)
     games=header['games'];page=games[offset:offset+limit];boards=[];errors=[]
+    # All source facts and validation results belong to the first MVCC capture.
+    # Render only this page, at that same captured clock, without hydrating the
+    # other games or consulting later SQL publications.
+    page_frame=header.pop('_frame')
+    proof=page_frame.pop('_dependencies',None)
+    if proof is not None:
+        proof['books']={(r['venue'],r['event_id'],r['native_market_id']):r for r in proof['books']}
+        proof['active_events']=set(proof['active_events'])
+        proof.update(by_event={},neighborhoods={},candidate_sets={})
+        proof.setdefault('selection_identities',{})
+        for row in proof['offers'].values():proof['by_event'].setdefault(row['event_id'],[]).append(row)
     for record in captured.records[offset:offset+limit]:
         reads.guard(len(record)*8)
         value=reads.decode(record)
-        if 'board' in value:boards.append(value['board'])
-        else:errors.append(value['error'])
-    end=offset+len(page);complete=end>=len(games)
+        key=value['game_key']
+        page_frame['rows']={key:value['row']} if value['row'] is not None else {}
+        page_frame['dependency_reasons']={key:value['dependencies']} if value['dependencies'] is not None else {}
+        if proof is not None and value['row'] is not None:
+            facts=value['row']['facts'];saved=facts.get('publication_dependencies')
+            checks=publication.reasons(proof,saved) if saved else dict(all=['current_dependencies_changed'],observations={},comparisons={})
+            if facts.get('observation_binding')!=page_frame['_source_binding']:
+                checks['all']=sorted(set([*checks['all'],'matching_binding_changed']))
+            page_frame['dependency_reasons'][key]=checks
+        try:
+            rendered=board(page_frame,key,view=view,filter=filter)
+            from .selected_frame import bind_token
+            bind_token(rendered,captured.token)
+            boards.append(rendered)
+        except ValueError as exc:errors.append(dict(game_key=key,reason=str(exc),
+            availability=result_availability(dict(reasons=['calculation_read_failed']))))
     evaluated=header.pop('_evaluated')
-    out=dict(header,boards=boards,errors=errors,
-        coverage=dict(total_games=len(games),offset=offset,limit=limit,returned_games=len(page),next_offset=None if complete else end,complete=complete))
-    if storage is not None:out['storage']=storage
-    out['availability']=combine([b['availability'] for b in boards],games=len(page),failures=[(e['game_key'],'calculation_read_failed') for e in errors],evaluated=evaluated)
     reads.guard()
-    size=len(encoded(out))
-    if size>8*1024*1024:
+    try:
+        out,size=bounded_page(header,boards,errors,offset=offset,limit=limit,evaluated=evaluated,storage=storage)
+    except ValueError:
         reads.discard(captured.token)
-        raise ValueError('slate_response_byte_capacity')
+        raise
+    complete=out['coverage']['complete']
     # Recheck after rendering too: a Stop/reset cannot race an expensive capture
     # and leave newly returned pages carrying the withdrawn authority.
     reads.authorize(captured,slate_authority(db,stopped=stopped))

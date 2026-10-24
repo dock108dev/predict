@@ -9,6 +9,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 import os
+import ctypes
+import sys
 from pathlib import Path
 import subprocess
 from threading import RLock
@@ -21,6 +23,24 @@ SOURCE_RUNWAY = 160 * MIB
 INGRESS_HEADROOM = 32 * MIB
 
 
+class _MachTaskBasicInfo(ctypes.Structure):
+    _fields_=[('virtual_size',ctypes.c_uint64),('resident_size',ctypes.c_uint64),
+        ('resident_size_max',ctypes.c_uint64),('user_time',ctypes.c_int*2),
+        ('system_time',ctypes.c_int*2),('policy',ctypes.c_int),('suspend_count',ctypes.c_int)]
+
+
+_MACH=ctypes.CDLL(None) if sys.platform=='darwin' else None
+
+
+def _mach_resident_bytes():
+    info=_MachTaskBasicInfo();count=ctypes.c_uint(ctypes.sizeof(info)//4)
+    task=ctypes.c_uint.in_dll(_MACH,'mach_task_self_').value
+    if _MACH.task_info(task,20,ctypes.byref(info),ctypes.byref(count))!=0:
+        raise OSError('resident_sample_failed')
+    if info.resident_size<=0:raise ValueError('resident_sample_invalid')
+    return int(info.resident_size)
+
+
 def resident_bytes():
     """Current resident bytes; peak RSS still owns the unchanged fatal guard."""
     try:
@@ -28,6 +48,9 @@ def resident_bytes():
         if path.exists():
             with path.open() as stream:fields=stream.read(256).split()
             return int(fields[1])*os.sysconf('SC_PAGE_SIZE')
+        if _MACH is not None:
+            try:return _mach_resident_bytes()
+            except (OSError,ValueError,AttributeError):pass
         value=subprocess.run(['/bin/ps','-o','rss=','-p',str(os.getpid())],
             capture_output=True,text=True,check=True,timeout=.25).stdout
         if len(value)>64:raise ValueError('resident_sample_capacity')
@@ -72,6 +95,22 @@ class BackgroundWork:
         outstanding=sum(size for kind,size in self.active.items() if kind in OPTIONAL)
         return resident+amount+outstanding+self.headroom+(self.runway if optional else 0)<self.limit
 
+    def capacity(self, kind, *, replacing=False):
+        """Planning ceiling only; claim rechecks live RSS before every capture.
+
+        A smaller batch contains fewer complete neighborhoods. Its full measured
+        reservation and all padding remain charged at the ordinary multiplier.
+        """
+        if kind not in (*OPTIONAL,'observations'):
+            raise ValueError('background_work_reservation_invalid')
+        resident=self.sampler()
+        if type(resident) is not int or resident<0:
+            raise ValueError('background_resident_sample_invalid')
+        with self.lock:
+            outstanding=sum(size for name,size in self.active.items() if name in OPTIONAL and not (replacing and name==kind))
+            available=self.limit-resident-outstanding-self.headroom-(self.runway if kind in OPTIONAL else 0)-1
+            return max(0,min(available,self.runway if kind=='observations' else self.limit))
+
     @contextmanager
     def claim(self, kind, additional_bytes, *, source=False):
         if (kind not in (*OPTIONAL,'observations') or source!=(kind=='observations') or
@@ -110,6 +149,20 @@ class BackgroundWork:
             if admitted:
                 with self.lock:self.active.pop(kind,None)
 
+    def resize(self, kind, additional_bytes):
+        """Grow a live worker's charge before retaining additional input graphs."""
+        resident=self.sampler()
+        with self.lock:
+            if kind not in self.active or type(additional_bytes) is not int or additional_bytes<0:
+                raise ValueError('background_work_reservation_invalid')
+            amount=max(self.active[kind],additional_bytes)
+            other=sum(v for k,v in self.active.items() if k in OPTIONAL and k!=kind)
+            if kind=='observations' and amount>self.runway:
+                raise ValueError('background_source_capacity')
+            if resident+amount+other+self.headroom+(self.runway if kind in OPTIONAL else 0)>=self.limit:
+                raise ValueError('background_memory_capacity')
+            self.active[kind]=amount
+
     def cancel(self, kind):
         """Remove a stopped owner's waiting turn; live leases stay charged."""
         with self.lock:self.waiting.pop(kind,None)
@@ -128,3 +181,35 @@ class BackgroundWork:
 
 
 BACKGROUND = BackgroundWork()
+
+
+# Exactly three runtime owners call this lane, each awaiting its one turn before
+# submitting another. Only callables queue, never captured source graphs. Sharing
+# the thread also reuses its allocator heap across these mutually exclusive
+# captures instead of retaining a separate high-water heap for every pool thread.
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
+from functools import partial
+import asyncio
+
+_OPTIONAL_EXECUTOR = ThreadPoolExecutor(max_workers=1,thread_name_prefix='predict-optional')
+_SOURCE_EXECUTOR = ThreadPoolExecutor(max_workers=1,thread_name_prefix='predict-observations')
+_INGRESS_EXECUTOR = ThreadPoolExecutor(max_workers=1,thread_name_prefix='predict-ingress')
+
+
+async def optional_thread(fn, *args, **kwargs):
+    return await asyncio.get_running_loop().run_in_executor(
+        _OPTIONAL_EXECUTOR,copy_context().run,partial(fn,*args,**kwargs))
+
+
+async def source_thread(fn, *args, **kwargs):
+    # One awaited observation owner; light heartbeat/control jobs never queue
+    # behind this capture and never inherit its allocator heap.
+    return await asyncio.get_running_loop().run_in_executor(
+        _SOURCE_EXECUTOR,copy_context().run,partial(fn,*args,**kwargs))
+
+
+async def ingress_thread(fn, *args, **kwargs):
+    # The bounded ingress owner's serialization lock admits one SQL job here.
+    return await asyncio.get_running_loop().run_in_executor(
+        _INGRESS_EXECUTOR,copy_context().run,partial(fn,*args,**kwargs))

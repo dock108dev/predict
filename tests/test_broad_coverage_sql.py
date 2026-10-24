@@ -137,6 +137,21 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         self.assertIsNone(pending['cells'][0]['counts']['retained_observations'])
         self.assertIsNone(pending['cells'][0]['ratios']['supported_peer']['value'])
 
+    async def test_read_exposes_publication_failure_without_inventing_measurements(self):
+        await self.owner.close()
+        from app.collection.runtime_status import read_runtime
+        with self.connect() as db:
+            db.execute('TRUNCATE coverage_latest')
+            owner = read_runtime(db)
+            owner['calculations'] = dict(coverage='unavailable', coverage_error='background_coverage_unavailable')
+            with patch('app.collection.runtime_status.read_runtime', return_value=owner):
+                value = read(db)
+        self.assertEqual(value['publication_error'], 'background_coverage_unavailable')
+        self.assertEqual(value['publication_worker_state'], 'unavailable')
+        self.assertEqual(value['publication_state'], 'pending')
+        self.assertIsNone(value['global_totals']['retained_observations'])
+        self.assertEqual(value['provider_requests'], 0)
+
     async def test_changed_source_input_waits_for_publication_with_exact_original(self):
         cases,calls,value=await self.matrix()
         await self.owner.close()
@@ -215,3 +230,121 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             Path(report,'coverage-resource-sample.json').write_text(json.dumps(dict(
                 retained_publication_bytes=int(retained),python_peak_allocated_bytes=peak,
                 reconcile_seconds=time.monotonic()-started,**metrics),indent=2)+'\n')
+
+    async def test_c2_capture_mixed_frozen_refs_and_duplicate_boards_fit_without_count_inflation(self):
+        from app.storage.coverage_latest import _capture_size, _PUBLICATION_SQL, _PUBLICATION_CAPTURE_SQL, _publication_rows, _OFFER_SQL, _captured_offers
+        from app.dashboard.comparison_board import expand_odds
+        from psycopg.types.json import Jsonb
+        cases,calls,baseline=await self.matrix()
+        before_calls=deepcopy(calls)
+        await self.owner.close()
+        with self.connect() as db:
+            rows=db.execute('SELECT * FROM latest_board ORDER BY game_key').fetchall()
+            # Older expanded and C1 compact publications coexist. Repeated game
+            # contexts must not multiply native observations or underlying pairs.
+            encodings=set()
+            for index,row in enumerate(rows):
+                facts=row['facts'];board=facts['boards']['odds']
+                encodings.update('refs' if q.get('current_comparison',{}).get('input_refs') else 'frozen'
+                    for q in board['prices'])
+                if index%2==0:
+                    expand_odds(board);board.pop('comparison_input_encoding',None)
+                for price in board['prices']:
+                    price.setdefault('selection',{})['period_boundary']='unused-display-boundary-'*120
+                    price.setdefault('observation_display',{})['unused_display_audit']='x'*3000
+                db.execute('UPDATE latest_board SET facts=%s WHERE game_key=%s',(Jsonb(facts),row['game_key']))
+                if index%3==0:
+                    literal={'quote_id','quote_revision','field_refs'}
+                    names=sorted({k for q in board['prices'] for k in q if k not in literal} |
+                                 {k for q in board['prices'] for k in q.get('field_refs',{})})
+                    board['price_key_pool']=names
+                    board['prices']=[{k if k in literal else str(names.index(k)):
+                        ({str(names.index(n)):v for n,v in value.items()} if k=='field_refs' else value)
+                        for k,value in q.items()} for q in board['prices']]
+                    db.execute('UPDATE latest_board SET facts=%s WHERE game_key=%s',(Jsonb(facts),row['game_key']))
+                for copy in range(15):
+                    db.execute('INSERT INTO latest_board SELECT %s,dependency_revision,economic_revision,calculated_at,%s FROM latest_board WHERE game_key=%s',
+                        (row['game_key']+'-duplicate-'+str(copy),Jsonb(facts),row['game_key']))
+            self.assertIn('refs',encodings)
+            plain=db.execute(_PUBLICATION_SQL+' ORDER BY game_key').fetchall()
+            compact=db.execute(_PUBLICATION_CAPTURE_SQL).fetchone()['capture']
+            self.assertEqual(list(_publication_rows(compact,db)),plain)
+            self.assertEqual(_captured_offers(compact),db.execute(_OFFER_SQL+' ORDER BY c.id').fetchall())
+            del plain,compact
+            size=_capture_size(db)
+            # One complete game is the streaming boundary. The old all-games
+            # representation is larger; exact admission and one-byte refusal
+            # must preserve the previous publication.
+            old_total=db.execute('SELECT octet_length(capture::text) n FROM ('+_PUBLICATION_CAPTURE_SQL+') p').fetchone()['n']
+            streamed=db.execute("SELECT octet_length((capture-'rows')::text)+COALESCE((SELECT max(octet_length(r::text)) FROM jsonb_array_elements(capture->'rows') r),0) n FROM ("+_PUBLICATION_CAPTURE_SQL+") p").fetchone()['n']
+            self.assertGreater(old_total,streamed)
+            prior=db.execute('SELECT revision FROM coverage_latest').fetchone()
+            with patch('app.storage.coverage_latest.MAX_CAPTURE_BYTES',size-1):
+                with self.assertRaisesRegex(ValueError,'coverage_capture_capacity'):reconcile(db)
+            self.assertEqual(db.execute('SELECT revision FROM coverage_latest').fetchone(),prior)
+            report=os.environ.get('PREDICT_CI_REPORT_ROOT')
+            if report:Path(report,'c2-capture-bytes.json').write_text(json.dumps(dict(projected_input_bytes=size))+'\n')
+            self.assertLess(size,8*1024*1024)
+            # This is an encoding-equivalence check, not an elapsed-time test.
+            # Keep the authored capture instant and heartbeat fixed while the
+            # intentionally enlarged SQL fixture is prepared synchronously.
+            instant=baseline['captured_at']
+            with patch('app.collection.runtime_status.clock',return_value=stamp(instant)):
+                self.state.write(self.service)
+            result=reconcile(db,at=instant)
+            value=read(db,at=instant)
+            self.assertTrue(result['published'])
+            for key in ('retained_observations','supported_comparison_observations','underlying_pairs',
+                    'signed_comparison_directions','eligible_current_pairs','published_current_pairs'):
+                self.assertEqual(value['global_totals'][key],baseline['global_totals'][key],key)
+            self.assertNotIn('unused-display-boundary-',json.dumps(value))
+            self.assertNotIn('unused_display_audit',json.dumps(value))
+            original={tuple(e['source'].values()):e['times'] for c in baseline['cells'] for e in c['examples']}
+            after={tuple(e['source'].values()):e['times'] for c in value['cells'] for e in c['examples']}
+            self.assertEqual(original,after)
+            metrics=db.execute("SELECT facts->'work_metrics' m FROM coverage_latest").fetchone()['m']
+            self.assertLessEqual(metrics['reserved_work_bytes'],128*1024*1024)
+            # Necessary facts cannot be silently dropped to force a fit.
+            db.execute("UPDATE current_offer SET facts=jsonb_set(facts,'{source,necessary_identity_extension}',to_jsonb(repeat('z',150000)))")
+            # A repeated extension now compresses losslessly; the expanded
+            # memory or final output guard must still refuse it before publish.
+            prior=db.execute('SELECT revision FROM coverage_latest').fetchone()
+            with self.assertRaisesRegex(ValueError,'coverage_(capture|memory|publication)_capacity'):reconcile(db)
+            self.assertEqual(db.execute('SELECT revision FROM coverage_latest').fetchone(),prior)
+            db.execute("UPDATE current_offer SET facts=facts#-'{source,necessary_identity_extension}'")
+            # A Coverage refusal is optional: the ordinary source publication
+            # still advances a healthy original input through its own owner.
+            records=CurrentRowStore(db).capture(include_depth=False)['records']
+            selected=deepcopy(next(r for r in records if r['quote']['venue']=='kalshi'
+                and r['event']['competition']=='NFL' and r['market_identity']['family']=='moneyline'
+                and r['quote']['source']['native_side']=='yes'))
+            clock=datetime.now(timezone.utc)+timedelta(seconds=1)
+            selected['quote']['original']['value']='0.4900'
+            selected['quote']['original']['native_value']=('0.5100' if
+                selected['quote']['original'].get('transformation')=='one_minus_native_bid' else '0.4900')
+            selected['quote']['times'].update(source_at=clock.isoformat(),received_at=clock.isoformat())
+            CurrentRowStore(db).upsert_records([selected],now=clock.isoformat())
+            self.state.write(self.service)
+            from app.storage.latest_board import reconcile as publish_prices
+            with patch('app.storage.coverage_latest.reconcile',side_effect=ValueError('coverage_capture_capacity')):
+                self.assertTrue(publish_prices(db,at=clock.isoformat(),observations_only=True)['published'])
+            prices=[q for row in db.execute(_PUBLICATION_SQL).fetchall() for q in row['prices']]
+            self.assertTrue(any(q['source']==selected['quote']['source'] and q['original']['value']=='0.4900'
+                and q['times']['source_at']==clock.isoformat() for q in prices),
+                dict(selected=selected['quote'],candidates=[q for q in prices if q['source']==selected['quote']['source']],
+                    errors=db.execute("SELECT facts->'observation_errors' errors FROM latest_board_status").fetchone()))
+        self.assertEqual(calls,before_calls)
+
+    async def test_c2_failed_board_withdraws_only_its_display_authority(self):
+        from psycopg.types.json import Jsonb
+        cases,calls,baseline=await self.matrix()
+        await self.owner.close()
+        with self.connect() as db:
+            row=db.execute('SELECT game_key FROM latest_board ORDER BY game_key LIMIT 1').fetchone()
+            db.execute("UPDATE latest_board_status SET facts=jsonb_set(facts,'{observation_errors}',%s)",
+                (Jsonb([dict(game_key=row['game_key'],reason='board_compact_response_capacity')]),))
+            reconcile(db);value=read(db)
+        self.assertEqual(value['global_totals']['retained_observations'],72)
+        self.assertLess(value['global_totals']['displayed_observations'],baseline['global_totals']['displayed_observations'])
+        self.assertGreater(value['global_totals']['displayed_observations'],0)
+        self.assertGreater(value['global_totals']['pending_observations'],0)

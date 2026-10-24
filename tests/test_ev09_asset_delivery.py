@@ -21,7 +21,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
         async with TestClient(TestServer(app)) as client:
             binding = await (await client.get('/api/scanner/client')).json()
             self.assertTrue(binding['assets_valid'])
-            for page in ("/", "/ev", "/arbs", "/odds"):
+            for page in ("/", "/ev", "/arbs", "/odds", "/scanner"):
                 response = await client.get(page)
                 self.assertEqual(response.status, 200)
                 html = await response.text()
@@ -58,12 +58,12 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         self.assertTrue(imports)
                     pending.extend(urljoin(path, module) for module in imports)
                 self.assertTrue(
-                    {"board-client.js", "board-read.js"}
+                    {"board-client.js", "board-contract.js", "board-values.js", "board-read.js"}
                     <= {Path(path.split("?")[0]).name for path in seen}
                 )
                 self.assertTrue(
                     (
-                        {"scanner.css", "scanner.js"} if page in ("/", "/arbs")
+                        {"scanner.css", "scanner.js"} if page == "/scanner"
                         else {"stored.css", "stored.js", "board-client.js"}
                     )
                     <= {Path(path.split("?")[0]).name for path in seen}

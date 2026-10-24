@@ -56,9 +56,10 @@
     justify-content:space-between
   }
   nav a {
-    flex:1;
+    flex:1 0 auto;
     min-width:0;
-    padding:8px 7px
+    font-size:.875rem;
+    padding:8px 6px
   }
   #stop {
     font-size:.8125rem;
@@ -453,4 +454,86 @@ opposing comparisons have four. */
   .heading-actions #settings .settings-fields label { grid-column:auto }
   .heading-actions #settings .settings-fields .benchmark-setting { grid-column:1/-1 }
   .heading-actions .settings-body { text-align:left }
+}
+
+/* U1 uses the same saved reads and dialogs, with results before setup. */
+.dashboard-page .heading-actions,.dashboard-page .scope { display:none }
+.dashboard-page .board-controls { display:block; margin-bottom:16px }
+.dashboard-page .board-controls .slate-selection:has(#sort-setting[hidden]) { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); max-width:720px }
+.dashboard-page .slate-selection label:has(#period),.dashboard-page .slate-selection label:has(#game),.dashboard-page .search-field,.dashboard-page #sort-setting { display:none }
+.dashboard-page .context-bar { margin-bottom:12px }
+.dashboard-page .heading { margin:24px 0 18px }
+.dashboard-page #settings { margin-top:20px; width:min(100%,440px) }
+.dashboard-page #applied[hidden] { display:none }
+.opportunity-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start }
+.opportunity-section { background:white; border:1px solid var(--line); border-radius:12px; padding:20px; min-width:0; box-shadow:var(--shadow) }
+.opportunity-section h2 { margin-bottom:10px }
+.opportunity-status { color:#43536a; font-size:.9375rem; line-height:1.5 }
+.opportunity-reasons { margin-top:12px; font-size:.875rem }
+.opportunity-reasons summary,.opportunity-group>summary { cursor:pointer; color:#245bcc; min-height:44px; padding:10px 0 }
+.opportunity-prices { padding:16px 0; margin:0 0 4px }
+.opportunity-prices>a { display:inline-flex; align-items:center; min-height:44px; padding:8px 16px; border-radius:8px; background:var(--blue); color:white; font-weight:650; text-decoration:none }
+.opportunity-prices>a:hover { background:#1849b2 }
+.opportunity-prices p { font-size:.875rem; color:var(--muted); max-width:760px }
+.opportunity-group { background:white; border:1px solid var(--line); padding:10px 18px; border-radius:10px; margin:10px 0 }
+.opportunity-group>p { font-size:.875rem; color:var(--muted) }
+.opportunity-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; border-top:1px solid var(--line); padding:16px 0; margin-top:12px; overflow-wrap:anywhere }
+.opportunity-row>button { justify-self:start }
+.opportunity-row p { font-size:.875rem }
+.opportunity-value { text-align:right }
+.opportunity-value>strong { font-size:21px; font-variant-numeric:tabular-nums }
+.opportunity-value small { max-width:160px }
+@media(max-width:600px) {
+ .dashboard-page main { padding:0 16px 20px }
+ .dashboard-page .heading { margin:18px 0 14px }
+ .dashboard-page h1 { font-size:25px }
+ .dashboard-page .board-controls .slate-selection { gap:8px }
+ .dashboard-page .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
+ .dashboard-page .slate-selection label:has(#family) { grid-column:1/-1 }
+ .opportunity-sections { grid-template-columns:1fr; gap:12px }
+ .opportunity-section { padding:16px }
+ .opportunity-section h2 { font-size:18px; margin-bottom:6px }
+ .opportunity-status { font-size:14px; margin:0 }
+ .opportunity-reasons { margin-top:6px }
+ .opportunity-prices { margin:0; padding:12px 0 }
+ .opportunity-row { grid-template-columns:minmax(0,1fr) }
+ .opportunity-value { text-align:left }
+ .opportunity-value small { max-width:none }
+}
+
+.ev-outcome-page .opportunity-sections{grid-template-columns:minmax(0,1fr)}
+.ev-outcome-page .ev-filters{margin:10px 0}
+.ev-outcome-page .ev-filters>summary{cursor:pointer;font-weight:600}
+.ev-outcome-page .heading{margin-bottom:10px}
+.ev-outcome-page .opportunity-section{min-width:0}
+
+/* Coverage is one optional disclosure; the price grid is the dominant work area. */
+@media(max-width:760px) {
+  .heading { margin:14px 0; gap:8px }
+  .view-title { display:block }
+  .observation-coverage-details { width:auto }
+  .slate-overview .slate-summary { flex:1 1 160px }
+  .slate-overview .observation-coverage-details[open] { flex-basis:100% }
+  .dashboard-page .heading { margin:16px 0 }
+  .opportunity-section { padding:16px }
+}
+@media(max-width:600px) {
+  nav { gap:2px; width:100% }
+  nav a { font-size:.875rem; padding:8px 6px; flex:1 0 auto }
+  .price-group-heading { margin:16px 0 10px }
+  .slate-price-row { gap:12px 16px }
+  footer { gap:8px; padding-top:16px }
+  footer>div { display:flex; flex-wrap:wrap; gap:8px 20px }
+}
+
+/* Explicit row placement avoids inherited comparison grids squeezing identities. */
+.opportunity-row.slate-result { grid-template-columns:minmax(0,1fr) minmax(160px,220px) auto; margin-top:0; border-bottom:0; padding:16px 0 }
+.opportunity-row.slate-result>div:first-child { grid-column:1; grid-row:1; min-width:0 }
+.opportunity-row.slate-result>.opportunity-value { grid-column:2; grid-row:1 }
+.opportunity-row.slate-result>button { grid-column:3; grid-row:1 }
+@media(max-width:600px) {
+  .opportunity-row.slate-result { grid-template-columns:minmax(0,1fr) auto; gap:12px }
+  .opportunity-row.slate-result>div:first-child { grid-column:1/-1; grid-row:1 }
+  .opportunity-row.slate-result>.opportunity-value { grid-column:1; grid-row:2 }
+  .opportunity-row.slate-result>button { grid-column:2; grid-row:2 }
 }

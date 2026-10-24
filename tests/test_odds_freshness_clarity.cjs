@@ -23,7 +23,7 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   const {checkBoard, checkSlate, SlateAccumulator, defaults} = await import(asset('board-client.js'));
   const {createComparisonSlate, scopedObservationCoverage} = await import(asset('comparison-slate-views.js'));
   const {renderOriginalDetails} = await import(asset('stored-details.js'));
-  const {updateRelativeAges, preserveDisclosures, relativeAge, ageNode} = await import(asset('board-elements.js'));
+  const {updateRelativeAges, preserveDisclosures, relativeAge, ageNode, observationSummary} = await import(asset('board-elements.js'));
   const b = board(fixture.odds, fixture.odds.game_key), g = copy(fixture.catalog.games[0]);
   b.prices = b.prices.slice(0, 4); b.rows = []; b.delivery_state = 'pending';
   const states = ['current', 'pending', 'last_known', 'unknown'];
@@ -51,7 +51,16 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   assert.equal(scopedObservationCoverage([{...b,prices:[...b.prices,b.prices[0]]}]).total,4,'duplicate quote identities counted once');
   const content = new Element('section'), renderer = createComparisonSlate({content,onOriginal:()=>{},onDetails:()=>{}});
   renderer.draw(slate,{view:'odds',filter:'all'});
-  for (const text of ['2 games shown · 2 in catalog','4 price observations','1 current · 1 pending publication · 1 last-known · 1 unknown/unavailable observations','Requested pages retrieved','board errors exclude unknown observations','source_board_read_failed','Updating stored observations','Gross difference -0.021739 cents','Last-known comparison']) assert(content.textContent.includes(text),text);
+  for (const text of ['2 games shown · 2 in catalog','4 price observations','1 current · 1 pending publication · 1 last-known · 1 unknown/unavailable observations','Requested pages retrieved','board errors exclude unknown observations','source_board_read_failed','Updating stored observations']) assert(content.textContent.includes(text),text);
+  const priceCells=content.querySelectorAll('.slate-price-cell');
+  assert.equal(content.querySelectorAll('.compact-price-status').length,4);
+  assert(priceCells.some(cell=>cell.textContent.includes('Current · 1s old')));
+  assert(!priceCells.some(cell=>cell.textContent.includes('Observed depth unknown') || cell.textContent.includes('Gross difference')),'price cards leave technical/comparison evidence to Details');
+  assert(!content.querySelector('.odds-research').open,'old observations start collapsed, independently of financial availability');
+  assert(content.querySelector('.odds-research').querySelectorAll('.compact-price-status').length>0,'old originals remain inspectable');
+  const brief=new Element('section');observationSummary(brief,selected,{compact:true});
+  assert.equal(brief.children.length,1);assert.equal(brief.textContent,'Current · 1s old');
+  updateRelativeAges(brief,at+16*60*1000);assert(brief.textContent.startsWith('Last-known · '));
   assert.equal(content.querySelectorAll('.observation-estimate-status').length,1,'one shared estimate message');
   assert(content.querySelector('.estimate-reasons').textContent.includes('selected_reference_missing'));
   renderer.draw(slate,{view:'odds',filter:'all',game:absent.game_key});
@@ -59,7 +68,7 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   assert(content.textContent.includes('Catalog: 4 returned price observations'));
   assert(content.textContent.includes('source_board_read_failed'));
   renderer.draw(slate,{view:'odds',filter:'all',search:g.participants[0].name});
-  assert.equal(content.querySelectorAll('.slate-odds').length,1);
+  assert.equal(content.querySelectorAll('.slate-odds').length,2,'current and research observations have separate game sections');
   const manyGames = Array.from({length:51}, (_,index) => ({...copy(g),game_key:'authored-page-game:'+index,title:'Paged synthetic game '+index}));
   const accumulator = new SlateAccumulator(c);
   for (const offset of [0,50]) {
@@ -77,8 +86,9 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   render();
   const before = JSON.stringify(selected.gross_comparison);
   for (const text of ['-1/46 cents','Native side','Original price',peer.times.source_at,selected.times.source_at,'Healthy source','168,659 seconds','Positive means the selected price is lower','negative means it is higher']) assert(root.textContent.includes(text),text);
-  const comparisonIndex = root.children.findIndex(node => node.className === 'original-comparison');
-  assert(comparisonIndex < root.children.findIndex(node => node.className === 'observed-depth'),'comparison precedes depth');
+  const evidenceBody = root.querySelector('.original-comparison').parentNode;
+  const comparisonIndex = evidenceBody.children.findIndex(node => node.className === 'original-comparison');
+  assert(comparisonIndex < evidenceBody.children.findIndex(node => node.className === 'observed-depth'),'comparison precedes depth inside collapsed evidence');
   const disclosure = root.querySelector('.estimate-reasons'); disclosure.open = true;
   const summary = disclosure.querySelector('summary'); summary.closest = () => disclosure; summary.focus();
   await Promise.resolve(); preserveDisclosures(root,render);

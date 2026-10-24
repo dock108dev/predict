@@ -84,7 +84,7 @@ class PayloadCodec(unittest.TestCase):
     def test_shared_row_factory_only_decodes_payload_and_keeps_metadata(self):
         from psycopg.pq import ExecStatus
         names=('id','payload','payload_sha256','stored_payload')
-        cursor=SimpleNamespace(pgresult=SimpleNamespace(status=ExecStatus.TUPLES_OK,nfields=len(names),fname=lambda i:names[i].encode()),_encoding='utf-8')
+        cursor=SimpleNamespace(connection=None,pgresult=SimpleNamespace(status=ExecStatus.TUPLES_OK,nfields=len(names),fname=lambda i:names[i].encode()),_encoding='utf-8')
         original=self.original();packed=codec.encode(original);digest=sha256(original.encode()).hexdigest()
         make_row=codec.payload_row(cursor)
         row=make_row(('immutable-id',packed,digest,packed))

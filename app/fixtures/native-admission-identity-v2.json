@@ -1,5 +1,5 @@
 {
-  "version": "retained-native-admission-2",
+  "version": "retained-native-admission-3",
   "collection_authorized": false,
   "mappings": [
     {
@@ -4301,7 +4301,79 @@
           "body_sha256": "b2f0865f113131c0a08e40d5f930797b1ff8c70a3f5ca0968953df47981e4644"
         }
       ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "49f26808-9595-45ec-946d-2aa58d67b782",
+      "target": "NCAAF:NCAA624",
+      "source": "SC07-M1: explicit native structured football team and label; NCAA institution Sam Houston State University; https://gobearkats.com/sports/football; identity only, no event crosswalk",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFGAME-26OCT21NMSUSHSU-SHSU",
+          "native_metadata_sha256": "3db660bf5fc2b17d93902c0efbed14bbf911951ddaf83b1c3e7ec13f3c81ab78",
+          "canonical_id": "NCAAF:NCAA624",
+          "label": "Sam Houston",
+          "body_sha256": "7c72062cff595ff966a3f4830ff9663892e6668d9e9e2bf2433b90e244403ed6",
+          "body_encoding": "canonical parsed JSON",
+          "source_path": "test-results/sc07-m1-20261020/source-KXNCAAFGAME-26OCT21NMSUSHSU.json",
+          "institution_url": "https://gobearkats.com/sports/football",
+          "institution_name": "Sam Houston State University",
+          "identity_only": true,
+          "institution_alias": true
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "7d548f70-b3f7-480b-9ee9-cd6b600bbffc",
+      "target": "NCAAF:NCAA27",
+      "source": "SC07-M1: explicit native structured football team and label; NCAA institution Appalachian State University; https://www.appstate.edu/; identity only, no event crosswalk",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFGAME-26OCT22JMUAPP-APP",
+          "native_metadata_sha256": "fb77a1ef35a054b3dff3999a44d0c15883370577217180c250cc6742e46a2fbb",
+          "canonical_id": "NCAAF:NCAA27",
+          "label": "Appalachian St.",
+          "body_sha256": "2f6568866d430212c88d743c37b70ac06cc1f8a188967118cdf9db842484d135",
+          "body_encoding": "canonical parsed JSON",
+          "source_path": "test-results/sc07-m1-20261020/source-KXNCAAFGAME-26OCT22JMUAPP.json",
+          "institution_url": "https://www.appstate.edu/",
+          "institution_name": "Appalachian State University",
+          "identity_only": true,
+          "institution_alias": true
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAF",
+      "native_id": "572cdd0f-f91f-4f48-b047-94d9b508477e",
+      "target": "NCAAF:NCAA301",
+      "source": "SC07-M1: explicit native structured football team and label; NCAA institution University of Illinois Urbana-Champaign; https://fightingillini.com/sports/football; identity only, no event crosswalk",
+      "evidence": [
+        {
+          "market_id": "KXNCAAFGAME-26OCT23OREILL-ILL",
+          "native_metadata_sha256": "baeb88195ff705474e9504832b08eeea08e9a99eb265e50833d2877e3101ebdd",
+          "canonical_id": "NCAAF:NCAA301",
+          "label": "Illinois",
+          "body_sha256": "eee9c02186848ca24a725d443406bb8c2d7d605f6395db387bb1fc710b5f32f9",
+          "body_encoding": "canonical parsed JSON",
+          "source_path": "test-results/sc07-m1-20261020/source-KXNCAAFGAME-26OCT23OREILL.json",
+          "institution_url": "https://fightingillini.com/sports/football",
+          "institution_name": "University of Illinois Urbana-Champaign",
+          "identity_only": true,
+          "institution_alias": true
+        }
+      ]
     }
   ],
-  "sha256": "9cc1b8e32aef2b0a522d8626fba3a0cd79eea8104e3e53f8c30b51c8f5aa38f7"
+  "sha256": "82139cfc383008b01cbdd95d3aa31f341cede23d9c96ced73edb3cfcc32259de"
 }

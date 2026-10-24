@@ -110,3 +110,15 @@ states remain in the complete minimum. A bounded nonqualifying sizing search
 cannot establish evaluated-zero unless exhaustive. Existing board/slate/Details
 wire versions retain their meanings. See the [scanner contract](scanner-projection-contract.md)
 and [financial examples](scanner-qualification-decisions.md).
+
+## Public product estimates
+
+The October 22 NFLWIN route uses the same cashflow, cost, probability and funded
+transport owners with a separately named public product model. Its cent-rounded
+USD-risk sizing is hypothetical; it does not attach a legal native grid or observed
+liquidity to the quote. `modeled_basis` survives compact publication and selected
+Details. Full modeled expectation and conditional expectation coexist. The actual
+void state remains null; `modeled_expected_void_receipt_usd` is an assumption for
+EV only and cannot establish a complete minimum. See the
+[versioned basis](novig-nflwin-modeled-basis.md) for all assumptions, expiry and
+excluded scope. Source and model expiry remain independent.

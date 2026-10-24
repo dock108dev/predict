@@ -46,7 +46,7 @@ def row(q=None, p=None, e=None, g=None, book=None, *, at=AT, status=None):
 
 
 def projection(rows, *, selection=None, evaluations=(), at=AT, scopes=None):
-    selection = selection or Selection(venues=('polymarket_us', 'kalshi'))
+    selection = selection or Selection(venues=('polymarket_us', 'kalshi'),sports=('football',),leagues=('NFL',),markets=('winner',))
     scopes = scopes or scope_inventory(selection, DEFAULT, GRANT)
     return assemble(rows, selection=selection, at=at, epoch='authored-epoch', input_revision='authored-inputs', scopes=scopes, evaluations=evaluations)
 
@@ -192,8 +192,8 @@ class Readiness(TestCase):
         self.assertEqual(r['counts']['observed_instruments']['value'],2)
         s=Selection(leagues=('NBA',),sports=('basketball',))
         scopes=scope_inventory(s,DEFAULT,GRANT)
-        self.assertTrue(all(not x['authorized'] and not x['supported'] for x in scopes))
-        self.assertEqual(projection([],selection=s,scopes=scopes)['state'],'unsupported')
+        self.assertTrue(all(not x['authorized'] and x['supported'] for x in scopes))
+        self.assertEqual(projection([],selection=s,scopes=scopes)['state'],'blocked')
         with self.assertRaises(ValueError):Selection(venues=('pinnacle',))
 
     def test_read_does_not_mutate_inputs_or_acquire(self):

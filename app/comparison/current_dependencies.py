@@ -24,6 +24,25 @@ def digest(value):
     return sha256(encoded(value)).hexdigest()
 
 
+def encoded_chunks(value):
+    """Canonical JSON without a second whole-frame string/byte allocation."""
+    encoder = json.JSONEncoder(sort_keys=True, separators=(',', ':'),
+                               ensure_ascii=False, allow_nan=False)
+    for chunk in encoder.iterencode(value):
+        yield chunk.encode()
+
+
+def encoded_size(value):
+    return sum(map(len, encoded_chunks(value)))
+
+
+def streaming_digest(value):
+    result = sha256()
+    for chunk in encoded_chunks(value):
+        result.update(chunk)
+    return result.hexdigest()
+
+
 def instant(value):
     if not isinstance(value, str) or len(value) > 64:
         raise ValueError('Dependency UTC timestamp required')

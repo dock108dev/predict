@@ -55,11 +55,6 @@ def event_key(event):
 
 
 def inventory_gaps(inventory):
-    from app.normalization import reviewed_winner
+    from app.normalization.reviewed_winner import line_inventory_gaps
     import sys
-    # Legacy winner records remain governed by their original path.
-    selected={}
-    for source,cat in inventory.items():
-        ids={m['event_id'] for m in cat.get('markets',[]) if m.get('market_type') in ('spread','total')}
-        selected[source]=dict(events=[e for e in cat.get('events',[]) if e['id'] in ids])
-    return reviewed_winner.inventory_gaps(sys.modules[__name__],selected)
+    return line_inventory_gaps(sys.modules[__name__], inventory)

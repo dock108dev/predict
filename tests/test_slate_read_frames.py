@@ -17,6 +17,8 @@ def authored_frame(count=60, revision='first-publication'):
     frame=latest_frame();template=next(iter(frame['rows'].values()))
     # Lifecycle coverage needs many small games, with one retained native price
     # each. The existing busy-game fixture deliberately contains much more data.
+    from app.dashboard.comparison_board import expand_odds
+    expand_odds(template['facts']['boards']['odds'])
     native=next(q for q in template['facts']['boards']['odds']['prices'] if q['venue']=='kalshi')
     template['facts']['boards']['odds']['prices']=[native]
     template['facts']['boards']['odds']['rows']=[]
@@ -138,6 +140,19 @@ class CapturedSlateReads(TestCase):
             self.read()
         self.assertEqual(self.frames.retained_bytes,0)
 
+    def assert_completed_cache(self):
+        # Completed pages retain bounded selected-input evidence, not boards.
+        self.assertGreater(self.frames.retained_bytes,0)
+        self.assertLessEqual(self.frames.retained_bytes,self.frames.maximum_bytes)
+        for frame in self.frames.frames.values():
+            self.assertEqual(frame.context,'completed')
+            for record in frame.records:
+                row=self.frames.decode(record)['row']
+                self.assertNotIn('boards',row['facts'])
+                self.assertNotIn('_boards_text',row)
+        self.now=31;self.frames.cleanup()
+        self.assertEqual(self.frames.retained_bytes,0)
+
     def test_concurrent_tabs_get_independent_frames_and_oldest_eviction(self):
         pages=[self.read() for _ in range(5)]
         self.assertEqual(len({p['read_token'] for p in pages}),5)
@@ -146,9 +161,9 @@ class CapturedSlateReads(TestCase):
         with self.assertRaisesRegex(ValueError,'current_slate_read_expired'):
             self.continuation(pages[0])
         self.continuation(pages[1])
-        self.assertEqual(len(self.frames.frames),3)
+        self.assertEqual(len(self.frames.frames),4)
         for first in pages[2:]:self.continuation(first)
-        self.assertEqual(self.frames.retained_bytes,0)
+        self.assert_completed_cache()
 
     def test_byte_capacity_refuses_and_fresh_read_can_recover(self):
         self.frames.maximum_bytes=4096
@@ -157,7 +172,7 @@ class CapturedSlateReads(TestCase):
         self.assertEqual(self.frames.retained_bytes,0)
         self.frames.maximum_bytes=64*1024*1024
         first=self.read();self.continuation(first)
-        self.assertEqual(self.frames.retained_bytes,0)
+        self.assert_completed_cache()
 
     def test_byte_pressure_evicts_older_frames_without_duplicate_per_page_copies(self):
         first=self.read();size=self.frames.retained_bytes
@@ -170,7 +185,7 @@ class CapturedSlateReads(TestCase):
         self.continuation(second,offset=0)
         self.assertEqual(self.frames.retained_bytes,size)
         self.continuation(second)
-        self.assertEqual(self.frames.retained_bytes,0)
+        self.assert_completed_cache()
 
     def test_process_guard_refuses_before_snapshot_or_page_allocation(self):
         self.frames.resource_bytes=lambda:768*1024*1024

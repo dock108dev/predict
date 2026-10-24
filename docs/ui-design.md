@@ -129,3 +129,32 @@ Narrow layouts must preserve value labels, focus containment/return and readable
 long identities without horizontal page overflow. Synthetic browser fixtures test
 these interactions; they do not establish current source availability or full-scale
 performance. See [scanner usage](scanner-usage.md) for the user workflow.
+
+## October 23 interface refinement
+
+The current Dashboard → Odds → Details journey keeps the cool light palette,
+system typography and restrained blue actions from the shared design requirements.
+Navigation and Stop use the same 44px control family on desktop and narrow screens.
+Dashboard filters remain readable; a healthy refresh does not leave a redundant
+Reload button. When positive results are unavailable, Browse available prices
+precedes the separate arbitrage/EV availability panels. Unknown is never zero.
+
+Odds groups diagnostic counts and comparison readiness under one Price coverage
+& availability disclosure. Current and last-known groups retain their own aligned
+venue headings. Original prices, native sides and source ages stay visible.
+Selected Original Inputs states comparison unavailability once, preserves the
+captured-frame reminder, and keeps complete wording, exact clocks, reasons and
+depth in Source details & observed depth. Selected sizing stays secondary in a
+full-width Details settings control with retained drafts.
+
+EV research rows explicitly place identity, metric and Details at each breakpoint;
+team names use full mobile width rather than inheriting a narrow desktop column.
+Footer links stay grouped. Existing captured selection leases preserve original
+evidence across updates; changing current inputs withdraw eligibility without
+silently replacing the selected evidence.
+
+Matched intercepted fixtures were visually reviewed at 1280px and 390px, including
+populated Odds, unavailable estimates, Original Inputs, empty and failed reads.
+Expanded conditional results, financial Details, enlarged text and long names were
+also inspected. These are presentation checks, not owner or new-user acceptance,
+current source qualification or commercial readiness.

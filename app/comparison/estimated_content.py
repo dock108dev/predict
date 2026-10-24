@@ -129,7 +129,19 @@ def resolve_content(q, profiles, *, at, kind, _values=None):
     """Versioned consumer reads exact original shared references and selected recipe."""
     if kind not in ('fee','payout'):raise ValueError('estimate_component_kind_required')
     recipe=q.get('comparison_input_status',{}).get(kind,{}).get('estimate_content')
-    if recipe is None:return dict(available=False,reasons=[q.get('comparison_input_status',{}).get(kind,{}).get('estimate_unresolved_reason','estimate_content_unbound')])
+    if recipe is None:
+        status=q.get('comparison_input_status',{}).get(kind,{})
+        reasons=[status.get('estimate_unresolved_reason', status.get('reason',kind+'_inputs_missing'))]
+        templates=[t for t in _catalog()['templates'] if t['venue']==q['venue']]
+        values=references(q,profiles) if _values is None else _values
+        selection=values.get('identity',{}).get('payload',{}).get('selection',{})
+        scope=selection.get('scope',{})
+        applicable=[t for t in templates if t['scope']['league']==selection.get('event',{}).get('league') and t['scope']['period']==scope.get('period') and selection.get('family') in ('moneyline','team_binary')]
+        if not applicable:
+            reasons.append(kind+'_estimate_scope_unsupported')
+        elif any(not _active(t,at) for t in applicable):
+            reasons.append(kind+'_estimate_model_expired_or_not_effective')
+        return dict(available=False,reasons=sorted(set(reasons)))
     if recipe.get('version')!=VERSION or recipe.get('id')!=digest({k:v for k,v in recipe.items() if k!='id'}):
         raise ValueError('estimate_content_digest_conflict')
     values=references(q,profiles) if _values is None else _values

@@ -45,12 +45,19 @@ Observed prices remain visible independently of financial eligibility. Native Po
 
 ## Bounds and failures
 
-Per-game compact boards are bounded at 512 KiB; Details/typed Original responses at 8 MiB. The read context admits at most 16,384 typed records and 96 MiB of encoded typed inputs, with occurrence matching capped at 16,000 records/2,048 source members. Native depth hydrates only selected games. Catalogs retain compact metadata, never every game's expanded profile graph. The 500-event slate uses explicit bounded pages described in [the slate contract](comparison-slate-api-contract.md).
+Per-game compact boards are bounded at 512 KiB. An optional `price_field_pool`
+losslessly interns repeated large per-price values via validated `field_refs`;
+clients expand them before validation or presentation. Original prices, clocks,
+native positions and quote identity remain inline. This changes representation,
+not retained market meaning or peer membership.
+
+ Details/typed Original responses at 8 MiB. The read context admits at most 16,384 typed records and 96 MiB of encoded typed inputs, with occurrence matching capped at 16,000 records/2,048 source members. Native depth hydrates only selected games. Catalogs retain compact metadata, never every game's expanded profile graph. The 500-event slate uses explicit bounded pages described in [the slate contract](comparison-slate-api-contract.md).
 
 HTTP retained reads use two fixed lanes: one ordinary worker and one selected
 Original/financial Details worker. Admission is capped at three ordinary and two
 selected requests (five total); excess returns HTTP 429 `current_read_busy`.
-Each queued request has one second to obtain its lane. A running request has a
+Each queued request has up to ten seconds to obtain its lane, covering the two
+possible admitted predecessors at the five-second work deadline. A running request has a
 five-second server response deadline, below the unchanged 30-second browser limit.
 Queue/worker deadlines return HTTP 504 with distinct queue/worker timeout codes.
 A disconnect or deadline withdraws adoption; it never releases a live worker's
@@ -251,3 +258,125 @@ in `wording_refs`; every description is retained without truncation, including
 unpaired or unsupported observations. Original native predicates, equality/scoring
 facts, prices and clocks remain exact. Full occurrence audits remain available in
 the local typed source-evidence endpoint. Financial `price_ref` values reuse an original only when its revision, selection, source identity, original price and clocks all agree. Clients restore those exact scalar inputs locally before display. Repeated book audits remain in Odds and the typed Original evidence endpoint.
+
+
+C1 keeps this wire version and decoder. Source health in a price and its frozen
+input uses the same `state`, `reason_code`, `reason` projection before capture;
+full source/runtime audit status has its existing separate owner. A same-board
+reference also requires equal captured/read-time freshness and display assessment.
+A comparison-specific pending reason therefore remains in an explicit frozen input
+when it differs from the price row. Malformed wording indexes and crossed or
+duplicate price references refuse. Native wording values, original prices, sides,
+units, revisions, book identities and clocks are unchanged.
+
+A compact-capacity refusal is local to its game: the catalog retains the game,
+`observation_errors` explains its unavailability and `scope_complete` is false.
+Other valid games publish. A retained older row for the failed game cannot grant
+current authority. Ordinary read decoration is checked against the same 512 KiB
+limit; an irreducible result refuses rather than truncating source evidence.
+
+## SC07-U1 dashboard consumer
+
+`/` uses the existing authored stored frontend. It reads complete bounded `all`
+EV and Arbs slates separately, keeping each response's availability and original
+Details identity. One section's failed read never supplies the other's status.
+League/venue/market filters select local rows; they do not change acquisition.
+`/arbs` is the stored comparison view; `/scanner` retains the advanced Scanner.
+
+The opener ranks only server-eligible current complete EV and complete covered
+minimum percentages. It orders exact rational/decimal values before display
+rounding, with start/game/instrument ties. Signed nonpositive complete results,
+conditional EV, decisive/listed-state hedges, gross decisive benchmarks and
+last-known research have separate groups. Unknowns have no numeric rank. A scope
+is described as evaluated with no positives only when its supplied board
+completeness and metric states support that assertion; refused candidates and
+failed boards prevent it. A positive summary and a route to prices remain visible
+before optional selected Amount settings. Default server policy is unchanged.
+
+After a failed selected read, the controller withdraws the selected identity and
+provides a close-and-load-current-results action. It never retries the obsolete
+identity on a poll or turns the failure into a zero. Existing original-input
+frames retain their exact clocks and independent inspection behavior.
+
+
+## EV outcome consumer (SC07-U3)
+
+`/ev` reads `filter=all` through the existing captured-slate reader. It reuses
+metric-specific dashboard presentation and exact supplied-value ordering, with
+one EV outcome before optional settings and scope controls. Complete net EV,
+conditional EV and gross decisive research remain separate; an empty positive
+subset never establishes an evaluated zero. Failed games are named alongside
+available results. Failed whole-view refreshes suppress current positives and
+retain inspectable research with unverified freshness, including across local
+filter changes. Optional selected sizing and the withdrawn-selection/reopen
+contract remain unchanged. No browser financial calculations are introduced.
+
+The Inputs endpoint accepts the observation context supplied by Odds or the
+financial selection context supplied by Details. These are distinct identities.
+Ordinary rows now include an optional `read_token` in their selection identity.
+Pass it with the exact game, context and quote/pair to Details or Inputs. These
+reads use the captured typed inputs, not a reconstruction from newer SQL.
+The response returns a selected-game token; the controller uses it thereafter.
+
+The existing four-frame, 64 MiB cache and 30-second lease remain bounded.
+Completed pagination releases board bodies and dependency indexes; an opened
+selection retains only its game and takes eviction priority over pagination.
+Selected Details reads run independently of slow whole-slate refreshes on the
+reserved selected lane. The visible completed slate also sends a ten-second `/api/boards/read-lease` heartbeat so a slower replacement does not expire the evidence still on screen. Displayed and selected frames share the same eviction/count/byte limits; closing the page stops renewal. Active reads renew only this cache lease. They never renew price, receipt,
+confirmation or calculation authority. An evicted token can recover from SQL
+only when the full requested context still matches exactly. Otherwise expiry or
+removal remains explicit, with a route to updated results.
+
+`selection_status=unchanged` means the captured dependency proof still agrees;
+normal freshness and financial expiry checks also apply. `captured` means the
+selected evidence remains readable as-of, with ranking eligibility withdrawn.
+Reference changes, relevant source changes, Stop, runtime loss, epoch reset,
+policy and engine changes retain their real authority effects. Epoch mismatch
+and crossed identities refuse. Unrelated catalog changes do not replace inputs.
+Optional Amount recalculates from that same captured input frame. The original
+publication calculation clock is `captured_calculated_at`; `calculated_at`
+describes the selected calculation. Original Inputs preserves the selected
+price, identity and source/receipt/confirmation clocks.
+
+Publication keeps bounded losslessly encoded selected inputs within its existing
+total byte limit. This is short-lived interaction evidence, not sports history.
+Source-only publication may commit a coherent older snapshot while a sibling
+book changes; reads independently mark each changed observation pending and
+keep unchanged eligible quotes usable. Membership, runtime and newer-publication
+barriers still apply. Active source components get an early scheduling turn,
+then the normal rotation resumes. Source work commits each complete occurrence
+separately and yields after five seconds between occurrences. Priority uses a
+recent original source or existing confirmation clock only to schedule work;
+normal rendering still validates the confirmation and all freshness/authority rules.
+
+### Wide board field encoding (October 22 publication repair)
+
+`price_field_pool` may now share any repeated price field except `quote_id` and
+`quote_revision`, including exact original values and clocks. Wide boards may
+also carry `price_key_pool`: a unique ordered dictionary of field names. In that
+case, price object keys other than `quote_id`, `quote_revision` and `field_refs`,
+and all keys inside `field_refs`, are canonical decimal dictionary indexes.
+Decode names first, then restore shared values, then resolve captured comparison
+inputs. Reject unknown indexes, duplicate/crossed fields and unsafe names. Each
+expanded value is detached. The Python, browser and Coverage SQL readers implement
+the same order. The 512 KiB board ceiling and whole-slate byte paging are unchanged.
+Source/receipt clocks are encoded literally or by exact frozen references; no
+publication/read clock substitutes for them.
+
+Wide EV/Arbs boards may include `financial_field_pool`. Each row keeps its literal
+identity and replaces exact repeated values with `financial_field_refs` (field to
+zero-based pool index). Restore detached values before logical row validation,
+price references or aging. Reject duplicate fields and invalid indexes. This is
+lossless sharing within a single captured board, with the same 512 KiB ceiling.
+
+Wide boards may additionally carry `price_object_keys`, a unique ordered string
+array. After expanding price names and shared price values, decode the immediate
+keys of **every object-valued price field** as canonical nonnegative decimal
+indexes into this array. Arrays, scalars and all deeper values remain literal;
+this never interprets an arbitrary nested object as a reference. Empty objects
+remain empty. Reject duplicate/unsafe dictionary names and invalid indexes.
+Financial rows are unaffected. Decode before validation, aging or input resolution.
+Coverage performs this same step in SQL before projecting its required fields.
+The encoder uses this only when the complete dictionary saves bytes, at 480 KiB
+or above; both publication and fully constructed HTTP replies retain the existing
+512 KiB check. No row, ladder level, original value or clock is removed by encoding.

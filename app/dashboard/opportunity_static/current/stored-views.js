@@ -68,7 +68,7 @@ export function createBoardViews({
                     words(q.original.units),
             ),
           );
-          observationSummary(box, q);
+          observationSummary(box, q, {compact:true});
           const b = el("button", "Original price");
           b.dataset.key = q.quote_id;
           b.onclick = () => onOriginal(q, b);

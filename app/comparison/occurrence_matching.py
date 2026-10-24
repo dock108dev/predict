@@ -149,6 +149,9 @@ class OccurrenceResolver:
                 shared_index.setdefault((namespace, value), set()).add(key)
                 namespaces.setdefault(namespace, set()).add(key)
         assigned = {}; methods = {}; intervals = {}; edge_ids = {}
+        source_groups={}
+        for k,f in facts.items():
+            source_groups.setdefault((k[0],f['source_game']),[]).append(k)
         # Shared provider identifiers outrank reviewed edges; disagreements fail.
         for k, f in sorted(facts.items()):
             if k in source_local:
@@ -226,6 +229,20 @@ class OccurrenceResolver:
                         if p not in assigned or methods[p] == 'shared_provider_event':assigned[p] = oid; methods[p] = 'unique_metadata'
                     continue
             if peers:conflicts[k] = ['ambiguous_metadata_candidates']
+        # Source-local family aliases are a fallback after cross-source joins.
+        # Giving them an independent strong ID earlier would create a second
+        # identity competing with the same game's typed cross-provider witness.
+        for (provider,game),members in source_groups.items():
+            if provider!='kalshi' or len(members)<2 or any(k in source_local or k in conflicts for k in members):continue
+            first=facts[members[0]]
+            if not all(self._consistent(first,facts[k]) and instant(first['start'])==instant(facts[k]['start']) for k in members):continue
+            ids={assigned[k] for k in members if k in assigned}
+            if len(ids)>1:
+                for k in members:conflicts.setdefault(k,[]).append('native_game_membership_conflict')
+                continue
+            oid=next(iter(ids)) if ids else 'native-game:'+digest([first['league'],provider,game])
+            for k in members:
+                if k not in assigned:assigned[k]=oid;methods[k]='shared_native_event'
         # Local reviewed overrides are explicit evidence, with the same expiry
         # and role checks. They cannot overrule a contradictory stronger identity.
         if self.overrides:
@@ -282,6 +299,11 @@ class OccurrenceResolver:
                 mapping = {r['event'][role]:f['roles'][role] for role in ('home','away')}
                 e = original['event']
                 e.update(game_id=oid,**canonical_roles)
+                # Source spelling is preserved in original_event. NHL providers
+                # use both hockey and ice_hockey for the same canonical sport.
+                if e['competition']=='NHL' and e['sport'] in ('hockey','ice_hockey'):
+                    e['sport']='hockey'
+                    original['market_identity']['sport']='hockey'
                 e['participants'] = {n:mapping.get(cid,cid) for n,cid in e['participants'].items()}
                 from .event_links import ordinary_event_key
                 original['market_identity']['event'] = ordinary_event_key(e)

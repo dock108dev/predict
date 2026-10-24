@@ -186,11 +186,6 @@ async def run(args):
     return result
 
 
-def ResponseLike(raw):
-    from app.adapters.prophetx import Response
-    return Response(raw.json_text,raw.source,raw.received_at,raw.kind)
-
-
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--live',action='store_true')

@@ -19,8 +19,6 @@ REGISTRY = 'app/fixtures/native-scoring-scope/nfl-full-game-registry.json'
 MAX_REGISTRY_BYTES = 128 * 1024
 MAX_TARGETS = 32
 STATES = ('included', 'excluded', 'unknown')
-UNKNOWN_FAILURES = {'scope_registry_unavailable', 'scope_registry_evidence_unavailable',
-    'scope_registry_not_effective', 'scope_registry_identity_missing', 'scope_registry_terms_missing'}
 
 
 def _hash(value):
@@ -148,79 +146,6 @@ def registry():
         return None
 
 
-def _lookup(value, key):
-    matches = []
-    for target in value['targets']:
-        if not isinstance(target, dict) or not isinstance(target.get('bindings'), list):
-            continue
-        for binding in target['bindings']:
-            if isinstance(binding, dict) and binding.get('native_key') == list(key):
-                matches.append((target, binding))
-    if not matches:
-        return None, None, None
-    if len(matches) != 1:
-        return None, None, 'scope_registry_binding_conflict'
-    target, binding = matches[0]
-    try:
-        _target(target, value['governing_rules'])
-        if sum(isinstance(t, dict) and t.get('id') == target['id'] for t in value['targets']) != 1:
-            raise ValueError('Duplicate selected target')
-    except (ValueError, KeyError, TypeError):
-        return None, None, 'scope_registry_binding_conflict'
-    return target, binding, None
-
-
-def _evidence(rule):
-    """Verify the common PDF and retained series pointer, independently of fees."""
-    try:
-        pdf = (ROOT / rule['path']).read_bytes();pointer = rule['pointer_evidence']
-        raw = (ROOT / pointer['path']).read_bytes()
-        if len(pdf) > 128 * 1024 or len(raw) > 16 * 1024:
-            return False
-        if sha256(pdf).hexdigest() != rule['sha256'] or sha256(raw).hexdigest() != pointer['sha256']:
-            return False
-        governing = json.loads(raw)['governing_terms']
-        return (governing['current_series_id'] == rule['series_id']
-            and governing['contract_terms_url'] == rule['contract_terms_url']
-            and governing['sha256'] == rule['sha256'])
-    except (OSError, ValueError, KeyError, TypeError):
-        return False
-
-
-def _publication_dependency(value, key, evidence):
-    """Only this native binding and its common rule invalidate its publication.
-
-    Unsupported identities retain a stable marker so a later registry addition
-    changes their dependency. Unrelated targets and review clocks do not fan out.
-    """
-    provider, native_event_id, native_market_id, native_outcome_id, native_side = key
-    if value is None:
-        return digest(['scope_registry_unavailable', key])
-    selected = []
-    for target in value['targets']:
-        if not isinstance(target, dict) or not isinstance(target.get('bindings'), list):
-            continue
-        for binding in target['bindings']:
-            native = binding.get('native_key') if isinstance(binding, dict) else None
-            if (not isinstance(native, list) or len(native) != 5 or native[:3] != list(key[:3])
-                    or native_outcome_id is not None and native[3] != native_outcome_id
-                    or native_side is not None and native[4] != native_side):
-                continue
-            target, selected_binding, failure = _lookup(value, native)
-            if failure:
-                selected.append(dict(binding=binding, failure=failure))
-                continue
-            rule = value['governing_rules'].get(binding.get('governing_rule'))
-            rule_id = binding.get('governing_rule')
-            if rule is not None and rule_id not in evidence:
-                evidence[rule_id] = _evidence(rule)
-            selected.append(dict(target=None if target is None else {k:v for k,v in target.items() if k != 'bindings'},
-                binding=selected_binding or binding, failure=failure, rule=rule,
-                evidence_available=None if rule is None else evidence[rule_id]))
-    return digest(dict(version=REGISTRY_VERSION, native_key=key, bindings=selected))
-
-
-
 def publication_dependencies(keys, contexts=None):
     """Invalidate by reusable source/type rules, never by example event lists."""
     if len(keys) > 32768:
@@ -246,65 +171,6 @@ def publication_dependencies(keys, contexts=None):
                 and (native_type is None or r['native_type'] == native_type)]
         result.append(digest(dict(version=VERSION, provider=provider, rules=selected)))
     return result
-
-
-def publication_dependency(provider, native_event_id, native_market_id, native_outcome_id=None, native_side=None):
-    """Conservative keys-only rule dependency for historical callers."""
-    return publication_dependencies([(provider, native_event_id, native_market_id, native_outcome_id, native_side)])[0]
-
-
-def _registered_fact(record, at, terms):
-    q = record['quote'];source = q['source'];meta = record.get('comparison_source_metadata', {})
-    key = [q['venue'], *[source.get(k) for k in ('native_event_id', 'native_market_id', 'native_outcome_id', 'native_side')]]
-    if source.get('provider') != q['venue'] or 'native_key' in meta and meta['native_key'] != key:
-        return None, 'scope_registry_identity_conflict'
-    value = registry()
-    if value is None:
-        return None, 'scope_registry_unavailable'
-    target, binding, failure = _lookup(value, key)
-    if failure or target is None:
-        return None, failure
-    event = record['event'];selection = record['selection'];market = record['market_identity']
-    expected = dict(target['game'], id=key[1])
-    actual_selection = {k:selection.get(k) for k in target['selection']}
-    if (any(event.get(k) is None for k in expected) or any(k not in selection for k in target['selection'])
-            or 'native_key' not in meta or 'series_id' not in meta
-            or any(market.get(k) is None for k in ('family', 'period'))
-            or binding['series_id'] is not None and meta.get('series_id') is None):
-        return None, 'scope_registry_identity_missing'
-    try:
-        equal_start = instant(event['scheduled_start']) == instant(expected['scheduled_start'])
-    except (ValueError, TypeError):
-        equal_start = False
-    if (any(event.get(k) != v for k,v in expected.items() if k != 'scheduled_start') or not equal_start
-            or actual_selection != target['selection'] or meta['native_key'] != key
-            or source.get('provider') != key[0] or meta['series_id'] != binding['series_id']
-            or market.get('family') != target['family'] or market.get('period') != target['period']
-            or event.get('conflicting_duplicate') or event.get('occurrence_conflict')
-            or any(event.get('source_participant_roles', {}).get(k, v) != v for k,v in target['game'].items() if k in ('home','away'))
-            or any(meta.get('combined_native_binding', {}).get('original_roles', {}).get(k, v) != v for k,v in target['game'].items() if k in ('home','away'))):
-        return None, 'scope_registry_identity_conflict'
-    wording = meta.get('original_wording') or {}
-    if not isinstance(terms, dict) or not isinstance(wording, dict) or not terms or not wording:
-        return None, 'scope_registry_terms_missing'
-    if digest(terms) != binding['terms']['sha256']:
-        return None, 'scope_registry_terms_changed'
-    if (digest(wording) != binding['wording']['sha256']
-            or any(k in meta and meta[k] != v for k,v in terms.items())):
-        return None, 'scope_registry_terms_conflict'
-    rule = value['governing_rules'].get(binding['governing_rule'])
-    if rule is not None:
-        if not _evidence(rule):
-            return None, 'scope_registry_evidence_unavailable'
-        if instant(at) < max(instant(binding['reviewed_at']), instant(rule['reviewed_at'])):
-            return None, 'scope_registry_not_effective'
-        overtime = rule['overtime']
-    else:
-        overtime = 'included' if any('Overtime is included if played.' in text for text in terms.values()) else 'unknown'
-    return dict(overtime=overtime, basis='registered_native_applicability', native_key=key,
-        target_id=target['id'], original_terms_sha256=binding['terms']['sha256'],
-        binding_sha256=_publication_dependency(value, tuple(key), {}), governing_rule=binding['governing_rule'],
-        governing_terms=None if rule is None else dict(path=rule['path'], sha256=rule['sha256'])), None
 
 
 _SOURCE_RULE_CACHE = None

@@ -43,6 +43,8 @@ def render(
             "package": root / "package/metrics.json",
         }
     )
+    if expanded or audit:
+        required["uv_audit"] = root / "quality/uv-audit.json"
     if expanded:
         required.update(
             lint=None,
@@ -79,6 +81,11 @@ def render(
                     ),
                     "skipped": sum(c.find("skipped") is not None for c in cases),
                     "seconds": sum(durations),
+                    "failing_tests": [
+                        (c.get("classname", "") + "::" + c.get("name", "unnamed"))[:300]
+                        for c in cases
+                        if c.find("failure") is not None or c.find("error") is not None
+                    ][:10],
                 }
                 record["measurements"]["passed"] = (
                     len(cases)
@@ -89,7 +96,7 @@ def render(
                     "skipped"
                 ] == len(cases):
                     raise ValueError("failed or entirely skipped suite")
-            elif name == "audit":
+            elif name in ("audit", "uv_audit"):
                 data = read(path, dict)
                 deps = data["dependencies"]
                 if not isinstance(deps, list) or not deps:

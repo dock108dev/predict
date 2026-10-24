@@ -20,6 +20,7 @@ JAVASCRIPT = (
     "comparison-slate-views.js",
     "stored-views.js",
     "stored-details.js",
+    "opportunity-dashboard.js",
     "stored-controller.js",
     "scanner-client.js",
     "scanner-controller.js",

@@ -121,7 +121,7 @@ async def run(args):
             ack=await provider.stop();return web.json_response(dict(stopped=True,**ack))
         root=Path(__file__).resolve().parents[1];assets=root/'app/dashboard/opportunity_static/current'
         async def asset(req):
-            if req.match_info['name'] not in ('scanner.js','scanner.css','board-client.js'):raise web.HTTPNotFound()
+            if req.match_info['name'] not in ('scanner.js','scanner.css','board-client.js','board-contract.js','board-values.js','board-read.js'):raise web.HTTPNotFound()
             return web.FileResponse(assets/req.match_info['name'])
         async def shell(req):
             return web.Response(text=(assets/'scanner.html').read_text().replace('<body>',

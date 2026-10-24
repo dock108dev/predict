@@ -94,7 +94,8 @@
                   "missing_reference",
                   "unsupported_inputs",
                   "calculation_failed",
-                  "not_evaluated"
+                  "not_evaluated",
+                  "missing_inputs"
                 ]
               },
               "reason_codes": {
@@ -111,11 +112,11 @@
                 "items": {
                   "type": "string"
                 },
-                "maxItems": 4
+                "maxItems": 5
               },
               "metrics": {
                 "type": "object",
-                "maxProperties": 4,
+                "maxProperties": 5,
                 "additionalProperties": {
                   "type": "object",
                   "required": [
@@ -130,7 +131,8 @@
                         "missing_reference",
                         "unsupported_inputs",
                         "calculation_failed",
-                        "not_evaluated"
+                        "not_evaluated",
+                        "missing_inputs"
                       ]
                     },
                     "reason_codes": {
@@ -147,6 +149,9 @@
                 }
               },
               "current_opportunity_eligible": {
+                "type": "boolean"
+              },
+              "evaluation_complete": {
                 "type": "boolean"
               }
             },
@@ -315,6 +320,10 @@
             "not_evaluated": {
               "type": "integer",
               "minimum": 0
+            },
+            "missing_inputs": {
+              "type": "integer",
+              "minimum": 0
             }
           },
           "additionalProperties": false
@@ -363,6 +372,24 @@
             },
             "additionalProperties": false
           }
+        },
+        "evaluation_complete": {
+          "type": "boolean"
+        },
+        "evaluated_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_scope": {
+          "type": "object"
+        },
+        "partial_results": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "additionalProperties": false

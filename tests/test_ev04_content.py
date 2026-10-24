@@ -248,6 +248,10 @@ class ContentTests(unittest.TestCase):
         record={k:v for k,v in native_records()[0].items() if not k.startswith('_')}
         record['quote'].pop('occurrence_match',None);record['quote'].pop('occurrence_link',None);record['quote'].pop('native_predicate',None)
         record['quote']['times'].update(source_at=AT.isoformat(),received_at=AT.isoformat())
+        # Authored future occurrence: the retained source event has already started at AT.
+        record=deepcopy(record)
+        record['event']['scheduled_start']=(AT+timedelta(days=1)).isoformat()
+        record['market_identity']['scheduled_start']=record['event']['scheduled_start']
         record['comparison_source_metadata']=dict(phase='pregame',overtime='included')
         envelope=fixture();envelope.update(clock_at=AT.isoformat(),projected_at=AT.isoformat(),events=[])
         raw=catalog_from_normalized(envelope,[record]);q=next(q for e in raw['events'] for g in e['groups'] for o in g['outcomes'] for q in quotes_of(o))

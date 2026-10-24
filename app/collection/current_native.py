@@ -4,6 +4,7 @@ Reuse complete HTTP admission, reviewed catalog bindings and native stream
 reconstruction. CurrentService retains catalogs and admitted book images.
 """
 import asyncio
+from .current_ingress import call
 from copy import deepcopy
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
@@ -34,6 +35,10 @@ class CatalogResync(Exception):
     """Local identity enrichment requires a fresh subscription image."""
 
 DISCOVERY_CAPS = frozenset(('native_discovery_wire_byte_cap', 'native_discovery_decoded_byte_cap'))
+RETRYABLE_DISCOVERY = frozenset(('provider_backoff_pending', 'native_http_timeout',
+    'native_http_transport_error', 'native_http_framing_error', 'native_http_length_mismatch',
+    'http_429', 'http_500', 'http_502', 'http_503', 'http_504'))
+
 HOURLY_CAPS = frozenset(('prediction_session_byte_cap', 'prediction_discovery_request_cap',
                         'current_snapshot_request_cap', 'current_connection_cap'))
 
@@ -74,6 +79,8 @@ class NativeWorker:
         self.source_highwater = {}
         self.pending_books = {}
         self.publication_handle = None
+        self.publication_task = None
+        self.pending_health = False
         from .current_confirmation import Confirmations
         self.confirmations = Confirmations(venue)
         from app.comparison.event_links import reviewed_links
@@ -98,15 +105,26 @@ class NativeWorker:
     def flush_books(self):
         if self.publication_handle:self.publication_handle.cancel()
         self.publication_handle=None
+        if self.publication_task and not self.publication_task.done():return
         books=list(self.pending_books.values());self.pending_books.clear()
         if not books or self.closed or self.failed or not self.service.dispatch:return
-        try:
-            tick=time.perf_counter()
+        if not getattr(self.service,'database_mode',False):
             self.service.books(self.venue,books)
-            self.metrics['receipt_projection_ms']=(time.perf_counter()-tick)*1000
-        except Exception:
-            self.failed=True
-            self.service.source_state(self.venue,'error','Native batch admission failed; fresh complete images are required.')
+            return
+        async def publish():
+            try:
+                tick=time.perf_counter()
+                await call(self.service,self.service.books,self.venue,books)
+                self.metrics['receipt_projection_ms']=(time.perf_counter()-tick)*1000
+            except asyncio.CancelledError:raise
+            except Exception:
+                self.failed=True
+                await call(self.service,self.service.source_state,self.venue,'error','Native batch admission failed; fresh complete images are required.')
+            finally:
+                if self.pending_books and not self.closed and self.service.dispatch:
+                    self.publication_handle=asyncio.get_running_loop().call_later(1,self.flush_books)
+        self.publication_task=asyncio.create_task(publish(),name='predict-native-publication-'+self.venue)
+        self.publication_task.add_done_callback(lambda task: None if task.cancelled() else task.exception())
 
     async def snapshots(self, engine, markets, pending):
         """At most one batched request per 20 seconds; same native request budget."""
@@ -141,6 +159,26 @@ class NativeWorker:
         if self.socket and (self.wake_task is None or self.wake_task.done()):
             self.wake_task = asyncio.create_task(self.socket.close())
 
+    async def quiesce_catalog(self, parsed, catalog):
+        """Retire old socket/publication callbacks before replacing membership.
+
+        SQL ingress serializes commands, but a timer can queue an old image behind
+        the new catalog command. Cancellation revokes that image's owned ingress;
+        the subsequent catalog waits for the same serialization lock. Never send
+        an old subscription batch into the replacement inventory.
+        """
+        from app.comparison.lifecycle import worker_selections
+        selected=worker_selections(self.venue,parsed,catalog)
+        old={mid:(lease['selection']['event']['id'],lease['selection']['material_revision'])
+             for mid,lease in self.lifecycle.leases.items()}
+        new={value['market_id']:(value['event']['id'],value['material_revision']) for value in selected}
+        if old!=new and self.lifecycle_initialized:
+            self.metrics['catalog_transition']=dict(previous_generation=self.metrics['connections'],
+                old_markets=len(old),new_markets=len(new),retired_markets=sorted(set(old)-set(new)),
+                changed_markets=sorted(mid for mid in old.keys()&new.keys() if old[mid]!=new[mid]),
+                pending_images=len(self.pending_books),reason='subscription_membership_or_material_changed')
+            await self.stop_stream()
+
     def guard(self):
         if (self.closed or not self.service.dispatch or self.failed
                 or getattr(self.service,'globally_stopped',False)
@@ -174,7 +212,7 @@ class NativeWorker:
 
     async def wait_hourly_budget(self):
         self.hourly_pause=True
-        self.service.source_state(self.venue,'budget_delayed','Native hourly transport allowance reached; waiting for its next window.')
+        await call(self.service, self.service.source_state, self.venue, 'budget_delayed', 'Native hourly transport allowance reached; waiting for its next window.')
         await self.stop_stream()
         await asyncio.sleep(max(0,3600-(time.monotonic()-self.budget_started)))
         self.guard()
@@ -193,11 +231,12 @@ class NativeWorker:
         if row['status'] in (401, 403):
             self.failed = True
             self.service.issue(self.venue, 'authentication' if row['status']==401 else 'entitlement', 'http_'+str(row['status']))
-            self.service.source_state(self.venue, 'unavailable', 'Native catalog access was refused.')
+            if getattr(self.service,'database_mode',False):self.pending_health = True
+            else:self.service.source_state(self.venue,'unavailable','Native catalog access was refused.')
         self.apply_http_backoff(row)
         if not row['complete'] or not row.get('usable_metadata'):
             query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
-            if row.get('delivery_reason') not in query_caps | DISCOVERY_CAPS | HOURLY_CAPS | {'http_status', None, 'native_http_timeout', 'native_http_transport_error'} and row['status']==200:
+            if row.get('delivery_reason') not in query_caps | DISCOVERY_CAPS | HOURLY_CAPS | {'http_status', None} | RETRYABLE_DISCOVERY and row['status']==200:
                 self.failed = True
             return
         page = dict(row, source=self.venue, native_binding_revision='live-native-binding-2',
@@ -245,6 +284,9 @@ class NativeWorker:
         finally:
             self._scope = None
             self.http_active=False
+            if self.pending_health:
+                self.pending_health=False
+                await call(self.service,self.service.source_state,self.venue,'unavailable','Native catalog access was refused.')
         if response.status_code != 200:
             if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
                 self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
@@ -333,7 +375,8 @@ class NativeWorker:
         if changed:
             # The outer admission marker survives ordinary catalog reannotation.
             # Membership/material is unchanged, retaining original books/clocks.
-            self.service.catalog(self.venue,self.catalog)
+            if getattr(self.service,'database_mode',False):self.catalog_dirty=True
+            else:self.service.catalog(self.venue,self.catalog)
 
     def retain_catalog_for_capacity(self,sports,families,native_events,returned_markets):
         """A local proposal limit cannot revoke coherent existing ownership."""
@@ -522,6 +565,9 @@ class NativeWorker:
         if ((projection['supported_family_candidates'] and not selection['markets'])
                 or (selected and not selection['events'])):
             self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+            if getattr(self,"catalog_dirty",False):
+                await call(self.service,self.service.catalog,self.venue,self.catalog)
+                self.catalog_dirty=False
             return
         cat = coverage.catalog(self.pages, self.venue, now, compact_output=False,current_selection=selection)
         from .current_occurrence import annotate as occurrence
@@ -533,12 +579,18 @@ class NativeWorker:
         while len(cat['events'])>200 or len(cat['markets'])>512 or actual_bytes>CATALOG_BYTES-QUARANTINE_HEADROOM:
             if not selection['markets']:
                 self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+                if getattr(self,"catalog_dirty",False):
+                    await call(self.service,self.service.catalog,self.venue,self.catalog)
+                    self.catalog_dirty=False
                 return
             selection['markets'].pop()
             retained={m['event_id'] for m in returned_markets if m['id'] in selection['markets']}
             selection['events']=[eid for eid in selection['events'] if eid in retained]
             if not selection['markets']:
                 self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+                if getattr(self,"catalog_dirty",False):
+                    await call(self.service,self.service.catalog,self.venue,self.catalog)
+                    self.catalog_dirty=False
                 return
             cat=coverage.catalog(self.pages,self.venue,now,compact_output=False,current_selection=selection)
             occurrence(cat,self.venue)
@@ -581,8 +633,14 @@ class NativeWorker:
         actual_bytes=len(json.dumps(cat,default=str).encode())
         if actual_bytes>CATALOG_BYTES-QUARANTINE_HEADROOM:
             self.retain_catalog_for_capacity(sports,families,native_events,returned_markets)
+            if getattr(self,"catalog_dirty",False):
+                await call(self.service,self.service.catalog,self.venue,self.catalog)
+                self.catalog_dirty=False
             return
         self.metrics['catalog_projection']['actual_bytes']=actual_bytes
+        # Quiesce while the old producer/catalog still describe the same native
+        # generation, before replacing membership or clearing source highwaters.
+        await self.quiesce_catalog(parsed,cat)
         # Retire unselected/closed catalogs deliberately; leases are independent.
         self.metrics['generations'] += 1
         self.catalog, self.markets = cat, parsed
@@ -599,7 +657,7 @@ class NativeWorker:
         trace_bytes=len(json.dumps(self.metrics['native_identity_trace'],separators=(',',':')).encode())
         self.metrics['identity_exclusions'],self.metrics['identity_exclusions_omitted']=identity_diagnostics(
             cat,ids,byte_cap=24*1024-trace_bytes-256)
-        self.service.catalog(self.venue, cat)
+        await call(self.service, self.service.catalog, self.venue, cat)
         from app.comparison.lifecycle import worker_selections
         delta=self.lifecycle.reconcile(worker_selections(self.venue,parsed,cat),now)
         self.material_quarantine.clear()
@@ -649,7 +707,7 @@ class NativeWorker:
                 self.stream_task = asyncio.create_task(self.stream(list(parsed.values())))
                 self.metrics['reconciliations'] += 1
             elif not parsed:
-                self.service.source_state(self.venue, 'not_offered', 'No admitted common markets in the bounded listing scope.')
+                await call(self.service, self.service.source_state, self.venue, 'not_offered', 'No admitted common markets in the bounded listing scope.')
 
     async def stream(self, markets):
         from app.adapters.kalshi_stream import BookReconstructor
@@ -660,6 +718,8 @@ class NativeWorker:
         while not self.closed and not self.failed and self.service.dispatch:
             engine = None
             snapshot_task = None
+            stage = 'connect'
+            seen = set()
             try:
                 self.guard()
                 if self.connection_allowance_used() >= self.config['connections_per_source']:
@@ -669,11 +729,28 @@ class NativeWorker:
                 self.confirmations.begin(self.metrics['connections'])
                 if self.publication_handle:self.publication_handle.cancel()
                 self.publication_handle=None;self.pending_books.clear()
-                self.service.source_state(self.venue, 'resyncing', 'Waiting for a complete native book image.')
-                headers = self.credential.headers()
+                await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Waiting for a complete native book image.')
+                credential = self.credential
+                headers = {}
+                metrics = self.metrics
+                from websockets.asyncio.client import ClientConnection
+                class SignedConnection(ClientConnection):
+                    async def handshake(connection, additional_headers=None, user_agent_header=None):
+                        nonlocal headers
+                        # Sign after DNS/TLS, immediately before the opening request.
+                        signed_at = utc()
+                        headers = credential.headers()
+                        metrics['last_handshake'] = dict(signed_at=signed_at,
+                            path=__import__('urllib.parse', fromlist=['urlsplit']).urlsplit(ENDPOINTS[self.venue]['ws']).path,
+                            result='pending')
+                        try:
+                            await super().handshake(headers, user_agent_header)
+                            metrics['last_handshake']['result'] = 'connected'
+                        finally:
+                            metrics['last_handshake']['completed_at'] = utc()
                 class NoRedirect(connect):
                     def process_redirect(self, exc): return exc
-                self.socket = await NoRedirect(ENDPOINTS[self.venue]['ws'], additional_headers=headers,
+                self.socket = await NoRedirect(ENDPOINTS[self.venue]['ws'], create_connection=SignedConnection,
                     max_size=256*1024, max_queue=1, compression=None, proxy=None,
                     open_timeout=5, close_timeout=1, ping_interval=20, ping_timeout=20)
                 self.reconcile_needed = False
@@ -691,11 +768,12 @@ class NativeWorker:
                     command = subscription(tuple(engine.markets), request_id)
                 requested=utc()
                 pending={m.raw.ref.market_id:(command['id'],requested) for m in markets} if self.venue=='kalshi' else {}
+                stage = 'subscribe'
                 await asyncio.wait_for(self.socket.send(json.dumps(command)), 3)
                 if self.venue=='kalshi':snapshot_task=asyncio.create_task(self.snapshots(engine,markets,pending))
                 initial_deadline = time.monotonic()+15
-                seen = set()
                 while True:
+                    stage = 'receive'
                     self.guard()
                     if snapshot_task and snapshot_task.done():snapshot_task.result()
                     timeout = max(.01, initial_deadline-time.monotonic()) if len(seen)<len(markets) else 30
@@ -712,6 +790,7 @@ class NativeWorker:
                     self.metrics['frames'] += 1
                     data = native_payload.parse(raw)
                     if not isinstance(data,dict): raise ValueError('malformed_native_frame')
+                    stage = 'reconstruct'
                     book = (engine.feed(raw, generation, received) if self.venue=='kalshi'
                             else engine.parse(raw.decode('utf-8'), request_id, generation=generation))
                     # Reused engines retain diagnostics for finite qualification;
@@ -730,12 +809,13 @@ class NativeWorker:
                         selected = next(m for m in markets if m.raw.ref.market_id==book.raw.ref.market_id)
                         book = replace(book, state=selected.state)
                     if book.state != MarketState.ACTIVE:
-                        self.service.source_state(self.venue, 'resyncing', 'Market lifecycle changed; rediscovery required.')
+                        await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Market lifecycle changed; rediscovery required.')
                         return
                     seen.add(book.raw.ref.market_id)
                     book = current_purchase_book(book)
                     value = json.loads(json.dumps(asdict(book), default=lambda v:v.isoformat() if isinstance(v,datetime) else str(v)))
                     from .current_confirmation import validate
+                    stage = 'confirm'
                     request=pending.pop(book.raw.ref.market_id,None) if data.get('type')=='orderbook_snapshot' else None
                     confirmation=self.confirmations.observe(value,data,raw,generation=self.metrics['connections'],
                         request_id=(request[0] if request else engine.request_id) if self.venue=='kalshi' else request_id,
@@ -745,6 +825,7 @@ class NativeWorker:
                         validate(confirmation,value['raw']['ref'],value)
                         value['book_confirmation']=confirmation
                     tick = time.perf_counter()
+                    stage = 'queue'
                     self.queue_book(value)
                     self.metrics['receipt_queue_ms'] = (time.perf_counter()-tick)*1000
                     self.metrics['source_receipt_ms'] = None if book.raw.exchange_at is None else (received-book.raw.exchange_at).total_seconds()*1000
@@ -755,12 +836,25 @@ class NativeWorker:
                     await asyncio.sleep(0)
             except asyncio.CancelledError: raise
             except Exception as exc:
+                from .current_transport_diagnostics import exception_kind
+                known = {'initial_image_deadline', 'incomplete_native_image',
+                         'regressed_native_source_clock', 'future_native_source_clock',
+                         'malformed_native_frame'}
+                # Developer-owned vocabulary only; never persist provider text,
+                # handshake headers, credentials or a raw exception repr.
+                self.metrics['last_stream_failure'] = dict(at=utc(), stage=stage,
+                    reason=str(exc) if type(exc) is ValueError and str(exc) in known else
+                           'catalog_resync' if isinstance(exc, CatalogResync) or self.reconcile_needed else
+                           'native_stream_failure',
+                    exception=exception_kind(exc), generation=self.metrics['connections'],
+                    selected=len(markets), initial_images=len(seen))
                 self.metrics['resyncs'] += 1
                 status = getattr(getattr(exc,'response',None), 'status_code', None)
                 if status in (401,403):
+                    self.metrics.setdefault('last_handshake', {})['result'] = 'http_'+str(status)
                     self.failed = True
                     self.service.issue(self.venue, 'authentication' if status==401 else 'entitlement', 'websocket_'+str(status))
-                    self.service.source_state(self.venue, 'unavailable', 'Native feed access was refused.')
+                    await call(self.service, self.service.source_state, self.venue, 'unavailable', 'Native feed access was refused.')
                     return
                 if status == 429:
                     delay = 60
@@ -775,31 +869,41 @@ class NativeWorker:
                     if delay > 300:
                         self.failed = True
                         self.service.issue(self.venue, 'rate_limit', 'websocket_retry_after_outside_envelope')
-                        self.service.source_state(self.venue, 'unavailable', 'Provider retry delay exceeds this runtime allowance.')
+                        await call(self.service, self.service.source_state, self.venue, 'unavailable', 'Provider retry delay exceeds this runtime allowance.')
                         return
                     self.backoff_until = time.monotonic()+delay
                 if isinstance(exc, BudgetStop):
                     if str(exc) in HOURLY_CAPS:
                         self.hourly_pause=True
                         self.service.issue(self.venue,'resource',str(exc))
-                        self.service.source_state(self.venue,'budget_delayed','Native hourly transport allowance reached; waiting for its next window.')
+                        await call(self.service, self.service.source_state, self.venue, 'budget_delayed', 'Native hourly transport allowance reached; waiting for its next window.')
                         return
                     self.failed = True
                     self.service.issue(self.venue, 'resource', str(exc))
-                    self.service.source_state(self.venue, 'unavailable', 'Native runtime resource allowance reached.')
+                    await call(self.service, self.service.source_state, self.venue, 'unavailable', 'Native runtime resource allowance reached.')
                     return
                 if isinstance(exc, ValueError): malformed += 1
                 failures += 1
                 if not self.reconcile_needed and not isinstance(exc,CatalogResync):
                     self.service.issue(self.venue, 'malformed_source' if isinstance(exc,ValueError) else 'connection', type(exc).__name__)
-                self.service.source_state(self.venue, 'resyncing', 'Native connection recovery requires a fresh image.')
-                if malformed >= 3 or failures >= self.config['reconnect_failures']:
+                await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Native connection recovery requires a fresh image.')
+                if malformed >= 3:
                     self.failed = True
-                    self.service.source_state(self.venue, 'error', 'Repeated native feed failures; source paused.')
+                    await call(self.service, self.service.source_state, self.venue, 'error', 'Repeated native feed failures; source paused.')
                     return
+                if failures >= self.config['reconnect_failures']:
+                    # A finite reconnect burst yields to the normal discovery pace.
+                    # Hourly counters continue to bound every later attempt.
+                    failures = 0
+                    self.backoff_until = time.monotonic()+self.config['rediscovery_seconds']
+                    await call(self.service, self.service.source_state, self.venue, 'resyncing',
+                               'Native connection unavailable; waiting before the next bounded retry.')
             finally:
                 if self.publication_handle:self.publication_handle.cancel()
                 self.publication_handle=None;self.pending_books.clear()
+                if self.publication_task and not self.publication_task.done():
+                    self.publication_task.cancel()
+                    await asyncio.gather(self.publication_task,return_exceptions=True)
                 if snapshot_task:
                     snapshot_task.cancel();await asyncio.gather(snapshot_task,return_exceptions=True)
                 if self.socket:
@@ -813,6 +917,9 @@ class NativeWorker:
     async def stop_stream(self):
         if self.publication_handle:self.publication_handle.cancel()
         self.publication_handle=None;self.pending_books.clear()
+        if self.publication_task and not self.publication_task.done():
+            self.publication_task.cancel()
+            await asyncio.gather(self.publication_task,return_exceptions=True)
         task, self.stream_task = self.stream_task, None
         if task:
             task.cancel()
@@ -833,7 +940,7 @@ class NativeWorker:
             try: self.credential = load_credentials([self.venue])[self.venue]
             except RuntimeError:
                 self.service.issue(self.venue, 'authentication', 'dedicated_credential_missing_or_invalid')
-                self.service.source_state(self.venue, 'unavailable', 'Dedicated native feed credentials are unavailable.')
+                await call(self.service, self.service.source_state, self.venue, 'unavailable', 'Dedicated native feed credentials are unavailable.')
                 return
             self.client = REST(ENDPOINTS[self.venue]['rest'], limits, self.receipt, 10,
                                PredictionBudget(limits), venue=self.venue, credential=self.credential)
@@ -854,7 +961,8 @@ class NativeWorker:
                 except asyncio.CancelledError: raise
                 except Exception as exc:
                     errors += 1
-                    code = str(exc) if isinstance(exc,BudgetStop) else type(exc).__name__
+                    code = str(exc) if isinstance(exc,BudgetStop) or type(exc) is ValueError and str(exc) in RETRYABLE_DISCOVERY else type(exc).__name__
+                    self.metrics['last_discovery_failure'] = dict(at=utc(), reason=code if code in RETRYABLE_DISCOVERY | HOURLY_CAPS | DISCOVERY_CAPS else 'native_discovery_failure', consecutive=errors)
                     self.service.issue(self.venue, 'resource' if isinstance(exc,BudgetStop) else 'discovery', code)
                     if isinstance(exc,BudgetStop) and code in DISCOVERY_CAPS and not self.failed:
                         # Partial metadata cannot replace the last complete catalog.
@@ -868,12 +976,31 @@ class NativeWorker:
                         errors=0
                         await self.wait_hourly_budget()
                         continue
+                    retryable=code in RETRYABLE_DISCOVERY
+                    if retryable and not self.failed and errors >= 3:
+                        self.pages=[]
+                        errors=0
+                        self.backoff_until=max(self.backoff_until,time.monotonic()+self.config['rediscovery_seconds'])
+                        await call(self.service,self.service.source_state,self.venue,'resyncing',
+                                   'Native discovery unavailable; waiting before the next bounded retry.')
+                        await asyncio.sleep(max(0,self.backoff_until-time.monotonic()))
+                        continue
+                    if (retryable and not self.failed and errors<3 and self.stream_task is not None
+                            and not self.stream_task.done()):
+                        # Failed optional rediscovery does not invalidate the
+                        # still-owned complete catalog or a healthy native socket.
+                        # Same finite attempts/backoff; no new transport allowance.
+                        self.pages=[]
+                        self.metrics['discovery_deferrals']=self.metrics.get('discovery_deferrals',0)+1
+                        self.metrics['last_discovery_deferral']=dict(at=utc(),reason=code)
+                        await asyncio.sleep(max(self.config['backoff_seconds'][errors-1],self.backoff_until-time.monotonic()))
+                        continue
                     await self.stop_stream()
-                    self.service.source_state(self.venue, 'unavailable' if self.failed else 'resyncing', 'Native discovery is unavailable; healthy sources continue.')
-                    retryable=code in ('provider_backoff_pending','native_http_timeout','native_http_transport_error')
                     if self.failed or errors >= 3 or isinstance(exc,BudgetStop) and not retryable:
                         self.failed = True
+                        await call(self.service, self.service.source_state, self.venue, 'unavailable', 'Native discovery stopped after its bounded failures; independent sources continue.')
                         break
+                    await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Native discovery is unavailable; healthy sources continue.')
                     await asyncio.sleep(max(self.config['backoff_seconds'][errors-1],self.backoff_until-time.monotonic()))
                     continue
                 await asyncio.sleep(max(self.config['rediscovery_seconds'], self.backoff_until-time.monotonic()))

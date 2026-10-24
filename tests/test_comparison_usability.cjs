@@ -25,7 +25,7 @@ function authoredAvailability(v) {
 }
 
 (async () => {
-  const { americanDecimal, matchesGameSearch } = await import(asset('board-elements.js'));
+  const { americanDecimal, matchesGameSearch, observationSummary } = await import(asset('board-elements.js'));
   const { createComparisonSlate, crossVenue } = await import(asset('comparison-slate-views.js'));
   for (const [value, expected] of [['2','+100'],['2.3','+130'],['1.75','-133'],['197/87','+126'],['197/110','-126'],['2.005','+101'],['2.004999999999999999999999999999','+100'],['1.8','-125'],['3/2','-200'],['1','Unavailable'],[null,'Unavailable'],['2/0','Unavailable'],['1.99','-101']]) assert.equal(americanDecimal(value),expected,value);
   assert(crossVenue({legs:[{venue:'novig',source:{provider:'shared'}},{venue:'prophetx',source:{provider:'shared'}}]}));
@@ -91,13 +91,18 @@ function authoredAvailability(v) {
   const before=JSON.stringify(observed);renderer.draw(observed,{view:'odds',filter:'all'});
   assert(content.textContent.includes('Estimates unavailable'));
   assert(content.querySelector('.estimate-reasons').textContent.includes('calculation_failed'));
-  assert(content.textContent.includes('Current price · Source available'));
-  assert(content.textContent.includes('Observed 12.5 contracts at 0.43 usd per contract'));
-  assert(content.textContent.includes('Gross difference +0.5 cents'));
+  const compact=content.querySelector('.compact-price-status');
+  assert(compact.textContent.includes('Current'));
+  assert(compact.title.includes('Source available'));
+  const expanded=new Element('div');observationSummary(expanded,q);
+  assert(expanded.textContent.includes('Observed 12.5 contracts at 0.43 usd per contract'));
+  assert(expanded.textContent.includes('Gross difference +0.5 cents'));
   const preserved=content.querySelectorAll('button').find(n=>n.dataset.key===b.game_key+':'+q.quote_id);assert(preserved);preserved.onclick();assert.equal(originals.at(-1).q,q);
   assert.equal(JSON.stringify(observed),before,'observation presentation cannot rewrite source or estimate clocks');
   q.observed_depth=null;q.freshness.status='historical';q.source_health.state='stopped';renderer.draw(observed,{view:'odds',filter:'all'});
-  assert(content.textContent.includes('Last-known price · Source stopped'));assert(content.textContent.includes('Observed depth unknown'));
+  const stopped=content.querySelectorAll('.compact-price-status').find(n=>n.title.includes('Source stopped'));
+  assert(stopped);assert(stopped.textContent.includes('Last-known'));
+  const unknown=new Element('div');observationSummary(unknown,q);assert(unknown.textContent.includes('Observed depth unknown'));
   const evidence=process.env.PREDICT_RETAINED_RESPONSES;
   if(evidence){
     const read=name=>JSON.parse(fs.readFileSync(path.join(evidence,name)));

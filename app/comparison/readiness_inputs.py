@@ -227,7 +227,8 @@ def instrument(q, profiles, event, group, *, at, source_status, authorized, book
         execution.append('pregame_ended')
     future = [d for d in deadlines if instant(d) > moment]
     contract = m['native_contract']
-    scope = dict(venue=venue, sport='football', league=event['league'], market=group['market'], period=group['period'])
+    from .sporting_scope import sport
+    scope = dict(venue=venue, sport=sport(event['league']), league=event['league'], market=group['market'], period=group['period'])
     return dict(id=digest([q['venue'], q['source']]), scope_key=digest(scope), **scope,
                 occurrence_id=event['id'], direction=m['direction'],
                 overtime=None if contract is None else contract['scope']['overtime'],

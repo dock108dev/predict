@@ -8,15 +8,16 @@ document.createTextNode = text => {const node=new Element('span');node.textConte
 let requests = 0;global.fetch = () => {requests++;throw Error('Retained rendering cannot dispatch');};
 const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current',name)).href;
 (async()=>{
- const {comparisonState}=await import(asset('board-elements.js'));
+ const {comparisonState,observationSummary}=await import(asset('board-elements.js'));
  const {createComparisonSlate}=await import(asset('comparison-slate-views.js'));
  const root=new Element('section');let current=0,prices=0;const scopes=new Set();
  for (const b of fixture.boards) {
   const original=JSON.stringify(b);const game=fixture.games.find(g=>g.game_key===b.game_key);
-  const renderer=createComparisonSlate({content:root,onOriginal:()=>{},onDetails:()=>{}});
+  const renderer=createComparisonSlate({content:root,onOriginal:q=>{const detail=new Element('section');observationSummary(detail,q);assert(detail.textContent.includes('Current-peer difference'));},onDetails:()=>{}});
   renderer.draw({view:'odds',filter:'all',boards:[b],games:[game],errors:[],coverage:{},bounds:{},read_at:fixture.at,policy:b.policy},{view:'odds',filter:'all'});
-  assert(root.textContent.includes('Current-peer difference'),'Positive comparison is visibly rendered');
   const selected=b.prices.find(q=>q.current_comparison?.available);
+  const button=root.querySelectorAll('button').find(n=>n.dataset.key===b.game_key+':'+selected.quote_id);
+  assert(button,'original price remains directly inspectable');button.onclick();
   assert.equal(comparisonState(selected.current_comparison,Date.parse(fixture.at)+30000),'current');
   assert.equal(comparisonState(selected.current_comparison,Date.parse(fixture.at)+30001),'last_known');
   prices+=b.prices.length;

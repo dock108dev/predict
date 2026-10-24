@@ -31,6 +31,25 @@ VENUES = ('kalshi', 'polymarket_us')
 
 
 class SourceLocalAdmission(IsolatedAsyncioTestCase):
+    async def test_source_linked_spread_uses_own_scheduled_main_game_witness(self):
+        case=source_local_case('NBA','spread',uuid4().hex[:10])
+        case['milestone']['details']['main_game_event_ticker']='authored-linked-main'
+        case['milestone']['related_event_tickers'].append('authored-linked-main')
+        published=[];config=validate(dict(deepcopy(DEFAULT),native_sports=['NBA'],native_families=['spread'],aggregate_enabled=False))
+        service=SimpleNamespace(config=config,dispatch=True,catalog=lambda _,value:published.append(deepcopy(value)),
+            issue=lambda *args:None,source_state=lambda *args:None)
+        worker=NativeWorker(service,'kalshi');self.addAsyncCleanup(worker.close)
+        fake_discovery(worker,[case]);await worker.discover()
+        book=current_book(case,'kalshi');at=book['raw']['received_at']
+        rows,excluded=normalize(dict(id='authored-catalog',record=dict(source='kalshi',value=dict(inventory=published[-1]))),
+            [dict(id='authored-book',record=dict(retained_at=at,value=dict(observations=[dict(type='prediction_book',source='kalshi',observed_at=at,book=book)])))],at=at)
+        self.assertFalse(excluded);self.assertEqual(len(rows),2)
+        for row in rows:
+            meta=row['comparison_source_metadata']
+            self.assertEqual(meta['phase'],'pregame')
+            self.assertEqual(meta['combined_native_binding']['phase_facts'][0]['main_game_event_ticker'],'authored-linked-main')
+            self.assertEqual(row['quote']['times']['source_at'],book['raw']['exchange_at'])
+
     async def test_generated_missing_context_matrix_retains_original_native_inputs(self):
         """Exercise every parser/type before SQL, using the ordinary reducer."""
         for league in SPORTS:
@@ -111,6 +130,54 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
     def records(self):
         with self.connect() as db:
             return CurrentRowStore(db).capture()['records']
+
+    async def test_shared_event_context_arrives_before_every_contract_rebinds(self):
+        case=source_local_case('NBA','moneyline',uuid4().hex[:10],clock=datetime.now(timezone.utc))
+        await self.ingress([case])
+        expected={member(case,venue) for venue in VENUES}
+        _,before=await self.published(expected,prices=4)
+        originals={tuple(q['source'][k] for k in ('provider','native_event_id','native_outcome_id')):
+            (q['original'],q['times']) for board in before.values() for q in board['prices']}
+        record=next(r for r in self.records() if r['quote']['venue']=='kalshi')
+        record['event'].update(season='2026-2027',stage='regular_season')
+        record['market_identity'].update(season='2026-2027',stage='regular_season')
+        record['comparison_source_metadata'].pop('comparison_admission')
+        record['verified']=True;record['event_scope']['policy']='native-provider-event-1'
+        with self.connect() as db:CurrentRowStore(db).upsert_records([record])
+        self.owner.wake.set()
+        def updated(prices):
+            return all('source_observation_changed' not in q['freshness']['reasons']
+                and not q['observation_display']['publication_reason_codes'] for q in prices)
+        _,after=await self.published(expected,prices=4,accept=updated)
+        with self.connect() as db:
+            catalog=latest.read_context(db).catalog()
+            self.assertEqual(catalog.get('provider_requests'),0)
+            self.assertTrue(any(r['event']['season']=='2026-2027' and r['market_identity']['season'] is None
+                for r in CurrentRowStore(db).capture()['records'] if r['quote']['venue']=='kalshi'))
+        client=await self.api();rendered=await self.read_boards(client,after)
+        self.assert_unavailable(rendered)
+        for board in rendered.values():
+            for q in board['prices']:
+                key=tuple(q['source'][k] for k in ('provider','native_event_id','native_outcome_id'))
+                self.assertEqual((q['original'],q['times']),originals[key])
+                await self.inputs(client,board,q)
+
+    async def test_future_postponed_prices_survive_without_current_pregame_authority(self):
+        case=source_local_case('NBA','moneyline',uuid4().hex[:10],clock=datetime.now(timezone.utc))
+        await self.ingress([case]);expected={member(case,venue) for venue in VENUES}
+        await self.published(expected,prices=4)
+        records=self.records()
+        for row in records:row['event']['status']=dict(status='postponed')
+        with self.connect() as db:CurrentRowStore(db).upsert_records(records)
+        self.owner.wake.set()
+        def postponed(prices):
+            return all('event_postponed' in q['freshness']['reasons'] for q in prices)
+        _,boards=await self.published(expected,prices=4,accept=postponed)
+        self.assert_unavailable(boards)
+        for board in boards.values():
+            for q in board['prices']:
+                self.assertEqual(q['freshness']['status'],'historical')
+                self.assertTrue(q['observed_depth']['available'])
 
     def sql_identities(self):
         with self.connect() as db:

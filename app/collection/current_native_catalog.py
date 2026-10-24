@@ -7,6 +7,23 @@ import json
 from . import coverage
 
 
+def book_material(venue, event, market):
+    """Native image identity, independent of derived comparison enrichment."""
+    from .native_review_contract import project, CURRENT_POLICY, ELIGIBILITY
+    from app.dashboard.session_projection import stable
+    def original(row, *, event=False):
+        raw=row.get('_native') or row.get('native_metadata') or {}
+        if event:raw={k:v for k,v in raw.items() if k!='markets'}
+        try:terms=project(venue,raw,event=event,policy=CURRENT_POLICY)
+        except (ValueError,TypeError):terms=raw  # Unknown changes remain material.
+        return dict(terms=terms,eligibility={k:raw[k] for k in ELIGIBILITY[venue] if k in raw})
+    return stable(dict(event_id=event['id'],market_id=market['id'],parent=market['event_id'],
+        scheduled_start=event.get('scheduled_start'),competition=event.get('competition'),
+        native_event=original(event,event=True),native_market=original(market),
+        sides=market.get('sides'),terms=market.get('terms'),status=market.get('status'),
+        family=market.get('market_type'),period=market.get('period'),slug=market.get('native_slug')))
+
+
 def balanced_markets(markets, cap, families, *, events=None, offset=0, priority=()):
     """Round robin across league, family and period within one source budget."""
     events = events or {}

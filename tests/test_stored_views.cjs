@@ -76,6 +76,13 @@ const asset = (name) =>
   );
   assert.equal(nodes.advanced, root.children[root.children.length - 1]);
   assert.equal(nodes.advanced.parentNode, root);
+  const grossExample=JSON.parse(JSON.stringify(fixture.single));
+  grossExample.quote.calculations.funded_estimate.gross_decisive_benchmark={available:true,state:'numeric_last_known',return_percent:'-475/214'};
+  renderSavedDetails(grossExample,{root,participants});
+  assert(root.textContent.includes('Gross decisive benchmark'));
+  assert(root.textContent.includes('-2.22%'));
+  assert(root.textContent.includes('before fees and exceptional settlement'));
+  assert(root.textContent.includes('No executable quantity'));
   renderSavedDetails(fixture.pair, { root, participants });
   assert(root.textContent.includes("Leg 2 quantity"));
   assert(root.textContent.includes("Modeled outcomes"));

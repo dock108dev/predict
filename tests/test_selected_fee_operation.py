@@ -295,7 +295,7 @@ class StopOwnerTests(unittest.IsolatedAsyncioTestCase):
         for action in ('stop','pause'):
             with self.subTest(action=action):
                 revoked=asyncio.Event();finish=asyncio.Event();worker=SimpleNamespace(closed=False)
-                service=SimpleNamespace(workers={'kalshi':worker},dispatch=True,globally_stopped=False,
+                service=SimpleNamespace(workers={'kalshi':worker},dispatch=True,globally_stopped=False,ingress=SimpleNamespace(revoke=Mock()),
                     paused_sources=set(),cleanup_errors=[],source_state=Mock())
                 async def ordinary(*args):
                     worker.closed=True
@@ -303,20 +303,21 @@ class StopOwnerTests(unittest.IsolatedAsyncioTestCase):
                     revoked.set()
                 async def finite():await finish.wait();return True
                 service.close=ordinary;service.pause=ordinary
-                runtime=DataRuntime(service=service);runtime.persist=Mock()
+                runtime=DataRuntime(service=service);runtime.persist=Mock();runtime.persist_control=AsyncMock()
                 runtime.selected_fees=SimpleNamespace(stop=finite)
                 task=asyncio.create_task(runtime.control(action,{} if action=='stop' else dict(source='kalshi')))
                 await asyncio.wait_for(revoked.wait(),.1)
                 self.assertTrue(worker.closed);self.assertFalse(task.done())
+                service.ingress.revoke.assert_called_once_with(*(() if action=="stop" else ("kalshi",)))
                 if action=='stop':self.assertFalse(service.dispatch)
                 finish.set();await task
 
     async def test_command_ack_fails_after_ordinary_revocation_on_finite_failure(self):
         worker=SimpleNamespace(closed=False)
         service=SimpleNamespace(runtime_id='fixture-runtime',workers={'kalshi':worker},dispatch=True,
-            globally_stopped=False,cleanup_errors=[])
+            globally_stopped=False,ingress=SimpleNamespace(revoke=Mock()),cleanup_errors=[])
         async def close():service.dispatch=False;worker.closed=True
-        service.close=close;runtime=DataRuntime(service=service);runtime.persist=Mock()
+        service.close=close;runtime=DataRuntime(service=service);runtime.persist=Mock();runtime.persist_control=AsyncMock()
         runtime.selected_fees=SimpleNamespace(stop=AsyncMock(return_value=False))
         runtime.state=Mock()
         runtime.state.pending.return_value=[dict(id='fixture-command',runtime_id='fixture-runtime',action='stop',body={})]
@@ -331,12 +332,12 @@ class StopOwnerTests(unittest.IsolatedAsyncioTestCase):
             for raises in (False,True):
                 with self.subTest(action=action,raises=raises):
                     worker=SimpleNamespace(closed=False)
-                    service=SimpleNamespace(workers={'kalshi':worker},dispatch=True,globally_stopped=False,
+                    service=SimpleNamespace(workers={'kalshi':worker},dispatch=True,globally_stopped=False,ingress=SimpleNamespace(revoke=Mock()),
                         paused_sources=set(),cleanup_errors=[],source_state=Mock())
                     async def close():service.dispatch=False;worker.closed=True
                     async def pause(venue):worker.closed=True
                     service.close=AsyncMock(side_effect=close);service.pause=AsyncMock(side_effect=pause)
-                    runtime=DataRuntime(service=service);runtime.persist=Mock()
+                    runtime=DataRuntime(service=service);runtime.persist=Mock();runtime.persist_control=AsyncMock()
                     runtime.selected_fees=SimpleNamespace(stop=AsyncMock(side_effect=RuntimeError('fixture') if raises else None,return_value=False))
                     with self.assertRaises(SelectionError) as exc:
                         await runtime.control(action,{} if action=='stop' else dict(source='kalshi'))

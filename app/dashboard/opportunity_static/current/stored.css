@@ -1,19 +1,20 @@
 /* Generated from the named stored-*.css sources; keep their cascade order. */
 :root {
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  font-size:16px; line-height:1.5; color:#1e293b; background:#f3f6fb;
+  font-size:16px; line-height:1.5; color:#1e293b; background:#f5f7fb;
   --blue:#245bcc; --muted:#526278; --line:#d9e1ec; --surface:#fff;
   --soft:#edf3fe; --radius:12px;
+  --shadow:0 2px 8px #172b4606;
 }
 * { box-sizing:border-box }
 body { margin:0 }
 main { max-width:1320px; margin:auto; padding:0 28px 24px }
 a { color:var(--blue) }
-header { display:flex; align-items:center; gap:28px; min-height:72px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:rgba(243,246,251,.97); backdrop-filter:blur(12px) }
+header { display:flex; align-items:center; gap:28px; min-height:72px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:rgba(245,247,251,.97); backdrop-filter:blur(12px) }
 .brand { display:flex; align-items:center; gap:8px; color:#172b46; font-weight:750; font-size:25px; letter-spacing:-.8px; text-decoration:none }
 .brand-mark { background:#e7eefc; color:var(--blue); font-size:23px; width:32px; height:32px; text-align:center; border-radius:9px; letter-spacing:0 }
-nav { display:flex; gap:4px; margin-right:auto }
-nav a { display:flex; align-items:center; justify-content:center; min-height:44px; padding:8px 16px; text-decoration:none; color:var(--muted); border-radius:8px; font-weight:600 }
+nav { display:flex; flex-wrap:wrap; gap:4px; margin-right:auto }
+nav a { display:flex; align-items:center; justify-content:center; min-height:44px; padding:8px 14px; text-decoration:none; color:var(--muted); border-radius:8px; font-weight:600 }
 nav a[aria-current] { background:#e5edfc; color:#1649ae }
 nav a:hover { background:#e7edf6 }
 .heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:18px 0 16px }
@@ -47,7 +48,7 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
 .board-controls #settings { display:block; margin:0; min-width:0 }
 .calculation-settings { border:1px solid #c8d4e6; border-radius:10px; background:#fff; margin:0 }
-.calculation-settings>summary { display:flex; align-items:center; justify-content:space-between; gap:12px; list-style:none; padding:8px 14px; min-height:70px; font-weight:400 }
+.calculation-settings>summary { cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; list-style:none; padding:8px 14px; min-height:52px; font-weight:400 }
 .calculation-settings>summary::-webkit-details-marker { display:none }
 .calculation-settings>summary strong { display:block; font-size:.8125rem; font-weight:600; color:#23354c }
 .calculation-settings>summary::after { content:""; display:block; width:8px; height:8px; border-right:2px solid #526278; border-bottom:2px solid #526278; transform:rotate(45deg); flex-shrink:0; margin-right:4px }
@@ -90,6 +91,13 @@ label { display:grid; gap:5px; font-size:.8125rem; font-weight:600 }
 .board-controls #sort-setting { grid-column:5/7 }
 button,input,select { border-color:#8595ac }
 #applied { line-height:1.4 }
+
+/* Selected sizing is secondary, but remains a complete, readable control. */
+main>#settings { display:block; width:min(100%,440px); margin:20px 0 0 }
+main>#settings .settings-body { min-width:100%; padding-top:12px }
+.settings-body>#applied { margin:0 14px 12px }
+main>#settings .calculation-settings[open] .settings-body { position:static; border:0; box-shadow:none }
+main>#settings .calculation-settings[open] { border-radius:10px }
 .odds-board {
   background:var(--surface);
   border:1px solid var(--line);
@@ -342,7 +350,7 @@ summary {
 .estimate-reasons { min-width:0 }
 .estimate-reasons[open] { flex-basis:100% }
 .estimate-reasons[open] summary { padding-bottom:0 }
-.slate-game { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin:0 0 12px; padding:12px 16px }
+.slate-game { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin:0 0 12px; padding:12px 16px; box-shadow:var(--shadow) }
 .slate-game-heading { display:flex; align-items:baseline; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; margin-bottom:10px }
 .slate-game h2,.slate-comparison-game h2 { font-size:1rem; line-height:1.4; margin:0; font-weight:650; overflow-wrap:anywhere }
 .slate-game-heading small { font-size:.75rem }
@@ -352,9 +360,9 @@ summary {
 .slate-price-row { padding:8px 0 }
 .slate-price-row.team { border:0; border-radius:0; margin:0; box-shadow:none; background:transparent }
 .slate-price-row.team+.slate-price-row.team { border-top:1px solid #e3e9f2 }
-.slate-team-name { font-size:.9375rem; padding:0; line-height:1.4; overflow-wrap:anywhere }
+.slate-team-name { font-size:1rem; padding:0; line-height:1.4; overflow-wrap:anywhere }
 .slate-price-cell { min-width:0; overflow-wrap:anywhere }
-.slate-price-cell .slate-action { font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; min-height:44px; padding:6px 10px; color:#204fbb; border:1px solid #6f88b1; background:#f3f7ff; line-height:1.35; text-align:left }
+.slate-price-cell .slate-action { font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; min-height:44px; padding:6px 10px; color:#204fbb; border:1px solid #8595ac; background:#fff; line-height:1.35; text-align:left }
 .slate-price-cell .slate-action:hover { border-color:#6e90cc; background:#e8f0ff }
 .compact-source-clock { font-size:.75rem; line-height:1.45; margin-top:4px }
 .compact-native-price,.compact-depth,.compact-gross-comparison,.compact-current-comparison,.compact-observation-age,.compact-comparator-age { display:block; font-size:.75rem; line-height:1.45; margin-top:3px; overflow-wrap:anywhere }
@@ -447,6 +455,13 @@ summary {
 
 .comparison-coverage { margin:0 }
 .slate-overview .comparison-coverage-reasons,.slate-overview .observation-coverage-details { margin:0 }
+
+.slate-overview { align-items:center; gap:0 16px }
+.slate-overview>.slate-summary { flex:1 1 220px }
+.slate-overview>.observation-coverage-details { flex:none }
+.slate-overview>.observation-coverage-details[open] { flex-basis:100% }
+.slate-price-headings { margin:0; padding-top:0; padding-bottom:8px }
+.slate-game-heading { padding-bottom:10px; border-bottom:1px solid var(--line) }
 dialog {
   width:min(800px,calc(100% - 24px));
   max-height:90dvh;
@@ -541,7 +556,9 @@ footer {
   justify-content:space-between;
   gap:16px;
   flex-wrap:wrap;
-  margin:20px 0 0;
+  border-top:1px solid var(--line);
+  padding-top:12px;
+  margin:24px 0 0;
   font-size:.8125rem;
   color:var(--muted)
 }
@@ -591,6 +608,19 @@ footer {
 .detail-reconciliation { column-gap:20px }
 
 #detail-content>.metrics:has(>.metric:only-child) { grid-template-columns:minmax(0,1fr) }
+
+.price-lead { margin:16px 0 }
+.original-price-value { display:block; font-size:1.5rem; overflow-wrap:anywhere }
+#detail-content { min-width:0; overflow-wrap:anywhere }
+.price-group-heading { margin:16px 0 12px; font-size:1.125rem }
+
+.price-lead .comparison-input p { font-size:.875rem; margin:6px 0 }
+
+footer>div { display:flex; align-items:center; flex-wrap:wrap; gap:20px }
+footer a { display:inline-flex; align-items:center; min-height:44px }
+.price-lead:has(>.comparison-input:only-child) { grid-template-columns:minmax(0,1fr) }
+.price-lead .comparison-input { background:#f5f8ff; border-color:#d9e4f7; padding:16px }
+#detail-content>.comparison-takeaway { margin:16px 0 12px; font-size:.9375rem }
 @media(max-width:900px) {
   .cards .card {
     grid-template-columns:minmax(150px,1fr) minmax(180px,1.25fr) auto;
@@ -649,9 +679,10 @@ footer {
     justify-content:space-between
   }
   nav a {
-    flex:1;
+    flex:1 0 auto;
     min-width:0;
-    padding:8px 7px
+    font-size:.875rem;
+    padding:8px 6px
   }
   #stop {
     font-size:.8125rem;
@@ -1046,4 +1077,86 @@ opposing comparisons have four. */
   .heading-actions #settings .settings-fields label { grid-column:auto }
   .heading-actions #settings .settings-fields .benchmark-setting { grid-column:1/-1 }
   .heading-actions .settings-body { text-align:left }
+}
+
+/* U1 uses the same saved reads and dialogs, with results before setup. */
+.dashboard-page .heading-actions,.dashboard-page .scope { display:none }
+.dashboard-page .board-controls { display:block; margin-bottom:16px }
+.dashboard-page .board-controls .slate-selection:has(#sort-setting[hidden]) { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); max-width:720px }
+.dashboard-page .slate-selection label:has(#period),.dashboard-page .slate-selection label:has(#game),.dashboard-page .search-field,.dashboard-page #sort-setting { display:none }
+.dashboard-page .context-bar { margin-bottom:12px }
+.dashboard-page .heading { margin:24px 0 18px }
+.dashboard-page #settings { margin-top:20px; width:min(100%,440px) }
+.dashboard-page #applied[hidden] { display:none }
+.opportunity-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start }
+.opportunity-section { background:white; border:1px solid var(--line); border-radius:12px; padding:20px; min-width:0; box-shadow:var(--shadow) }
+.opportunity-section h2 { margin-bottom:10px }
+.opportunity-status { color:#43536a; font-size:.9375rem; line-height:1.5 }
+.opportunity-reasons { margin-top:12px; font-size:.875rem }
+.opportunity-reasons summary,.opportunity-group>summary { cursor:pointer; color:#245bcc; min-height:44px; padding:10px 0 }
+.opportunity-prices { padding:16px 0; margin:0 0 4px }
+.opportunity-prices>a { display:inline-flex; align-items:center; min-height:44px; padding:8px 16px; border-radius:8px; background:var(--blue); color:white; font-weight:650; text-decoration:none }
+.opportunity-prices>a:hover { background:#1849b2 }
+.opportunity-prices p { font-size:.875rem; color:var(--muted); max-width:760px }
+.opportunity-group { background:white; border:1px solid var(--line); padding:10px 18px; border-radius:10px; margin:10px 0 }
+.opportunity-group>p { font-size:.875rem; color:var(--muted) }
+.opportunity-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; border-top:1px solid var(--line); padding:16px 0; margin-top:12px; overflow-wrap:anywhere }
+.opportunity-row>button { justify-self:start }
+.opportunity-row p { font-size:.875rem }
+.opportunity-value { text-align:right }
+.opportunity-value>strong { font-size:21px; font-variant-numeric:tabular-nums }
+.opportunity-value small { max-width:160px }
+@media(max-width:600px) {
+ .dashboard-page main { padding:0 16px 20px }
+ .dashboard-page .heading { margin:18px 0 14px }
+ .dashboard-page h1 { font-size:25px }
+ .dashboard-page .board-controls .slate-selection { gap:8px }
+ .dashboard-page .board-controls .slate-selection:has(#sort-setting[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)) }
+ .dashboard-page .slate-selection label:has(#family) { grid-column:1/-1 }
+ .opportunity-sections { grid-template-columns:1fr; gap:12px }
+ .opportunity-section { padding:16px }
+ .opportunity-section h2 { font-size:18px; margin-bottom:6px }
+ .opportunity-status { font-size:14px; margin:0 }
+ .opportunity-reasons { margin-top:6px }
+ .opportunity-prices { margin:0; padding:12px 0 }
+ .opportunity-row { grid-template-columns:minmax(0,1fr) }
+ .opportunity-value { text-align:left }
+ .opportunity-value small { max-width:none }
+}
+
+.ev-outcome-page .opportunity-sections{grid-template-columns:minmax(0,1fr)}
+.ev-outcome-page .ev-filters{margin:10px 0}
+.ev-outcome-page .ev-filters>summary{cursor:pointer;font-weight:600}
+.ev-outcome-page .heading{margin-bottom:10px}
+.ev-outcome-page .opportunity-section{min-width:0}
+
+/* Coverage is one optional disclosure; the price grid is the dominant work area. */
+@media(max-width:760px) {
+  .heading { margin:14px 0; gap:8px }
+  .view-title { display:block }
+  .observation-coverage-details { width:auto }
+  .slate-overview .slate-summary { flex:1 1 160px }
+  .slate-overview .observation-coverage-details[open] { flex-basis:100% }
+  .dashboard-page .heading { margin:16px 0 }
+  .opportunity-section { padding:16px }
+}
+@media(max-width:600px) {
+  nav { gap:2px; width:100% }
+  nav a { font-size:.875rem; padding:8px 6px; flex:1 0 auto }
+  .price-group-heading { margin:16px 0 10px }
+  .slate-price-row { gap:12px 16px }
+  footer { gap:8px; padding-top:16px }
+  footer>div { display:flex; flex-wrap:wrap; gap:8px 20px }
+}
+
+/* Explicit row placement avoids inherited comparison grids squeezing identities. */
+.opportunity-row.slate-result { grid-template-columns:minmax(0,1fr) minmax(160px,220px) auto; margin-top:0; border-bottom:0; padding:16px 0 }
+.opportunity-row.slate-result>div:first-child { grid-column:1; grid-row:1; min-width:0 }
+.opportunity-row.slate-result>.opportunity-value { grid-column:2; grid-row:1 }
+.opportunity-row.slate-result>button { grid-column:3; grid-row:1 }
+@media(max-width:600px) {
+  .opportunity-row.slate-result { grid-template-columns:minmax(0,1fr) auto; gap:12px }
+  .opportunity-row.slate-result>div:first-child { grid-column:1/-1; grid-row:1 }
+  .opportunity-row.slate-result>.opportunity-value { grid-column:1; grid-row:2 }
+  .opportunity-row.slate-result>button { grid-column:2; grid-row:2 }
 }

@@ -29,7 +29,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
   assert(comparisonTakeaway(q.gross_comparison,at).includes('2d 0h old; Last-known comparison'));
   const root=new Element('section');renderOriginalDetails(q,{evidence:{}},{root,participants:fixture.catalog.games[0].participants});
   assert(root.querySelector('.comparison-takeaway').textContent.includes('Current comparison'));
-  assert.equal(root.children[2].className,'comparison-takeaway');
+  assert(root.children.indexOf(root.querySelector('.price-lead')) < root.children.indexOf(root.querySelector('.comparison-takeaway')),'original prices lead the comparison interpretation');
   for(const text of ['Current-peer price comparison','Lowest observed price comparison','-1/46 cents','Original source time'])assert(root.textContent.includes(text),text);
   const captured=JSON.stringify(q.current_comparison);p.original.value='0.9999';
   updateRelativeAges(root,at+20000);

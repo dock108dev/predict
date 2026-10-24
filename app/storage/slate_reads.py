@@ -21,8 +21,10 @@ TTL_SECONDS = 30
 
 
 def process_bytes():
-    from app.collection.continuous import rss
-    return rss()
+    # Admission measures live allocations. A prior, released capture's peak is
+    # not resident memory and must not permanently deny subsequent refreshes.
+    from app.collection.background_work import resident_bytes
+    return resident_bytes()
 
 
 @dataclass
@@ -54,6 +56,7 @@ class CapturedReads:
         self.frames = OrderedDict()
         self.retained_bytes = 0
         self.lock = RLock()
+        self.on_capture = None
 
     def guard(self, additional_bytes=0):
         # This is the existing process guard, never an expanded read allowance.
@@ -91,11 +94,15 @@ class CapturedReads:
             self.guard(size)
             while self.frames and (len(self.frames) >= self.maximum_frames or
                                    self.retained_bytes + size > self.maximum_bytes):
-                self.discard(next(iter(self.frames)))
+                # Open selections are small and actively leased. Retire old
+                # pagination captures first, within the same total bounds.
+                victim=next((key for key,value in self.frames.items() if value.context not in ('selected','displayed')),next(iter(self.frames)))
+                self.discard(victim)
             frame = CapturedRead(token, context, authority, self.clock() + self.ttl_seconds,
                                  header, records, size)
             self.frames[token] = frame
             self.retained_bytes += size
+            if self.on_capture:self.on_capture(frame.token)
             return frame
 
     def get(self, token, *, context):
@@ -124,8 +131,55 @@ class CapturedReads:
                 self.discard(frame.token)
                 raise ValueError('current_slate_read_capacity')
             frame.page_bytes[(offset, limit)] = size
+            # Completed pages can still open an exact selected result. They
+            # remain within the same four-frame/byte/TTL eviction budget.
             if complete:
-                self.discard(frame.token)
+                records=[]
+                for record in frame.records:
+                    self.guard(len(record)*8)
+                    value=self.decode(record)
+                    if value.get('row'):
+                        value['row'].pop('_boards_text',None)
+                        value['row']['facts'].pop('boards',None)
+                    records.append(encoded(value))
+                old_size=frame.size
+                frame.records=tuple(records);frame.header=b'{}';frame.context='completed'
+                frame.size=2+sum(map(len,records))+4096+256*len(records)
+                self.retained_bytes+=frame.size-old_size
+
+    def lease(self, token):
+        """Keep a currently displayed completed frame selectable, within bounds."""
+        with self.lock:
+            self.cleanup()
+            frame=self.frames.get(token)
+            if frame is None:raise ValueError('current_slate_read_expired')
+            if frame.context not in ('completed','displayed'):
+                raise ValueError('current_slate_read_context_changed')
+            self.guard()
+            frame.context='displayed'
+            frame.deadline=self.clock()+self.ttl_seconds
+            self.frames.move_to_end(token)
+
+    def selection(self, token, game):
+        with self.lock:
+            self.cleanup()
+            frame = self.frames.get(token)
+            if frame is None:raise ValueError('current_slate_read_expired')
+            for record in frame.records:
+                self.guard(len(record)*8)
+                value = self.decode(record)
+                if value['game_key'] == game:
+                    if frame.context != 'selected':
+                        # Retain only the opened game. A selected modal must
+                        # not pin a 500-game pagination frame between polls.
+                        selected=self.capture({},[record],context='selected',authority=frame.authority)
+                        return value['row'],selected.token
+                    # Reading renews only this bounded UI cache lease, never
+                    # any source, confirmation or calculation clock.
+                    frame.deadline = self.clock() + self.ttl_seconds
+                    self.frames.move_to_end(token)
+                    return value['row'],frame.token
+            raise ValueError('current_selection_removed')
 
     @staticmethod
     def decode(value):

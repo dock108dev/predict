@@ -160,7 +160,7 @@ function comparisonStatusLabel(comparison, now = Date.now()) {
   return ({current: "Current comparison", pending: "Comparison pending publication", last_known: "Last-known comparison", unknown: "Comparison age unknown"})[state] || "Comparison age unknown";
 }
 function comparisonTakeaway(comparison, now = Date.now()) {
-  if (!comparison?.available) return "Comparison unavailable: " + (comparison?.reason || "No compatible other-venue observation.");
+  if (!comparison?.available) return "Comparison unavailable: " + (comparison?.reason ? words(comparison.reason) : "No compatible other-venue observation.");
   const peer = comparison.inputs?.find(input => input.quote_id === comparison.comparison_quote_id);
   if (!peer || !comparison.exact) return "Comparison inputs unavailable.";
   const n = BigInt(comparison.exact.numerator), d = BigInt(comparison.exact.denominator), magnitude = n < 0n ? -n : n;
@@ -169,7 +169,7 @@ function comparisonTakeaway(comparison, now = Date.now()) {
   const digits = rounded.toString().padStart(precision + 1, "0");
   const amount = rounded === 0n && magnitude !== 0n ? "less than 0.000001¢" : "about " + (digits.slice(0, -precision) + "." + digits.slice(-precision)).replace(/\.?0+$/, "") + "¢";
   const relation = n === 0n ? "equals" : "is " + amount + (n > 0n ? " lower than" : " higher than");
-  return "Selected price " + relation + " the " + venue(peer.venue) + " quote (" + relativeAge(peer.times?.source_at, now) + "; " + comparisonStatusLabel(comparison, now) + ").";
+  return "Selected price " + relation + " the " + venue(peer.venue) + " quote, before costs (" + relativeAge(peer.times?.source_at, now) + "; " + comparisonStatusLabel(comparison, now) + ").";
 }
 function estimateSummary(root, estimate, key = "estimate-reasons") {
   if (!estimate) return;
@@ -202,7 +202,14 @@ function depthSummary(q) {
     " at " + quantity(first.price) + " " + words(depth.price_units) +
     (depth.levels.length > 1 ? " · " + depth.levels.length + " retained levels" : "");
 }
-function observationSummary(root, q) {
+function observationSummary(root, q, {compact = false} = {}) {
+  if (compact) {
+    const status = clockedText("small", now => observationStateLabel(observationState(q, now)) + " · " +
+      relativeAge(q.times?.source_at || q.freshness?.source_at, now), "compact-price-status");
+    status.title = observationStatus(q) + " · Open the price for source, depth and comparison details.";
+    root.append(status);
+    return;
+  }
   root.append(el("small", "Native " + quantity(q.original?.value) + " " + words(q.original?.units), "compact-native-price"));
   root.append(clockedText("small", now => observationStatus(q, now), "compact-source-clock"));
   const clock = el("small", undefined, "compact-observation-age");
@@ -322,6 +329,16 @@ function matchesGameSearch(game, search = "") {
 }
 
 
+// Participant identity supplies the game heading; source titles remain evidence.
+function typedGameTitle(participants, fallback = "Game") {
+  const names = (participants || []).map(p => p.name || p.id).filter(Boolean);
+  return names.length >= 2 ? names.join(" vs ") : fallback;
+}
+function priceResearch(q, now = Date.now()) {
+  const reasons = [...(q.freshness?.reasons || []), ...(q.observation_display?.reason_codes || [])];
+  return observationState(q, now) !== "current" || reasons.some(r => r === "pregame_ended" || r.startsWith("event_"));
+}
+
 // Source: comparison-coverage.js
 
 const coverageCauseLabels = {
@@ -410,27 +427,28 @@ function appendComparisonCoverage(root, boards, key = "comparison-coverage") {
 
 // Source: comparison-slate-views.js
 
-const comparisonStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "calculation_failed", "not_evaluated"];
+const comparisonStates = ["numeric_current", "numeric_last_known", "missing_reference", "unsupported_inputs", "missing_inputs", "calculation_failed", "not_evaluated"];
 const comparisonMetrics = {
   buffered_ev_usd: ["buffered_return_percent", "Estimated return", 0],
   conditional_buffered_ev_usd: ["conditional_buffered_return_percent", "Return · decisive outcomes only", 1],
   buffered_complete_modeled_minimum_usd: ["buffered_complete_minimum_return_percent", "Minimum margin · modeled outcomes", 0],
+  buffered_conditional_known_state_minimum_usd: ["buffered_conditional_known_state_minimum_return_percent", "Margin · listed known outcomes only", 1],
   buffered_decisive_opposing_margin_usd: ["buffered_decisive_return_percent", "Margin · decisive outcomes only", 1],
 };
 // Financial category decides the field. Never pick the most favorable number.
 function primaryComparisonMetric(row, view) {
-  const fields = view === "arbs" ? (row.classification?.category === "positive_complete_modeled_pair" ? ["buffered_complete_modeled_minimum_usd"] : ["buffered_decisive_opposing_margin_usd"]) : ["buffered_ev_usd", "conditional_buffered_ev_usd"];
+  const fields = view === "arbs" ? (row.classification?.category === "positive_complete_modeled_pair" ? ["buffered_complete_modeled_minimum_usd"] : ["buffered_decisive_opposing_margin_usd", "buffered_conditional_known_state_minimum_usd"]) : ["buffered_ev_usd", "conditional_buffered_ev_usd"];
   for (const field of fields) {
     const [percentField, label, category] = comparisonMetrics[field], state = row.availability?.metrics?.[field]?.state;
     if (row.availability?.numeric_metrics?.includes(field) && ["numeric_current", "numeric_last_known"].includes(state) && numeric(row.financial_metrics?.[field]) !== null && numeric(row.financial_metrics?.[percentField]) !== null)
-      return {field, percentField, label, category, state, value: row.financial_metrics[percentField]};
+      return {field, percentField, label: row.modeled_basis ? (row.modeled_basis.scenario_parameters?.refund_given_void === "1" ? "Hypothetical refund scenario · uncalibrated" : "Modeled return · uncalibrated assumptions") : label, category, state, value: row.financial_metrics[percentField]};
   }
   return null;
 }
 function compareComparisonMetrics(a, b, view) {
   const x = primaryComparisonMetric(a, view), y = primaryComparisonMetric(b, view);
   if (!x || !y) return Number(!x) - Number(!y);
-  return x.category - y.category || numeric(y.value) - numeric(x.value);
+  return x.category - y.category || compareExactPercent(x.value, y.value);
 }
 const comparisonCauseLabels = {
   selected_reference_missing: "Selected reference missing",
@@ -443,6 +461,7 @@ const comparisonCauseLabels = {
   source_price_expired: "Source price freshness has expired",
   calculation_read_failed: "Calculation read failed",
   calculation_failed: "Calculation failed",
+  background_estimates_pending: "Calculations pending",
   complete_probability_partition_unsupported: "Complete outcome probabilities unsupported",
   unsupported_model_or_contract: "Model or contract unsupported",
   invalid_inputs: "Inputs invalid or conflicting",
@@ -450,6 +469,7 @@ const comparisonCauseLabels = {
 function causeLabel(code) { return comparisonCauseLabels[code] || "Unsupported input (" + words(code) + ")"; }
 function unavailableLabel(a, shared) {
   if (!a || a.state === "not_evaluated") return "Not evaluated";
+  if (a.state === "missing_inputs") return "Required inputs missing";
   const local = a.reason_codes.filter(c => !shared.has(c));
   if (local.length) return causeLabel(local[0]);
   return "Unavailable · see availability";
@@ -464,7 +484,7 @@ function comparisonWarning(row, view, chosen) {
 }
 function scopedComparisonAvailability(boards, errors, games) {
   const counts = Object.fromEntries(comparisonStates.map(s => [s, 0])), causes = new Map();
-  let positive = 0, evaluated = false;
+  let positive = 0, partial = 0, evaluated = false;
   function addCause(c) {
     const entry = causes.get(c.code) || {code: c.code, affected_results: 0, affected_games: 0, venues: []};
     entry.affected_results += c.affected_results; entry.affected_games += c.affected_games;
@@ -474,8 +494,8 @@ function scopedComparisonAvailability(boards, errors, games) {
     const a = b.availability;
     if (!a) continue;
     evaluated ||= a.outcome !== "not_evaluated";
-    for (const state of comparisonStates) counts[state] += a.counts[state];
-    positive += a.positive_results;
+    for (const state of comparisonStates) counts[state] += a.counts[state] || 0;
+    positive += a.positive_results; partial += a.partial_results || 0;
     a.causes.forEach(addCause);
   }
   for (const e of errors) {
@@ -486,7 +506,7 @@ function scopedComparisonAvailability(boards, errors, games) {
   }
   const total = Object.values(counts).reduce((a, b) => a + b, 0), numericResults = counts.numeric_current + counts.numeric_last_known;
   return {counts, total_results: total, numeric_results: numericResults, current_results: counts.numeric_current, positive_results: positive, games,
-    outcome: !evaluated ? "not_evaluated" : !numericResults && total ? "unavailable" : positive ? "positive" : numericResults < total ? "partial" : !counts.numeric_current && numericResults ? "last_known_only" : "evaluated_no_positive", causes: [...causes.values()]};
+    outcome: !evaluated || !total || counts.not_evaluated === total ? "not_evaluated" : !numericResults ? "unavailable" : numericResults < total || partial || counts.numeric_current && counts.numeric_last_known ? "partial" : !counts.numeric_current ? "last_known_only" : positive ? "positive" : "evaluated_no_positive", causes: [...causes.values()]};
 }
 
 // Pure selection/presentation. Every callback keeps the original row and game;
@@ -517,7 +537,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
   }
   function heading(root, g) {
     const h = el("div", undefined, "slate-game-heading");
-    h.append(el("h2", g.title), el("small", [g.league || g.sport, "Starts " + time(g.start_at)].filter(Boolean).join(" · ")));
+    h.append(el("h2", typedGameTitle(g.participants, g.title)), el("small", [g.league || g.sport, "Starts " + time(g.start_at)].filter(Boolean).join(" · ")));
     root.append(h);
   }
   function delivery(b, paused, sourceOnly = false) {
@@ -535,9 +555,9 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     if (!benchmark.available) d.append(el("p", "Selected benchmark unavailable · " + words(benchmark.reason)));
     root.append(d);
   }
-  function odds(g, b, paused) {
+  function odds(g, b, paused, target = content) {
     const root = el("article", undefined, "slate-game slate-odds");
-    root.dataset.key = g.game_key;
+    root.dataset.key = g.game_key + (b.prices.every(q => priceResearch(q)) ? ":research" : ":current");
     heading(root, g);
     if (delivery(b, paused, true)) root.append(el("small", delivery(b, paused, true), "pending-label"));
     const table = el("div", undefined, "slate-prices");
@@ -573,7 +593,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
           const meaning = labelsFor(g.participants).selection(q) + " · " + venue(book) + " · original " + q.original.value + " " + words(q.original.units) + " · " + (q.freshness?.status === "current" ? "Current inputs" : "As-of inputs") + " · Source " + (q.freshness?.source_at || "Unknown") + " · Received " + (q.freshness?.received_at || "Unknown");
           button.title = meaning;
           button.setAttribute("aria-label", meaning + " · Open original price");
-          observationSummary(cell, q);
+          observationSummary(cell, q, {compact:true});
         }
         row.append(cell);
       }
@@ -587,7 +607,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     }
     root.append(table);
     referenceEvidence(root, g, b);
-    content.append(root);
+    target.append(root);
   }
   function financial(root, g, b, row, view, paused, shared) {
     const item = el("div", undefined, "slate-result " + (view === "arbs" ? "slate-arb" : "slate-ev"));
@@ -680,7 +700,7 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     const boards = v.boards.filter(b => visible.has(b.game_key)).map(b => ({...b,
       prices:b.prices.filter(q => (!source || q.venue === source) && matchesMarketFilter(q, family, period)),
       rows:b.rows.filter(q => q.legs ? (!source || q.legs.some(leg => leg.venue === source)) && q.legs.every(leg => matchesMarketFilter(leg, family, period)) : (!source || q.venue === source) && matchesMarketFilter(q, family, period))})).filter(b => (!family && !period && !source) || b.prices.length || source === v.policy.benchmark_venue && (!family || family === "winner") && (!period || period === "full_game") && b.benchmark?.originals?.length), paused = v.storage?.state === "unavailable";
-    if (family || period || source) for (const key of visible.keys()) if (!boards.some(b => b.game_key === key)) visible.delete(key);
+    if (family || period || source) for (const key of visible.keys()) if (!boards.some(b => b.game_key === key) && !(v.errors || []).some(e => e.game_key === key)) visible.delete(key);
     const rows = boards.flatMap(b => b.rows.filter(row => view !== "arbs" || crossVenue(row)).map(row => ({ g: visible.get(b.game_key), b, row })));
     rows.sort((a, b) => compareComparisonMetrics(a.row, b.row, view) || (a.g.start_at || "").localeCompare(b.g.start_at || "") || a.g.game_key.localeCompare(b.g.game_key) || String(a.row.quote_id || a.row.pair_id).localeCompare(String(b.row.quote_id || b.row.pair_id)));
     const scope = scopedComparisonAvailability(boards, (v.errors || []).filter(e => visible.has(e.game_key)), visible.size);
@@ -690,11 +710,11 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     if (view !== "odds") summary.append(el("span", rows.length + (view === "arbs" ? " cross-venue comparisons" : " comparisons") + " · " + (filter === "all" ? "all returned results" : filter === "hedges" ? "positive rule-sensitive hedges" : "eligible positive results")));
     const overview = el("div", undefined, "slate-overview");
     overview.append(summary);
-    if (view === "odds") appendComparisonCoverage(overview, boards);
     const observationOverview = view === "odds" ? el("details", undefined, "observation-coverage-details") : overview;
     if (view === "odds") {
       observationOverview.dataset.key = "observation-coverage-details";
-      observationOverview.append(el("summary", "Retained observation status & source coverage"));
+      observationOverview.append(el("summary", "Price coverage & availability"));
+      appendComparisonCoverage(observationOverview, boards);
     }
     const observed = scopedObservationCoverage(boards), catalog = scopedObservationCoverage(v.boards), errors = (v.errors || []).filter(e => visible.has(e.game_key));
     observationOverview.append(el("p", "Shown scope: " + observed.total + " price observations in " + observed.games + " matching games · Catalog: " + catalog.total + " returned price observations" + ((v.errors || []).length ? " (board errors exclude unknown observations)" : ""), "observation-counts"));
@@ -719,8 +739,11 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
     if (view === "odds") overview.append(observationOverview);
     if (errors.length) {
       const missing = el("div", undefined, "missing-board-errors");
-      missing.append(el("strong", errors.length + " matching games have unavailable boards; their observation counts are unknown."));
-      for (const error of errors) missing.append(el("p", visible.get(error.game_key).title + " · " + words(error.reason) + " · " + error.reason));
+      missing.append(el("strong", errors.length + " matching games could not be read. Other returned games remain usable; missing observation counts are unknown."));
+      for (const error of errors) {
+        const item = el("details"); item.dataset.key = "read-failure:" + error.game_key;
+        item.append(el("summary", typedGameTitle(visible.get(error.game_key).participants, visible.get(error.game_key).title) + " · Prices unavailable"), el("p", words(error.reason) + " · " + error.reason)); missing.append(item);
+      }
       overview.append(missing);
     }
     if (v.games.length || errors.length) content.append(overview);
@@ -735,16 +758,31 @@ function createComparisonSlate({ content, onDetails, onOriginal }) {
       const estimates = boards.map(b => b.estimate_availability).filter(Boolean);
       if (estimates.length) {
         const states = new Set(estimates.map(e => e.state));
-        estimateSummary(content, {state: states.size === 1 ? estimates[0].state : "partially_available", reason_codes: estimates.flatMap(e => e.reason_codes || [])}, "odds-estimate-reasons");
+        estimateSummary(observationOverview, {state: states.size === 1 ? estimates[0].state : "partially_available", reason_codes: estimates.flatMap(e => e.reason_codes || [])}, "odds-estimate-reasons");
       }
-      if (boards.some(b => b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome"))) content.append(el("small", "Native sides have their own tie and refund terms. Open a price to inspect its contract.", "native-meaning"));
-      const h = el("div", undefined, "slate-price-headings slate-shared-headings");
-      h.append(el("span", "Game / outcome"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
-      content.append(h);
+      if (boards.some(b => b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome"))) observationOverview.append(el("small", "Native sides have their own tie and refund terms. Open a price to inspect its contract.", "native-meaning"));
+      for (const research of [false, true]) {
+        const groups = boards.map(b => ({...b, prices:b.prices.filter(q => priceResearch(q) === research)})).filter(b => b.prices.length);
+        if (!groups.length) {
+          if (!research) content.append(el("p", "No current prices in this view."));
+          continue;
+        }
+        let target = content;
+        if (research) {
+          target = el("details", undefined, "odds-research");
+          target.dataset.key = "odds-research";
+          target.append(el("summary", "Last-known & other prices · " + groups.length + (groups.length === 1 ? " game" : " games")));
+          content.append(target);
+        } else content.append(el("h2", "Current prices", "price-group-heading"));
+        const h = el("div", undefined, "slate-price-headings slate-shared-headings");
+        h.append(el("span", "Game / outcome"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
+        target.append(h);
+        for (const b of groups) odds(visible.get(b.game_key), b, paused, target);
+      }
       for (const g of visible.values()) {
         const b = boards.find(b => b.game_key === g.game_key);
-        if (b) odds(g, b, paused);
-        else content.append(el("p", g.title + " · Current prices unavailable"));
+        if (!b) continue; // Failed games are named above; their price counts are unknown.
+        if (!b.prices.length) content.append(el("p", typedGameTitle(g.participants, g.title) + " · No retained prices for this market scope."));
       }
       return;
     }
@@ -856,7 +894,7 @@ function createBoardViews({
                     words(q.original.units),
             ),
           );
-          observationSummary(box, q);
+          observationSummary(box, q, {compact:true});
           const b = el("button", "Original price");
           b.dataset.key = q.quote_id;
           b.onclick = () => onOriginal(q, b);
@@ -1105,6 +1143,33 @@ function createSlateViews(options) {
 // Source: stored-details.js
 
 function renderOriginalDetails(q, inputs, { root, participants, title }) {
+  root.replaceChildren(el("h3", typedGameTitle(participants, "Selected game") + " · " + marketCaption(q)));
+  root.append(el("p", [q.event?.league || q.event?.sport, q.event?.start_at ? "Scheduled " + time(q.event.start_at) : "Scheduled start unknown"].filter(Boolean).join(" · ")));
+  const captured = q.current_comparison?.available ? q.current_comparison : q.gross_comparison;
+  const frames = el("div", undefined, "comparison-inputs price-lead");
+  // Use only the already captured pair, never a supplementary response's peers.
+  const peers = captured?.available ? (captured.inputs || []).filter(i => i.quote_id !== q.quote_id) : [];
+  for (const [index, input] of [q, ...peers].entries()) {
+    const card = el("section", undefined, "comparison-input");
+    card.append(el("h4", (index ? "Captured peer · " : "Original price · ") + venue(input.venue)),
+      el("strong", String(input.original?.value ?? "Unknown") + " " + words(input.original?.units), "original-price-value"),
+      el("p", labelsFor(participants).selection(input)),
+      clockedText("small", now => observationStatus(input, now)));
+    const age = el("p"); age.append(ageNode(input.times?.source_at || input.freshness?.source_at, "Source: ")); card.append(age);
+    if (input.original?.native_value != null) textLine(card, "Source input", String(input.original.native_value) + " " + words(input.original.native_units));
+    frames.append(card);
+  }
+  root.append(frames, clockedText("p", now => comparisonTakeaway(captured, now), "comparison-takeaway"));
+  if (captured?.available) root.append(el("p", "Difference is peer minus selected, before costs. It does not establish net EV or covered arbitrage."));
+  root.append(el("small", "Captured prices stay fixed. Close and reopen for updated inputs."));
+  const evidence = el("details"); evidence.dataset.key = "captured-price-evidence";
+  evidence.append(el("summary", "Source details & observed depth"));
+  evidence.append(el("p", "A passed scheduled start does not establish completion or settlement."));
+  const body = el("div"); renderOriginalEvidence(q, inputs, {root:body, participants, title});
+  evidence.append(body); root.append(evidence);
+}
+
+function renderOriginalEvidence(q, inputs, { root, participants, title }) {
   root.replaceChildren(el("h3", labelsFor(participants).selection(q)), el("p", (title ? title + " · " : "") + venue(q.venue) + " · " + price(q)));
   root.append(clockedText("p", now => comparisonTakeaway(q.current_comparison?.available ? q.current_comparison : q.gross_comparison, now), "comparison-takeaway"));
   const captured = q.current_comparison?.available ? q.current_comparison : q.gross_comparison;
@@ -1242,33 +1307,53 @@ function renderSavedDetails(v, { root, participants }) {
         .join(" + "),
     ),
   );
+  for (const q of quotes)
+    textLine(
+      root,
+      venue(q.venue) + " original price",
+      String(q.original.value) +
+        " " +
+        words(q.original.units) +
+        " · " +
+        side(q.source.native_side),
+    );
+  root.append(clockedText("p", now => quotes.map(q => observationStatus(q, now)).join(" · ")));
   const primary = primaryComparisonMetric(selected, v.pair ? "arbs" : "ev");
   if (primary) {
     const headline = el("div", undefined, "metrics selected-primary");
     metric(headline, (primary.state === "numeric_last_known" ? "Last-known · " : "") + primary.label, primary.value, x => (numeric(x) > 0 ? "+" : "") + percent(x));
     root.append(headline);
   }
-  const age = el("div");
-  age.id = "detail-freshness";
-  freshness(age, selected.freshness);
-  root.append(age);
-  root.append(el("small", "Inputs captured " + time(v.as_of)));
-  const frame = selected.evaluation_frame;
-  if (frame) root.append(el("small", "Evaluated " + time(frame.evaluated_at) + (frame.mixed_source_times ? " · Last-known prices from different times; no simultaneous historical trade is established." : " · Original price clocks retained.")));
-  for (const q of quotes)
-    textLine(
-      root,
-      venue(q.venue) + " original price",
-      quantity(q.original.value) +
-        " " +
-        words(q.original.units) +
-        " · " +
-        side(q.source.native_side),
-    );
+  const gross = selected.gross_decisive_benchmark;
+  if (gross?.available && numeric(gross.return_percent) !== null) {
+    const companion = el("section", undefined, "gross-benchmark-companion");
+    companion.append(el("h3", "Gross decisive benchmark"));
+    metric(companion, (gross.state === "numeric_last_known" ? "Last-known · " : "") + "Return on normal acquisition", gross.return_percent, x => (numeric(x) > 0 ? "+" : "") + percent(x));
+    companion.append(el("p", "Per $1 normal claim, before fees and exceptional settlement. No executable quantity, complete net EV or covered arbitrage is established."));
+    root.append(companion);
+  }
+  if (selected.modeled_basis) {
+    const basis = selected.modeled_basis;
+    const disclosure = el("details", undefined, "modeled-product-basis");
+    disclosure.append(el("summary", "Model, scenarios & sensitivity"));
+    for (const key of ["product", "quantity", "charges", "probability", "exceptional_model", "rules", "historical_context", "sensitivity_scope", "review_horizon", "missing"])
+      disclosure.append(el("p", basis[key]));
+    if (selected.modeled_expected_void_receipt_usd != null) disclosure.append(el("p", "Assumed expected void receipt at this amount: " + money(selected.modeled_expected_void_receipt_usd) + ". Actual void receipt and guaranteed minimum remain unknown."));
+    const sensitivity = basis.sensitivity;
+    if (sensitivity) {
+      disclosure.append(el("h4", "Full EV sensitivity · hypothetical parameters"));
+      disclosure.append(el("p", "After one buffer: " + money(sensitivity.buffered_ev_low_usd) + " to " + money(sensitivity.buffered_ev_high_usd) + ". " + (sensitivity.sign_changes ? "Assumptions reverse the sign." : "No sign reversal within this hypothetical range.") + " This is not a confidence interval or guaranteed minimum."));
+      disclosure.append(el("p", sensitivity.threshold_condition));
+      disclosure.append(el("p", "Break-even expected void receipt per $1 face: " + money(sensitivity.break_even_expected_void_receipt_per_face) + (sensitivity.break_even_receipt_feasible ? ". Higher expected receipt gives positive buffered EV." : " (outside the feasible $0-$1 interval).")));
+      if (sensitivity.break_even_void_probability_zero_receipt != null) disclosure.append(el("p", "Break-even void rate with zero void receipt: " + percent(100 * numeric(sensitivity.break_even_void_probability_zero_receipt)) + (sensitivity.break_even_void_feasible ? "." : " (outside the feasible probability interval).")));
+      disclosure.append(el("p", sensitivity.formula));
+    }
+    root.append(disclosure);
+  }
   const metrics = el("div", undefined, "metrics");
   metric(
     metrics,
-    v.pair ? "Buffered decisive margin" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
+    v.pair ? "Buffered decisive margin" : selected.modeled_basis?.scenario_parameters?.refund_given_void === "1" ? "Hypothetical refund scenario · buffered" : m.buffered_ev_usd == null ? "Conditional EV · buffered" : "Complete buffered EV",
     v.pair ? m.buffered_decisive_opposing_margin_usd : m.buffered_ev_usd ?? m.conditional_buffered_ev_usd,
   );
   if (v.pair) {
@@ -1276,7 +1361,22 @@ function renderSavedDetails(v, { root, participants }) {
     if (m.buffered_complete_modeled_minimum_usd == null) metrics.append(el("small","Complete modeled minimum unknown; the decisive margin does not cover every outcome.","conditional-label"));
   }
   root.append(metrics);
+  if (selected.modeled_basis) {
+    metric(metrics, "Conditional net EV · decisive outcomes · buffered", m.conditional_buffered_ev_usd);
+    root.append(el("p", "Conditional EV assumes a decisive winner. The full-EV scenario uses hypothetical tie and void assumptions; neither is a guaranteed return."));
+  }
   if (!v.pair && m.buffered_ev_usd == null) metrics.append(el("small", "Complete modeled EV unavailable", "conditional-label"));
+  const main = root;
+  const sizing = el("details"); sizing.dataset.key = "selected-sizing-evidence";
+  sizing.append(el("summary", "Selected amount, fees, buffer & reconciliation"));
+  main.append(sizing); root = sizing;
+  const age = el("div");
+  age.id = "detail-freshness";
+  freshness(age, selected.freshness);
+  root.append(age);
+  root.append(el("small", "Inputs captured " + time(v.as_of)));
+  const frame = selected.evaluation_frame;
+  if (frame) root.append(el("small", "Evaluated " + time(frame.evaluated_at) + (frame.mixed_source_times ? " · Last-known prices from different times; no simultaneous historical trade is established." : " · Original price clocks retained.")));
   const funding = el("div", undefined, "detail-funding");
   for (const [label, value] of [["Requested funding",money(f.requested_usd)],["Deployed",money(f.deployed_usd)],["Residual",residual(f.residual_usd)]]) {
     const item=el("div");item.append(el("small",label),el("strong",value));funding.append(item);
@@ -1304,7 +1404,7 @@ function renderSavedDetails(v, { root, participants }) {
   );
   const dl = el("dl", undefined, "detail-reconciliation");
   for (const [name, value] of [
-    ["Gross benchmark estimate", m.gross_benchmark_ev_usd],
+    ["Gross benchmark estimate at requested size", m.gross_benchmark_ev_usd],
     ["Rule effects", m.rule_adjustment_usd],
     ["Upfront fees", m.net_upfront_fee_usd],
     ["Expected settlement fees", m.reconciliation_expected_settlement_fee_usd],
@@ -1335,6 +1435,7 @@ function renderSavedDetails(v, { root, participants }) {
       " · " +
       (f.residual_reason || "Unknown residual reason"),
   );
+  root = main;
   const outcomes=el("details",undefined,"detail-outcomes");
   outcomes.dataset.key="outcomes";
   outcomes.append(el("summary", "Modeled outcomes"));
@@ -1385,14 +1486,194 @@ function renderSavedDetails(v, { root, participants }) {
   return { advanced };
 }
 
+// Source: opportunity-dashboard.js
+
+// Compare supplied exact values before formatting. This is ordering, not finance.
+function compareExactPercent(a, b) {
+  function rational(value) {
+    const s = String(value), fraction = /^(-?\d+)\/(\d+)$/.exec(s);
+    if (fraction && BigInt(fraction[2])) return [BigInt(fraction[1]), BigInt(fraction[2])];
+    const decimal = /^([+-]?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(s);
+    if (!decimal || Math.abs(Number(decimal[4] || 0)) > 1000) return null;
+    const scale=(decimal[3] || "").length-Number(decimal[4] || 0), numerator=BigInt((decimal[1] || "")+decimal[2]+(decimal[3] || ""));
+    return scale >= 0 ? [numerator,10n ** BigInt(scale)] : [numerator*10n ** BigInt(-scale),1n];
+  }
+  const x = rational(a), y = rational(b);
+  if (!x || !y) return Number(!x) - Number(!y);
+  const delta = y[0] * x[1] - x[0] * y[1];
+  return delta > 0n ? 1 : delta < 0n ? -1 : 0;
+}
+const dashboardMetrics = {
+  ev: ["buffered_ev_usd", "buffered_return_percent", "Net expected return"],
+  arbs: ["buffered_complete_modeled_minimum_usd", "buffered_complete_minimum_return_percent", "Covered modeled minimum"],
+  conditional: ["conditional_buffered_ev_usd", "conditional_buffered_return_percent", "Conditional net EV · decisive outcomes"],
+  decisive: ["buffered_decisive_opposing_margin_usd", "buffered_decisive_return_percent", "Decisive hedge margin"],
+  known: ["buffered_conditional_known_state_minimum_usd", "buffered_conditional_known_state_minimum_return_percent", "Listed known outcomes margin"],
+};
+function dashboardMetric(row, kind) {
+  if (kind === "gross") {
+    const g = row.gross_decisive_benchmark;
+    return g?.available && numeric(g.return_percent) !== null ? {value:g.return_percent, state:g.state, label:"Gross decisive benchmark"} : null;
+  }
+  const [field, percentage, label] = dashboardMetrics[kind], state = row.availability?.metrics?.[field]?.state;
+  return row.availability?.numeric_metrics?.includes(field) && ["numeric_current", "numeric_last_known"].includes(state) && numeric(row.financial_metrics?.[percentage]) !== null
+    ? {value:row.financial_metrics[percentage], state, label: kind === "ev" && row.modeled_basis ? (row.modeled_basis.scenario_parameters?.refund_given_void === "1" ? "Hypothetical refund scenario · uncalibrated" : "Modeled return · uncalibrated assumptions") : label} : null;
+}
+function dashboardTie(a, b) {
+  return (a.g.start_at || "").localeCompare(b.g.start_at || "") || a.g.game_key.localeCompare(b.g.game_key) || String(a.row.quote_id || a.row.pair_id).localeCompare(String(b.row.quote_id || b.row.pair_id));
+}
+function dashboardScope(slate, kind, filters = {}) {
+  const {game="", search="", league="", family="", period="", source=""} = filters;
+  const games = new Map((slate?.games || []).filter(g => (!game || game === g.game_key) && (!league || (g.league || g.scope?.split("/")[0]) === league) && matchesGameSearch(g, search)).map(g => [g.game_key,g]));
+  const match = row => row.legs ? (!source || row.legs.some(l => l.venue === source)) && row.legs.every(l => matchesMarketFilter(l,family,period)) : (!source || row.venue === source) && matchesMarketFilter(row,family,period);
+  const boards = (slate?.boards || []).filter(b => games.has(b.game_key));
+  const rows = boards.flatMap(b => b.rows.filter(match).filter(r => kind !== "arbs" || r.legs?.length === 2 && r.legs[0].venue !== r.legs[1].venue).map(row => ({row,g:games.get(b.game_key),b})));
+  const errors = (slate?.errors || []).filter(e => games.has(e.game_key));
+  const positive = rows.filter(e => {
+    const m = dashboardMetric(e.row,kind);
+    return m?.state === "numeric_current" && compareExactPercent(m.value,"0") < 0 && e.row.freshness?.status === "current" && e.row.classification?.main_positive_eligible && e.row.availability?.current_opportunity_eligible && !slate.stopped && !slate.dashboard_error;
+  });
+  const sort = entries => entries.sort((a,b) => compareExactPercent(dashboardMetric(a.row,kind)?.value,dashboardMetric(b.row,kind)?.value) || dashboardTie(a,b));
+  sort(positive);
+  const relevant = boards.filter(b => b.prices.some(match) || b.rows.some(match));
+  const field = dashboardMetrics[kind][0];
+  const reasons = [...new Set(rows.flatMap(e => e.row.availability?.metrics?.[field]?.reason_codes || e.row.availability?.reason_codes || []).concat(relevant.flatMap(b => (b.availability?.causes || []).map(c => c.code))))];
+  const pending = relevant.some(b => b.delivery_state === "pending" || b.availability?.outcome === "not_evaluated") || rows.some(e => e.row.availability?.metrics?.[field]?.state === "not_evaluated");
+  const unknown = rows.some(e => !dashboardMetric(e.row,kind));
+  const current = rows.filter(e => dashboardMetric(e.row,kind)?.state === "numeric_current");
+  const lastKnown = rows.some(e => dashboardMetric(e.row,kind)?.state === "numeric_last_known");
+  // Board completeness includes refused candidates not materialized as rows.
+  const complete = rows.length > 0 && relevant.length > 0 && relevant.every(b => b.availability?.evaluation_complete === true) && !pending && !errors.length && !unknown && !lastKnown && !slate.stopped && !slate.dashboard_error;
+  const failed = !!slate?.dashboard_error || errors.length > 0 || rows.some(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed") || reasons.some(r => /calculation.*failed/.test(r));
+  const state = slate?.dashboard_error ? "failed" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
+  return {rows,positive,state: errors.length && boards.length && !slate?.dashboard_error ? "partial" : state,reasons,pending,failed,complete,errors,games};
+}
+function dashboardMessage(scope, kind) {
+  if (scope.state === "positive") return "Current positive results, highest return first.";
+  if (scope.state === "evaluated_no_positive") return "No positive results in the evaluated scope. Zero and negative comparisons are below.";
+  if (scope.state === "partial") return "Partially evaluated. Available results are shown; other results remain unknown.";
+  if (scope.state === "last_known") return "Last-known estimates only. Older inputs are shown separately for research.";
+  if (scope.state === "failed") return "Results could not be fully evaluated. Browse prices or retry the read.";
+  if (scope.state === "pending") return "Calculations pending. You can browse prices while they update.";
+  return kind === "ev" ? "Net EV unavailable. Required cost, sizing, settlement or probability inputs are missing, unsupported or expired." : "Covered arbitrage unavailable. Required cost, sizing or settlement inputs are missing, unsupported or expired.";
+}
+function dashboardReasons(codes) {
+  const labels = new Set();
+  for (const code of codes) {
+    if (/fee|cost|charge/.test(code)) labels.add("Applicable fees and charges");
+    if (/quant|size|grid|depth|execution/.test(code)) labels.add("Executable quantities and sizing");
+    if (/payout|settle|rule|cashflow/.test(code)) labels.add("Complete settlement terms");
+    if (/probab|model|distribution/.test(code)) labels.add("Applicable probability and financial models");
+    if (/reference|source.*expir|fresh/.test(code)) labels.add("Current source and reference inputs");
+  }
+  return [...labels];
+}
+function drawOpportunityDashboard(content, slates, filters, onDetails, kinds = ["arbs", "ev"]) {
+  content.replaceChildren();
+  content.classList.add("opportunity-dashboard");
+  const grid = el("div",undefined,"opportunity-sections");
+  const scopes = {};
+  function renderRow(root, e, kind) {
+    const {row,g} = e, m = dashboardMetric(row,kind), item = el("article",undefined,"opportunity-row slate-result");
+    item.dataset.key = kind + ":" + g.game_key + ":" + (row.quote_id || row.pair_id);
+    const identity=el("div"), when=g.start_at ? new Date(g.start_at).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) + " ET" : "Start unknown";
+    identity.append(el("strong",kinds.length === 1 ? typedGameTitle(g.participants,g.title) : g.title),el("small",[g.league,when].filter(Boolean).join(" · ")));
+    for (const leg of row.legs || [row]) identity.append(el("p",labelsFor(g.participants).selection(leg) + " · " + venue(leg.venue) + " " + price(leg)));
+    if (kinds.length === 1) identity.append(el("small", marketCaption(row)));
+    const value=el("div",undefined,"opportunity-value");
+    value.append(el("strong",(numeric(m.value)>0?"+":"")+percent(m.value)),el("small",m.label),el("small",m.state === "numeric_current" && !slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? "Current inputs" : slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? "Freshness unverified after failed read" : "Last-known inputs"));
+    const button=el("button","Details"); button.dataset.key=item.dataset.key; button.onclick=()=>onDetails(row,button,g);
+    item.append(identity,value,button);root.append(item);
+  }
+  for (const kind of kinds) {
+    const scope=scopes[kind]=dashboardScope(slates[kind],kind,filters), section=el("section",undefined,"opportunity-section");
+    section.dataset.state=scope.state;
+    section.setAttribute("aria-label",kind === "ev" ? "Positive expected value" : "Positive arbitrage");
+    section.append(el("h2",kind === "ev" ? "Positive expected value" : "Positive arbitrage"),el("p",dashboardMessage(scope,kind),"opportunity-status"));
+    if (scope.positive.length) {
+      const best=scope.positive[0], lead=el("p",undefined,"opportunity-lead");
+      lead.append(el("strong","+"+percent(dashboardMetric(best.row,kind).value)+" · "+best.g.title));
+      const jump=el("a","View "+scope.positive.length+" positive results");jump.href="#positive-"+kind;
+      section.append(lead,jump);
+    }
+    if (scope.reasons.length || scope.pending || scope.failed) {
+      const d=el("details",undefined,"opportunity-reasons");d.dataset.key=kind+":reasons";d.append(el("summary","What’s needed"));
+      const labels=dashboardReasons(scope.reasons);
+      for (const label of labels) d.append(el("p",label));
+      if(scope.pending)d.append(el("p","Some local calculations are pending."));
+      if(scope.failed)d.append(el("p","A calculation or local read failed; use Reload results or inspect Admin."));
+      const technical=el("details");technical.dataset.key=kind+":codes";technical.append(el("summary","Detailed reasons"));
+      for(const code of scope.reasons)technical.append(el("p",words(code)));
+      if(slates[kind]?.dashboard_error)technical.append(el("p",slates[kind].dashboard_error));
+      d.append(technical);section.append(d);
+    }
+    if (scope.errors.length) {
+      const failures = el("details"); failures.dataset.key = kind + ":failed-games";
+      failures.append(el("summary", scope.errors.length + " games failed · other returned games remain inspectable"));
+      for (const error of scope.errors) failures.append(el("p", (scope.games.get(error.game_key)?.title || error.game_key) + " · " + words(error.reason)));
+      section.append(failures);
+    }
+    grid.append(section);
+  }
+  content.append(grid);
+  const prices=el("section",undefined,"opportunity-prices");
+  const link=el("a","Browse available prices →");
+  const query=new URLSearchParams(Object.fromEntries(Object.entries({league:filters.league || "",venue:filters.source || "",family:filters.family || ""}).filter(([,v])=>v)));
+  link.href="/odds"+(query.size?"?"+query:"");
+  prices.append(link,el("p","Inspect source prices and their original inputs. Gross comparisons exclude fees and exceptional settlement."));
+  if (kinds.length > 1 && !kinds.some(kind => scopes[kind].positive.length)) content.replaceChildren(prices,grid);
+  else content.append(prices);
+  const results=el("div",undefined,"opportunity-sections");
+  for (const kind of kinds) if(scopes[kind].positive.length) {
+    const section=el("section",undefined,"opportunity-section");section.id="positive-"+kind;
+    section.append(el("h2",kind === "ev" ? "Net EV results" : "Covered arbitrage results"));
+    for(const entry of scopes[kind].positive)renderRow(section,entry,kind);
+    results.append(section);
+  }
+  content.append(results);
+  const research=el("div",undefined,"opportunity-research");
+  for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
+    if (!scopes[source]) continue;
+    const entries=scopes[source].rows.filter(e => {
+      const m=dashboardMetric(e.row,kind);
+      return m && (!["ev","arbs"].includes(kind) || compareExactPercent(m.value,"0") >= 0 || m.state === "numeric_last_known" || slates[source]?.dashboard_error);
+    });
+    if(!entries.length)continue;
+    const groups = [entries.filter(e=>dashboardMetric(e.row,kind).state === "numeric_current"),entries.filter(e=>dashboardMetric(e.row,kind).state !== "numeric_current")];
+    for (const group of groups) {
+      if(!group.length)continue;
+      group.sort((a,b)=>compareExactPercent(dashboardMetric(a.row,kind).value,dashboardMetric(b.row,kind).value)||dashboardTie(a,b));
+      const old=!!slates[source]?.dashboard_error || group.every(e=>dashboardMetric(e.row,kind).state !== "numeric_current");
+      const d=el("details",undefined,"opportunity-group");d.dataset.key="research:"+kind+":"+old;
+      d.append(el("summary",(old?"Last-known · ":"")+(old && kind === "ev" ? "Net EV research" : old && kind === "arbs" ? "Covered minimum research" : title)+" ("+group.length+")"));
+      if(kind === "gross")d.append(el("p","Decisive winners only, per $1 normal claim. Before fees and exceptional settlement; no executable quantity or net-EV claim."));
+      else d.append(el("p","Highest percentage first. Funding, assumptions and quantities are in Details."));
+      for(const e of group)renderRow(d,e,kind);
+      research.append(d);
+    }
+  }
+  content.append(research);
+  if (kinds.length === 1) {
+    const slate = slates.ev, scope = scopes.ev, details = el("details"); details.dataset.key = "ev-scope-evidence";
+    details.append(el("summary", "Calculation coverage & evidence"));
+    details.append(el("p", scope.games.size + " selected catalog games · " + scope.rows.length + " returned candidates. Counts are not proof of complete evaluation."));
+    details.append(el("p", "Publication: " + (slate?.as_of || "Unknown") + ". Page retrieval does not renew original price or financial input clocks."));
+    for (const b of slate?.boards || []) if (scope.games.has(b.game_key) && !b.rows.length)
+      details.append(el("p", scope.games.get(b.game_key).title + " · " + words(b.empty_reason || b.availability?.outcome || "not_evaluated")));
+    content.append(details);
+  }
+}
+
 // Source: stored-controller.js
 
 const setStatus = (message, state = "ready") => {
   if ($("status").textContent !== message) $("status").textContent = message;
   $("status").dataset.state = state;
 };
+const dashboard = location.pathname === "/";
+const dashboardSlates = {ev:null,arbs:null};
 const view =
-  location.pathname === "/ev"
+  dashboard || location.pathname === "/ev"
     ? "ev"
     : location.pathname === "/arbs"
       ? "arbs"
@@ -1401,11 +1682,13 @@ const read = new LatestRead(),
   detailRead = new LatestRead(),
   originalRead = new LatestRead();
 let pullGeneration = 0;
+let oddsGroups = "";
+const priceGroups = v => v.boards.map(b => b.prices.map(q => priceResearch(q) ? "r" : "c").join("")).join("|");
 let previousSelection = null;
 let applied = { ...defaults },
   games = [],
   game = "",
-  filter = view === "odds" ? "all" : "positive",
+  filter = dashboard || view === "odds" || view === "ev" ? "all" : "positive",
   current = null,
   stopped = false,
   stopRequested = false,
@@ -1432,6 +1715,10 @@ try {
   $("search").value = sessionStorage.getItem("predict-board-slate-search") || "";
   for (const key of ["league", "family", "period", "venue"]) if ($(key)) $(key).dataset.saved = sessionStorage.getItem("predict-board-slate-" + key) || "";
 } catch {}
+if (dashboard) {
+  game = ""; $("search").value = "";
+  for (const key of ["league", "family", "period", "venue"]) $(key).dataset.saved = sessionStorage.getItem("predict-dashboard-" + key) || "";
+}
 // Coverage links select a local display scope. They do not change collection,
 // the captured slate request, or a frozen Details frame.
 const incomingScope = new URLSearchParams(location.search || "");
@@ -1469,6 +1756,7 @@ function persist() {
   sessionStorage.setItem("predict-board-slate-game", game);
   sessionStorage.setItem("predict-board-slate-search", $("search").value);
   for (const key of ["league", "family", "period", "venue"]) if ($(key)) sessionStorage.setItem("predict-board-slate-" + key, $(key).value);
+  if (dashboard) for (const key of ["league", "family", "period", "venue"]) sessionStorage.setItem("predict-dashboard-" + key, $(key).value);
 }
 function preserveContent(draw) {
   const active = document.activeElement,
@@ -1486,15 +1774,21 @@ function preserveContent(draw) {
     const replacement = [...$("content").querySelectorAll("[data-key]")].find(n => n.dataset.key === anchorKey && n.className === anchor.className);
     if (replacement) window.scrollBy(0, replacement.getBoundingClientRect().top - anchorTop);
   }
-  if (key && focusedSummary) [...$("content").querySelectorAll("details")].find(d => d.dataset.key === key)?.querySelector("summary")?.focus({ preventScroll: true });
-  else if (key)
-    $("content")
-      .querySelectorAll("button[data-key]")
-      .forEach((b) => {
-        if (b.dataset.key === key) b.focus({ preventScroll: true });
-      });
+  if (key) {
+    const target = focusedSummary
+      ? [...$("content").querySelectorAll("details")].find(d => d.dataset.key === key)?.querySelector("summary")
+      : [...$("content").querySelectorAll("button[data-key]")].find(b => b.dataset.key === key);
+    (target || $("content")).focus({preventScroll:true});
+  }
 }
 function draw(v) {
+  if (view === "odds") oddsGroups = priceGroups(v);
+  if (dashboard) {
+    current = v;
+    $("applied").textContent = money(applied.amount) + " · " + percent(String(numeric(applied.buffer)*100)) + " buffer · " + venue(applied.benchmark_venue);
+    preserveContent(() => drawOpportunityDashboard($("content"),dashboardSlates,{game,search:$("search").value,league:$("league").value,family:$("family").value,period:$("period").value,source:$("venue").value},openDetails));
+    return;
+  }
   const renderers = createSlateViews({
     content: $("content"),
     onDetails: openDetails,
@@ -1518,6 +1812,11 @@ function draw(v) {
   const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Saving updates paused. Source status is in Admin.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
   setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
   if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
+  if (view === "ev") {
+    preserveContent(() => drawOpportunityDashboard($("content"), {ev:{...v, stopped:stopped || v.stopped, ...(failures ? {dashboard_error:$("read-error").textContent || "Current read failed"} : {})}},
+      {game,search:$("search").value,league:$("league").value,family:$("family").value,period:$("period").value,source:$("venue").value}, openDetails, ["ev"]));
+    return;
+  }
   preserveContent(() =>
     renderers.draw(v, {
       view,
@@ -1533,8 +1832,8 @@ function draw(v) {
 }
 function catalogOptions() {
   const options = {
-    league:[...new Set(games.map(g => g.league || g.scope?.split("/")[0]).filter(Boolean))].sort(),
-    family:[...new Set((current?.boards || []).flatMap(b => b.prices.map(marketFamily)))].sort(),
+    league:[...new Set([...(dashboard ? ["NFL","NCAAF","NBA","NCAAB","MLB","NHL"] : []), ...games.map(g => g.league || g.scope?.split("/")[0]).filter(Boolean)])].sort(),
+    family:[...new Set([...(dashboard ? ["winner","spread","total"] : []), ...(current?.boards || []).flatMap(b => b.prices.map(marketFamily))])].sort(),
     period:[...new Set((current?.boards || []).flatMap(b => b.prices.map(q => q.market?.period || "full_game")))].sort(),
     venue:[...new Set(["kalshi", "polymarket_us", "novig", "prophetx", "pinnacle", ...(current?.boards || []).flatMap(b => b.prices.map(q => q.venue))])].sort(),
   };
@@ -1565,7 +1864,7 @@ function catalogOptions() {
     ...visible.map((g) => {
       const o = el(
         "option",
-        [g.league || g.sport, g.title, time(g.start_at)].filter(Boolean).join(" · ") +
+        [g.league || g.sport, typedGameTitle(g.participants, g.title), time(g.start_at)].filter(Boolean).join(" · ") +
           (g.matches?.some((m) => m.status === "conflict")
             ? " · Unmatched source"
             : ""),
@@ -1576,7 +1875,51 @@ function catalogOptions() {
   );
   $("game").value = game;
 }
+function retainDisplayed() {
+  const tokens = new Set((dashboard ? Object.values(dashboardSlates) : [current]).map(v => v?.read_token).filter(Boolean));
+  for (const token of tokens) fetch('/api/boards/read-lease?read_token=' + encodeURIComponent(token)).catch(() => {});
+}
+const displayedTimer = setInterval(() => { if (!unloading) retainDisplayed(); }, 10000);
+window.addEventListener('pagehide', () => clearInterval(displayedTimer));
+async function pullDashboard() {
+  polling.cancel();
+  if (failures >= 4) return;
+  const generation = ++pullGeneration;
+  let succeeded = 0;
+  for (const kind of ["arbs","ev"]) {
+    try {
+      const value = await readSlate(read,{...context(),view:kind,filter:"all"},{isCurrent:()=>generation === pullGeneration && !unloading});
+      if (!value || generation !== pullGeneration) return;
+      dashboardSlates[kind] = value;
+      retainDisplayed();
+      succeeded++;
+      stopped = value.stopped;
+      polling.setSlate(value);
+    } catch(e) {
+      if(e.name === "AbortError" || generation !== pullGeneration) return;
+      dashboardSlates[kind] = {...(dashboardSlates[kind] || {}),dashboard_error:e.message};
+    }
+    const available = dashboardSlates.ev?.policy ? dashboardSlates.ev : dashboardSlates.arbs;
+    if (available?.policy) {
+      current = available;
+      games = [...new Map(Object.values(dashboardSlates).flatMap(v=>v?.games || []).map(g=>[g.game_key,g])).values()];
+      catalogOptions();
+      persist();
+      draw(current);
+    } else preserveContent(()=>drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails));
+  }
+  failures = succeeded ? 0 : failures + 1;
+  const failed = Object.values(dashboardSlates).some(v=>v?.dashboard_error);
+  $("retry").hidden = !failed;
+  $("retry").textContent = "Reload results";
+  setStatus(failed ? "Some local results could not be refreshed. Each section shows its availability." : "");
+  if(detail?.kind === "result") refreshDetails();
+  // Two complete view reads share the ordinary lane; avoid rapid pending loops.
+  polling.delay = Math.max(polling.delay, 10000);
+  polling.schedule();
+}
 async function pull() {
+  if (dashboard) return pullDashboard();
   polling.cancel();
   if (failures >= 4) return;
   const c = context(), generation = ++pullGeneration;
@@ -1601,12 +1944,13 @@ async function pull() {
     document.querySelector(".selection").hidden = !games.length;
     $("settings").hidden = !games.length;
     $("applied").hidden = !games.length;
-    $("filters").hidden = view === "odds" || !games.length;
-    $("sort-setting").hidden = view === "odds" || !games.length;
+    $("filters").hidden = view !== "arbs" || !games.length;
+    $("sort-setting").hidden = view !== "arbs" || !games.length;
     stopped = stopRequested || value.stopped;
     $("stop").disabled = stopped;
     $("stop").textContent = stopped ? "Collection stopped" : "Stop collection";
     current = value;
+    retainDisplayed();
     catalogOptions();
     persist();
     failures = 0;
@@ -1649,6 +1993,10 @@ async function pull() {
     $("read-error").textContent = e.message;
     $("read-diagnostics").hidden = false;
     $("retry").hidden = false;
+    if (view === "ev") {
+      if (current) draw(current);
+      else preserveContent(() => drawOpportunityDashboard($("content"), {ev:{dashboard_error:e.message}}, {}, openDetails, ["ev"]));
+    }
   } finally {
     if (generation === pullGeneration && !read.pending) polling.schedule();
   }
@@ -1672,7 +2020,7 @@ function closeDetails() {
           (b) => b.dataset.key === opener?.dataset.key,
         );
     if (target) target.focus();
-    else $("game").focus();
+    else (dashboard || view === "ev" ? $("content") : $("game")).focus();
   }
 }
 $("close-details").onclick = closeDetails;
@@ -1703,10 +2051,11 @@ function detailFailure(message, diagnostic) {
 }
 async function refreshDetails() {
   const held = detail;
-  if (held?.kind !== "result") return;
+  if (held?.kind !== "result" || detailRead.pending) return;
   const qs = query(held.context),
     d = held.identity;
   qs.set("context_id", d.context_id);
+  if (d.read_token) qs.set("read_token", d.read_token);
   qs.set(d.quote_id ? "quote" : "pair", d.quote_id || d.pair_id);
   try {
     const v = await detailRead.read(
@@ -1715,6 +2064,7 @@ async function refreshDetails() {
       8388608,
     );
     if (!v || detail !== held) return;
+    if (v.read_token) held.identity.read_token = v.read_token;
     held.rendered = true;
     const open = [...$("detail-content").querySelectorAll("details[open]")].map(
         (x, i) => x.dataset.key || String(i),
@@ -1723,6 +2073,12 @@ async function refreshDetails() {
       activeDisclosure = active?.closest?.("details")?.dataset.key,
       focusedSummary = active?.tagName === "SUMMARY";
     reconcile(v);
+    if (v.selection_status === "captured") {
+      $("detail-content").prepend(el("p", "Captured result. New inputs are available; this result keeps its original evidence.", "muted"));
+      const latest = el("button", "View updated results");
+      latest.onclick = () => { closeDetails(); failures=0; pull(); };
+      $("detail-content").append(latest);
+    }
     for (const [i, x] of [
       ...$("detail-content").querySelectorAll("details"),
     ].entries())
@@ -1731,14 +2087,25 @@ async function refreshDetails() {
     else if (focusedSummary && activeDisclosure)
       [...$("detail-content").querySelectorAll("details")].find(x => x.dataset.key === activeDisclosure)?.querySelector("summary")?.focus({ preventScroll: true });
   } catch (e) {
-    if (e.name !== "AbortError" && held === detail)
+    if (e.name !== "AbortError" && held === detail) {
+      detail = {...held, kind:"withdrawn", identity:null};
       detailFailure("Current inputs changed, were removed or are unavailable. Close Details and reopen the current selection.",e.message);
+      const reopen = el("button", "Close and load current results");
+      reopen.onclick = () => { closeDetails(); failures=0; pull(); };
+      $("detail-content").append(reopen);
+    }
   }
 }
+// Selected evidence has its own bounded read lane. A slow/failed whole-slate
+// refresh must not let an actively opened selection's cache lease expire.
+const selectedTimer = setInterval(() => {
+  if (!unloading && detail?.kind === "result") refreshDetails();
+}, 10000);
+addEventListener("pagehide", () => clearInterval(selectedTimer), { once: true });
 function openDetails(row, button, selectedGame) {
   detailRead.cancel();
   originalRead.cancel();
-  detail = { kind: "result", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
+  detail = { kind: "result", context: { ...context(), view:row.pair_id ? "arbs" : "ev", game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
   $("detail-content").replaceChildren(el("p", "Loading current Details…"));
   showDialog(button);
   refreshDetails();
@@ -1749,12 +2116,15 @@ async function openOriginal(q, button, selectedGame) {
   originalRead.cancel();
   const selectedBoard = current.boards.find(b => b.game_key === selectedGame.game_key);
   const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, quote_revision: q.quote_revision, observation_revision: q.observation_revision, policy_revision: selectedBoard?.calculation_context?.policy_revision } });
-  const renderFrame = inputs => preserveDisclosures($("detail-content"), () => renderOriginalDetails(q, { estimate_availability: selectedBoard?.estimate_availability, ...inputs }, { root: $("detail-content"), participants: selectedGame.participants, title: selectedGame.title }));
+  const renderFrame = inputs => preserveDisclosures($("detail-content"), () => renderOriginalDetails(
+    inputs.evidence?.observation_display ? {...q, observation_display:inputs.evidence.observation_display, source_state:inputs.evidence.source_state, source_health:inputs.evidence.source_health} : q,
+    { estimate_availability: selectedBoard?.estimate_availability, ...inputs }, { root: $("detail-content"), participants: selectedGame.participants, title: selectedGame.title }));
   renderFrame({ evidence: { status: "Loading exact-frame contract and source evidence" } });
   showDialog(button);
   try {
     const qs = query(held.context);
     qs.set("context_id", q.inputs_identity.context_id);
+    if (q.inputs_identity.read_token) qs.set("read_token", q.inputs_identity.read_token);
     qs.set("quote", q.quote_id);
     const inputs = await originalRead.read(
       "/api/boards/inputs?" + qs,
@@ -1783,10 +2153,9 @@ function changeSettings(next) {
   setStatus("Settings apply when you open selected Details. Shared comparisons keep their displayed defaults.");
 }
 const settingsDisclosure=document.querySelector(".calculation-settings");
-settingsDisclosure.addEventListener("focusout",event=>{
-  if (event.relatedTarget && !settingsDisclosure.contains(event.relatedTarget)) settingsDisclosure.open=false;
-});
-document.addEventListener("pointerdown",event=>{
+// Close after the outside click has its target. Closing on pointerdown or
+// focusout moves the next disclosure before mouseup and swallows that click.
+document.addEventListener("click",event=>{
   if (settingsDisclosure.open && !settingsDisclosure.contains(event.target)) settingsDisclosure.open=false;
 });
 document.addEventListener("keydown",event=>{
@@ -1870,15 +2239,33 @@ $("stop").onclick = async () => {
   }
 };
 $("title").textContent =
-  view === "odds" ? "Odds" : view === "ev" ? "Expected value" : "Arbitrage";
-$("filters").hidden = view === "odds";
+  dashboard ? "Opportunities" : view === "odds" ? "Odds" : view === "ev" ? "Expected value" : "Arbitrage";
+if (view === "ev") document.querySelector(".view-help p").textContent = "Expected value estimates the return after modeled costs and one buffer. Conditional estimates cover decisive outcomes only; they remain separate from complete-outcome EV. Open Details for funding, assumptions and original inputs.";
+$("filters").hidden = dashboard || view !== "arbs";
 $("filters").querySelector("[data-filter=hedges]").hidden = view !== "arbs";
 for (const a of document.querySelectorAll("nav a"))
   if (a.getAttribute("href") === location.pathname)
     a.setAttribute("aria-current", "page");
+if (dashboard) {
+  document.body.classList.add("dashboard-page");
+  drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails);
+}
+if (dashboard || view === "odds" || view === "ev") {
+  $("settings").querySelector("strong").textContent = "Details settings";
+  $("content").after($("settings"));
+  document.querySelector(".settings-body").prepend($("applied"));
+}
+if (!dashboard && view === "ev") {
+  document.body.classList.add("ev-outcome-page");
+  const disclosure = el("details", undefined, "ev-filters");
+  disclosure.append(el("summary", "Filter games, sources & markets"), document.querySelector(".board-controls"));
+  $("content").before(disclosure);
+  drawOpportunityDashboard($("content"), {ev:null}, {}, openDetails, ["ev"]);
+}
 form();
 const ageClock = window.setInterval(() => {
   if (unloading || document.hidden) return;
+  if (view === "odds" && current && !$("details").open && oddsGroups !== priceGroups(current)) draw(current);
   updateRelativeAges($("content"));
   if ($("details").open) updateRelativeAges($("detail-content"));
 }, 1000);

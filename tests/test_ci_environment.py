@@ -9,6 +9,43 @@ from tests.ci_support import load
 
 
 class EnvironmentTests(unittest.TestCase):
+    def test_package_source_excludes_ignored_local_inputs(self):
+        import subprocess
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "repo"
+            root.mkdir()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "app").mkdir()
+            (root / ".gitignore").write_text("app/local.json\n")
+            (root / "app/module.py").write_text("pass\n")
+            (root / "app/local.json").write_text("ignored local evidence")
+            output = Path(folder) / "build-source"
+            load("package_smoke").copy_source(root, output)
+            self.assertTrue((output / "app/module.py").is_file())
+            self.assertFalse((output / "app/local.json").exists())
+
+    def test_alternate_lock_export_rejects_unreviewed_sources_and_empty_hashes(self):
+        from copy import deepcopy
+
+        export = load("uv_audit_requirements").requirements
+        package = dict(
+            name="example",
+            version="1.0",
+            source={"registry": "https://pypi.org/simple"},
+            wheels=[dict(hash="sha256:" + "a" * 64)],
+        )
+        self.assertIn("example==1.0 --hash=sha256:", export(dict(package=[package])))
+        for changes in (
+            {"source": {"git": "https://invalid"}},
+            {"wheels": []},
+            {"name": "--index-url"},
+        ):
+            value = deepcopy(package)
+            value.update(changes)
+            with self.assertRaises(ValueError):
+                export(dict(package=[value]))
+
     def test_primary_sql_rejects_accidental_older_postgres_selection(self):
         from unittest.mock import patch
 
@@ -40,6 +77,27 @@ class EnvironmentTests(unittest.TestCase):
                 self.assertEqual(
                     invoke.call_args_list[0].args[0][0], "/chosen/pg_config"
                 )
+
+    def test_sql_runner_preserves_existing_reports_before_starting_cluster(self):
+        from unittest.mock import patch
+
+        module = load("postgres")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            evidence = root / "junit.xml"
+            evidence.write_text("prior evidence")
+            with (
+                patch.object(
+                    module, "postgres_tools", return_value=(root, "PostgreSQL 16", 16)
+                ),
+                patch.object(module.os, "geteuid", return_value=501),
+                patch.object(module.subprocess, "run") as run,
+                self.assertRaises(SystemExit) as error,
+            ):
+                module.main(["--report-dir", str(root)])
+            self.assertEqual(error.exception.code, 2)
+            run.assert_not_called()
+            self.assertEqual(evidence.read_text(), "prior evidence")
 
     def test_project_postgres_requires_tools_matching_existing_cluster(self):
         import os
@@ -217,6 +275,21 @@ class SuiteContractTests(unittest.TestCase):
                 json.dumps(dict(required=["test_unit.cjs"], deferred={}))
             )
             module.validate(root)
+            client_policy = root / "scripts/ci/browser-suites.json"
+            valid = client_policy.read_text()
+            client_policy.write_text(
+                json.dumps(
+                    dict(required=["test_unit.cjs", "test_unit.cjs"], deferred={})
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "Duplicate client"):
+                module.validate(root)
+            client_policy.write_text(
+                json.dumps(dict(required=[], deferred={"test_unit.cjs": " "}))
+            )
+            with self.assertRaisesRegex(ValueError, "unexplained client"):
+                module.validate(root)
+            client_policy.write_text(valid)
             added = root / "tests/test_new.py"
             added.write_text("")
             with self.assertRaisesRegex(ValueError, "classification drift"):

@@ -17,7 +17,7 @@ export function cellRatio(cell, kind = "supported_peer") {
   const supplied = cell.ratios?.[kind], counts = cell.counts || {};
   const key = {supported_peer:"supported_comparison_observations", current_peer:"current_comparison_observations", current:"current_observations"}[kind];
   return coverageRatio(supplied && Object.hasOwn(supplied, "numerator") ? supplied.numerator : counts[key],
-    supplied && Object.hasOwn(supplied, "denominator") ? supplied.denominator : (kind === "current" ? counts.retained_observations : counts.retained_comparison_observations ?? counts.retained_observations),
+    supplied && Object.hasOwn(supplied, "denominator") ? supplied.denominator : (kind === "current" ? counts.retained_observations : counts.retained_comparison_observations),
     supplied?.scope || "retained observations in this captured cell");
 }
 export function coveragePercent(ratio) {
@@ -35,8 +35,13 @@ export function coverageCellState(cell) {
   if (cell.capability?.state === "unsupported") return "Unsupported capability";
   if (cell.role === "reference" || cell.capability?.state === "reference_only") return "Reference only";
   if (coverageNumber(cell.counts?.retained_observations) === null) return "Not measured";
-  if (!cell.counts.retained_observations && !cell.discovery?.checked_at) return "Not checked";
+  if ((cell.reasons || []).some(r => ["source_failed", "payload_rejected"].includes(r.code))) return "Source query failed";
+  if ((cell.reasons || []).some(r => r.category === "publication")) return "Pending publication";
+  if (!cell.counts.retained_observations && !cell.discovery?.checked_at) return "No observations · discovery unmeasured";
   if (!cell.counts.retained_observations) return "No retained prices";
+  if (cell.counts.current_comparison_observations > 0) return "Current supported comparisons";
+  if ((cell.reasons || []).some(r => ["identity", "meaning", "matching"].includes(r.category))) return "Matching facts or peers missing";
+  if (cell.counts.last_known_observations > 0) return "Last-known observations";
   return "Implemented";
 }
 export function filterCoverageCells(cells, filters = {}) {
@@ -46,7 +51,7 @@ export function filterCoverageCells(cells, filters = {}) {
     const c = cell.counts || {}, ratio = cellRatio(cell);
     if (filters.attention === "low") return ratio.value !== null && ratio.value < 0.5;
     if (filters.attention === "stale") return c.last_known_observations > 0;
-    if (filters.attention === "gaps") return c.gap_observations > 0 || coverageCellState(cell) !== "Implemented";
+    if (filters.attention === "gaps") return c.gap_observations > 0 || !["Implemented", "Current supported comparisons", "Reference only"].includes(coverageCellState(cell));
     return true;
   });
 }

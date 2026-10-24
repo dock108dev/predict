@@ -463,6 +463,7 @@ class Projection:
                 total_matching=len(rows),offset=offset,limit=limit,next_offset=offset+limit if offset+limit<len(rows) else None,
                 expires_at=min((r['expires_at'] for r in page),key=instant,default=None),published_at=self.published_at,
                 coverage=dict(state=coverage_state,complete=complete,compatible_pairs=len(selected_pairs),evaluated_pairs=evaluated,
+                    captured_at=frame.get('as_of'),capture_only=frame.get('capture_only',False),
                     qualifying_pairs=selected_qualifying if evaluated else None,no_qualifying_opportunities=complete and not selected_qualifying,
                     readiness_state=frame.get('state','not_evaluated'),errors=self.errors,scopes=deepcopy(relevant_scopes)),
                 causal=dict(readiness_revision=frame.get('revision'),input_revision=self.capture_revision,

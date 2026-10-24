@@ -47,12 +47,19 @@ class Scanner:
 
     def _capture(self):
         start=perf_counter()
+        self.readiness_publication=None
         config=deepcopy(self.capture_config if self.durable else self.provider.config)
-        with self.connector() as db:
+        with self.connector() as db, db.transaction():
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            if self.durable:
+                from app.collection.runtime_status import read_runtime
+                capture_owner=read_runtime(db)
             frame,inputs,metadata=capture(db,config=config,
                 authority=config.get('authority'),at=self.clock(),
                 source_status=None if self.durable else deepcopy(self.provider.states),
-                cache=self.preparation,_shared_facts=True)
+                cache=self.preparation,_shared_facts=True,resource_guard=getattr(self,'capture_guard',None))
+            if self.durable and config==capture_owner['config']:
+                self.readiness_publication=(metadata['publication_proof'],capture_owner['revision'])
         # Both connection and repeatable-read transaction are closed before finance.
         return frame,inputs,metadata,(perf_counter()-start)*1000
 
@@ -113,23 +120,31 @@ class Scanner:
         # boards and coverage. Fixture/local readers keep their existing lane.
         if not self.durable or self.stopped():return self._once_worker()
         from app.collection.background_work import BACKGROUND
+        from app.storage.scanner_readiness import capture_reservation
         with self.connector() as db:
-            size=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-                SELECT octet_length(facts::text) n FROM current_event
-                UNION ALL SELECT octet_length(facts::text) FROM current_contract
-                UNION ALL SELECT octet_length(facts::text) FROM current_offer
-                UNION ALL SELECT octet_length(payload::text) FROM scanner_latest) inputs''').fetchone()['n']
-            depth=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-                SELECT octet_length(price_value)+octet_length(quantity_value)+256 n FROM current_native_depth WHERE side='asks'
-                UNION ALL SELECT octet_length(price_value)+octet_length(quantity_value)+256 FROM current_depth WHERE side='asks') levels''').fetchone()['n']
-        required=int(size)*8+int(depth)+16*1024*1024
+            required=capture_reservation(db)
+            if not self.restored:
+                old=db.execute('SELECT octet_length(payload::text) n FROM scanner_latest WHERE singleton').fetchone()
+                required=max(required,(int(old['n'])*8 if old else 0)+16*1024*1024)
         with BACKGROUND.claim('scanner',required) as lease:
             self.admission_status=dict(state='admitted' if lease else 'deferred',reason=lease.reason,
                 reserved_bytes=required,resident_bytes=lease.resident_bytes)
             if not lease:
                 self.projection.expire()
                 return lease.deferred()
-            return self._once_worker()
+            self.capture_guard=lambda amount:BACKGROUND.resize('scanner',amount)
+            try:return self._once_worker()
+            except ValueError as exc:
+                if str(exc) != 'background_memory_capacity':raise
+                # A resize refusal is temporary admission, not corrupt capture.
+                # Keep the last dated frame; live readers independently check its
+                # authority. Retry from a new SQL snapshot on the next turn.
+                self.marker=None;self.continuation=None
+                self.projection.fail('background_memory_capacity')
+                self.preparation.clear()
+                self.admission_status.update(state='deferred',reason=str(exc))
+                return dict(published=False,deferred=True,reason=str(exc),provider_requests=0)
+            finally:self.capture_guard=None
 
     def _once_worker(self):
         if self.durable and not self.restored:
@@ -153,6 +168,14 @@ class Scanner:
                 with self.connector() as db:
                     if not publish(db,self,proof=self.database_proof,runtime_revision=self.runtime_revision):
                         self.marker=None
+        if self.durable and self.marker is None and not self.stopped() and getattr(self,'readiness_publication',None):
+            # Live ingress may invalidate current financial authority while a
+            # complete frozen readiness capture is being prepared. Preserve its
+            # measured scope separately, never its rows, receipts or tickets.
+            from app.storage.scanner_latest import publish
+            proof,revision=self.readiness_publication
+            with self.connector() as db:
+                publish(db,self,proof=proof,runtime_revision=revision,capture_only=True)
 
     def _once(self):
         continuation,self.continuation=self.continuation,None
@@ -188,6 +211,15 @@ class Scanner:
         latest,_=self._probe()
         if self._withdraw_if_stopped():return
         if latest!=marker:
+            if self.durable:
+                # Preserve this complete dated capture, withdraw current finance,
+                # and yield. Recapturing immediately doubles residency and can
+                # chase continuously changing inputs forever in one worker turn.
+                self.marker=None
+                with self.projection.lock:
+                    self.projection.receipts.clear()
+                    self.projection._publish({}, 'captured_inputs_changed')
+                return
             # Reconcile against the latest detached proof before publishing a
             # completed financial result. Unrelated pairs retain cached work.
             frame,inputs,metadata,elapsed=self._capture()
@@ -205,12 +237,13 @@ class Scanner:
                     self.continuation=(marker,self.projection.generation,self.projection.capture_revision)
 
     async def run(self):
+        from app.collection.background_work import optional_thread
         try:
             while not self.closed:
                 self.wake.clear()
                 deferred=False
                 try:
-                    turn=await asyncio.to_thread(self.once)
+                    turn=await (optional_thread(self.once) if self.durable else asyncio.to_thread(self.once))
                     deferred=isinstance(turn,dict) and turn.get('deferred',False)
                     self.error=None
                 except Exception as exc:
@@ -315,6 +348,9 @@ class ScannerReader(Scanner):
             marker=digest(dict(rows=proof,config=runtime['config'],states=runtime['states'],
                 engine=engine_binding(),policy=policy.to_dict(),registry=self.preparation.registry(at=self.clock())))
             value=None if row is None else row['payload']
+            if value is not None:
+                from app.comparison.readiness_encoding import expand
+                value['frame']=expand(value['frame'])
             self.value=value
             self.capture_config=runtime['config']
             self.collection_stopped=bool(runtime.get('global_stopped',False))
@@ -328,6 +364,16 @@ class ScannerReader(Scanner):
             self.authority_until=((instant(runtime['heartbeat_at'])+timedelta(seconds=HEARTBEAT_SECONDS)).isoformat()
                                   if runtime['heartbeat_at'] else None)
             if not valid:
+                if value and value.get('capture_only') and row['runtime_id']==runtime['runtime_id']:
+                    # Keep the exact capture clock and full scope visible, but
+                    # fail() below clears all financial/action authority.
+                    if self.projection.capture_revision!=value['capture_revision']:
+                        self.projection.fail('captured_inputs_changed')
+                    self.projection.frame=deepcopy(value['frame'])
+                    self.projection.frame['capture_only']=True
+                    self.projection.capture_revision=value['capture_revision']
+                    self.projection.last_capture_ms=value['last_capture_ms']
+                    self.projection.published_at=row['published_at']
                 self.loaded=None; self._withdraw_if_stopped()
                 return
             identity=(row['runtime_id'],row['publication'],row['runtime_revision'],value['source_marker'],row['published_at'])

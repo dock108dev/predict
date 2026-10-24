@@ -666,7 +666,7 @@ class QuotaLedger:
             if receipt_pause:v['pause']=None
         self.transact(recover)
 
-    def record_response(self, aid, receipt, *, interruption=None):
+    def record_response(self, aid, receipt, *, interruption=None, diagnostic=None):
         """Persist sanitized response identity independently of optional capture."""
         safe=None
         if receipt is not None:
@@ -685,6 +685,7 @@ class QuotaLedger:
                 if a.get('response_receipt') is not None and a['response_receipt']!=safe:raise QuotaStop('response_identity_invalid')
                 a['response_receipt']=deepcopy(safe)
             if interruption:a['interruption']=interruption
+            if diagnostic is not None:a['transport_diagnostic']=deepcopy(diagnostic)
         self.transact(record)
 
     def reconcile(self, aid, items, *, received_at=None):

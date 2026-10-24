@@ -279,6 +279,8 @@ class ReadinessUniverseBounds(TestCase):
         frame = dict(records=[], epoch='authored-epoch', revision='authored-revision', source_status={})
         prepared = dict(instruments=[], failures=[], references={}, financial_inputs={}, input_bytes=0)
         with ExitStack() as stack:
+            stack.enter_context(patch('app.storage.scanner_publication.current_revision',return_value=dict(epoch='authored',current_rows_revision='authored')))
+            stack.enter_context(patch('app.storage.latest_board.capture_batches',return_value=[['authored-event']]))
             stack.enter_context(patch.object(scanner_readiness, 'ReadContext', return_value=context))
             stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'capture', return_value=frame))
             stack.enter_context(patch('app.storage.scanner_preparation.PreparationCache.registry', return_value=('authored-registry', None)))
@@ -304,12 +306,11 @@ class ReadinessUniverseBounds(TestCase):
         self.assertEqual(self.producer_calls, 500)
         self.assertEqual(result[0]['provider_requests'], 0)
 
-    def test_unsupported_scope_keeps_original_no_preparation_behavior(self):
+    def test_unsupported_scope_still_enforces_complete_catalog_bound(self):
         from app.comparison.scanner_readiness import Selection
-        result = self.capture(self.groups(501), selection=Selection(markets=('total',)))
+        with self.assertRaisesRegex(ValueError, '^board_catalog_capacity$'):
+            self.capture(self.groups(501), selection=Selection(markets=('total',)))
         self.assertEqual(self.producer_calls, 0)
-        self.assertEqual(result[0]['instruments'], [])
-        self.assertFalse(result[0]['evaluation']['no_qualifying_opportunities'])
 
 
 class AuthoredOriginals(TestCase):

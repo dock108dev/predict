@@ -58,6 +58,29 @@ class NFLSharedChecks(shared.ScoreLines):
 
 
 class NFLSpecific(unittest.TestCase):
+    def test_line_inventory_uses_shared_filter_and_preserves_sport_identity(self):
+        from app.normalization import nhl_lines, reviewed_winner
+        from tests.test_nhl_lines import fixture as hockey_fixture
+        for config, make_fixture in ((nfl_lines, fixture), (nhl_lines, hockey_fixture)):
+            for family in ('spread', 'total'):
+                with self.subTest(league=config.LEAGUE, family=family):
+                    inventory = make_fixture(family=family, line='5' if family == 'total' else '-3')[1]['inventory']
+                    catalog = inventory['kalshi']
+                    # An unrelated winner may lack reviewed line identity.
+                    catalog['events'].append(dict(id='winner-only', competition=config.LEAGUE))
+                    catalog['markets'].append(dict(event_id='winner-only', market_type='moneyline'))
+                    before = deepcopy(inventory)
+                    with patch.object(reviewed_winner, 'line_inventory_gaps',
+                                      wraps=reviewed_winner.line_inventory_gaps) as owner:
+                        self.assertEqual(config.inventory_gaps(inventory), {})
+                        owner.assert_called_once_with(config, inventory)
+                    self.assertEqual(inventory, before)
+                    # The same missing identity is rejected when a line selects it.
+                    catalog['markets'][-1]['market_type'] = family
+                    gaps = config.inventory_gaps(inventory)
+                    self.assertIn(('kalshi', 'winner-only'), gaps)
+                    self.assertTrue(gaps[('kalshi', 'winner-only')].startswith(config.LEAGUE))
+
     def test_alias_identity_and_conflicts(self):
         from app.normalization.registry import Registry
         reg=Registry.load()

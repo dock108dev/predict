@@ -174,6 +174,33 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                     self.assertLess(db.execute('SELECT octet_length(payload::text) n FROM scanner_latest').fetchone()['n'],1024*1024)
         finally:await worker.close()
 
+    async def test_changed_inputs_preserve_complete_capture_without_financial_authority(self):
+        from app.storage.scanner_latest import publish
+        worker=self.scanner();reader=ScannerReader(RuntimeClient(connector=self.connect),connector=self.connect,clock=self.clock)
+        try:
+            with AuthoredAdapters():
+                self.drain(worker)
+                captured=deepcopy(worker.projection.frame)
+                with self.connect() as db:proof=current_revision(db)
+                revision=self.state.read()['revision']
+                self.clock.advance()
+                changed=deepcopy(self.rows[0]);changed['quote']['times'].update(source_at=self.clock(),received_at=self.clock())
+                changed['quote']['original']['value']='0.24'
+                self.admit([changed])
+                with self.connect() as db:
+                    self.assertFalse(publish(db,worker,proof=proof,runtime_revision=revision))
+                    self.assertTrue(publish(db,worker,proof=proof,runtime_revision=revision,capture_only=True))
+                reader.refresh()
+                self.assertTrue(reader.stopped())
+                self.assertEqual(reader.projection.frame['instruments'],captured['instruments'])
+                self.assertEqual(reader.projection.frame['as_of'],captured['as_of'])
+                self.assertFalse(reader.projection.rows)
+                self.assertFalse(reader.projection.receipts)
+                self.assertFalse(reader.projection.targets)
+                self.assertFalse(reader.projection.view()['coverage']['complete'])
+                self.assertTrue(reader.projection.view()['coverage']['capture_only'])
+        finally:await reader.close();await worker.close()
+
     async def test_dependency_removal_expiry_stop_dead_owner_and_late_publication(self):
         from app.storage.scanner_latest import publish
         worker=self.scanner();reader=ScannerReader(RuntimeClient(connector=self.connect),connector=self.connect,clock=self.clock)

@@ -83,6 +83,10 @@ def main(argv=None):
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         parser.error(str(error))
     output = Path(args.report_dir).expanduser().resolve()
+    if output.exists() and any(output.iterdir()):
+        parser.error(
+            "Use an empty SQL report directory; existing evidence is preserved"
+        )
     output.mkdir(parents=True, exist_ok=True)
     identity = {
         "python": sys.version.split()[0],
@@ -187,6 +191,7 @@ def main(argv=None):
                 else [
                     "integration_tests",
                     "tests/test_d03_current_rows.py",
+                    "tests/test_native_admission_sql.py",
                     "tests/test_current_row_financial_roundtrip.py",
                     "tests/test_current_row_occurrence_roundtrip.py",
                     "tests/test_multisport_pipeline_sql.py",

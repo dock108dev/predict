@@ -10,9 +10,10 @@ import re
 
 VERSION = 'predict-calculation-availability-1'
 STATES = ('numeric_current', 'numeric_last_known', 'missing_reference',
-          'unsupported_inputs', 'calculation_failed', 'not_evaluated')
+          'unsupported_inputs', 'missing_inputs', 'calculation_failed', 'not_evaluated')
 METRICS = ('buffered_ev_usd', 'conditional_buffered_ev_usd',
-           'buffered_decisive_opposing_margin_usd', 'buffered_complete_modeled_minimum_usd')
+           'buffered_decisive_opposing_margin_usd', 'buffered_complete_modeled_minimum_usd',
+           'buffered_conditional_known_state_minimum_usd')
 
 
 def frame(quotes, reference, at):
@@ -43,9 +44,16 @@ def _reasons(result):
 
 def refusal(reasons):
     """Stable categories plus exact existing codes; prose is never a UI parser."""
+    if any(r in ('background_estimates_pending', 'calculation_pending', 'not_evaluated',
+            'estimate_unavailable','background_calculation_unavailable','background_observation_unavailable',
+            'current_inputs_changed_or_removed','current_selection_removed','current_slate_changed',
+            'current_slate_read_expired','current_slate_read_authority_changed') or r.startswith('background_work_') or r=='background_memory_capacity' for r in reasons):
+        return 'not_evaluated', sorted(set(reasons))
     if any(any(v in r for v in ('reference_missing', 'reference_inputs_unbound',
             'selected_benchmark_missing', 'pinnacle_reference_missing')) for r in reasons):
         return 'missing_reference', ['selected_reference_missing']
+    if any(any(v in r for v in ('_absent', '_missing', '_unavailable')) for r in reasons) and not any(r in ('calculation_failed', 'calculation_read_failed', 'calculation_render_failed') for r in reasons):
+        return 'missing_inputs', sorted(set(reasons))
     if any('short_collateral_unresolved' in r for r in reasons):
         return 'unsupported_inputs', ['short_collateral_unresolved']
     codes = [r for r in reasons if re.fullmatch(r'[a-z][a-z0-9_]{0,159}', r)]
@@ -76,12 +84,13 @@ def result_availability(result, *, pair=False):
         elif pair and not reasons:
             metric_state, metric_codes = 'unsupported_inputs', ['complete_probability_partition_unsupported']
         per_metric[field] = dict(state=metric_state, reason_codes=metric_codes)
-    primary = 'buffered_decisive_opposing_margin_usd' if pair else (
+    primary = (next((k for k in ('buffered_complete_modeled_minimum_usd','buffered_decisive_opposing_margin_usd','buffered_conditional_known_state_minimum_usd') if metrics.get(k) is not None),'buffered_decisive_opposing_margin_usd')) if pair else (
         'buffered_ev_usd' if metrics.get('buffered_ev_usd') is not None else 'conditional_buffered_ev_usd')
     chosen = per_metric[primary]
     return dict(version=VERSION, state=chosen['state'], reason_codes=sorted(set([*chosen['reason_codes'], *stale])),
                 numeric_metrics=[k for k in fields if metrics.get(k) is not None],
-                metrics=per_metric, current_opportunity_eligible=bool(
+                metrics=per_metric, evaluation_complete=per_metric['buffered_complete_modeled_minimum_usd' if pair else 'buffered_ev_usd']['state']=='numeric_current',
+                current_opportunity_eligible=bool(
                     result.get('classification', {}).get('main_positive_eligible') or
                     result.get('classification', {}).get('positive_rule_sensitive_eligible')))
 
@@ -90,32 +99,33 @@ def summary(items, *, games=1, evaluated=True, failures=()):
     """Count the entire evaluated scope before result filtering, never displayed rows."""
     counts = Counter({state: 0 for state in STATES})
     causes = defaultdict(lambda: dict(results=0, games=set(), venues=set()))
-    positive = 0
+    positive = 0; partial = 0
     for game, venues, value in items:
         counts[value['state']] += 1
         positive += value['current_opportunity_eligible']
+        partial += value['state']=='numeric_current' and not value.get('evaluation_complete',True)
         for code in value['reason_codes']:
             cause = causes[code]; cause['results'] += 1; cause['games'].add(game); cause['venues'].update(venues)
     for game, code in failures:
-        counts['calculation_failed'] += 1
+        state, _ = refusal([code])
+        counts[state] += 1
         cause = causes[code]; cause['results'] += 1; cause['games'].add(game)
     total = sum(counts.values()); numeric = counts['numeric_current'] + counts['numeric_last_known']
-    outcome = ('not_evaluated' if not evaluated else 'unavailable' if not numeric and total else
-               'evaluated_no_positive' if not total else 'positive' if positive else
-               'partial' if numeric < total else 'last_known_only' if not counts['numeric_current'] else
-               'evaluated_no_positive')
+    outcome = _outcome(counts, positive, evaluated, partial)
     return dict(version=VERSION, scope='evaluated_results_before_filter', games=games,
                 total_results=total, numeric_results=numeric, current_results=counts['numeric_current'],
                 positive_results=positive, counts=dict(counts), outcome=outcome,
+                evaluation_complete=bool(evaluated and total and numeric==total and counts['numeric_current']==total and not partial),
+                evaluated_results=numeric, pending_results=counts['not_evaluated'], partial_results=partial,
                 causes=[dict(code=k, affected_results=v['results'], affected_games=len(v['games']),
                              venues=sorted(v['venues'])) for k, v in sorted(causes.items())])
 
 
 def combine(summaries, *, games, failures=(), evaluated=True):
     """Combine page summaries without retaining individual calculations."""
-    counts = Counter({state: 0 for state in STATES}); causes = {}; positive = 0
+    counts = Counter({state: 0 for state in STATES}); causes = {}; positive = 0; partial = 0
     for value in summaries:
-        counts.update(value['counts']); positive += value['positive_results']
+        counts.update(value['counts']); positive += value['positive_results']; partial += value.get('partial_results',0)
         for c in value['causes']:
             aggregate = causes.setdefault(c['code'], dict(code=c['code'], affected_results=0, affected_games=0, venues=set()))
             aggregate['affected_results'] += c['affected_results']; aggregate['affected_games'] += c['affected_games']; aggregate['venues'].update(c['venues'])
@@ -127,8 +137,24 @@ def combine(summaries, *, games, failures=(), evaluated=True):
     total = sum(counts.values()); numeric = counts['numeric_current'] + counts['numeric_last_known']
     base.update(total_results=total, numeric_results=numeric, current_results=counts['numeric_current'],
                 positive_results=positive, counts=dict(counts),
-                outcome='not_evaluated' if not evaluated else 'unavailable' if not numeric and total else
-                'evaluated_no_positive' if not total else 'positive' if positive else 'partial' if numeric < total else
-                'last_known_only' if not counts['numeric_current'] else 'evaluated_no_positive',
+                outcome=_outcome(counts, positive, evaluated, partial),
+                evaluation_complete=bool(evaluated and total and numeric==total and counts['numeric_current']==total and not partial),
+                evaluated_results=numeric, pending_results=counts['not_evaluated'], partial_results=partial,
                 causes=[dict(c, venues=sorted(c['venues'])) for c in causes.values()])
     return base
+
+
+def _outcome(counts, positive, evaluated, partial=0):
+    total=sum(counts.values()); numeric=counts['numeric_current']+counts['numeric_last_known']
+    if not evaluated or not total or counts['not_evaluated']==total:
+        return 'not_evaluated'
+    if not numeric:
+        return 'unavailable'
+    # Completeness precedes positive filtering, including mixed current/history.
+    if numeric<total or counts['numeric_current'] and counts['numeric_last_known']:
+        return 'partial'
+    if not counts['numeric_current']:
+        return 'last_known_only'
+    if partial:
+        return 'partial'
+    return 'positive' if positive else 'evaluated_no_positive'

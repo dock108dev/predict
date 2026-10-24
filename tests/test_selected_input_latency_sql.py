@@ -56,7 +56,7 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
         for generation, offset in enumerate(range(0, 60, 15), 1):
             cases[:] = self.authored[offset:offset + 15]
             for w in workers.values():await w.discover()
-            self.ingress_books(workers, cases, generation=generation)
+            await self.ingress_books(workers, cases, generation=generation)
             await self.publication(offset + len(cases))
         self.read_call_counts={v:len(calls) for v,calls in self.calls.items()}
         self.workers = workers
@@ -125,7 +125,7 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
             for generation in range(5,9):
                 await asyncio.sleep(.08)
                 unrelated['clock']=datetime.now(timezone.utc)
-                self.ingress_books(self.workers,[unrelated],price='0.54' if generation%2 else '0.55',generation=generation)
+                await self.ingress_books(self.workers,[unrelated],price='0.54' if generation%2 else '0.55',generation=generation)
         from app.dashboard.comparison_board_api import READ_WORK
         # Keep the first latency sample under the actual production deadline.
         # The explicit concurrency hold uses a separate bounded test budget;

@@ -1,5 +1,6 @@
 """Automatic source-owning current provider, independent of browser lifetimes."""
 import asyncio
+from .current_ingress import operation, call
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +52,7 @@ class CurrentService:
         self.started = False
         self.closed = False
         self.closing = False
+        self._source_close_started = False
         self.cleanup_complete = False
         self.cleanup_errors = []
         self.issues = []
@@ -62,6 +64,8 @@ class CurrentService:
         self.stop_reason = None
         from .current_clock import continuous
         self.clock_wall, self.clock_mono = time.time(), continuous()
+        from .current_ingress import Ingress
+        self.ingress = Ingress(self)
         self._control_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
         self.states = self.initial_state()['source_status']
@@ -97,11 +101,11 @@ class CurrentService:
                 self.issue('service','local_defect','issue_retention_invalid')
         if self.globally_stopped:
             for venue in ('kalshi','polymarket_us','novig','prophetx'):
-                self.source_state(venue,'stopped','Collection explicitly stopped. Inspect Admin before guarded recovery.')
+                await call(self, self.source_state, venue, 'stopped', 'Collection explicitly stopped. Inspect Admin before guarded recovery.')
             return
         if not self.config['enabled']:
             # Retained prices remain inspectable while all dispatch is disabled.
-            for venue in ('kalshi','polymarket_us'): self.source_state(venue,'unavailable','Acquisition is disabled in operational configuration; retained observations remain historical.')
+            for venue in ('kalshi','polymarket_us'): await call(self, self.source_state, venue, 'unavailable', 'Acquisition is disabled in operational configuration; retained observations remain historical.')
             return
         try:
             self.ownership.acquire(self.runtime_id)
@@ -109,7 +113,7 @@ class CurrentService:
             self.attempt = consume(self.directory, self.runtime_id, self.config, self.digest)
         except (ValueError, OSError):
             if self.ownership.file: self.ownership.release()
-            for venue in ('kalshi','polymarket_us','novig','prophetx'): self.source_state(venue,'unavailable','Native acquisition ownership or operational authority is unavailable.')
+            for venue in ('kalshi','polymarket_us','novig','prophetx'): await call(self, self.source_state, venue, 'unavailable', 'Native acquisition ownership or operational authority is unavailable.')
             self.issue('service','ownership','ownership_or_authority_unavailable')
             return
         self.deadline = float('inf') if self.config['duration_seconds']==APP_RUNNING_DURATION else time.monotonic()+self.config['duration_seconds']
@@ -118,7 +122,7 @@ class CurrentService:
         factory = self.worker_factory or NativeWorker
         for venue in ('kalshi','polymarket_us'):
             if venue in self.paused_sources:
-                self.source_state(venue,'stopped','Source explicitly paused. This pause survives app and data restarts.')
+                await call(self, self.source_state, venue, 'stopped', 'Source explicitly paused. This pause survives app and data restarts.')
                 continue
             self.workers[venue] = factory(self,venue)
             self.tasks[venue] = asyncio.create_task(self.run_worker(venue), name='predict-current-'+venue)
@@ -128,7 +132,7 @@ class CurrentService:
             self.tasks['the_odds_api']=asyncio.create_task(self.run_worker('the_odds_api'),name='predict-current-aggregate')
         elif 'the_odds_api' in self.paused_sources:
             for venue in ('novig','prophetx'):
-                self.source_state(venue,'stopped','Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
+                await call(self, self.source_state, venue, 'stopped', 'Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
         self.watchdog = asyncio.create_task(self.watch(), name='predict-current-resources')
 
     async def run_worker(self, venue):
@@ -138,9 +142,9 @@ class CurrentService:
         except Exception as exc:
             self.issue(venue, 'local_defect', type(exc).__name__)
             if venue=='the_odds_api':
-                try:self.workers[venue].state('error','aggregate_worker_failed','Shared aggregate worker failed; native sources continue.')
+                try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed; native sources continue.')
                 except Exception:self.cleanup_errors.append('aggregate_status_failed')
-            else:self.source_state(venue, 'error', 'Native worker failed; this source is paused.')
+            else:await call(self, self.source_state, venue, 'error', 'Native worker failed; this source is paused.')
 
     def observation(self, venue, kind, value):
         if self.evidence:
@@ -177,13 +181,14 @@ class CurrentService:
     def row(self, kind, venue, **value):
         return dict(type=kind, source=venue, session_id=self.runtime_id, observed_at=utc(), **value)
 
+    @operation
     def source_state(self, venue, state, reason):
         if self.store is None or self.store.closed: return
         status = dict(state=state, reason_code='native_'+state, reason=reason, next_due_at=None)
         if self.states.get(venue)==status: return
         states = deepcopy(self.states); states[venue]=status
         try:
-            self.sink.commit(self.row('source_health',venue,state='connected' if state=='available' else state), states)
+            (yield (self.row('source_health',venue,state='connected' if state=='available' else state), states))
             self.states = states
         except Exception as exc:
             # Preserve previous admitted prices and mark only affected source.
@@ -209,6 +214,7 @@ class CurrentService:
                 if prior['source']==venue:prior['revision']+=1;prior['fingerprint']=None
         self.states=states
 
+    @operation
     def catalog(self, venue, cat):
         if not self.dispatch: raise asyncio.CancelledError()
         cats = deepcopy(self.sink.reducer.inventory)
@@ -232,13 +238,13 @@ class CurrentService:
             occurrence(cats['polymarket_us'],'polymarket_us')
         generation=(self.sink.reducer.generation or 0)+1
         prior_books=set(self.sink.reducer.books)
-        self.sink.commit(self.row('coverage_inventory',venue,inventory=cats,generation=generation,
-                                 previous_generation=self.sink.reducer.generation),self.states)
+        (yield (self.row('coverage_inventory',venue,inventory=cats,generation=generation,
+                                 previous_generation=self.sink.reducer.generation), self.states))
         affected={key[0] for key in prior_books-set(self.sink.reducer.books)}
         for source in affected:
             worker=self.workers.get(source)
             if worker and not worker.closed and hasattr(worker,'request_resync'):
-                self.source_state(source,'resyncing','Catalog identity changed; waiting for a fresh native image.')
+                (yield from self.source_state.operation(self, source, 'resyncing', 'Catalog identity changed; waiting for a fresh native image.'))
                 worker.request_resync()
         self.observation(venue,'catalog',dict(events=len(cat['events']),markets=len(cat['markets']),
             selected=len(cat.get('selection',{}).get('ids',[])),exclusions=self.sink.exclusions))
@@ -246,6 +252,7 @@ class CurrentService:
     def book(self, venue, book):
         self.books(venue,[book])
 
+    @operation
     def books(self, venue, books):
         if not self.dispatch: raise asyncio.CancelledError()
         states=deepcopy(self.states)
@@ -254,11 +261,20 @@ class CurrentService:
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
         try:
             observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
-            self.sink.commit(self.row('prediction_books',venue,observations=observations),states)
+            (yield (self.row('prediction_books',venue,observations=observations), states))
             self.states=states
         except Exception as exc:
             from app.diagnostics import failure
             failure(__name__, 'current_image_admission', exc)
+            from .current_database import NativeAdmissionError
+            if isinstance(exc,NativeAdmissionError):
+                import logging
+                diagnostic=dict(exc.diagnostic)
+                worker=self.workers.get(venue)
+                if worker:
+                    diagnostic['connection_generation']=worker.metrics.get('connections')
+                    worker.metrics['last_admission_rejection']=diagnostic
+                logging.getLogger(__name__).warning('native_admission_rejected %s',json.dumps(diagnostic,sort_keys=True))
             self.issue(venue,'local_defect',type(exc).__name__)
             self.degrade(venue,'Current image was rejected; a fresh complete image is required.')
             raise ValueError('current_admission_rejected') from None
@@ -290,6 +306,7 @@ class CurrentService:
     async def _pause(self, venue):
         if venue in ('novig','prophetx'):venue='the_odds_api'
         if venue not in self.workers: raise ValueError('Source is not running')
+        self.ingress.revoke(venue)
         self.workers[venue].closed=True
         if hasattr(self.workers[venue],'lifecycle'):self.workers[venue].lifecycle.revoke()
         self.tasks[venue].cancel()
@@ -297,16 +314,17 @@ class CurrentService:
         if pending:
             self.issue(venue,'cleanup','worker_cleanup_timeout')
             self.cleanup_errors.append(venue+':cleanup_timeout')
-            self.workers[venue].state('error','aggregate_cleanup_unresolved','Shared cleanup is unresolved; ownership remains held.') if venue=='the_odds_api' else self.source_state(venue,'error','Source cleanup is unresolved; ownership remains held.')
             return
         if not await self.cleanup_clients([venue]):
             if venue+':cleanup_failure' not in self.cleanup_errors:self.cleanup_errors.append(venue+':cleanup_failure')
             self.issue(venue,'cleanup','source_cleanup_unresolved')
-            self.workers[venue].state('error','aggregate_cleanup_unresolved','Shared cleanup is unresolved; ownership remains held.') if venue=='the_odds_api' else self.source_state(venue,'error','Source cleanup is unresolved; ownership remains held.')
+            return
+        if not await self.ingress.drain(self.config['cleanup_seconds'],venue):
+            self.cleanup_errors.append(venue+':ingress_cleanup_timeout')
             return
         if venue=='the_odds_api':
-            self.workers[venue].state('stopped','aggregate_paused','Shared aggregate acquisition paused. Persisted quota and next-due survive reopening.')
-        else:self.source_state(venue,'stopped','Native source paused. This pause survives app and data restarts.')
+            await call(self, self.workers[venue].state, 'stopped', 'aggregate_paused', 'Shared aggregate acquisition paused. Persisted quota and next-due survive reopening.')
+        else:await call(self, self.source_state, venue, 'stopped', 'Native source paused. This pause survives app and data restarts.')
 
     async def cleanup_clients(self, venues):
         # Cancellation-resistant closures must never keep the operator request
@@ -330,8 +348,10 @@ class CurrentService:
 
     async def _close(self):
         async with self._close_lock:
-            if self.closed or (self.cleanup_errors and not self.dispatch): return
+            if self.closed or self._source_close_started: return
+            self._source_close_started=True
             self.dispatch=False;self.closing=True
+            self.ingress.revoke()
             if self.database:self.database.closed=True
             # Revocation precedes task cancellation and client/socket cleanup.
             for worker in self.workers.values():
@@ -344,12 +364,12 @@ class CurrentService:
             for task in tasks:task.cancel()
             done,pending=await asyncio.wait(tasks,timeout=self.config['cleanup_seconds']) if tasks else (set(),set())
             await self.cleanup_clients(list(self.workers))
+            if not await self.ingress.drain(self.config["cleanup_seconds"]):self.cleanup_errors.append("ingress_cleanup_timeout")
             if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
             if pending:self.cleanup_errors.append('worker_cleanup_timeout')
             self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
-            for venue in ('kalshi','polymarket_us','novig','prophetx'):
-                self.source_state(venue,'stopped' if not self.cleanup_errors else 'error',
-                    (self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.') if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
+            for venue in (() if self.ingress.tasks else ('kalshi','polymarket_us','novig','prophetx')):
+                await call(self, self.source_state, venue, 'stopped' if not self.cleanup_errors else 'error', (self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.') if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
             if self.store:
                 self.store.leases.clear();self.store.clients.clear()
             self.cleanup_complete=not self.cleanup_errors
@@ -368,6 +388,7 @@ class CurrentService:
             cleanup_errors=list(self.cleanup_errors),config=self.config,source_status=self.states,
             metrics={v:deepcopy(w.metrics) for v,w in self.workers.items()},peak_rss_bytes=self.peak_rss,
             observation_retention=None,
+            ingress=dict(owned=len(self.ingress.tasks),maximum=self.ingress.maximum,records=list(self.ingress.records)),
             sink=None if self.sink is None else dict(sequence=self.sink.sequence,**self.sink.metrics),
             exclusions=[] if self.sink is None else self.sink.exclusions,issues=deepcopy(self.issues),
             odds_api_requests=self.workers['the_odds_api'].metrics['requests'] if 'the_odds_api' in self.workers else 0,
@@ -431,7 +452,7 @@ class CurrentService:
             reason=self.recovery_reason()
             if reason:raise SelectionError(409,reason,'Recovery blocked after cleanup: '+reason.replace('_',' ')+'.')
             if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Application changed during cleanup; reopen with the current candidate.')
-            self.runtime_id=str(uuid4());self.started=False;self.closed=False
+            self.runtime_id=str(uuid4());self.started=False;self.closed=False;self._source_close_started=False
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
             self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None;self.stop_reason=None
             self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
