@@ -44,7 +44,7 @@ const copy = v => JSON.parse(JSON.stringify(v));
  const old=JSON.parse(zlib.gunzipSync(fs.readFileSync('tests/fixtures/wide-spread-board-20261022.json.gz')));
  const original=copy(old),options={...defaults,view:'odds',filter:'all',game:old.game_key};
  checkBoard(original,options);
- const wire=JSON.parse(cp.execFileSync('.venv/bin/python',['-c',
+ const wire=JSON.parse(cp.execFileSync(process.env.PYTHON || 'python3',['-c',
   'import json,sys; from app.dashboard.comparison_board import compact_price_fields; print(json.dumps(compact_price_fields(json.load(sys.stdin))))'],{input:JSON.stringify(old),maxBuffer:4*1024*1024}));
  const restored=copy(wire);checkBoard(restored,options);assert.deepEqual(restored,original);
  for(const names of [['x','x'],['__proto__'],[true],{}]){const bad=copy(wire);bad.price_object_keys=names;assert.throws(()=>checkBoard(bad,options));}
