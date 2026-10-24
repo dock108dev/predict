@@ -22,8 +22,8 @@ Acquisition, storage/publication, matching, financial logic, frontend and
 integration QA have distinct responsibilities. Current architecture has **two OS processes**:
 the background data process hosts collection and calculation workers; the app
 process reads publications. Logical worker separation does not establish complete
-resource/failure isolation. The completion slices must verify those boundaries;
-a further process split requires an evidenced proposal rather than an assumed rewrite.
+resource/failure isolation: workers within the data process share its memory and
+process lifetime.
 
 The ordinary launcher runs an independent background data process and an app
 process against the existing PostgreSQL database. The data runtime owns

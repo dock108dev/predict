@@ -64,15 +64,6 @@ assessments remain explicit. Complete native wording stays pooled without
 truncation. The existing compact explanation also applies to unavailable pairs.
 Both assembly and ordinary read output retain the 512 KiB refusal.
 
-The local C1 receipts (`test-results/sc07-c1-20261020/`) distinguish authored,
-disposable SQL and installed evidence. The shaped 46-price distinct-wording SQL
-frame falls from 647,714 to 520,408 bytes (520,992 through ordinary HTTP). An
-irreducible frame still refuses while a good game publishes. This is a local
-repair, not proof of every installed game's cause. The app was restarted alone;
-the data owner remains unreloaded because startup could recreate acquisition.
-Coverage's separate capture refusal remains C2 work. No source clock, limit or
-owner acceptance is renewed by this repair.
-
 ## Selected Original read ownership
 
 Exact Original and selected financial Details share one bounded worker; ordinary
@@ -227,17 +218,16 @@ policy boundary; they perform no fetch or financial calculation. Close and reope
 the price to select newer observations. Source health displayed on that retained
 frame describes its last read, not an unseen live health refresh.
 
-SC07-C2 integrates Coverage with the C1 publication shape. Coverage validates exact
+Coverage uses the compact publication shape. It validates exact
 same-board references alongside older frozen inputs and follows per-game
 `observation_errors`; a refused game's older saved row cannot supply displayed
 Coverage authority. Original retained observations remain measurable. Capture
 interning is internal to Coverage and changes neither compact board encoding nor
-ordinary price/Inputs responses. Local C2 evidence is retained under
-`test-results/sc07-c2-20261020/`; owner acceptance remains changes requested.
+ordinary price/Inputs responses.
 
-### October 20 V correction: incremental complete-neighborhood publication
+### Incremental complete-neighborhood publication
 
-The installed publisher now queries complete possible-peer components in bounded
+The publisher queries complete possible-peer components in bounded
 batches, retaining the existing identity index, SQL current rows, independent
 source/estimate workers and ordinary API. New peers are checked inside the actual
 capture snapshot before decoding; changed capacity defers that batch. Scoped CAS
@@ -245,15 +235,7 @@ and merged status preserve unrelated games and authoritative withdrawals. Prior
 selected boards, repeated event rows and depth containers remain in reservations;
 total retained-board caps apply across batches. Ordinary reads still never acquire.
 
-On the dated broad cohort, 2,544 rows / 17,871,549 projected bytes partition into
-four batches, largest 902 rows / 5,743,401 bytes. Reservations are 96/96/96/51 MiB
-against the unchanged 160 MiB source runway. Installed SQL-to-HTTP and actual
-screens cover all 47 populated purchase cells across five returned leagues.
-Matching/financial availability, one irreducible game response and broader
-Coverage capture remain separate limitations. See
-`test-results/sc07-d2-20261020/publication-repair/closeout.md` in the local evidence.
-
-### October 22 read/publication integration
+### Read and publication coordination
 
 An admitted estimate sweep owns one finite catalog turn, like the whole-capture
 Scanner and Coverage workers. Complete match neighborhoods are still packed

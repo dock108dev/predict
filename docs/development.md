@@ -26,7 +26,7 @@ required evidence. [Runtime contract](data-app-runtime-contract.md).
 Focused separation SQL and the small authored working loop use disposable storage:
 
 ```sh
-PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --da-separation --report-dir test-results/da-separation/sql
+.venv/bin/python scripts/ci/postgres.py --da-separation --report-dir test-results/da-separation/sql
 ```
 
 This focused lane excludes the broader compatibility manifest and stress workloads.
@@ -118,7 +118,7 @@ environment results, including a `toolchain.json` identity receipt. The explicit
 compatibility runs. Python 3.11 remains a supported compatibility lane.
 
 ```sh
-PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config .venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
+.venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
 ```
 
 The SQL lane includes small financial current-row roundtrips, ready tickets,
@@ -228,14 +228,6 @@ CSS use 300/600 lines. Tests use their language's thresholds. Judge extensionles
 launchers by their shebang: `scripts/opportunity-board` is Python. These are review
 triggers, not reasons to compress formatting or add forwarding fragments.
 
-Native catalog selection and bounded diagnostics live in
-`collection/current_native_catalog.py`; `current_native.py` preserves public helper
-imports and owns transport lifecycle. Its remaining worker intentionally keeps
-discovery, socket replacement, Stop, hourly budgets and cleanup together: these
-operations share the same socket/task/credential/budget ownership. Splitting its
-methods into stateful mixins would obscure that ownership. Review another
-extraction if a separate transport or lifecycle owner becomes necessary.
-
 Latest-board SQL capture sizing and fair source scheduling live in
 `storage/board_capture.py`; `storage/board_view.py` renders captured results and
 bounds wire pages without acquiring inputs. `latest_board.py` owns transactional
@@ -245,11 +237,14 @@ includes both extracted modules. SQL tests share disposable setup in
 `tests/latest_board_fixture.py`; `test_latest_board_sql.py` retains its public test
 class and independently reset behavioral cases.
 
-The native worker remains just above 1,000 lines after adding async book publication:
-its queued books, pending publication task, discovery replacement and close path
-share one cancellation/Stop owner. The existing catalog extraction remains the
-stateless boundary; separating publication into a second state owner would make
-shutdown and resync ordering harder to verify. The 648-line `stored-controller.js`
+Native catalog selection and bounded diagnostics live in
+`collection/current_native_catalog.py`; `current_native.py` preserves public helper
+imports and owns transport lifecycle. The worker remains just above 1,000 lines
+after adding async book publication: queued books, pending publication, discovery,
+socket replacement, hourly budgets and cleanup share one credential/budget and
+cancellation/Stop owner. The catalog extraction remains the stateless boundary;
+stateful mixins or a second publication owner would obscure shutdown and resync
+ordering. The 648-line `stored-controller.js`
 likewise retains one UI lifecycle: generation cancellation, applied settings,
 selection leases, modal focus and Stop all mutate the same current view. Rendering,
 wire validation, pagination and read scheduling are already separate modules;

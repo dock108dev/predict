@@ -158,15 +158,13 @@ commit. No deployment, publishing or external reporting service is configured
 by these checks. Configure `CI readiness` as a required branch check separately;
 workflow success alone cannot enforce merge policy.
 
-## October 23, 2026 contract review
+## Check coverage and merge policy
 
-The current public repository has no branch protection or rulesets (read-only API
-inspection). Recommend requiring **CI readiness** on `main`; this setting has
-not been applied. No merge queue was observed. The `merge_group` trigger is
-prepared for future queue use and runs the same gates. No path filters can strand
-that gate. Main pushes validate the merged state; PRs validate GitHub's merge
-candidate, with the PR head separately recorded. No publish/tag/release workflow
-is part of this contract.
+Require **CI readiness** in branch protection or a ruleset to enforce these gates.
+The workflows cannot configure that repository setting. The `merge_group` trigger
+runs the same gates for merge queues, without path filters. Main pushes validate
+the merged state; PRs validate GitHub's merge candidate, with the PR head separately
+recorded. These workflows do not publish releases.
 
 | Area / product risk | Exact workflow / job / command | Event / platform | Policy | Reason / evidence |
 | --- | --- | --- | --- | --- |
@@ -177,12 +175,12 @@ is part of this contract.
 | Ordinary navigation, keyboard, errors and narrow layout | CI / Ordinary browser journey / `python -m pytest -q browser_tests` | Same; locked Chromium | Required | Authored intercepted board fixtures plus scanner/ticket loopback journeys; fixed fixture clock and displayed-read lease response |
 | Fresh distribution, imports, assets and HTTP startup | CI / Source, security and package / `python scripts/ci/package_smoke.py` | Same | Required | Publishable Git-listed source build excluding ignored local catalogs, wheel inventory, separate locked installation, no collector; current stored-dashboard landing page |
 | Secrets and dependency advisories | CI / Source, security and package / `secret_scan.py`, `pip_audit` | Same plus weekly dependency refresh | Required | Redacted current-tree Gitleaks with detection controls; CI/browser hash locks and the alternate `uv.lock` audited; scanner outages fail |
-| Language security analysis | GitHub-managed CodeQL default setup | Hosted default setup, independent workflow | Advisory until branch rules require it | Configured for Python, JavaScript/TypeScript and Actions; no duplicate SAST service; dirty worktree unscanned |
-| macOS and supported Python endpoints | Scheduled assurance / macOS Python 3.11 and 3.14 | Monday 07:23 UTC; macOS 15; manual compatibility | Scheduled | Oldest supported runtime and primary runtime; not evidence of local owner acceptance |
+| Language security analysis | GitHub-managed CodeQL default setup | Hosted default setup, independent workflow | Advisory until branch rules require it | Managed in repository settings; inspect hosted results separately from local checks |
+| macOS and supported Python endpoints | Scheduled assurance / macOS Python 3.11 and 3.14 | Monday 07:23 UTC; macOS 15; manual compatibility | Scheduled | Oldest supported runtime and primary runtime; does not exercise live provider data |
 | Package size and dependency/license inventory | Package `metrics.json` | Required builds | Advisory measurement | Wheel bytes, file count, elapsed seconds, installed versions/license expressions; no comparable baseline or size budget |
 | Reliability and resource trends | Scheduled assurance / CI health sample / `health.py` | Weekly and every manual scope | Advisory | Up to 30 completed runs / 30 days; event-separated rates, cancelled runs excluded; no inferred flakes or billing |
 | Reporting/gate integrity | CI / Source, security and package / `pytest tests/test_ci_*.py`; CI readiness / `gate.py` | Every CI event | Required | Passing, failing, missing, malformed and skipped-report cases; first ten failing JUnit identities in summaries, escaped as data |
-| Type checking and broad formatting | No repository-wide typing/format migration | N/A for this pass | Explicit omission | Dynamic dict/JSON application has no type-check configuration or established typed boundary; compilation, Ruff and executable schema/contract tests remain required. Broad annotation/style migration would be separate product work |
+| Type checking and broad formatting | No repository-wide typing/format migration | N/A | Explicit omission | Dynamic dict/JSON application has no type-check configuration or established typed boundary; compilation, Ruff and executable schema/contract tests remain required. Broad annotation/style migration would be separate product work |
 | ShellCheck, containers and IaC | Shell parser check; no container/IaC distribution | N/A for container/IaC | Explicit omission | Existing shell wrappers use syntax checks; actionlint ShellCheck integration remains disabled, so no claim of shell semantic lint coverage |
 | Performance and accessibility scoring | Existing workload, keyboard and overflow assertions | Required functional lanes | Advisory beyond assertions | No stable Lighthouse/burst benchmark or automated WCAG conformance baseline; native/device usability and performance remain separate evidence |
 | Signing, deployment and owner-data migrations | None | N/A | Not authorized by CI | Local read-only product; CI does not publish, sign, collect live odds or touch owner state |
@@ -203,42 +201,21 @@ changing candidates and are operational observations, not a performance baseline
 Package sizes and local durations likewise have no automatic regression threshold.
 The report retains actual failures rather than reducing scope to obtain a pass.
 
-### Integration choices and eligibility
+### Tools and report handling
 
-Verified October 23, 2026 against official sources and read-only repository APIs:
+GitHub job summaries and artifacts retain check results; workflow artifacts expire
+after 14 days. Required report or upload failures stay visible. Optional health API
+outages produce unavailable metrics. Account billing and branch protection are
+managed separately in GitHub settings.
 
-- **Native GitHub summaries and artifacts: active configuration.** Standard hosted
-  runners are free for public repositories; private repository minutes/storage
-  depend on plan. This repository is public. Account storage allowance and billing
-  budget were not accessible and are not assumed unlimited. Reports stay on GitHub,
-  artifacts expire after 14 days, and each step summary has a 1 MiB limit. No new
-  token/account or third-party upload is needed. Storage/upload or required report
-  failures stay visible; optional health API outages produce unavailable metrics.
-  See [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
-  and [job summaries](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-job-summary).
-- **CodeQL: existing hosted configuration verified, current candidate unverified.**
-  Public repositories qualify for code scanning; private use requires eligible
-  GitHub Code Security licensing. Analysis/results stay in GitHub. No account or
-  permission changes were made. The read-only open-alert query returned zero;
-  that does not scan this dirty worktree. See [code scanning eligibility](https://docs.github.com/en/code-security/concepts/code-scanning/code-scanning).
-- **Gitleaks CLI, actionlint and pip-audit: existing repository-only tools retained.**
-  No user/LOC/upload subscription limits or new accounts. CLI analysis uses local
-  source; Gitleaks is distinct from its separately licensed wrapper Action.
-  pip-audit sends package names/versions to PyPI advisory endpoints, not application
-  source. Dependency outages fail the required scan; no finding is silently ignored.
-  See [Gitleaks](https://github.com/gitleaks/gitleaks),
-  [actionlint](https://github.com/rhysd/actionlint), and
-  [pip-audit](https://github.com/pypa/pip-audit). Reports use the same 14-day native
-  artifact retention; CLI tools have no remote report retention.
-- **Codecov, SonarQube Cloud, OSV-Scanner and Lighthouse CI: not adopted or activated.**
-  Native coverage, existing CodeQL and pip-audit cover the present reporting and
-  security needs without another upload service. Lighthouse would need a stable
-  synthetic performance target before adding useful evidence. No free-tier
-  eligibility, account enrollment or permissions are assumed for these unused
-  candidates; no setup/configuration or external upload has been introduced.
+Gitleaks scans source for secrets and actionlint validates workflow definitions.
+`pip-audit` queries package advisories using dependency names and versions. Advisory
+service failures fail the required scan; findings are not silently ignored.
+CI and browser dependency locks and the alternate `uv.lock` are audited.
+`uv_audit_requirements.py` exports pinned PyPI packages and hashes without installing
+or resolving them, and the audit writes a separate `uv-audit.json`. Unreviewed
+package sources and missing hashes fail the exporter.
 
-The lock refresh is limited to certifi, filelock and setuptools to address five
-reported advisories. Runtime roots and other locked packages are unchanged. The certifi repair also
-updates `uv.lock`. `uv_audit_requirements.py` exports its pinned PyPI packages and
-hashes without installing/resolving them; PR and scheduled audits retain a separate
-`uv-audit.json`. Unreviewed package sources and missing hashes fail the exporter.
+CodeQL default setup is managed by GitHub independently of these workflows. Local
+checks cannot establish its current status; consult the repository's code-scanning
+results. No additional external coverage or reporting service is configured here.

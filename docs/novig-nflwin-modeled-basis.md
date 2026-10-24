@@ -9,9 +9,7 @@ terms or kickoff. The prior expiry is not extended.
 ## Documented rules and applicability
 
 Exact [NFL Winner Series, NFLWIN / NFL-004](https://novig.intercom-attachments-1.com/i/o/y5ui11zw/2574338241/138190d9b820637c62eaad1d0718/NFL%2BWinner%2BSeries.pdf),
-Public Appendix A, retrieved October 22; no printed revision date. The downloaded
-PDF and SHA-256 are retained in the validation evidence. References below use
-physical PDF pages, starting at 1.
+Public Appendix A, retrieved October 22; no printed revision date. References below use physical PDF pages, starting at 1.
 
 - Payout Criterion (p5) and Official Game and Winner Rule (p6–7): full-game
   overtime included; winner receives $1, loser $0, tie $0.50 per face.
@@ -40,8 +38,7 @@ not established.
 ## Historical evidence and its limits
 
 Reproducible [nflverse game dataset](https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv),
-retrieved October 22, 2026; retained CSV, hash, analysis and per-season IDs in
-`test-results/sc07-v-model-validation-20261022/`. One row per game, REG only,
+retrieved October 22, 2026. One row per game, REG only,
 2017–2025 seasons with both final scores present; ties require equal final scores.
 Preseason, postseason, unscored/canceled games and incomplete 2026 season excluded.
 The 2022 canceled BUF–CIN game is not a completed-game denominator or evidence of
@@ -125,4 +122,3 @@ Publication, HTTP and Details retain basis, scenario inputs and sensitivity; car
 rank the disclosed hypothetical refund scenario. Source clocks and last-known
 status are unchanged. Actual void receipt and complete covered minimum remain
 unknown. No calibrated full forecast, execution claim or covered arbitrage follows.
-Owner acceptance remains **changes requested**.

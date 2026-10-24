@@ -157,8 +157,8 @@ for the request and retained-data bounds. Polling cadence is not evidence of
 source freshness or demonstrated propagation latency.
 
 The 768 MiB per-process guard remains independent of encoded cache bounds.
-Authored SQL/browser workload evidence, actual current source qualification,
-hosted CI and owner acceptance retain separate meanings. See the
+Authored SQL/browser workloads test implementation behavior; they do not establish
+current provider coverage or financial applicability. See the
 [readiness](scanner-readiness-contract.md),
 [projection](scanner-projection-contract.md),
 [ticket](scanner-ticket-contract.md) and

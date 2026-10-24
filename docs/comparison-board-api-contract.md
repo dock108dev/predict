@@ -275,7 +275,7 @@ Other valid games publish. A retained older row for the failed game cannot grant
 current authority. Ordinary read decoration is checked against the same 512 KiB
 limit; an irreducible result refuses rather than truncating source evidence.
 
-## SC07-U1 dashboard consumer
+## Home dashboard consumer
 
 `/` uses the existing authored stored frontend. It reads complete bounded `all`
 EV and Arbs slates separately, keeping each response's availability and original
@@ -299,7 +299,7 @@ identity on a poll or turns the failure into a zero. Existing original-input
 frames retain their exact clocks and independent inspection behavior.
 
 
-## EV outcome consumer (SC07-U3)
+## EV outcome consumer
 
 `/ev` reads `filter=all` through the existing captured-slate reader. It reuses
 metric-specific dashboard presentation and exact supplied-value ordering, with

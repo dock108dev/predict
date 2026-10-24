@@ -84,7 +84,7 @@ limits, storage limits and process memory guards continue to apply.
 Authored transport and disposable PostgreSQL results establish local engineering
 capability. Installed captures describe only the retained owner cohort at their
 capture times. Neither establishes a provider universe, hosted CI, formal load
-qualification, current-source financial qualification or owner acceptance.
+qualification or current-source financial applicability.
 
 ## Shared current-input and publication breakdown
 
@@ -134,7 +134,7 @@ unavailable rather than a measured zero. Check Admin and the safe operation log;
 keep the resource guard intact. Source prices and other background publications
 can remain useful while the independent Coverage worker is unavailable.
 
-### Compact capture integration (SC07-C2)
+### Compact capture
 
 The capture omits prior display-age calculations and selection prose, retains only
 the event start needed for aging and the occurrence identity needed for counts,
@@ -143,7 +143,7 @@ interns repeated field values across saved prices, older frozen comparison input
 and raw offers/contracts. Native values and generated references have separate
 containers. The adapter restores exact values before the existing observation,
 comparison, matching and dependency owners run; it never fills a frozen peer from
-new ingress. C1 same-board references use the ordinary exact-reference validator.
+new ingress. Same-board references use the ordinary exact-reference validator.
 
 Schedule bindings are projected when event and contract starts differ. For aligned
 starts that evidence is unused by schedule projection; full contract dependency
@@ -155,7 +155,7 @@ rows as well as events, shared publications/offers, board status and prior queri
 All capture, reservation, publication, process and storage limits remain unchanged.
 
 
-## Outcome-first presentation (SC07-U3)
+## Outcome-first presentation
 
 Coverage leads with the selected captured scope, original capture/publication
 ages and availability. Ratios and exact clocks remain in a disclosure. Local
@@ -170,7 +170,7 @@ independently of `publication_state` and the retained capture. In particular,
 `background_coverage_unavailable` can coexist with an inspectable stale capture
 or an unmeasured first publication. Displaying that failure does not repair it.
 
-### Complete streamed capture (October 22 publication repair)
+### Complete streamed capture
 
 Coverage computes its shared SQL capture once per repeatable-read snapshot. An
 owned server cursor yields admission bytes first, then the bounded shared header

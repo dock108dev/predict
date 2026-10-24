@@ -1,10 +1,11 @@
 # Predict
 
-A local, read-only prediction-market comparison app for macOS. The **Scanner**
-ranks supported opportunities, **Odds** groups observed prices by game, and
+A local, read-only prediction-market comparison app for macOS. The home dashboard
+groups arbitrage and EV results, **Odds** groups observed prices by game, and
 **EV** shows modeled single-trade estimates. Filter available games,
 inspect original prices and calculation inputs in Details, and manage collection
-and source status in Admin.
+and source status in Admin. The advanced **Scanner** supports opportunity filters
+and manual tickets.
 
 Kalshi and Polymarket US use native adapters; Novig and ProphetX can arrive through
 The Odds API. Pinnacle is a reference, not a purchase leg. The default calculation

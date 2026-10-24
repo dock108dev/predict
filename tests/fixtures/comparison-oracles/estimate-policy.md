@@ -33,8 +33,11 @@ Freeze quantity/allocation for base/conservative sensitivity. Higher adverse pri
 
 Independent vectors in [policy vectors](comparison-r06-policy-vectors-20261008.json) cover $50 deployed/$55 payout: no cost 10%, $.50 cost 9%, $1 cost 8%, $6 cost −2%. A $10 refundable hold adds funded capital once: profit $5, denominator $60, return 8⅓%; consuming $2 of it leaves profit $3, denominator $60, return 5%. A separate negative example records why changing denominators can otherwise falsify monotonicity. Quote ages 899/900 seconds admit pregame; 901 fails; live 15 admits/16 fails. Missing source clocks fail. These are independent authored checks, not measured market behavior.
 
-## Acceptance and handoff
+## Fixture scope
 
-One zero-input capital policy, optional Details override, fixed-allocation monotonic profit checks, reserve accounting, units, rounding/fragmentation limits, age/depth refusal and sensitivity are specified. R05/R01 gates are reviewable. Software must preserve the actual input revisions, probability condition and estimate label through D09/S02/S03/S04/S05. Machine vectors are portable expected values; runtime integration, actual quote/depth applicability, Q03 bounded live qualification and owner acceptance remain pending. Unknown cost rules cannot be replaced by these stress defaults.
-
-Verification: all three machine JSON artifacts parsed; 17 independent fee vectors, six policy cashflows and seven source-age cases were checked. Fixed-basis dollar profit is monotonic across the four cost cases. No production test or live qualification was claimed.
+These vectors specify capital policy, optional Details overrides, fixed-allocation
+monotonic profit checks, reserve accounting, units, rounding and fragmentation
+limits, and age/depth refusal. Consumers must preserve input revisions, probability
+conditions and estimate labels. The vectors are authored expected values; they do
+not establish actual quote/depth applicability or live financial qualification.
+Unknown cost rules cannot be replaced by these stress defaults.
