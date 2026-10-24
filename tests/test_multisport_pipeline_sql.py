@@ -96,6 +96,35 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         self.assertTrue(owner.coverage_task.done())
         self.assertEqual(owner.connections,set())
 
+    async def test_shutdown_cancels_cursor_query_started_after_first_cancel(self):
+        from threading import Event
+        await self.owner.close()
+        owner=latest.LatestBoardOwner(self.service)
+        self.addAsyncCleanup(owner.close)
+        entered=Event();release=Event();finished=Event();attempts=[]
+        cancel=owner.cancel_queries
+        def blocked(db):
+            # Streamed captures own a raw cursor. Its next query can begin just
+            # after shutdown's cancellation request found an idle connection.
+            with db.cursor() as cursor:
+                entered.set()
+                if not release.wait(5):raise AssertionError('shutdown did not start')
+                try:cursor.execute('SELECT pg_sleep(30)')
+                finally:finished.set()
+        def cancel_then_release():
+            cancel()
+            attempts.append(True)
+            release.set()
+        with patch('app.storage.coverage_latest.reconcile',side_effect=blocked), patch.object(owner,'cancel_queries',side_effect=cancel_then_release):
+            owner.coverage_task=asyncio.create_task(owner.run_coverage())
+            async with asyncio.timeout(5):
+                while not entered.is_set():await asyncio.sleep(.01)
+            await owner.close()
+        self.assertGreaterEqual(len(attempts),2)
+        self.assertTrue(finished.is_set())
+        self.assertTrue(owner.coverage_task.done())
+        self.assertEqual(owner.connections,set())
+
     async def unseen_event_after_startup(self,league,family,*,flat_season=False):
         from app.dashboard.comparison_board_api import mount
         proxy=RuntimeClient(connector=self.connect)

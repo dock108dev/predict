@@ -705,7 +705,13 @@ class LatestBoardOwner:
         tasks=[task for task in (self.task,self.estimate_task,self.coverage_task) if task]
         if tasks:
             async def drain():
-                await asyncio.to_thread(self.cancel_queries)
+                pending=set(tasks)
+                while pending:
+                    # A streamed cursor may start its next query just after a
+                    # cancellation found the connection idle. Keep cancelling
+                    # until every owned worker finishes; never detach its thread.
+                    await asyncio.to_thread(self.cancel_queries)
+                    _,pending=await asyncio.wait(pending,timeout=.05)
                 results=await asyncio.gather(*tasks,return_exceptions=True)
                 for result in results:
                     if isinstance(result,BaseException):raise result

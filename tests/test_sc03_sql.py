@@ -32,8 +32,11 @@ class TicketSQL(IsolatedAsyncioTestCase):
         from app.storage.store import encoded
         from app.storage.scanner_preparation import is_immutable_fact
         from app.comparison.scanner_finance import dependencies
-        from tests.sc06_fixture import records,native_books,AuthoredAdapters,Clock
-        clock=Clock();rows=records(500,at=clock())
+        from tests.sc06_fixture import records,native_books,AuthoredAdapters
+        # Cache/identity assertions must not expire native inputs on a slower runner.
+        # Expiry behavior is covered separately with explicit clock advances.
+        from tests.test_sc03_finance import AT as finance_at
+        clock=lambda: finance_at.isoformat();rows=records(500,at=clock())
         with TemporaryDirectory(prefix='predict-sc06-500-admission-') as directory:
             worker=Scanner(self.provider(),connector=self.connect,clock=clock,summary_path=Path(directory)/'summary')
             try:
