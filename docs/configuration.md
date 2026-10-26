@@ -82,7 +82,9 @@ data ends acquisition. Both leave PostgreSQL running; use
 
 | Surface | Purpose |
 | --- | --- |
-| `/`, `/arbs` | Globally ranked opportunity scanner and selected manual tickets |
+| `/` | Opportunity dashboard with separate EV and arbitrage sections |
+| `/arbs` | Stored opposing-comparison view |
+| `/scanner` | Advanced Scanner, observed episodes and selected manual tickets |
 | `/odds`, `/ev` | Observed source prices and single-trade estimates across games |
 | Details and Original | Selected calculations and original inputs; leased selections retain captured evidence when current inputs change |
 | `/admin` | Source, quota, storage and issue status; collection controls and guarded recovery |
@@ -138,10 +140,14 @@ are exact strings and omitted fields use defaults. For example:
 Accepted fields are `version`, `capital_ceiling_usd`, `buffer_rate`, `tie`,
 `terminal_noncompletion`, `sizing_mode`, `benchmark_venue` and
 `benchmark_method`. Invalid configuration refuses the affected operation.
-Each calculation request applies its explicit settings over this base policy.
+Selected calculations apply their explicit settings over this base policy.
+Shared discovery rows retain the background owner's policy; changing selected
+Details settings does not recalculate or rerank the shared slate.
 
-The browser sends its amount, buffer and benchmark settings on every calculation
-read and remembers them in the tab's session storage. Without saved tab settings,
+The browser sends its amount, buffer and benchmark settings on board reads as
+the requested policy for selected Details and remembers them in the tab's session
+storage. The response distinguishes that requested policy from the shared
+discovery policy. Without saved tab settings,
 and on **Restore defaults**, it uses fixed $1,000, 0.5% and Pinnacle settings;
 these do not read `.local/estimate-policy.json`. The file still supplies unspecified policy
 fields such as exceptional-state probabilities. Browser changes do not write the

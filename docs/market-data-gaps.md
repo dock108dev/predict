@@ -15,9 +15,12 @@ Native and aggregate sources have independent access, timing and availability.
   crossed or stale originals withhold dependent EV rather than substitute a book.
 - Modeled fees, payout recipes, quantity grids and provisional tie/noncompletion
   probabilities are explicit assumptions. Content has bounded effective intervals
-  and expiry in `app/fixtures/estimated-content-v1.json`; the bundled recipes are
-  not continuously refreshed provider terms. Expired or unmatched content refuses
-  affected estimates.
+  and expiry in `app/fixtures/estimated-content-v1.json`; strictly bound profiles
+  and `app/comparison/modeled_winner.py` have separate applicability checks. The
+  legacy recipes retain their October 16, 2026 expiry. The Novig NFLWIN revision-2
+  model ends October 29 at 00:00 UTC (October 28 at 20:00 Eastern). None is a
+  continuously refreshed terms feed. Expired or unmatched content refuses
+  affected estimates while preserving authentic original prices.
 - Native NO and Short retain their original predicates and collateral requirements.
   Unsupported Short collateral, unknown depth or exceptional payouts can withhold
   calculations even when the original numerical price is visible.

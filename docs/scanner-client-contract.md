@@ -1,6 +1,13 @@
 # Scanner client and selection integration
 
-The ordinary current-row landing page and `/arbs` display the flat global scanner. `/odds` retains the American offered/fair reference matrix and source disclosures; `/ev` retains the auxiliary estimate view. Admin and Stop remain reachable. This implementation consumes [scanner v1](scanner-projection-contract.md); financial calculations and the [selected ticket backend](scanner-ticket-contract.md) remain server-owned.
+The advanced `/scanner` page displays the flat global Scanner and selected manual
+tickets. The landing page `/` uses the stored frontend's separate EV/arbitrage
+dashboard, while `/arbs` is the stored opposing-comparison view. `/odds` presents
+original prices and supported offered/fair references; `/ev` presents the EV
+outcome and labeled research. Admin and Stop remain reachable. The advanced
+Scanner consumes [scanner v1](scanner-projection-contract.md); financial
+calculations and the [selected ticket backend](scanner-ticket-contract.md) remain
+server-owned. Its client is distinct from the dashboard's captured-slate reader.
 
 ## Reading, filters and bounds
 

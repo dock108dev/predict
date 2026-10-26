@@ -24,7 +24,18 @@ Every board carries `calculation_context = {context_id, epoch, dependency_revisi
 
 The context binds the current store reset epoch, canonical game, source/native-book dependencies (including bid-only book changes), original receipt facts, occurrence matching, policy, financial/model/source engine files and applicability boundaries. A receipt-only observation may invalidate a context; it never renews an unchanged source-price timestamp. Unrelated game updates do not invalidate a selected game's context. Shared definitions are built from their versioned owners; no settings-variant report graph is cached or persisted.
 
-Details and typed Original reads capture current rows and compare the required expected context. Changed, removed or temporally expired inputs return HTTP 409 with `current_inputs_changed_or_removed`; an absent selected quote returns `current_selection_removed`. Original-price Details renders its captured price and clocks immediately and keeps that frozen observation visible while supplementary evidence resolves or ends with a bounded unavailable/changed/timeout state. Financial Details adopts only a complete validated response. It never attaches new prices or freshness labels to old financial totals. Captured prices, profiles and financial results belong to one detached coherent frame even if ingress changes afterward.
+Details and typed Original reads compare the required expected context. Without
+a surviving captured frame, a context that no longer matches current inputs
+returns HTTP 409 with `current_inputs_changed_or_removed`; an absent selected
+quote returns `current_selection_removed`. An exact `read_token` can retain the
+captured inputs across replacement, as described under selected-frame leases
+below. Mere source-price aging does not change observation identity or make
+Original Inputs uninspectable; it withdraws current eligibility and updates age
+labels. Original-price Details renders its captured price and clocks immediately
+while supplementary evidence resolves or reports a bounded failure. Financial
+Details adopts only a complete validated response. It never attaches new prices
+or freshness labels to old financial totals. Captured prices, profiles and
+financial results belong to one detached coherent frame even if ingress changes.
 
 Selected reads retain the full matching neighborhood: all possible current peer
 events and active-membership bits, all relevant contracts/offers (including

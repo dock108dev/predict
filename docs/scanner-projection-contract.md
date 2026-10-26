@@ -39,7 +39,14 @@ An opportunity identity binds occurrence, sport/league, market/period/overtime, 
 
 All current evaluated rows form one flat universe. Filters apply to the entire universe before sorting and pagination. Default category is covered-outcome arb, descending exact complete-minimum percentage; ties use occurrence then stable row ID. Games are context, never a ranking/grouping stage. A venue filter must include both execution legs. Pinnacle is reference-only and rejects as an execution venue.
 
-Optional query fields: `venues,sports,leagues,markets,periods` (comma-separated), `category`, `minimum_edge`, `minimum_size`, `offset` (default 0), `limit` (default 50, maximum 100), `since`, `epoch`, `query_id`, `expected_revision`. Edge is percentage points on the category's named basis. Minimum size tests the supplied legal allocation's deployed capital; it is not a fresh budget request. No amount/settings mutation, receipt, provider request or ticket query is accepted. Unsupported dimensions return explicit unsupported filters and no matching rows. Filter options come only from configured, authorized implemented adapter scopes: currently NFL/football, winner/full_game, not broader configuration vocabulary.
+Optional query fields: `venues,sports,leagues,markets,periods` (comma-separated), `category`, `minimum_edge`, `minimum_size`, `offset` (default 0), `limit` (default 50, maximum 100), `since`, `epoch`, `query_id`, `expected_revision`. Edge is percentage points on the category's named basis. Minimum size tests the supplied legal allocation's deployed capital; it is not a fresh budget request. No amount/settings mutation, receipt, provider request or ticket query is accepted. Unsupported dimensions return explicit unsupported filters and no matching rows.
+
+Filter options come only from configured, authorized and supported adapter
+scopes. Current scope support includes NFL/NCAAF football, NBA/NCAAB basketball,
+MLB baseball and NHL hockey, with `winner`, `spread` and `total` at `full_game`.
+`scope_inventory` checks the league/sport relation and shared sporting capability;
+`Projection._options` derives choices from the admitted scopes. A filter
+choice proves neither observed listings nor complete financial eligibility.
 
 ## Coherent incremental protocol
 

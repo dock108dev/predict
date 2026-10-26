@@ -4,7 +4,15 @@ The ordinary app exposes bounded read-only input readiness. Current source/model
 
 ## Read and ownership
 
-`GET /api/boards/readiness` returns `predict-scanner-readiness-1` in the ordinary app. Optional comma-separated `venues`, `sports`, `leagues`, `markets` and `periods` select an exact universe. Defaults are four execution venues, `football`, `NFL`, `winner`, `full_game`. Pinnacle is reference-only and cannot be an execution venue. Unimplemented sports/markets return explicit unsupported scopes; changing a filter cannot authorize collection.
+`GET /api/boards/readiness` returns `predict-scanner-readiness-1` in the ordinary
+app. Optional comma-separated `venues`, `sports`, `leagues`, `markets` and `periods`
+select an exact universe. `Selection` defaults to four execution venues, the six
+leagues NFL/NCAAF/NBA/NCAAB/MLB/NHL and their football/basketball/baseball/hockey
+dimensions, `winner`/`spread`/`total`, and `full_game`. Scope inventory removes
+mismatched sport/league combinations and checks actual configuration, authority
+and adapter support independently. Pinnacle is reference-only and cannot be an
+execution venue. Unimplemented sports/markets return explicit unsupported scopes;
+changing a filter cannot authorize collection or establish finance readiness.
 
 The existing board/slate/Details versions keep their meanings. The readiness route shares their one-reader/four-waiter limit, cancellation and failure handling. It reads the existing service configuration/authority and current rows; it does not initialize a collection owner, inspect credentials, read/write settings or call recovery. No HTTP endpoint accepts client-authored evaluation receipts.
 
@@ -55,6 +63,18 @@ Connect source/model expiry, source withdrawal/Stop, policy/settings and materia
 
 ## Client integration
 
-Consume scanner's eventual scanner protocol for opportunities and this version for coverage. Show one scanner-level degraded summary with inspectable exact affected scopes/reasons. Label retained sync/depth separately from current evaluability. Use named count units and denominators; never label 27 occurrences as 27 two-venue arb markets. Distinguish waiting, stale-only, unsupported, failed/blocked, no compatible pairs, not evaluated and authoritative evaluated zero. Do not calculate money or infer a zero-opportunity result from readiness counts. Unsupported filter vocabulary must not look like available acquisition.
+Consume the implemented [Scanner protocol](scanner-projection-contract.md) for
+opportunities and this version for input readiness. Show one scanner-level
+degraded summary with inspectable exact affected scopes/reasons. Label retained
+sync/depth separately from current evaluability. Use named count units and
+denominators; never label 27 occurrences as 27 two-venue arb markets. Distinguish
+waiting, stale-only, unsupported, failed/blocked, no compatible pairs, not evaluated
+and authoritative evaluated zero. Do not calculate money or infer a zero-opportunity
+result from readiness counts. Unsupported filter vocabulary must not look like
+available acquisition.
 
-Readiness remains an input contract, separate from scanner financial classification, ticket authority and browser evidence. Warm ready scanner ≤3s, valid receipt-to-visible result p95≤2s/max3s and ready ticket p95≤1s/max2s require their own measured proof. Source, model and destination validity require current qualified inputs.
+Readiness remains an input contract, separate from Scanner financial classification,
+ticket authority and browser evidence. Earlier warm-Scanner and receipt-to-screen
+timing targets are not established guarantees; formal stress qualification is
+deferred. Source, model and destination validity require their own applicable
+inputs. A healthy worker or successful readiness read alone does not qualify them.

@@ -1,12 +1,18 @@
 # Watching opportunities in Predict
 
-The landing page and `/arbs` show the globally ranked scanner. `/odds` shows
-observed source prices; `/ev` shows single-trade estimates. Use Admin to inspect
-source status and control collection. None of these views places orders.
+Open **Advanced Scanner** in the page footer, or visit `/scanner`, for the
+globally ranked Scanner and manual tickets described below. The landing page `/`
+is the opportunity dashboard, with separate EV and arbitrage sections; `/arbs`
+is the stored opposing-comparison view. `/odds` shows observed source prices and
+`/ev` shows single-trade estimates. Use Admin to inspect source status and control
+collection. None of these views places orders.
 
 ## Filters and observations
 
-Choose supported venues, sports and market filters. Both execution positions must
+Choose supported venues, sports and market filters. Configured supported scope
+can include NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winners, spreads and
+totals. Available filter choices do not prove observed prices or qualified finance.
+Both execution positions must
 use included venues. **Find on this page** searches only the displayed page; it
 does not narrow observation history or arrival cues. Amount is optional and does
 not change discovery rows.

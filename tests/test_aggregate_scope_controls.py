@@ -1,5 +1,6 @@
 """Disposable scope/transport controls. No authentic account or provider I/O."""
 import json
+from datetime import timedelta
 import unittest
 from unittest.mock import patch
 from app.collection.current_quota import QuotaStop
@@ -7,6 +8,7 @@ from tests import test_current_aggregate as fixtures
 from tests.test_current_service import native_fixture
 from tests import test_current_conservative_recovery as recovery_fixtures
 from app.collection.current_conservative import digest
+from app.dashboard.current_contract import stamp
 
 
 class ConfiguredAggregateScope(unittest.IsolatedAsyncioTestCase):
@@ -62,6 +64,11 @@ class ConfiguredAggregateScope(unittest.IsolatedAsyncioTestCase):
 
     async def test_recovered_accounting_wait_replaces_only_old_hold_status(self):
         await self.scheduler.step()
+        # The shared fixture pins the schedule to 14:00 UTC, but the ledger
+        # uses real time. Explicitly keep this scenario before its next cycle
+        # even when the suite runs after the fixture's 14:15 UTC due time.
+        self.q.transact(lambda value,at:value.update(
+            next_due_at=(stamp(at)+timedelta(minutes=15)).isoformat()))
         self.service.states['novig']=dict(state='unavailable',reason_code='aggregate_transport_uncertain',reason='old hold')
         self.service.states['prophetx']=dict(state='unavailable',reason_code='aggregate_decimal_price',reason='bad original')
         count=len(self.wire.calls)

@@ -61,7 +61,16 @@ Use `classification.main_positive_eligible` for the main positive list. Singles 
 
 ## Identity, storage and limits
 
-`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing mode and benchmark venue/method. Conflicting amount aliases reject. Current board, slate and Details reads bind their calculation context to that policy revision without a durable saved result. Attaching/changing either original reference changes the dependency/reference/result revision. The selected benchmark and shared model versions remain exact transient dependencies; the calculation context binds those revisions. Full saved combined profiles are not required.
+`effective_policy` accepts exact `amount` (or compatible `ceiling`), buffer, sizing
+mode and benchmark venue/method. Conflicting amount aliases reject. Shared board
+and slate rows retain the background owner's policy and calculation context;
+`requested_policy` records overrides reserved for selected Details. Selected
+calculations bind their effective policy and preserve the clicked selection's
+identity separately, without a durable saved result. Changing Details settings
+does not recalculate or rerank discovery rows. Attaching/changing either original
+reference changes the dependency/reference/result revision. The selected benchmark
+and shared model versions remain exact transient dependencies; the calculation
+context binds those revisions. Full saved combined profiles are not required.
 
 The engine binding includes sizing, policy, benchmark and metrics owners plus source/domain validation. If a legacy fixture/result is deliberately retained, its engine/policy meaning stays original. It need not survive a sports reset. Never relabel an old result as current or silently bind mutable current inputs to an old immutable snapshot ID.
 

@@ -13,7 +13,14 @@ support the comparison loop; calculation reports are not persisted.
 
 ## Compact views and financial meaning
 
-**Odds** opens on All games, grouping observed supported games into
+**Dashboard** at `/` shows separate positive EV and arbitrage sections, ranked
+by their own exact supplied percentages. It distinguishes current positives,
+evaluated no-positive, partial, unavailable and last-known states. Nonpositive
+research sorts least negative first; conditional, hypothetical and gross results
+retain separate labels. Filters narrow already collected results.
+
+**Odds** defaults to All games and restores a valid saved game/filter selection,
+grouping observed supported games into
 compact game/team rows with venue columns. Search and game selection are optional.
 Observed Polymarket US Long and Short appear inline with their actual participant,
 side and predicate. Keep NO/Short distinct from opponent YES/Long and bookmaker
@@ -24,21 +31,22 @@ no-vig treatment. Fair odds are a derived reference, not an executable offer.
 Exact originals, probabilities, method, conditioning and clocks are inspectable
 in Details. A missing selected reference is not replaced implicitly.
 
-**EV** uses dense rows grouped by game and team/instrument, placing each venue's
-price and after-cost, after-buffer dollars/return together. Complete-state EV and
-conditional decisive EV have separate labels. Positive is the default; All
-comparisons includes concise signed current results and explicit unavailable states.
-Supported older inputs appear as **Last-known** estimates in All comparisons and
-are excluded from current Positive and Hedges. The board distinguishes those
-results from missing references, unsupported inputs, calculation failures and
-evaluated results with no positive value. Older inputs from different times do
-not establish a simultaneous historical trade.
+**EV** at `/ev` reads All comparisons and leads with the EV outcome, followed by
+ranked labeled research. Complete-state, conditional decisive and gross benchmark
+values have separate meanings. Supported older inputs appear as **Last-known**
+estimates and cannot enter current-positive results. Missing references,
+unsupported inputs, calculation failures and evaluated no-positive states remain
+distinct. Older inputs from different times do not establish a simultaneous
+historical trade.
 
-**Scanner**, available at `/` and `/arbs`, ranks supported covered-outcome,
-conditional and EV opportunities globally, with named funding and buffered metrics. Every ordinary filter requires distinct venues. Rule-sensitive hedges
-stay separate from pairs positive across every modeled state. One short material
-status/risk note remains visible; full fee and scenario reports belong in Details.
-No positive opportunity is a normal result.
+**Arbs** at `/arbs` is the stored opposing-comparison view, with Positive as its
+initial filter and separate All comparisons and rule-sensitive research.
+**Advanced Scanner** at `/scanner` ranks supported covered-outcome, conditional
+and EV opportunities globally and supports manual tickets and observed episodes.
+Its venue filters require both execution legs. Rule-sensitive hedges stay separate
+from pairs positive across every modeled state. One short material status/risk
+note remains visible; full fee and scenario reports belong in Details. A complete
+evaluated no-positive scope is a normal result; unavailable evaluation is different.
 
 Defaults are **$1,000 requested funding, one 0.5% buffer on actual deployed capital
 and Pinnacle reference**. A pair shares funding across both legs, modeled upfront
@@ -51,17 +59,19 @@ liquidity and probability models retain their labels. See the
 ## Current Details and updates
 
 Details binds the selected game and instrument or pair to its input-dependency,
-policy and engine revisions. It leads with the supplied complete or conditional
-percentage, source status and buffered dollars, then requested/deployed/residual
-funding and quantities. Reconciliation explains gross value, rule adjustment,
-modeled fees, net estimate and one buffer. Native terms, exceptional outcomes,
-assumptions and selected current original inputs follow in expandable sections.
+policy and engine revisions. Original-price Details leads with the exact selected
+price and captured peer when available, native position, simple age and comparison
+meaning. Financial Details starts with exact positions and original prices, then
+the supplied metric and its complete, conditional or hypothetical meaning.
+Optional funding, quantities, reconciliation, models and technical source evidence
+remain inspectable without dominating ordinary discovery.
 
 Use a bounded transient context or explicitly report that the comparison changed,
 was removed or expired. Never silently replace the clicked selection or show new
 source ages beside old financial values. Refuse crossed/delayed responses. Ordinary
-Details uses current contexts, with no legacy history/envelope controls or
-permanent result IDs.
+Details uses revision-bound contexts and bounded selection leases, with no legacy
+history/envelope controls or permanent result IDs. A surviving leased frame keeps
+captured inputs inspectable across replacement while withdrawing current eligibility.
 
 Apply and Enter submit the same settings; Restore returns to calculation defaults.
 Navigation and updates preserve useful filters, settings, scroll, focus and
@@ -85,13 +95,13 @@ and support increased text size. Dialogs support a focus loop, Escape/Close and
 focus return to the opening row or a useful fallback. Collapsed sections do not
 leave hidden controls in the tab sequence.
 
-Common game/search filters stay visible. Calculation settings use an anchored
-expandable panel, with applied funding, buffer and reference always shown.
-Opening it reveals the existing fields, Apply and Restore defaults without moving
-the comparison rows. Escape or an outside click closes the panel while retaining
-its draft. Polls preserve drafts and focus, and sticky navigation keeps Stop
-available. Source clocks use at least 12px text while game/team names and prices
-carry the main visual hierarchy.
+Common game/search filters stay visible. Optional **Details settings** uses an
+expandable disclosure for amount, buffer and reference, with Apply and Restore
+defaults. Shared discovery keeps its server policy; selected settings do not
+rerank the slate. Dashboard and EV keep settings secondary to the outcome.
+Polls preserve drafts and focus, and navigation keeps Stop available. Source
+clocks use at least 12px text while game/team names and prices carry the main
+visual hierarchy.
 
 First use offers Admin source status when no game is available. Positive empty
 states offer All comparisons. Failed reads offer Retry with a useful reason;
@@ -104,8 +114,8 @@ Healthy routine status prose stays out of the price rows; actual source times
 remain beside prices and shared native limitations appear once per displayed
 slate. Empty first use shows one source-setup action. Failed reads lead with
 Retry/Admin guidance and retain technical reasons in a disclosure. Details leads
-with the supplied complete or conditional estimate, then separate funding and
-reconciliation; modeled outcomes and original inputs sit in named disclosures.
+with prices and meaning, followed by the supplied metric where available; funding,
+reconciliation, modeled outcomes and technical evidence remain inspectable.
 Opposing Details shows the supplied modeled minimum or its explicit unknown state.
 Ordinary negative results use neutral copy; material uncertainty retains caution
 styling. These presentation choices do not alter financial or protocol guards.

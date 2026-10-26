@@ -1,8 +1,10 @@
 # Calculation basis and benchmark EV
 
-The ordinary comparison model evaluates NFL pregame full-game winners. It uses
-original source prices, a selected two-way sportsbook reference, scoped fee/payout
-recipes and disclosed provisional exceptional-outcome probabilities. It does not
+Original-price comparison supports the configured multi-sport universe. Financial
+estimates have narrower, input-specific applicability: the legacy dated recipes
+cover NFL pregame full-game winners; strictly bound financial profiles and the
+public Novig NFLWIN model have the separate rules described below. A league or
+market appearing in Odds does not imply a usable EV model. Calculations do not
 establish actual fills, final grades or known total account charges.
 
 ## Policy and requested funding

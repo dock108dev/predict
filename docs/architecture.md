@@ -71,7 +71,9 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/arbs` | Globally ranked scanner and selected manual tickets |
+| `/` | Opportunity dashboard with separate EV and arbitrage sections and labeled research |
+| `/arbs` | Stored opposing-comparison view |
+| `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
 | `/odds`, `/ev` | Observed prices and single-trade estimates |
 | `/api/boards/{view}` | Latest shared results, revision-bound selected Details and typed Original |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
