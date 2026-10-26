@@ -6,6 +6,117 @@ Page loading, local filters, sorting, cell inspection and links back to Odds nev
 start collection. The prior saved-session `/coverage` page remains a separate
 historical reader.
 
+## Next-version target — bulk live data and 99% coverage
+
+Owner direction on October 26, 2026 changes the completion target. This section
+specifies required behavior; the retained-cohort implementation described below
+has **not** achieved it. Coverage must expose offered scope independently of the
+subset already stored. Bulk acquisition and raw visibility precede semantic
+qualification and maths. No per-game installation, approval or qualification
+sequence is required. Small regression cases may support engineering, but cannot
+qualify broad live coverage.
+
+### Scope and denominator
+
+The target is the full available pregame offering for NFL, NCAAF, NBA, NCAAB, MLB
+and NHL, moneyline/winner, spread and total, full game, across Kalshi, Polymarket
+US, Novig and ProphetX; Pinnacle is measured separately as reference-only. Include
+all available in-scope lines and native sides, not just a selected main line or a
+handpicked near-term cohort. Other periods, futures and extra providers remain
+outside this version. No new narrower time horizon may be introduced to improve
+the percentage. Started/ended/postponed/unknown states need explicit evidence and
+separate current eligibility; preserve inspectable raw observations.
+
+Define one offered unit as provider + venue + native event + native market +
+outcome/side + native line + period. Deduplicate reconnects and repeated pages;
+do not deduplicate distinct native sides into a synthetic outcome. Measure the
+available authorized source route, not an unobservable entire provider business.
+Reconcile listing identities and price-bearing responses at documented capture
+boundaries, including additions, withdrawals and pagination races. Listing-only
+markets with no offered price are counted separately with evidence.
+
+A denominator is complete only when all relevant listing/response pages or an
+authoritative inventory/delta boundary are accounted for. Report route, scope,
+start/end, exhaustion/continuation, failures and completeness. An unmeasured,
+failed or truncated inventory cannot pass as 99%; retained-row ratios cannot
+stand in for offered coverage. Zero offered units is N/A with fresh complete-query
+evidence. Provider absence must not be inferred from a failed request or a cap.
+
+### Acceptance measures
+
+| Measure | Required result and denominator |
+| --- | --- |
+| Raw acquisition coverage | At least 99% of independently enumerated offered price units have faithful raw values, native units/IDs and original available clocks locally inspectable. |
+| Raw display coverage | At least 99% of those offered units are reachable in ordinary paginated Odds/Original views, including unmatched, stale and rejected-for-calculation values with explicit labels. Raw visibility never grants calculation authority. |
+| Fresh coverage | At least 99% of offered units have valid, independently supported currentness at the sampled time under the declared source-specific policy. Recent receipt, ingestion or model time cannot make an old source quote fresh. |
+| Validation accounting | 100% of received units have an explicit valid, invalid, missing-fact, stale, unsupported or pending disposition, with reason and provenance. This accounting percentage is not the raw/fresh coverage percentage. |
+| Comparison processing | At least 99% of reference-enumerated eligible cross-venue comparisons are evaluated and published; count deterministic output selections separately from all evaluated candidates. Missing peers and unresolved meaning remain measured gaps. |
+| Financial processing | At least 99% of valid input sets eligible for each implemented metric are computed/published. Separately show eligible/total offered and blocked counts by missing fee, payout, probability, size or reference input. An empty eligible set cannot establish financial completion. |
+
+Raw acquisition, display and freshness targets apply both globally and to each
+nonempty venue/league/family cell, with reference cells reported separately. A
+large NFL cell cannot hide a missing NHL or ProphetX cell. Report numerators,
+denominators and residual gaps, not only rounded percentages. Use the smallest
+integer numerator meeting 0.99 times the denominator. Rejected or unsupported
+received rows remain in raw coverage denominators; only evidenced source absence
+or genuine out-of-scope units leave the offered cohort.
+
+Missing contract/financial evidence cannot be removed from the overall gap
+report by shrinking an eligibility denominator. The core type-driven contracts
+and maths must work across the full selected scope. Missing evidence is explicit
+remaining work or a named owner-accepted limitation; neither is called 99%
+financial coverage. This target does not promise 99% profitable opportunities,
+identical venue offerings, actual fills or execution-qualified returns.
+
+### Freshness and verification window
+
+Record native source/complete-book confirmation time, aggregate source update,
+receipt, admission, publication and display separately. Establish a documented
+policy per feed using its actual update semantics. Preserve the existing native
+30-second policy until an evidenced policy change is justified; never widen it
+solely to pass. Aggregate scheduled completeness and between-cycle source age
+must be separate measures. A 15-minute paid cadence cannot be labeled a
+continuous fresh feed merely because every scheduled request succeeded.
+
+Verify the entire live scope through cold catch-up and then at least two
+consecutive operating hours spanning eight scheduled aggregate cycles. Sample
+full-scope metrics at least once per minute, plus each completed aggregate cycle;
+report cold catch-up separately and require each steady-state sample to meet the
+applicable 99% target. This is a next-version engineering acceptance design, not
+a previously measured capability. Include an ordinary listing change if observed;
+exercise missing transitions in regression tests rather than force paid events.
+Recheck supported behavior after app-only restart without interrupting data work.
+
+If a source's offering, timestamps, cadence or account budget cannot satisfy the
+target, retain the measured deficit and concrete alternative. Do not silently
+substitute last-known prices, change scope, or spend beyond the authorized plan.
+An explicit owner decision is needed only for a real change to budget/scope or
+acceptance of a measured limitation, not routine implementation or live validation.
+
+### Capacity policy for this version
+
+Remove arbitrary product cardinality cutoffs that prevent complete acquisition,
+retention, processing or access: the current 24-event/20-market selections,
+fixed discovery-page windows, metadata projection truncation and any whole-slate
+row/capture limits must be replaced or revised wherever they lose in-scope data.
+Configuration validation currently rejects values above its defaults; editing
+only the installed JSON is insufficient. This is implementation work, not a
+claim those restrictions have already been removed.
+
+Use incremental current-state updates, shared metadata, streamed complete pages,
+indexed SQL and resumable fair queues so chunk size limits memory in flight,
+not total represented games. Paginated/virtualized display is compatible with
+all values being reachable. Reassess fixed memory/storage budgets from measured
+full-scope demand; the old numeric ceilings are not immutable requirements.
+Persist progress and make backpressure visible without dropping tail records or
+starving leagues. Text wire size alone does not establish decoded graph, depth,
+join or calculation memory cost; measure these separately without turning a
+speculative large stress campaign into a prerequisite for real bulk operation.
+
+Actual provider limits, paid credit authority, accounting/hold integrity, explicit
+Stop and correct cleanup still apply. They are distinct from arbitrary product
+coverage caps. No backup, cloned checkout or per-game rehearsal gate is required.
+
 ## Scope and capability
 
 The matrix comes from shared configuration, source selectors and representation
@@ -65,7 +176,7 @@ valid original source-local price inspectable. Valid groups continue publishing
 beside an invalid group. Details preserves its original captured inputs and the
 existing changed-input and authority checks.
 
-## Bounds and operation
+## Current implementation bounds and operation
 
 Coverage stores only the latest compact summary with bounded example records and
 canonical membership counts. PostgreSQL projects the required metric fields
@@ -131,7 +242,8 @@ fees, sizes or settlement.
 
 If Coverage reports a capture-capacity or memory-capacity failure, its summary is
 unavailable rather than a measured zero. Check Admin and the safe operation log;
-keep the resource guard intact. Source prices and other background publications
+diagnose the current guard and redesign its work granularity under the next-version
+capacity policy rather than silently discard inputs. Source prices and other background publications
 can remain useful while the independent Coverage worker is unavailable.
 
 ### Compact capture
